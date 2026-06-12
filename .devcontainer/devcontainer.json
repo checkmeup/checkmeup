@@ -1,0 +1,80 @@
+{
+  "name": "checkmeup",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "make install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "github.copilot.chat.generateCommitMessage.enabled": false,
+        "editor.fontFamily": "'JetBrains Mono', Consolas, 'Courier New', monospace",
+        "editor.fontSize": 13,
+        "editor.fontLigatures": true,
+        "editor.letterSpacing": 0.4,
+        "editor.smoothScrolling": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.oxlint": "explicit"
+        },
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        },
+        "[json]": {
+          "editor.defaultFormatter": "oxc.oxc-vscode"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "oxc.oxc-vscode"
+        },
+        "cSpell.words": [
+          "checkmeup",
+          "bunx",
+          "codacy",
+          "commandhistory",
+          "commitlint",
+          "commitlintrc",
+          "consolas",
+          "juanlb",
+          "molyuk",
+          "oxfmt",
+          "oxlint",
+          "wagoid"
+        ],
+        "explorer.fileNesting.enabled": true,
+        "explorer.fileNesting.patterns": {
+          "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
+          "vite.config.*": "vitest.config.*",
+          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*"
+        }
+      },
+      "extensions": [
+        "anthropic.claude-code",
+        "cloudflare.cloudflare-workers-bindings-extension",
+        "juanlb.claude-commit",
+        "ms-azuretools.vscode-containers",
+        "oxc.oxc-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "vitest.explorer",
+        "vue.volar"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/dev/.ssh,type=bind,consistency=cached",
+    "source=/run/host-services/ssh-auth.sock,target=/ssh-agent.sock,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.zsh_history,target=/home/dev/.zsh_history,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/dev/.claude,type=bind,consistency=cached"
+  ],
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vue Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteUser": "dev"
+}
