@@ -22,6 +22,8 @@
     "oxlint",
     "sqlc",
     "statefulness",
-    "wagoid"
+    "stdlib",
+    "wagoid",
+    "zerolog"
   ]
 }
