@@ -30,25 +30,11 @@
         "[jsonc]": {
           "editor.defaultFormatter": "oxc.oxc-vscode"
         },
-        "cSpell.words": [
-          "checkmeup",
-          "bunx",
-          "codacy",
-          "commandhistory",
-          "commitlint",
-          "commitlintrc",
-          "consolas",
-          "juanlb",
-          "molyuk",
-          "oxfmt",
-          "oxlint",
-          "wagoid"
-        ],
         "explorer.fileNesting.enabled": true,
         "explorer.fileNesting.patterns": {
           "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
           "vite.config.*": "vitest.config.*",
-          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*"
+          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json"
         }
       },
       "extensions": [
