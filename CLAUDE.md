@@ -25,7 +25,7 @@ make clean    # wipe node_modules, dist, coverage
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
 **Infra:** Hetzner CX23 · Kamal · Traefik
 
-Full rationale in [`docs/decisions/`](docs/decisions/).
+Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md).
 
 ---
 
