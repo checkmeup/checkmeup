@@ -1,8 +1,9 @@
 {
   "name": "checkmeup",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "runServices": ["dev", "db"],
+  "workspaceFolder": "/workspaces/checkmeup",
   "postCreateCommand": "make install",
   "customizations": {
     "vscode": {
@@ -33,6 +34,7 @@
         "explorer.fileNesting.enabled": true,
         "explorer.fileNesting.patterns": {
           "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
+          "go.mod": "go.sum, .air.toml, sqlc.yaml, .env, .env.*",
           "vite.config.*": "vitest.config.*",
           "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig"
         }

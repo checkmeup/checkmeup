@@ -1,0 +1,10 @@
+{
+  "name": "@checkmeup/api",
+  "private": true,
+  "scripts": {
+    "dev": "air",
+    "build": "go build -o bin/api ./cmd/api",
+    "lint": "golangci-lint run ./...",
+    "test": "go test -count=1 -coverprofile=coverage/coverage.out ./..."
+  }
+}
