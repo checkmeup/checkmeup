@@ -1,14 +1,21 @@
 FROM debian:stable-slim
 
-ARG GO_VERSION=1.25.0
+ARG GO_VERSION=1.25.11
 ARG GOLANGCI_LINT_VERSION=v2.12.2
 
 # System packages + Go (multi-arch)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       git gnupg openssh-client curl make zsh unzip ca-certificates \
+       git=1:2.47.3-0+deb13u1 \
+       gnupg=2.4.7-21+deb13u1 \
+       openssh-client=1:10.0p1-7+deb13u4 \
+       curl=8.14.1-2+deb13u3 \
+       make=4.4.1-2 \
+       zsh=5.9-8+b23 \
+       unzip=6.0-29 \
+       ca-certificates=20250419 \
     && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get install -y --no-install-recommends nodejs=24.16.0-1nodesource1 \
     && GOARCH=$(dpkg --print-architecture) \
     && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C /usr/local -xz \
     && apt-get clean \

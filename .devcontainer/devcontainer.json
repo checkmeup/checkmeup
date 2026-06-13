@@ -36,7 +36,7 @@
           "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
           "go.mod": "go.sum, .air.toml, sqlc.yaml, .env, .env.*",
           "vite.config.*": "vitest.config.*",
-          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig"
+          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json"
         }
       },
       "extensions": [
