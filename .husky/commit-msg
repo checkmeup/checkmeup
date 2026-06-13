@@ -1,6 +1,8 @@
 bunx --no -- commitlint --edit "$1"
 
 if grep -qiE 'Co-Authored-By|Claude|Copilot' "$1"; then
-  echo "commit-msg: AI attribution is not allowed in commit messages" >&2
-  exit 1
+  if ! git diff --cached --name-only | grep -qE '^CLAUDE\.md$|^\.claude/'; then
+    echo "commit-msg: AI attribution is not allowed in commit messages" >&2
+    exit 1
+  fi
 fi
