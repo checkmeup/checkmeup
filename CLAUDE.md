@@ -23,7 +23,10 @@ make clean    # wipe node_modules, dist, coverage
 
 **Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Telegram alerts · air (hot reload)  
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
-**Infra:** Hetzner CX23 · Kamal · Traefik
+**Infra:** Hetzner CX23 · Kamal · Traefik  
+**Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
+
+> `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md).
 
@@ -45,3 +48,4 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 - Use an ORM — sqlc only ([ADR-004](docs/decisions/004-sqlc-over-orm.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants
 - Add subdomains for status pages — `/status/:slug` path is intentional ([ADR-005](docs/decisions/005-status-page-same-domain.md))
+- Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))

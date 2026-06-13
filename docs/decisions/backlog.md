@@ -31,10 +31,3 @@ Specifics to decide:
 
 **Needed before:** implementing the uptime monitor worker (Phase 3).
 
----
-
-## Chi router rationale
-
-**Question:** Document why Chi over alternatives (gin, echo, fiber, stdlib `net/http`).
-
-**Needed before:** not blocking — capture when the first route is written.
