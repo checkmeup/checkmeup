@@ -42,6 +42,36 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 
 ---
 
+## Code quality (Codacy)
+
+CI uploads coverage to Codacy after every push. `CODACY_API_TOKEN` (account-level) is in `apps/api/.env`.
+
+**Fetch current issues before starting a fix session:**
+
+```bash
+source apps/api/.env
+curl -s -X POST \
+  -H "api-token: $CODACY_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"filters":{"categories":[],"levels":[],"languages":[]}}' \
+  "https://app.codacy.com/api/v3/analysis/organizations/gh/checkmeup/repositories/checkmeup/issues/search?limit=100" \
+  | python3 -c "
+import json, sys
+issues = json.load(sys.stdin)['data']
+priority = [i for i in issues if i['patternInfo']['level'] in ('Error','High','Warning')]
+for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
+    print(f\"[{i['toolInfo']['name']}][{i['patternInfo']['level']}] {i['filePath']}:{i['lineNumber']}: {i['message'][:100]}\")
+"
+```
+
+**Triage guide:**
+- **TSQLLint** — always ignore, SQL Server rules applied to PostgreSQL migrations
+- **Opengrep cookies in `*_test.go`** — ignore, synthetic request cookies in tests intentionally lack HttpOnly/Secure
+- **Trivy on `go.mod`** — real; upgrade the flagged dependency or pin a patched version
+- **Opengrep/ESLint in production code** — investigate before dismissing
+
+---
+
 ## Don't
 
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR-001](docs/decisions/001-worker-model.md))

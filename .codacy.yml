@@ -3,3 +3,6 @@ engines:
   # TSQLLint is SQL Server-specific; this project uses PostgreSQL
   tsqllint:
     enabled: false
+
+exclude_paths:
+  - "**/*_test.go"
