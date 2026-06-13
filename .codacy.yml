@@ -8,5 +8,5 @@ exclude_paths:
   - '**/*_test.go'
   - 'docs/**'
   - '**/*.md'
+  - '*.md'
   - '**/*.sql'
-  - 'CLAUDE.md'
