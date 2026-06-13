@@ -9,3 +9,4 @@ exclude_paths:
   - 'docs/**'
   - '**/*.md'
   - '**/*.sql'
+  - 'CLAUDE.md'
