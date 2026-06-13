@@ -6,6 +6,7 @@
 ## Context
 
 Auth options considered:
+
 - Stateless JWT in `Authorization` header (no server-side session state)
 - Session ID in httpOnly cookie backed by a sessions table
 - Short-lived JWT in httpOnly cookie + long-lived refresh token stored in DB

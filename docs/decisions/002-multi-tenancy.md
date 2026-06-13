@@ -6,6 +6,7 @@
 ## Context
 
 Multi-tenant SaaS has three common isolation models:
+
 1. Separate database per tenant
 2. Separate schema per tenant (PostgreSQL schemas)
 3. Shared schema with a `tenant_id` / `org_id` discriminator column on every table

@@ -6,6 +6,7 @@
 ## Context
 
 Status pages could be served at:
+
 - A separate subdomain per org: `acme.checkmeup.net`
 - A fixed path on the main domain: `checkmeup.net/status/acme`
 - A fully custom domain: `status.acme.com` (white-label)

@@ -53,6 +53,7 @@ Decision affects how errors surface in production and what Kamal/Traefik ship to
 **Question:** What is the logic for sending a Telegram alert vs. staying silent?
 
 Specifics to decide:
+
 - How many consecutive failures before alerting? (e.g. 2-of-3)
 - How long to wait before re-alerting on a still-down monitor?
 - Alert on recovery? (monitor back up)
@@ -67,6 +68,7 @@ Specifics to decide:
 **Question:** How exactly does an uptime check work?
 
 Specifics to decide:
+
 - HTTP method: HEAD (lighter) or GET (catches body-level errors)?
 - Timeout per request
 - What counts as "down": non-2xx, connection timeout, both?

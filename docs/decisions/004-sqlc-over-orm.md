@@ -6,6 +6,7 @@
 ## Context
 
 Go database access options:
+
 - ORM (gorm, ent) — model structs, query builder, auto-migrations
 - Query builder (squirrel, jet) — programmatic SQL construction
 - Raw `database/sql` — manual scanning, no type safety

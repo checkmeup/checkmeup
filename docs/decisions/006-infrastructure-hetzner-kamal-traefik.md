@@ -6,6 +6,7 @@
 ## Context
 
 Hosting options considered:
+
 - Managed cloud (AWS ECS/Fargate, GCP Cloud Run, Fly.io, Render) — higher cost, less control
 - Self-managed VPS with manual deploy scripts
 - Self-managed VPS with a container-native deploy tool (Kamal)

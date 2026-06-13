@@ -6,6 +6,7 @@
 ## Context
 
 Monitors need to fire on a schedule (cron) or be polled on an interval (uptime, SSL). Common approaches are:
+
 - A job queue backed by Redis/BullMQ/etc. with worker processes consuming it
 - A goroutine per monitor with a `time.Ticker`
 - A single scheduler loop iterating over due monitors
