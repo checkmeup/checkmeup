@@ -12,11 +12,11 @@ import (
 	"github.com/checkmeup/checkmeup/internal/middleware"
 )
 
-const testSecret = "test-secret-32-chars-xxxxxxxxxx"
+const jwtSigningKey = "test-signing-key-32-chars-xxxxx"
 
 func okHandler(w http.ResponseWriter, r *http.Request) {
 	c := middleware.ClaimsFrom(r.Context())
-	fmt.Fprintf(w, "userID=%s orgID=%s", c.Subject, c.OrgID)
+	_, _ = fmt.Fprintf(w, "userID=%s orgID=%s", c.Subject, c.OrgID)
 }
 
 func validToken(t *testing.T, ttl time.Duration) string {
@@ -24,7 +24,7 @@ func validToken(t *testing.T, ttl time.Duration) string {
 	claims := &middleware.Claims{OrgID: "org-abc"}
 	claims.Subject = "user-xyz"
 	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(ttl))
-	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(testSecret))
+	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(jwtSigningKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func serve(t *testing.T, cookie *http.Cookie) *httptest.ResponseRecorder {
 		r.AddCookie(cookie)
 	}
 	w := httptest.NewRecorder()
-	middleware.RequireAuth(testSecret)(http.HandlerFunc(okHandler)).ServeHTTP(w, r)
+	middleware.RequireAuth(jwtSigningKey)(http.HandlerFunc(okHandler)).ServeHTTP(w, r)
 	return w
 }
 
@@ -70,7 +70,7 @@ func TestRequireAuth_WrongSecret(t *testing.T) {
 	claims := &middleware.Claims{OrgID: "org-abc"}
 	claims.Subject = "user-xyz"
 	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(15 * time.Minute))
-	tok, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte("wrong-secret"))
+	tok, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte("different-signing-key"))
 	w := serve(t, &http.Cookie{Name: "access_token", Value: tok})
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", w.Code)

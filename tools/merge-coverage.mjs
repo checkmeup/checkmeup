@@ -21,6 +21,7 @@ const merged = files
         if (!line.startsWith('SF:')) return line
         const filePath = line.slice(3)
         // gcov2lcov (Go) already emits repo-root-relative paths; JS tools emit package-relative paths
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const absPath = existsSync(resolve(ROOT, filePath))
           ? resolve(ROOT, filePath)
           : resolve(pkgDir, filePath)

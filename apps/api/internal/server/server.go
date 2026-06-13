@@ -41,7 +41,6 @@ func (s *Server) buildRouter() *chi.Mux {
 		MaxAge:           300,
 	}))
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
 

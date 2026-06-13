@@ -42,7 +42,7 @@ func loadDotEnv(filename string) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -54,7 +54,7 @@ func loadDotEnv(filename string) {
 		if !ok || os.Getenv(strings.TrimSpace(key)) != "" {
 			continue
 		}
-		os.Setenv(strings.TrimSpace(key), strings.TrimSpace(value))
+		_ = os.Setenv(strings.TrimSpace(key), strings.TrimSpace(value))
 	}
 }
 
