@@ -31,11 +31,11 @@ Close all open questions before writing any feature code. A bad foundation compo
 
 ### Goals
 
-- [ ] Resolve [decision backlog](decisions/backlog.md) — pick logging library, testing strategy, API error format, API versioning. Write ADRs for each (half a day)
-- [ ] Backend scaffold — Go module, Chi router, DB connection pool, `GET /health`, middleware skeleton (auth, CORS, request logging), first goose migration (users + orgs)
-- [ ] Frontend scaffold — Vue 3 + Vite, Pinia, Vue Router, TanStack Query, shadcn-vue wired up, base layout
-- [ ] Local dev — `docker-compose.yml` for PostgreSQL so `make dev` starts the full stack
-- [ ] CI — GitHub Actions: lint + test on push and PR
+- [x] Resolve [decision backlog](decisions/backlog.md) — ADRs 001–011 written (worker model, multi-tenancy, auth, sqlc, infra, status pages, API versioning, error format, logging, testing, Chi)
+- [x] Backend scaffold — Go module, Chi router, DB connection pool, `GET /health`, CORS middleware, JWT auth middleware, request logging, first goose migration (users + orgs + refresh_tokens)
+- [x] Frontend scaffold — Vue 3 + Vite, Pinia, Vue Router, TanStack Query, Radix Vue, base layout, auth guard, design tokens
+- [x] Local dev — `docker-compose.yml` for PostgreSQL so `make dev` starts the full stack
+- [x] CI — GitHub Actions: lint + test + Codacy coverage upload on push and PR
 
 ### Deliverable
 
@@ -53,7 +53,7 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 
 ### Goals
 
-- [ ] DB schema — users, orgs, refresh_tokens tables
+- [x] DB schema — users, orgs, refresh_tokens tables (migration 001_initial.sql)
 - [ ] US-0101 Sign up — registration endpoint, sign-up page
 - [ ] US-0102 Sign in — JWT + httpOnly cookie, sign-in page
 - [ ] US-0103 Sign out — revoke token, clear cookie

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -44,12 +45,20 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
 
+	auth := handler.NewAuthHandler(s.cfg, s.db)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
 
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/sign-up", auth.SignUp)
+			r.Post("/sign-in", auth.SignIn)
+			r.Post("/sign-out", auth.SignOut)
+		})
+
 		r.Group(func(r chi.Router) {
 			r.Use(apimiddleware.RequireAuth(s.cfg.JWTSecret))
-			// authenticated routes go here
+			r.Get("/me", auth.Me)
 		})
 	})
 
