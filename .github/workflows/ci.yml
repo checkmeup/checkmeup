@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: checkmeup
+          POSTGRES_PASSWORD: checkmeup
+          POSTGRES_DB: checkmeup
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable
+      JWT_SECRET: ci-jwt-secret-not-used-in-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+          cache: true
+          cache-dependency-path: apps/api/go.sum
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Install Go tools
+        run: |
+          go install github.com/jandelgado/gcov2lcov@latest
+          go install github.com/pressly/goose/v3/cmd/goose@latest
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v1.64.8
+
+      - name: Run migrations
+        run: goose -dir apps/api/migrations postgres "$DATABASE_URL" up
+
+      - name: Lint & test
+        run: make test
+
+      - name: Upload coverage to Codacy
+        if: ${{ !cancelled() }}
+        uses: codacy/codacy-coverage-reporter-action@v1
+        continue-on-error: true
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage/lcov.info
