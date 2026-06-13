@@ -9,12 +9,13 @@ import (
 )
 
 type Config struct {
-	Env         string
-	Port        string
-	DatabaseURL string
-	JWTSecret   string
+	Env           string
+	Port          string
+	DatabaseURL   string
+	JWTSecret     string
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
+	CORSOrigins   []string
 }
 
 func Load() *Config {
@@ -27,6 +28,7 @@ func Load() *Config {
 		JWTSecret:     mustEnv("JWT_SECRET"),
 		JWTAccessTTL:  parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),
 		JWTRefreshTTL: parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
+		CORSOrigins:   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
 	}
 	return cfg
 }
@@ -70,6 +72,16 @@ func mustEnv(key string) string {
 		os.Exit(1)
 	}
 	return v
+}
+
+func parseOrigins(s string) []string {
+	var origins []string
+	for _, o := range strings.Split(s, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
 }
 
 func parseDuration(s string) time.Duration {

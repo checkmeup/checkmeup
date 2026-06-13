@@ -13,7 +13,7 @@ Needed a testing approach for both Go (backend) and Vue (frontend) before writin
 
 **Frontend:** Vitest (already in the Turborepo pipeline). Unit tests for pure logic (stores, utils). No component tests on MVP — the UI surface changes too fast to justify the maintenance cost yet.
 
-**Coverage:** collected per-package in Go, per-app in Vitest; merged by `tools/merge-coverage.mjs`.
+**Coverage:** Go outputs `coverage/coverage.out` (native format); `gcov2lcov` converts it to `coverage/lcov.info` with repo-root-relative `SF:` paths as part of the `test` script in `apps/api/package.json`. Vitest outputs `lcov.info` directly. `tools/merge-coverage.mjs` then concatenates all `**/coverage/lcov.info` files into a single `coverage/lcov.info` at the repo root, rewriting package-relative paths to repo-relative ones (Go paths are already repo-relative and pass through unchanged).
 
 ## Consequences
 

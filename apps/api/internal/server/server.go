@@ -9,9 +9,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
 
@@ -31,6 +33,13 @@ func New(cfg *config.Config, logger *slog.Logger, db *pgxpool.Pool) *Server {
 func (s *Server) buildRouter() *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   s.cfg.CORSOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
@@ -38,6 +47,11 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
+
+		r.Group(func(r chi.Router) {
+			r.Use(apimiddleware.RequireAuth(s.cfg.JWTSecret))
+			// authenticated routes go here
+		})
 	})
 
 	return r

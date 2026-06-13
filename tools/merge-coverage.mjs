@@ -1,5 +1,5 @@
 // tools/merge-coverage.mjs
-import { readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { glob } from 'glob'
 import { dirname, resolve, relative } from 'path'
 
@@ -19,9 +19,12 @@ const merged = files
       .split('\n')
       .map((line) => {
         if (!line.startsWith('SF:')) return line
-        const filePath = line.slice(3) // src/index.ts
-        const absPath = resolve(pkgDir, filePath) // /repo/apps/ingest/src/index.ts
-        const relPath = relative(ROOT, absPath) // apps/ingest/src/index.ts
+        const filePath = line.slice(3)
+        // gcov2lcov (Go) already emits repo-root-relative paths; JS tools emit package-relative paths
+        const absPath = existsSync(resolve(ROOT, filePath))
+          ? resolve(ROOT, filePath)
+          : resolve(pkgDir, filePath)
+        const relPath = relative(ROOT, absPath)
         return `SF:${relPath}`
       })
       .join('\n')
