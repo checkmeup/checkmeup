@@ -1,19 +1,34 @@
-# Ignore Mac system files
+# OS
 .DS_Store
+Thumbs.db
 
-# Ignore Node.js files
+# Editors
+.vscode/
+*.swp
+*.swo
+
+# Environment — never commit secrets
+.env
+.env.*
+!.env.example
+
+# Node
 node_modules/
 package-lock.json
 yarn.lock
 
-# Ignore turbo files
-.turbo/
+# Bun
+bun.lockb
 
-# Ignore Vite files
+# Build output
 dist/
 
-# Ignore test coverage files
+# Go
+apps/api/bin/
+apps/api/tmp/
+
+# Test coverage
 coverage/
 
-# Ignore VSCode files
-.vscode/
+# Turborepo
+.turbo/

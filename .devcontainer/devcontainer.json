@@ -34,12 +34,13 @@
         "explorer.fileNesting.patterns": {
           "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
           "vite.config.*": "vitest.config.*",
-          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json"
+          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig"
         }
       },
       "extensions": [
         "anthropic.claude-code",
         "cloudflare.cloudflare-workers-bindings-extension",
+        "golang.go",
         "juanlb.claude-commit",
         "ms-azuretools.vscode-containers",
         "oxc.oxc-vscode",
@@ -55,10 +56,14 @@
     "source=${localEnv:HOME}/.zsh_history,target=/home/dev/.zsh_history,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude,target=/home/dev/.claude,type=bind,consistency=cached"
   ],
-  "forwardPorts": [5173],
+  "forwardPorts": [5173, 8080],
   "portsAttributes": {
     "5173": {
       "label": "Vue Dev Server",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Go API",
       "onAutoForward": "notify"
     }
   },
