@@ -57,12 +57,8 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
-	if req.Email == "" || req.Password == "" {
-		respond.Error(w, http.StatusBadRequest, "email and password are required", "bad_request")
-		return
-	}
-	if len(req.Password) < 8 {
-		respond.Error(w, http.StatusBadRequest, "password must be at least 8 characters", "bad_request")
+	if msg := validateSignUp(req); msg != "" {
+		respond.Error(w, http.StatusBadRequest, msg, "bad_request")
 		return
 	}
 
@@ -85,7 +81,7 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: string(hash),
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") {
+		if isUniqueViolation(err) {
 			respond.Error(w, http.StatusConflict, "an account with this email already exists", "email_taken")
 			return
 		}
@@ -103,6 +99,21 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		Email: user.Email,
 		OrgID: user.OrgID.String(),
 	})
+}
+
+func validateSignUp(req signUpRequest) string {
+	if req.Email == "" || req.Password == "" {
+		return "email and password are required"
+	}
+	if len(req.Password) < 8 {
+		return "password must be at least 8 characters"
+	}
+	return ""
+}
+
+func isUniqueViolation(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "unique") || strings.Contains(s, "duplicate")
 }
 
 func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
@@ -145,8 +156,9 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 		tokenHash := hashToken(cookie.Value)
 		_ = h.queries.DeleteRefreshToken(r.Context(), tokenHash)
 	}
-	clearCookie(w, "access_token")
-	clearCookie(w, "refresh_token")
+	secure := !h.cfg.IsDev()
+	clearCookie(w, "access_token", secure)
+	clearCookie(w, "refresh_token", secure)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -234,13 +246,14 @@ func setCookie(w http.ResponseWriter, name, value string, maxAge int, secure boo
 	})
 }
 
-func clearCookie(w http.ResponseWriter, name string) {
+func clearCookie(w http.ResponseWriter, name string, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
 	})
 }
