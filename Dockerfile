@@ -1,13 +1,12 @@
 # ── Stage 1: Build Vue frontend ────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS frontend
-WORKDIR /workspace
+WORKDIR /app
 
-COPY package.json bun.lock turbo.json ./
-COPY apps/web/package.json apps/web/
+COPY apps/web/package.json ./
 RUN bun install --ignore-scripts
 
-COPY apps/web apps/web
-RUN bun --cwd apps/web run build
+COPY apps/web .
+RUN bun run build
 
 # ── Stage 2: Build Go API ───────────────────────────────────────────────────
 FROM golang:1.25-bookworm AS backend
@@ -26,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend /api /api
-COPY --from=frontend /workspace/apps/web/dist /static
+COPY --from=frontend /app/dist /static
 COPY apps/api/migrations /migrations
 
 ENV MIGRATIONS_DIR=/migrations \
