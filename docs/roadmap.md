@@ -11,15 +11,15 @@
 
 ## Overview
 
-| Phase | Dates | Days | ~Hours | Epics | Milestone |
-|-------|-------|------|--------|-------|-----------|
-| [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | Dev stack + scaffold running |
-| [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | Sign up · sign in · sessions |
-| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 28–Jul 11 | 14 | 57 h | EP-02, EP-05 | **First useful version** |
-| [3 — Uptime](#phase-3--uptime-monitor) | Jul 12–18 | 7 | 28 h | EP-03 | URL uptime live |
-| [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | Full monitoring suite |
-| [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | Public status pages |
-| [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | **MVP launch-ready** |
+| Phase | Dates | Days | ~Hours | Epics | Status | Milestone |
+|-------|-------|------|--------|-------|--------|-----------|
+| [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
+| [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | 🔄 In progress | Sign up · sign in · sessions |
+| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 28–Jul 11 | 14 | 57 h | EP-02, EP-05 | ⬜ Not started | **First useful version** |
+| [3 — Uptime](#phase-3--uptime-monitor) | Jul 12–18 | 7 | 28 h | EP-03 | ⬜ Not started | URL uptime live |
+| [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | ⬜ Not started | Full monitoring suite |
+| [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | ⬜ Not started | Public status pages |
+| [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |
 
 ---
 
@@ -54,12 +54,12 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 ### Goals
 
 - [x] DB schema — users, orgs, refresh_tokens tables (migration 001_initial.sql)
-- [ ] US-0101 Sign up — registration endpoint, sign-up page
-- [ ] US-0102 Sign in — JWT + httpOnly cookie, sign-in page
-- [ ] US-0103 Sign out — revoke token, clear cookie
+- [x] US-0101 Sign up — registration endpoint, sign-up page
+- [x] US-0102 Sign in — JWT + httpOnly cookie, sign-in page
+- [x] US-0103 Sign out — revoke token, clear cookie
 - [ ] US-0104 Silent token refresh — refresh endpoint, frontend interceptor
-- [ ] Protected route guard in Vue Router + auth Pinia store
-- [ ] Dashboard shell (empty) behind auth
+- [x] Protected route guard in Vue Router + auth Pinia store
+- [x] Dashboard shell (empty) behind auth
 
 > **US-0105 (password reset) deferred** — needs an email provider, which is still an open decision. Add post-launch.
 
