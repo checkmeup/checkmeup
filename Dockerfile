@@ -1,5 +1,5 @@
-# ── Stage 1: Build Vue frontend ────────────────────────────────────────────
-FROM oven/bun:1.3-alpine AS frontend
+# ── Stage 1: Build Vue frontend (native arch — output is platform-independent JS/CSS) ─
+FROM --platform=${BUILDPLATFORM} oven/bun:1.3-alpine AS frontend
 WORKDIR /app
 
 COPY apps/web/package.json ./
@@ -8,17 +8,17 @@ RUN bun install --ignore-scripts
 COPY apps/web .
 RUN ./node_modules/.bin/vite build
 
-# ── Stage 2: Build Go API ───────────────────────────────────────────────────
-FROM golang:1.25-bookworm AS backend
+# ── Stage 2: Build Go API (native arch + cross-compile target) ──────────────
+FROM --platform=${BUILDPLATFORM} golang:1.25-bookworm AS backend
 WORKDIR /app
 
 COPY apps/api/go.mod apps/api/go.sum ./
 RUN go mod download
 
 COPY apps/api .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -o /api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /api ./cmd/api
 
-# ── Stage 3: Runtime ────────────────────────────────────────────────────────
+# ── Stage 3: Runtime (amd64 — matches server) ───────────────────────────────
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
