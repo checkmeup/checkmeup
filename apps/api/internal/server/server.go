@@ -18,6 +18,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
+	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
 type Server struct {
@@ -47,11 +48,19 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
 
+	tg := telegram.NewClient(s.cfg.TelegramBotToken)
 	auth := handler.NewAuthHandler(s.cfg, s.db)
+	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
+	settings := handler.NewSettingsHandler(s.cfg, s.db, tg)
+	ping := handler.NewPingHandler(s.db)
 
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
 	}
+
+	// No-auth public endpoints
+	r.Get("/ping/{token}", ping.ReceivePing)
+	r.Post("/webhook/telegram", settings.HandleTelegramWebhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
@@ -67,7 +76,27 @@ func (s *Server) buildRouter() *chi.Mux {
 
 		r.Group(func(r chi.Router) {
 			r.Use(apimiddleware.RequireAuth(s.cfg.JWTSecret))
+
 			r.Get("/me", auth.Me)
+
+			r.Route("/settings", func(r chi.Router) {
+				r.Get("/", settings.GetSettings)
+				r.Put("/telegram", settings.SaveTelegram)
+				r.Post("/telegram/test", settings.TestTelegram)
+			})
+
+			r.Route("/monitors/cron", func(r chi.Router) {
+				r.Get("/", monitors.ListCronMonitors)
+				r.Post("/", monitors.CreateCronMonitor)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", monitors.GetCronMonitor)
+					r.Patch("/", monitors.UpdateCronMonitor)
+					r.Delete("/", monitors.DeleteCronMonitor)
+					r.Post("/pause", monitors.PauseCronMonitor)
+					r.Post("/resume", monitors.ResumeCronMonitor)
+					r.Get("/pings", monitors.GetCronPings)
+				})
+			})
 		})
 	})
 

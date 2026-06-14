@@ -12,6 +12,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type MonitorStatus string
+
+const (
+	MonitorStatusWaiting MonitorStatus = "waiting"
+	MonitorStatusUp      MonitorStatus = "up"
+	MonitorStatusDown    MonitorStatus = "down"
+	MonitorStatusPaused  MonitorStatus = "paused"
+)
+
+func (e *MonitorStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MonitorStatus(s)
+	case string:
+		*e = MonitorStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MonitorStatus: %T", src)
+	}
+	return nil
+}
+
+type NullMonitorStatus struct {
+	MonitorStatus MonitorStatus `json:"monitor_status"`
+	Valid         bool          `json:"valid"` // Valid is true if MonitorStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMonitorStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.MonitorStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MonitorStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMonitorStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MonitorStatus), nil
+}
+
 type Plan string
 
 const (
@@ -56,12 +100,42 @@ func (ns NullPlan) Value() (driver.Value, error) {
 	return string(ns.Plan), nil
 }
 
+type CronIncident struct {
+	ID         uuid.UUID          `json:"id"`
+	MonitorID  uuid.UUID          `json:"monitor_id"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+}
+
+type CronMonitor struct {
+	ID              uuid.UUID          `json:"id"`
+	OrgID           uuid.UUID          `json:"org_id"`
+	Name            string             `json:"name"`
+	Schedule        string             `json:"schedule"`
+	GracePeriodMins int32              `json:"grace_period_mins"`
+	PingToken       string             `json:"ping_token"`
+	Status          MonitorStatus      `json:"status"`
+	AlertsEnabled   bool               `json:"alerts_enabled"`
+	LastPingAt      pgtype.Timestamptz `json:"last_ping_at"`
+	NextPingAt      pgtype.Timestamptz `json:"next_ping_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CronPing struct {
+	ID         uuid.UUID          `json:"id"`
+	MonitorID  uuid.UUID          `json:"monitor_id"`
+	ReceivedAt pgtype.Timestamptz `json:"received_at"`
+	SourceIp   string             `json:"source_ip"`
+}
+
 type Org struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	Plan      Plan               `json:"plan"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID             uuid.UUID          `json:"id"`
+	Name           string             `json:"name"`
+	Plan           Plan               `json:"plan"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	TelegramChatID pgtype.Text        `json:"telegram_chat_id"`
 }
 
 type PasswordResetToken struct {

@@ -9,17 +9,19 @@ import (
 )
 
 type Config struct {
-	Env           string
-	Port          string
-	DatabaseURL   string
-	JWTSecret     string
-	JWTAccessTTL  time.Duration
-	JWTRefreshTTL time.Duration
-	CORSOrigins   []string
-	MigrationsDir string
-	StaticDir     string
-	ResendAPIKey  string
-	AppURL        string
+	Env              string
+	Port             string
+	DatabaseURL      string
+	JWTSecret        string
+	JWTAccessTTL     time.Duration
+	JWTRefreshTTL    time.Duration
+	CORSOrigins      []string
+	MigrationsDir    string
+	StaticDir        string
+	ResendAPIKey     string
+	AppURL           string
+	BaseURL          string
+	TelegramBotToken string
 }
 
 func Load() *Config {
@@ -34,9 +36,11 @@ func Load() *Config {
 		JWTRefreshTTL: parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
 		CORSOrigins:   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
-		StaticDir:     getEnv("STATIC_DIR", ""),
-		ResendAPIKey:  getEnv("RESEND_API_KEY", ""),
-		AppURL:        getEnv("APP_URL", "http://localhost:5173"),
+		StaticDir:        getEnv("STATIC_DIR", ""),
+		ResendAPIKey:     getEnv("RESEND_API_KEY", ""),
+		AppURL:           getEnv("APP_URL", "http://localhost:5173"),
+		BaseURL:          getEnv("BASE_URL", "http://localhost:8080"),
+		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
 	}
 	return cfg
 }

@@ -45,6 +45,36 @@ export const router = createRouter({
       component: () => import('@/views/DashboardView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/monitors/cron',
+      name: 'cron-monitors',
+      component: () => import('@/views/CronMonitorListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/cron/new',
+      name: 'cron-monitor-create',
+      component: () => import('@/views/CronMonitorCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/cron/:id',
+      name: 'cron-monitor-detail',
+      component: () => import('@/views/CronMonitorDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/cron/:id/edit',
+      name: 'cron-monitor-edit',
+      component: () => import('@/views/CronMonitorEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

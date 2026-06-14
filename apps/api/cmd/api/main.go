@@ -12,6 +12,7 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/server"
+	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
 func main() {
@@ -54,6 +55,16 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("database connected")
+
+	if cfg.TelegramBotToken != "" && !cfg.IsDev() {
+		tg := telegram.NewClient(cfg.TelegramBotToken)
+		webhookURL := cfg.BaseURL + "/webhook/telegram"
+		if err := tg.SetWebhook(webhookURL); err != nil {
+			logger.Error("telegram webhook registration failed", "err", err)
+		} else {
+			logger.Info("telegram webhook registered", "url", webhookURL)
+		}
+	}
 
 	srv := server.New(cfg, logger, db)
 	if err := srv.Start(); err != nil {
