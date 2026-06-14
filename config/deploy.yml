@@ -36,7 +36,7 @@ accessories:
   db:
     image: postgres:17-alpine
     host: 167.233.116.118
-    port: "5432:5432"
+    port: "127.0.0.1:5432:5432"
     env:
       secret:
         - POSTGRES_PASSWORD
