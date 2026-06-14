@@ -1,7 +1,10 @@
 {
   "version": "0.2",
   "words": [
+    "BUILDPLATFORM",
+    "buildx",
     "bunx",
+    "usermod",
     "checkmeup",
     "codacy",
     "commandhistory",
@@ -32,6 +35,7 @@
     "pgxpool",
     "pressly",
     "sqlc",
+    "sslmode",
     "statefulness",
     "stdlib",
     "stretchr",
