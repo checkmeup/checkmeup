@@ -4,10 +4,10 @@ WORKDIR /workspace
 
 COPY package.json bun.lock turbo.json ./
 COPY apps/web/package.json apps/web/
-RUN bun install
+RUN bun install --ignore-scripts
 
 COPY apps/web apps/web
-RUN bunx turbo run build --filter=@checkmeup/web
+RUN bun --cwd apps/web run build
 
 # ── Stage 2: Build Go API ───────────────────────────────────────────────────
 FROM golang:1.25-bookworm AS backend
