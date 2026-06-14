@@ -1,4 +1,4 @@
-.PHONY: install update lint test dev build clean migrate migrate-create
+.PHONY: install update lint test dev build clean migrate migrate-create deploy
 
 install:
 	bun install
@@ -30,6 +30,9 @@ clean:
 	rm -Rf apps/web/node_modules
 	rm -Rf apps/web/dist
 	rm -Rf apps/web/coverage
+
+deploy:
+	set -a && source .env && set +a && kamal $(cmd)
 
 # Load DATABASE_URL from apps/api/.env and run goose
 DB_URL := $(shell grep '^DATABASE_URL=' apps/api/.env 2>/dev/null | cut -d= -f2-)
