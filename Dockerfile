@@ -6,7 +6,7 @@ COPY apps/web/package.json ./
 RUN bun install --ignore-scripts
 
 COPY apps/web .
-RUN bun run build
+RUN ./node_modules/.bin/vite build
 
 # ── Stage 2: Build Go API ───────────────────────────────────────────────────
 FROM golang:1.25-bookworm AS backend
