@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -47,6 +49,10 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 
+	if s.cfg.StaticDir != "" {
+		r.Get("/*", s.handleSPA)
+	}
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
 
@@ -78,6 +84,15 @@ func (s *Server) Start() error {
 	}
 
 	return srv.ListenAndServe()
+}
+
+func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(s.cfg.StaticDir, filepath.Clean("/"+r.URL.Path))
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		http.ServeFile(w, r, filepath.Join(s.cfg.StaticDir, "index.html"))
+		return
+	}
+	http.ServeFile(w, r, path)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

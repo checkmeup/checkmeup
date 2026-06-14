@@ -16,6 +16,8 @@ type Config struct {
 	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
 	CORSOrigins   []string
+	MigrationsDir string
+	StaticDir     string
 }
 
 func Load() *Config {
@@ -29,6 +31,8 @@ func Load() *Config {
 		JWTAccessTTL:  parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),
 		JWTRefreshTTL: parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
 		CORSOrigins:   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
+		MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
+		StaticDir:     getEnv("STATIC_DIR", ""),
 	}
 	return cfg
 }

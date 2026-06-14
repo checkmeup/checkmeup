@@ -35,6 +35,7 @@
     "statefulness",
     "stdlib",
     "stretchr",
+    "trimpath",
     "wagoid",
     "zerolog"
   ]

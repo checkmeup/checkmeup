@@ -1,0 +1,13 @@
+node_modules
+apps/web/node_modules
+apps/web/dist
+apps/web/coverage
+apps/api/tmp
+apps/api/coverage
+apps/api/bin
+coverage
+dist
+.git
+.github
+docs
+assets/*.sketch

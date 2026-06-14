@@ -1,0 +1,47 @@
+service: checkmeup
+image: checkmeup/checkmeup
+
+servers:
+  - 167.233.116.118
+
+proxy:
+  ssl: true
+  host: checkmeup.net
+  app_port: 8080
+
+registry:
+  server: ghcr.io
+  username: checkmeup
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    ENV: production
+    PORT: "8080"
+    CORS_ORIGINS: https://checkmeup.net
+    MIGRATIONS_DIR: /migrations
+    STATIC_DIR: /static
+  secret:
+    - DATABASE_URL
+    - JWT_SECRET
+
+ssh:
+  user: deploy
+
+builder:
+  arch: amd64
+
+accessories:
+  db:
+    image: postgres:17-alpine
+    host: 167.233.116.118
+    port: "5432:5432"
+    env:
+      secret:
+        - POSTGRES_PASSWORD
+      clear:
+        POSTGRES_USER: checkmeup
+        POSTGRES_DB: checkmeup
+    directories:
+      - data:/var/lib/postgresql/data
