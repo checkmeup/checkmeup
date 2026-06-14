@@ -11,8 +11,10 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/server"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 func main() {
@@ -43,21 +45,22 @@ func main() {
 	}
 	logger.Info("migrations applied", "dir", cfg.MigrationsDir)
 
-	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Error("failed to connect to database", "err", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer pool.Close()
 
-	if err := db.Ping(context.Background()); err != nil {
+	if err := pool.Ping(context.Background()); err != nil {
 		logger.Error("database ping failed", "err", err)
 		os.Exit(1)
 	}
 	logger.Info("database connected")
 
+	tg := telegram.NewClient(cfg.TelegramBotToken)
+
 	if cfg.TelegramBotToken != "" && !cfg.IsDev() {
-		tg := telegram.NewClient(cfg.TelegramBotToken)
 		webhookURL := cfg.BaseURL + "/webhook/telegram"
 		if err := tg.SetWebhook(webhookURL); err != nil {
 			logger.Error("telegram webhook registration failed", "err", err)
@@ -66,7 +69,11 @@ func main() {
 		}
 	}
 
-	srv := server.New(cfg, logger, db)
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	go worker.Run(workerCtx, db.New(pool), tg, logger)
+
+	srv := server.New(cfg, logger, pool)
 	if err := srv.Start(); err != nil {
 		logger.Error("server error", "err", err)
 		os.Exit(1)

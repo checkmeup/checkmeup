@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,14 +13,16 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
 type PingHandler struct {
 	queries *db.Queries
+	tg      *telegram.Client
 }
 
-func NewPingHandler(pool *pgxpool.Pool) *PingHandler {
-	return &PingHandler{queries: db.New(pool)}
+func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client) *PingHandler {
+	return &PingHandler{queries: db.New(pool), tg: tg}
 }
 
 // ReceivePing handles GET /ping/{token}
@@ -46,6 +49,8 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wasDown := monitor.Status == db.MonitorStatusDown
+
 	// Don't update next_ping_at for paused monitors; the worker ignores them anyway.
 	if monitor.Status != db.MonitorStatusPaused {
 		nextPing := computeNextPing(monitor.Schedule, now, int(monitor.GracePeriodMins))
@@ -55,6 +60,23 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 			LastPingAt: pgtype.Timestamptz{Time: now, Valid: true},
 			NextPingAt: pgtype.Timestamptz{Time: nextPing, Valid: true},
 		})
+	}
+
+	// Recovery alert: monitor was down and just checked in again.
+	if wasDown && monitor.AlertsEnabled {
+		inc, err := h.queries.ResolveLatestCronIncident(r.Context(), monitor.ID)
+		if err == nil {
+			org, err := h.queries.GetOrgByID(r.Context(), monitor.OrgID)
+			if err == nil && org.TelegramChatID.Valid {
+				downtime := now.Sub(inc.StartedAt.Time).Round(time.Second)
+				msg := fmt.Sprintf(
+					"✅ <b>%s</b> recovered\n\nDown for: %s",
+					monitor.Name,
+					formatDuration(downtime),
+				)
+				_ = h.tg.SendMessage(org.TelegramChatID.String, msg)
+			}
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -85,14 +107,27 @@ func computeNextPing(schedule string, now time.Time, graceMins int) time.Time {
 	return now.Add(time.Hour + time.Duration(graceMins)*time.Minute)
 }
 
-// parseEveryDuration parses "1h", "30m", "1d", "1w" etc.
+// parseEveryDuration parses "1h", "1hr", "1hour", "30m", "30min", "30mins",
+// "1d", "1day", "1w", "1week" etc.
 func parseEveryDuration(s string) time.Duration {
-	s = strings.TrimSpace(s)
+	s = strings.TrimSpace(strings.ToLower(s))
+	// Normalise word suffixes to single-char unit before parsing.
+	for _, r := range []struct{ old, new string }{
+		{"minutes", "m"}, {"minute", "m"}, {"mins", "m"}, {"min", "m"},
+		{"hours", "h"}, {"hour", "h"}, {"hrs", "h"}, {"hr", "h"},
+		{"weeks", "w"}, {"week", "w"},
+		{"days", "d"}, {"day", "d"},
+	} {
+		if strings.HasSuffix(s, r.old) {
+			s = strings.TrimSpace(s[:len(s)-len(r.old)]) + r.new
+			break
+		}
+	}
 	if len(s) < 2 {
 		return 0
 	}
 	unit := s[len(s)-1]
-	n, err := strconv.Atoi(s[:len(s)-1])
+	n, err := strconv.Atoi(strings.TrimSpace(s[:len(s)-1]))
 	if err != nil || n <= 0 {
 		return 0
 	}
@@ -125,5 +160,19 @@ func realIP(r *http.Request) string {
 		return addr[:i]
 	}
 	return addr
+}
+
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	s := int(d.Seconds()) % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	if m > 0 {
+		return fmt.Sprintf("%dm %ds", m, s)
+	}
+	return fmt.Sprintf("%ds", s)
 }
 

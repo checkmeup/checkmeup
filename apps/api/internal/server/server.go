@@ -52,7 +52,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
 	settings := handler.NewSettingsHandler(s.cfg, s.db, tg)
-	ping := handler.NewPingHandler(s.db)
+	ping := handler.NewPingHandler(s.db, tg)
 
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
