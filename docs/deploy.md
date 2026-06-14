@@ -87,7 +87,7 @@ kamal app details           # show running containers and image SHA
 | **Let's Encrypt SSL** | €0 | kamal-proxy provisions and renews TLS certificates automatically. |
 | **Kamal** | €0 | Open-source MIT tool, no SaaS fees. |
 | **GHCR (GitHub Container Registry)** | €0 – small | See below. |
-| **Domain name** | ~€10–15/yr | Separate, wherever you registered `checkmeup.net`. |
+| **Domain name** | ~$12/yr | `checkmeup.net` renewal cost. |
 
 **Total recurring: ~€6/mo + domain**
 
