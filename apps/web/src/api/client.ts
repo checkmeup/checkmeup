@@ -8,7 +8,32 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+let refreshPromise: Promise<void> | null = null
+
+async function attemptRefresh(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new ApiError(res.status, 'session expired')
+      })
+      .catch(async (err) => {
+        const { useAuthStore } = await import('@/stores/auth')
+        const { router } = await import('@/router')
+        useAuthStore().clear()
+        router.push({ name: 'sign-in' })
+        throw err
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+async function request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
   const res = await fetch(path, {
     ...init,
     credentials: 'include',
@@ -17,6 +42,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   })
+
+  if (res.status === 401 && retry) {
+    await attemptRefresh()
+    return request<T>(path, init, false)
+  }
 
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string }

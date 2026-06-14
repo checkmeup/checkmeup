@@ -151,6 +151,51 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "missing refresh token", "unauthenticated")
+		return
+	}
+
+	tokenHash := hashToken(cookie.Value)
+	token, err := h.queries.GetRefreshTokenByHash(r.Context(), tokenHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respond.Error(w, http.StatusUnauthorized, "invalid or expired refresh token", "unauthenticated")
+			return
+		}
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	if err := h.queries.DeleteRefreshToken(r.Context(), tokenHash); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	user, err := h.queries.GetUserByID(r.Context(), token.UserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respond.Error(w, http.StatusUnauthorized, "user not found", "unauthenticated")
+			return
+		}
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	if err := h.issueTokens(w, r, user); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, userResponse{
+		ID:    user.ID.String(),
+		Email: user.Email,
+		OrgID: user.OrgID.String(),
+	})
+}
+
 func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie("refresh_token"); err == nil {
 		tokenHash := hashToken(cookie.Value)

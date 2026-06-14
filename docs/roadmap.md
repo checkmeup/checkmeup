@@ -57,7 +57,7 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 - [x] US-0101 Sign up — registration endpoint, sign-up page
 - [x] US-0102 Sign in — JWT + httpOnly cookie, sign-in page
 - [x] US-0103 Sign out — revoke token, clear cookie
-- [ ] US-0104 Silent token refresh — refresh endpoint, frontend interceptor
+- [x] US-0104 Silent token refresh — refresh endpoint, frontend interceptor
 - [x] Protected route guard in Vue Router + auth Pinia store
 - [x] Dashboard shell (empty) behind auth
 
