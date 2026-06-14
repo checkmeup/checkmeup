@@ -10,12 +10,12 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 
 **Acceptance criteria:**
 
-- [ ] Email + password form with client-side validation
-- [ ] Email must be unique — duplicate returns a clear error
-- [ ] Password minimum 8 characters
-- [ ] Organization created automatically on sign-up (org name defaults to email prefix)
-- [ ] User is signed in immediately after registration
-- [ ] JWT access token set in httpOnly cookie; refresh token stored in DB
+- [x] Email + password form with client-side validation
+- [x] Email must be unique — duplicate returns a clear error
+- [x] Password minimum 8 characters
+- [x] Organization created automatically on sign-up (org name defaults to email prefix)
+- [x] User is signed in immediately after registration
+- [x] JWT access token set in httpOnly cookie; refresh token stored in DB
 
 ---
 
@@ -25,10 +25,10 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 
 **Acceptance criteria:**
 
-- [ ] Email + password sign-in form
-- [ ] Invalid credentials return a generic "incorrect email or password" error (no user enumeration)
-- [ ] JWT access token set in httpOnly cookie on success
-- [ ] Redirect to dashboard after sign-in
+- [x] Email + password sign-in form
+- [x] Invalid credentials return a generic "incorrect email or password" error (no user enumeration)
+- [x] JWT access token set in httpOnly cookie on success
+- [x] Redirect to dashboard after sign-in
 
 ---
 
@@ -38,9 +38,9 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 
 **Acceptance criteria:**
 
-- [ ] Sign-out clears the auth cookie
-- [ ] Refresh token revoked in DB
-- [ ] Redirect to sign-in page
+- [x] Sign-out clears the auth cookie
+- [x] Refresh token revoked in DB
+- [x] Redirect to sign-in page
 
 ---
 
@@ -50,9 +50,9 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 
 **Acceptance criteria:**
 
-- [ ] Access token silently refreshed using the refresh token before it expires
-- [ ] Refresh token rotated on each use
-- [ ] Expired or invalid refresh token redirects to sign-in without data loss
+- [x] Access token silently refreshed using the refresh token before it expires
+- [x] Refresh token rotated on each use
+- [x] Expired or invalid refresh token redirects to sign-in without data loss
 
 ---
 
@@ -62,8 +62,8 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 
 **Acceptance criteria:**
 
-- [ ] "Forgot password" link on sign-in page
-- [ ] Reset email sent with a time-limited link (1 hour TTL)
-- [ ] Token is single-use — invalidated immediately after use
-- [ ] Success message shown regardless of whether the email exists (no enumeration)
-- [ ] After reset, all existing refresh tokens for that user are revoked
+- [x] "Forgot password?" link on sign-in page
+- [x] Reset email sent with a time-limited link (1 hour TTL)
+- [x] Token is single-use — invalidated immediately after use
+- [x] Success message shown regardless of whether the email exists (no enumeration)
+- [x] After reset, all existing refresh tokens for that user are revoked

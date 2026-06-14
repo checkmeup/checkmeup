@@ -60,7 +60,16 @@ async function submit() {
       </div>
 
       <div class="space-y-1.5">
-        <Label for="password">Password</Label>
+        <div class="flex items-center justify-between">
+          <Label for="password">Password</Label>
+          <RouterLink
+            to="/forgot-password"
+            class="text-xs"
+            style="color: var(--text-muted)"
+          >
+            Forgot password?
+          </RouterLink>
+        </div>
         <Input
           id="password"
           v-model="password"

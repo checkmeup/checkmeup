@@ -14,7 +14,7 @@
 | Phase | Dates | Days | ~Hours | Epics | Status | Milestone |
 |-------|-------|------|--------|-------|--------|-----------|
 | [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
-| [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | 🔄 In progress | Sign up · sign in · sessions |
+| [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
 | [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 28–Jul 11 | 14 | 57 h | EP-02, EP-05 | ⬜ Not started | **First useful version** |
 | [3 — Uptime](#phase-3--uptime-monitor) | Jul 12–18 | 7 | 28 h | EP-03 | ⬜ Not started | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | ⬜ Not started | Full monitoring suite |
@@ -61,7 +61,7 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 - [x] Protected route guard in Vue Router + auth Pinia store
 - [x] Dashboard shell (empty) behind auth
 
-> **US-0105 (password reset) deferred** — needs an email provider, which is still an open decision. Add post-launch.
+> **US-0105 (password reset)** implemented with Resend ([ADR-012](decisions/012-email-resend.md)). Requires `RESEND_API_KEY` + `APP_URL` in env.
 
 ### Deliverable
 

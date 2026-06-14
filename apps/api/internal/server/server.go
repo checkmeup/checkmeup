@@ -61,6 +61,8 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Post("/sign-in", auth.SignIn)
 			r.Post("/sign-out", auth.SignOut)
 			r.Post("/refresh", auth.Refresh)
+			r.Post("/forgot-password", auth.ForgotPassword)
+			r.Post("/reset-password", auth.ResetPassword)
 		})
 
 		r.Group(func(r chi.Router) {

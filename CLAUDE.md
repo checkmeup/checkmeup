@@ -21,7 +21,7 @@ make clean    # wipe node_modules, dist, coverage
 
 ## Stack
 
-**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Telegram alerts · air (hot reload)  
+**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · air (hot reload)  
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
 **Infra:** Hetzner CX23 · Kamal · Traefik  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
@@ -79,3 +79,4 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - Skip `org_id` filters in DB queries — silent data leak across tenants
 - Add subdomains for status pages — `/status/:slug` path is intentional ([ADR-005](docs/decisions/005-status-page-same-domain.md))
 - Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))
+- Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error

@@ -11,7 +11,7 @@
 | 4 — SSL | 22 h | 0 h | — |
 | 5 — Status page | 30 h | 0 h | — |
 | 6 — Billing + polish | 40 h | 0 h | — |
-| **Total** | **233 h** | **13 h** | **-220 h** |
+| **Total** | **233 h** | **13 h** | — |
 
 ---
 

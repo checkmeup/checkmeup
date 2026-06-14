@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { api } from '@/api/client'
 
 export interface User {
   id: string
@@ -20,7 +19,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (status.value !== 'idle') return
     status.value = 'loading'
     try {
-      user.value = await api.get<User>('/api/v1/me')
+      // Use plain fetch to avoid the 401 interceptor triggering a redirect
+      // during the initial auth check — a 401 here just means "not logged in".
+      const res = await fetch('/api/v1/me', { credentials: 'include' })
+      if (!res.ok) throw new Error('unauthenticated')
+      user.value = (await res.json()) as User
       status.value = 'authenticated'
     } catch {
       user.value = null

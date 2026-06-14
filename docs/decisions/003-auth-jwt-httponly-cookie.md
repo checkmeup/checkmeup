@@ -34,6 +34,8 @@ Short-lived JWT in an httpOnly cookie for request auth. Refresh tokens stored in
 
 **Signing algorithm:** HS256 (HMAC-SHA256) using `JWT_SECRET` from env.
 
+**401 interceptor:** The frontend `api` client automatically retries any 401 response by calling `POST /auth/refresh`. If the refresh also fails, it clears auth state and redirects to sign-in. **Exception:** `auth.init()` (the initial session check on page load) uses plain `fetch` and bypasses the interceptor — a 401 on `/me` during init simply means "not logged in", not a session error requiring a redirect.
+
 ## Consequences
 
 - **XSS protection:** httpOnly cookie means JavaScript cannot read the token

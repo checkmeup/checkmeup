@@ -18,6 +18,8 @@ type Config struct {
 	CORSOrigins   []string
 	MigrationsDir string
 	StaticDir     string
+	ResendAPIKey  string
+	AppURL        string
 }
 
 func Load() *Config {
@@ -33,6 +35,8 @@ func Load() *Config {
 		CORSOrigins:   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
 		StaticDir:     getEnv("STATIC_DIR", ""),
+		ResendAPIKey:  getEnv("RESEND_API_KEY", ""),
+		AppURL:        getEnv("APP_URL", "http://localhost:5173"),
 	}
 	return cfg
 }
