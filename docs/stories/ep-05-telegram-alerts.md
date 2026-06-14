@@ -10,13 +10,13 @@ One Telegram chat per organization on MVP. Alert logic (debounce, thresholds) is
 
 **Acceptance criteria:**
 
-- [ ] Setup instructions shown in the UI:
+- [x] Setup instructions shown in the UI:
   1. Start the checkmeup bot in Telegram
   2. Send `/start` to get a chat ID
   3. Paste the chat ID into the settings form
-- [ ] "Send test message" button verifies the connection before saving
-- [ ] Success and failure states shown clearly (wrong ID, bot not started, etc.)
-- [ ] One chat per org on MVP (replacing the previous one if changed)
+- [x] "Send test message" button verifies the connection before saving
+- [x] Success and failure states shown clearly (wrong ID, bot not started, etc.)
+- [x] One chat per org on MVP (replacing the previous one if changed)
 
 ---
 
@@ -26,9 +26,9 @@ One Telegram chat per organization on MVP. Alert logic (debounce, thresholds) is
 
 **Acceptance criteria:**
 
-- [ ] Message format: monitor name, type (cron / uptime / SSL), reason, timestamp
-- [ ] Sent within one check cycle of the status transition to "down"
-- [ ] Not sent if alerts are disabled for that monitor (US-0504)
+- [x] Message format: monitor name, type (cron / uptime / SSL), reason, timestamp
+- [x] Sent within one check cycle of the status transition to "down"
+- [x] Not sent if alerts are disabled for that monitor (US-0504)
 
 ---
 
@@ -38,9 +38,9 @@ One Telegram chat per organization on MVP. Alert logic (debounce, thresholds) is
 
 **Acceptance criteria:**
 
-- [ ] Message includes: monitor name, downtime duration
-- [ ] Only sent after a genuine "down" state — not after a transient check failure that never crossed the threshold
-- [ ] Not sent if alerts are disabled for that monitor
+- [x] Message includes: monitor name, downtime duration
+- [x] Only sent after a genuine "down" state — not after a transient check failure that never crossed the threshold
+- [x] Not sent if alerts are disabled for that monitor
 
 ---
 
@@ -50,6 +50,6 @@ One Telegram chat per organization on MVP. Alert logic (debounce, thresholds) is
 
 **Acceptance criteria:**
 
-- [ ] Alert toggle in each monitor's settings (on by default)
-- [ ] Muted monitors still track status and history — only notifications are suppressed
-- [ ] Muted state visible in the monitor list (icon or badge)
+- [x] Alert toggle in each monitor's settings (on by default)
+- [x] Muted monitors still track status and history — only notifications are suppressed
+- [x] Muted state visible in the monitor list (icon or badge)

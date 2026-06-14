@@ -15,7 +15,7 @@
 |-------|-------|------|--------|-------|--------|-----------|
 | [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
 | [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
-| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 28–Jul 11 | 14 | 57 h | EP-02, EP-05 | ⬜ Not started | **First useful version** |
+| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 5 h | EP-02, EP-05 | ✅ Done | **First useful version** |
 | [3 — Uptime](#phase-3--uptime-monitor) | Jul 12–18 | 7 | 28 h | EP-03 | ⬜ Not started | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | ⬜ Not started | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | ⬜ Not started | Public status pages |
@@ -71,35 +71,24 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 
 ## Phase 2 — Cron monitor + Telegram alerts
 
-**Sun Jun 28 → Sat Jul 11 · ~57 h (2 weeks)**
+**Sun Jun 14 · ~5 h (completed ahead of schedule)**
 
 [EP-02](stories/ep-02-cron-monitor.md) — 8 stories  
 [EP-05](stories/ep-05-telegram-alerts.md) — 4 stories
 
-This is the riskiest phase — first real background workers, most stories. Build Telegram first so every alert integration can be tested as you go.
+- [x] DB schema — monitors, pings, incidents (migration 003)
+- [x] US-0501 Connect Telegram — org settings page, chat ID input, test message button; bot webhook so `/start` replies with chat ID
+- [x] US-0504 Per-monitor alert toggle
+- [x] US-0201 Create cron monitor — token generation, CRUD API + create form
+- [x] US-0204 Monitor list — status badges (up / down / waiting / paused)
+- [x] US-0205 Monitor detail — config + paginated execution log
+- [x] US-0206–0208 Edit, pause/resume, delete
+- [x] US-0202 Receive a ping — `GET /ping/{token}`, log to DB, return 200 always
+- [x] US-0203 Missed ping detection — goroutine worker, 30-second ticker, grace period logic
+- [x] US-0502 Down alert — Telegram message on status → down
+- [x] US-0503 Recovery alert — Telegram message on status → up
 
-### Week 1 — Sun Jun 28 → Sat Jul 4 (~28 h)
-
-**Cron CRUD + Telegram setup**
-
-- [ ] DB schema — monitors, pings, incidents
-- [ ] US-0501 Connect Telegram — org settings page, chat ID input, test message button
-- [ ] US-0504 Per-monitor alert toggle
-- [ ] US-0201 Create cron monitor — token generation, CRUD API + create form
-- [ ] US-0204 Monitor list — status badges (up / down / waiting / paused)
-- [ ] US-0205 Monitor detail — config + paginated execution log
-- [ ] US-0206–0208 Edit, pause/resume, delete
-
-### Week 2 — Sun Jul 5 → Sat Jul 11 (~28 h)
-
-**Ping endpoint + worker + live alerts**
-
-- [ ] US-0202 Receive a ping — `GET /ping/{token}`, log to DB, return 200 always
-- [ ] US-0203 Missed ping detection — goroutine worker, 30-second ticker, grace period logic
-- [ ] US-0502 Down alert — Telegram message on status → down
-- [ ] US-0503 Recovery alert — Telegram message on status → up
-
-### Milestone 🟢 First useful version — Sat Jul 11
+### Milestone 🟢 First useful version — Jun 14
 
 Point a real cron job at checkmeup. Watch pings arrive. Get a Telegram message when the job stops. The product can be used for real at this point.
 
@@ -162,7 +151,7 @@ First public-facing surface. Needs to look polished — visitors will judge the 
 - [ ] US-0601 Create status page — slug validation with real-time availability check
 - [ ] US-0602 Add monitors — multi-select, custom display names, ordering
 - [ ] US-0603 Public page — overall status banner, 90-day uptime bars, no-login required
-- [ ] US-0604 Customise — title, description, logo URL
+- [ ] US-0604 Customize — title, description, logo URL
 - [ ] US-0605 Delete
 
 ### Deliverable

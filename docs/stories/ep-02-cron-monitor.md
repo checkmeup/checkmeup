@@ -10,10 +10,10 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Fields: name, schedule (cron expression or plain interval — e.g. "every 1h"), grace period
-- [ ] A unique ping URL with an unguessable token is generated on creation
-- [ ] Ping URL displayed prominently after creation with a copy button
-- [ ] Monitor starts in "waiting for first ping" state (not "down")
+- [x] Fields: name, schedule (cron expression or plain interval — e.g. "every 1h"), grace period
+- [x] A unique ping URL with an unguessable token is generated on creation
+- [x] Ping URL displayed prominently after creation with a copy button
+- [x] Monitor starts in "waiting for first ping" state (not "down")
 
 ---
 
@@ -23,10 +23,10 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Endpoint: `GET /ping/{token}` — no auth header required; the token is the secret
-- [ ] Any response from the endpoint is 200 OK (the job shouldn't fail because monitoring is down)
-- [ ] Ping logged with timestamp and source IP
-- [ ] Monitor status set to "up" and next expected ping calculated
+- [x] Endpoint: `GET /ping/{token}` — no auth header required; the token is the secret
+- [x] Any response from the endpoint is 200 OK (the job shouldn't fail because monitoring is down)
+- [x] Ping logged with timestamp and source IP
+- [x] Monitor status set to "up" and next expected ping calculated
 
 ---
 
@@ -36,10 +36,10 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Background worker checks overdue monitors on a ticker (every 30s)
-- [ ] Monitor status transitions to "down" when grace period expires without a ping
-- [ ] Alert sent via configured channel on transition to "down" (see EP-05)
-- [ ] "Expected at" and "missed by" shown on the detail page
+- [x] Background worker checks overdue monitors on a ticker (every 30s)
+- [x] Monitor status transitions to "down" when grace period expires without a ping
+- [x] Alert sent via configured channel on transition to "down" (see EP-05)
+- [x] "Expected at" and "missed by" shown on the detail page
 
 ---
 
@@ -49,9 +49,9 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Shows: name, status, last ping time, next expected ping
-- [ ] Status badges: up (green), down (red), waiting (grey), paused (slate)
-- [ ] Empty state with a prompt to create the first monitor
+- [x] Shows: name, status, last ping time, next expected ping
+- [x] Status badges: up (green), down (red), waiting (grey), paused (slate)
+- [x] Empty state with a prompt to create the first monitor
 
 ---
 
@@ -61,9 +61,9 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Shows ping URL, schedule, grace period, current status
-- [ ] Execution log: timestamp and status per ping, paginated, latest first
-- [ ] Incident log: when it went down, when it recovered, duration
+- [x] Shows ping URL, schedule, grace period, current status
+- [x] Execution log: timestamp and status per ping, paginated, latest first
+- [x] Incident log: when it went down, when it recovered, duration
 
 ---
 
@@ -73,9 +73,9 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Name, schedule, and grace period are editable
-- [ ] Ping URL / token is never changed (would break existing jobs)
-- [ ] Worker picks up the new schedule immediately without restart
+- [x] Name, schedule, and grace period are editable
+- [x] Ping URL / token is never changed (would break existing jobs)
+- [x] Worker picks up the new schedule immediately without restart
 
 ---
 
@@ -85,9 +85,9 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Paused monitor accepts pings but does not alert on missed ones
-- [ ] Status shown as "paused" in list and detail
-- [ ] Resume restores normal schedule checking from that moment
+- [x] Paused monitor accepts pings but does not alert on missed ones
+- [x] Status shown as "paused" in list and detail
+- [x] Resume restores normal schedule checking from that moment
 
 ---
 
@@ -97,6 +97,6 @@ A cron monitor expects a periodic HTTP ping from a scheduled job. If no ping arr
 
 **Acceptance criteria:**
 
-- [ ] Confirmation dialog required before deletion
-- [ ] Ping URL invalidated immediately — further pings return 404
-- [ ] All logs deleted
+- [x] Confirmation dialog required before deletion
+- [x] Ping URL invalidated immediately — further pings return 404
+- [x] All logs deleted
