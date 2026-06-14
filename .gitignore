@@ -32,4 +32,6 @@ coverage/
 
 # Turborepo
 .turbo/
+
+# Kamal — never commit secrets
 .kamal/secrets
