@@ -4,7 +4,7 @@ WORKDIR /workspace
 
 COPY package.json bun.lock turbo.json ./
 COPY apps/web/package.json apps/web/
-RUN bun install --frozen-lockfile
+RUN bun install
 
 COPY apps/web apps/web
 RUN bunx turbo run build --filter=@checkmeup/web
