@@ -327,7 +327,7 @@ func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysL
 	if err != nil {
 		return time.Time{}, "", 0, err
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // TLS close errors are not actionable
 
 	certs := conn.ConnectionState().PeerCertificates
 	if len(certs) == 0 {

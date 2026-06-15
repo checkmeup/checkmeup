@@ -112,23 +112,21 @@ Cross-cutting work done before Phase 3. Not a feature phase — no new user-visi
 
 ## Phase 3 — Uptime monitor
 
-**Sun Jul 12 → Sat Jul 18 · ~28 h**
+**Jun 15 · ~3 h (completed ahead of schedule)**
 
 [EP-03](stories/ep-03-uptime-monitor.md) — 6 stories
 
-Reuses patterns from Phase 2 (DB shape, worker model, alert wiring). Should move faster.
+Reused patterns from Phase 2 (DB shape, worker model, alert wiring). Completed same day as Phase 4 & 5.
 
-- [ ] DB schema — uptime_checks, uptime_incidents
-- [ ] US-0301 Create uptime monitor — CRUD + form, interval selector
-- [ ] US-0302 HTTP health check worker — HEAD→GET fallback, 10 s timeout, redirect follow
-- [ ] US-0303 Downtime detection — 2-consecutive-failures rule, alert on transition
-- [ ] US-0304 Monitor list — uptime %, last checked
-- [ ] US-0305 Monitor detail — response time chart, uptime % (24h/7d/30d), incident log
-- [ ] US-0306 Edit, pause, delete
+- [x] DB schema — uptime_checks, uptime_incidents (migration 006)
+- [x] US-0301 Create uptime monitor — CRUD + form, interval selector (10 min / 30 min)
+- [x] US-0302 HTTP health check worker — GET always, 10 s timeout, redirects followed, response time recorded (see ADR-014)
+- [x] US-0303 Downtime detection — 2-consecutive-failures rule, alert on transition, recovery alert, alert cap via `max_alerts_per_incident`
+- [x] US-0304 Monitor list — uptime %, last checked, status badges
+- [x] US-0305 Monitor detail — response time chart (24h), uptime % (24h/7d/30d), incident log, check log
+- [x] US-0306 Edit, pause, delete
 
-### Deliverable
-
-URL uptime monitoring is live end-to-end with Telegram alerts.
+### Milestone 🟢 URL uptime live — Jun 15
 
 ---
 

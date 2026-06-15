@@ -51,6 +51,9 @@ jobs:
       - name: Run migrations
         run: goose -dir apps/api/migrations postgres "$DATABASE_URL" up
 
+      - name: Disable telemetry
+        run: turbo telemetry disable
+
       - name: Lint & test
         run: make test
 
