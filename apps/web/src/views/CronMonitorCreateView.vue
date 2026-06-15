@@ -12,6 +12,7 @@ const router = useRouter()
 const name = ref('')
 const schedule = ref('')
 const gracePeriodMins = ref(5)
+const maxAlertsPerIncident = ref(3)
 const submitting = ref(false)
 const error = ref('')
 
@@ -31,6 +32,15 @@ const graceOptions = [
   { label: '1 hour', value: 60 },
 ]
 
+const alertLimitOptions = [
+  { label: 'Always alert', value: 0 },
+  { label: '1 time', value: 1 },
+  { label: '2 times', value: 2 },
+  { label: '3 times (default)', value: 3 },
+  { label: '5 times', value: 5 },
+  { label: '10 times', value: 10 },
+]
+
 async function submit() {
   error.value = ''
   if (!name.value.trim()) {
@@ -48,6 +58,7 @@ async function submit() {
       name: name.value.trim(),
       schedule: schedule.value.trim(),
       gracePeriodMins: gracePeriodMins.value,
+      maxAlertsPerIncident: maxAlertsPerIncident.value,
     })
     router.push({ name: 'cron-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -127,6 +138,23 @@ async function submit() {
           </select>
           <p class="text-xs mt-1" style="color: var(--text-muted)">
             How long to wait after the expected time before alerting.
+          </p>
+        </div>
+
+        <div>
+          <Label for="alertLimit">Alert limit per incident</Label>
+          <select
+            id="alertLimit"
+            v-model="maxAlertsPerIncident"
+            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+          >
+            <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Stop alerting after this many notifications per incident.
           </p>
         </div>
 

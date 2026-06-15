@@ -105,21 +105,23 @@ type CronIncident struct {
 	MonitorID  uuid.UUID          `json:"monitor_id"`
 	StartedAt  pgtype.Timestamptz `json:"started_at"`
 	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount int32              `json:"alert_count"`
 }
 
 type CronMonitor struct {
-	ID              uuid.UUID          `json:"id"`
-	OrgID           uuid.UUID          `json:"org_id"`
-	Name            string             `json:"name"`
-	Schedule        string             `json:"schedule"`
-	GracePeriodMins int32              `json:"grace_period_mins"`
-	PingToken       string             `json:"ping_token"`
-	Status          MonitorStatus      `json:"status"`
-	AlertsEnabled   bool               `json:"alerts_enabled"`
-	LastPingAt      pgtype.Timestamptz `json:"last_ping_at"`
-	NextPingAt      pgtype.Timestamptz `json:"next_ping_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Schedule             string             `json:"schedule"`
+	GracePeriodMins      int32              `json:"grace_period_mins"`
+	PingToken            string             `json:"ping_token"`
+	Status               MonitorStatus      `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	LastPingAt           pgtype.Timestamptz `json:"last_ping_at"`
+	NextPingAt           pgtype.Timestamptz `json:"next_ping_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
 }
 
 type CronPing struct {

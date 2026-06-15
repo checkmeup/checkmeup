@@ -33,17 +33,18 @@ func NewMonitorHandler(cfg *config.Config, pool *pgxpool.Pool, tg *telegram.Clie
 }
 
 type cronMonitorResponse struct {
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	Schedule        string  `json:"schedule"`
-	GracePeriodMins int32   `json:"gracePeriodMins"`
-	PingToken       string  `json:"pingToken"`
-	PingURL         string  `json:"pingUrl"`
-	Status          string  `json:"status"`
-	AlertsEnabled   bool    `json:"alertsEnabled"`
-	LastPingAt      *string `json:"lastPingAt"`
-	NextPingAt      *string `json:"nextPingAt"`
-	CreatedAt       string  `json:"createdAt"`
+	ID                   string  `json:"id"`
+	Name                 string  `json:"name"`
+	Schedule             string  `json:"schedule"`
+	GracePeriodMins      int32   `json:"gracePeriodMins"`
+	PingToken            string  `json:"pingToken"`
+	PingURL              string  `json:"pingUrl"`
+	Status               string  `json:"status"`
+	AlertsEnabled        bool    `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32   `json:"maxAlertsPerIncident"`
+	LastPingAt           *string `json:"lastPingAt"`
+	NextPingAt           *string `json:"nextPingAt"`
+	CreatedAt            string  `json:"createdAt"`
 }
 
 type cronPingResponse struct {
@@ -60,15 +61,16 @@ type cronIncidentResponse struct {
 
 func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse {
 	r := cronMonitorResponse{
-		ID:              m.ID.String(),
-		Name:            m.Name,
-		Schedule:        m.Schedule,
-		GracePeriodMins: m.GracePeriodMins,
-		PingToken:       m.PingToken,
-		PingURL:         fmt.Sprintf("%s/ping/%s", h.cfg.BaseURL, m.PingToken),
-		Status:          string(m.Status),
-		AlertsEnabled:   m.AlertsEnabled,
-		CreatedAt:       m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ID:                   m.ID.String(),
+		Name:                 m.Name,
+		Schedule:             m.Schedule,
+		GracePeriodMins:      m.GracePeriodMins,
+		PingToken:            m.PingToken,
+		PingURL:              fmt.Sprintf("%s/ping/%s", h.cfg.BaseURL, m.PingToken),
+		Status:               string(m.Status),
+		AlertsEnabled:        m.AlertsEnabled,
+		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
+		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
 	if m.LastPingAt.Valid {
 		t := m.LastPingAt.Time.Format("2006-01-02T15:04:05Z")
@@ -111,9 +113,10 @@ func (h *MonitorHandler) ListCronMonitors(w http.ResponseWriter, r *http.Request
 }
 
 type createCronMonitorRequest struct {
-	Name            string `json:"name"`
-	Schedule        string `json:"schedule"`
-	GracePeriodMins int32  `json:"gracePeriodMins"`
+	Name                 string `json:"name"`
+	Schedule             string `json:"schedule"`
+	GracePeriodMins      int32  `json:"gracePeriodMins"`
+	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
 }
 
 // CreateCronMonitor POST /api/v1/monitors/cron
@@ -144,6 +147,9 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	if req.GracePeriodMins < 1 {
 		req.GracePeriodMins = 5
 	}
+	if req.MaxAlertsPerIncident < 0 {
+		req.MaxAlertsPerIncident = 3
+	}
 
 	tokenBytes := make([]byte, 16)
 	if _, err := rand.Read(tokenBytes); err != nil {
@@ -153,11 +159,12 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	token := hex.EncodeToString(tokenBytes)
 
 	monitor, err := h.queries.CreateCronMonitor(r.Context(), db.CreateCronMonitorParams{
-		OrgID:           orgID,
-		Name:            req.Name,
-		Schedule:        req.Schedule,
-		GracePeriodMins: req.GracePeriodMins,
-		PingToken:       token,
+		OrgID:                orgID,
+		Name:                 req.Name,
+		Schedule:             req.Schedule,
+		GracePeriodMins:      req.GracePeriodMins,
+		PingToken:            token,
+		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -281,10 +288,11 @@ func (h *MonitorHandler) GetCronPings(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCronMonitorRequest struct {
-	Name            string `json:"name"`
-	Schedule        string `json:"schedule"`
-	GracePeriodMins int32  `json:"gracePeriodMins"`
-	AlertsEnabled   bool   `json:"alertsEnabled"`
+	Name                 string `json:"name"`
+	Schedule             string `json:"schedule"`
+	GracePeriodMins      int32  `json:"gracePeriodMins"`
+	AlertsEnabled        bool   `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
 }
 
 // UpdateCronMonitor PATCH /api/v1/monitors/cron/{id}
@@ -314,14 +322,18 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 	if req.GracePeriodMins < 1 {
 		req.GracePeriodMins = 5
 	}
+	if req.MaxAlertsPerIncident < 0 {
+		req.MaxAlertsPerIncident = 3
+	}
 
 	monitor, err := h.queries.UpdateCronMonitor(r.Context(), db.UpdateCronMonitorParams{
-		ID:              monitorID,
-		OrgID:           orgID,
-		Name:            req.Name,
-		Schedule:        req.Schedule,
-		GracePeriodMins: req.GracePeriodMins,
-		AlertsEnabled:   req.AlertsEnabled,
+		ID:                   monitorID,
+		OrgID:                orgID,
+		Name:                 req.Name,
+		Schedule:             req.Schedule,
+		GracePeriodMins:      req.GracePeriodMins,
+		AlertsEnabled:        req.AlertsEnabled,
+		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -10,21 +10,33 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
-// Run starts the missed-ping detection loop. It ticks every 30 seconds and
-// transitions overdue monitors to "down", opens incidents, and fires alerts.
-// Returns when ctx is cancelled.
+// Run starts the background worker loops. Returns when ctx is cancelled.
+//   - Every 30 s: missed-ping detection — transitions overdue monitors to "down" and fires alerts.
+//   - Every 24 h: ping retention cleanup — deletes cron_pings older than 30 days (ADR-015).
 func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	overdureTicker := time.NewTicker(30 * time.Second)
+	cleanupTicker := time.NewTicker(24 * time.Hour)
+	defer overdureTicker.Stop()
+	defer cleanupTicker.Stop()
 	logger.Info("cron worker started")
 	for {
 		select {
 		case <-ctx.Done():
 			logger.Info("cron worker stopped")
 			return
-		case <-ticker.C:
+		case <-overdureTicker.C:
 			checkOverdue(ctx, queries, tg, logger)
+		case <-cleanupTicker.C:
+			pruneOldPings(ctx, queries, logger)
 		}
+	}
+}
+
+func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
+	if err := queries.DeleteOldCronPings(ctx); err != nil {
+		logger.Error("worker: prune old pings", "err", err)
+	} else {
+		logger.Info("worker: pruned cron_pings older than 30 days")
 	}
 }
 
@@ -41,13 +53,21 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 			continue
 		}
 
-		if _, err := queries.CreateCronIncident(ctx, m.ID); err != nil {
+		inc, err := queries.CreateCronIncident(ctx, m.ID)
+		if err != nil {
 			logger.Error("worker: create incident", "monitor_id", m.ID, "err", err)
+			continue
 		}
 
 		if !m.AlertsEnabled {
 			continue
 		}
+
+		max := m.MaxAlertsPerIncident
+		if max > 0 && inc.AlertCount >= max {
+			continue
+		}
+
 		org, err := queries.GetOrgByID(ctx, m.OrgID)
 		if err != nil || !org.TelegramChatID.Valid {
 			continue
@@ -63,6 +83,10 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 		)
 		if err := tg.SendMessage(org.TelegramChatID.String, msg); err != nil {
 			logger.Error("worker: send down alert", "monitor_id", m.ID, "err", err)
+			continue
+		}
+		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
+			logger.Error("worker: increment alert count", "incident_id", inc.ID, "err", err)
 		}
 	}
 }

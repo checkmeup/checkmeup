@@ -15,6 +15,7 @@ const name = ref('')
 const schedule = ref('')
 const gracePeriodMins = ref(5)
 const alertsEnabled = ref(true)
+const maxAlertsPerIncident = ref(3)
 const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
@@ -27,6 +28,15 @@ const graceOptions = [
   { label: '1 hour', value: 60 },
 ]
 
+const alertLimitOptions = [
+  { label: 'Always alert', value: 0 },
+  { label: '1 time', value: 1 },
+  { label: '2 times', value: 2 },
+  { label: '3 times (default)', value: 3 },
+  { label: '5 times', value: 5 },
+  { label: '10 times', value: 10 },
+]
+
 onMounted(async () => {
   try {
     const detail = await monitorsApi.getCron(id)
@@ -35,6 +45,7 @@ onMounted(async () => {
     schedule.value = m.schedule
     gracePeriodMins.value = m.gracePeriodMins
     alertsEnabled.value = m.alertsEnabled
+    maxAlertsPerIncident.value = m.maxAlertsPerIncident
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load monitor'
   } finally {
@@ -60,6 +71,7 @@ async function submit() {
       schedule: schedule.value.trim(),
       gracePeriodMins: gracePeriodMins.value,
       alertsEnabled: alertsEnabled.value,
+      maxAlertsPerIncident: maxAlertsPerIncident.value,
     })
     router.push({ name: 'cron-monitor-detail', params: { id } })
   } catch (e: unknown) {
@@ -137,6 +149,23 @@ async function submit() {
             class="rounded"
           />
           <Label for="alerts" class="cursor-pointer">Send Telegram alerts</Label>
+        </div>
+
+        <div>
+          <Label for="alertLimit">Alert limit per incident</Label>
+          <select
+            id="alertLimit"
+            v-model="maxAlertsPerIncident"
+            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+          >
+            <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Stop alerting after this many notifications per incident.
+          </p>
         </div>
 
         <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

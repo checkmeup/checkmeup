@@ -9,6 +9,7 @@ export interface CronMonitor {
   pingUrl: string
   status: 'waiting' | 'up' | 'down' | 'paused'
   alertsEnabled: boolean
+  maxAlertsPerIncident: number
   lastPingAt: string | null
   nextPingAt: string | null
   createdAt: string
@@ -36,6 +37,7 @@ export interface CreateCronMonitorInput {
   name: string
   schedule: string
   gracePeriodMins: number
+  maxAlertsPerIncident: number
 }
 
 export interface UpdateCronMonitorInput {
@@ -43,6 +45,7 @@ export interface UpdateCronMonitorInput {
   schedule: string
   gracePeriodMins: number
   alertsEnabled: boolean
+  maxAlertsPerIncident: number
 }
 
 export const monitorsApi = {

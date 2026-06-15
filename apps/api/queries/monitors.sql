@@ -1,6 +1,6 @@
 -- name: CreateCronMonitor :one
-INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetCronMonitor :one
@@ -14,7 +14,7 @@ SELECT * FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateCronMonitor :one
 UPDATE cron_monitors
-SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, updated_at = NOW()
+SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
@@ -75,3 +75,9 @@ RETURNING *;
 
 -- name: ListCronIncidents :many
 SELECT * FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC;
+
+-- name: IncrementCronIncidentAlertCount :one
+UPDATE cron_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING *;
+
+-- name: DeleteOldCronPings :exec
+DELETE FROM cron_pings WHERE received_at < NOW() - INTERVAL '30 days';

@@ -1,27 +1,24 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import { useAuthStore } from '@/stores/auth'
+import { monitorsApi } from '@/api/monitors'
 
 const auth = useAuthStore()
+const router = useRouter()
 
-const monitors = [
-  {
-    title: 'Cron monitors',
-    description: 'Get alerted when a scheduled job stops running.',
-    cta: 'Add cron monitor',
-  },
-  {
-    title: 'Uptime monitors',
-    description: 'Ping your URLs and detect downtime in seconds.',
-    cta: 'Add uptime monitor',
-  },
-  {
-    title: 'SSL monitors',
-    description: 'Know before your certificates expire.',
-    cta: 'Add SSL monitor',
-  },
-]
+const cronCount = ref<number | null>(null)
+
+onMounted(async () => {
+  try {
+    const monitors = await monitorsApi.listCron()
+    cronCount.value = monitors.length
+  } catch {
+    cronCount.value = 0
+  }
+})
 </script>
 
 <template>
@@ -37,19 +34,62 @@ const monitors = [
       </div>
 
       <div class="grid gap-4 sm:grid-cols-3">
+        <!-- Cron monitors -->
         <div
-          v-for="monitor in monitors"
-          :key="monitor.title"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'cron-monitors' })"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">Cron monitors</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ cronCount ?? '—' }}
+            </span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Get alerted when a scheduled job stops running.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'cron-monitor-create' })"
+          >
+            Add cron monitor
+          </Button>
+        </div>
+
+        <!-- Uptime monitors (Phase 3 — not yet built) -->
+        <div
           class="rounded-xl border p-6 space-y-4"
           style="background-color: var(--surface); border-color: var(--border)"
         >
           <div class="flex items-center justify-between">
-            <span class="text-sm font-medium" style="color: var(--text-dim)">{{ monitor.title }}</span>
+            <span class="text-sm font-medium" style="color: var(--text-dim)">Uptime monitors</span>
             <span class="text-2xl font-bold" style="color: var(--text-strong)">0</span>
           </div>
-          <p class="text-xs" style="color: var(--text-muted)">{{ monitor.description }}</p>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Ping your URLs and detect downtime in seconds.
+          </p>
           <Button variant="secondary" size="sm" class="w-full" disabled>
-            {{ monitor.cta }}
+            Add uptime monitor
+          </Button>
+        </div>
+
+        <!-- SSL monitors (Phase 4 — not yet built) -->
+        <div
+          class="rounded-xl border p-6 space-y-4"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">SSL monitors</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">0</span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Know before your certificates expire.
+          </p>
+          <Button variant="secondary" size="sm" class="w-full" disabled>
+            Add SSL monitor
           </Button>
         </div>
       </div>

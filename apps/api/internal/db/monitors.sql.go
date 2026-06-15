@@ -26,7 +26,7 @@ func (q *Queries) CountCronPings(ctx context.Context, monitorID uuid.UUID) (int6
 const createCronIncident = `-- name: CreateCronIncident :one
 INSERT INTO cron_incidents (monitor_id)
 VALUES ($1)
-RETURNING id, monitor_id, started_at, resolved_at
+RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
 func (q *Queries) CreateCronIncident(ctx context.Context, monitorID uuid.UUID) (CronIncident, error) {
@@ -37,22 +37,24 @@ func (q *Queries) CreateCronIncident(ctx context.Context, monitorID uuid.UUID) (
 		&i.MonitorID,
 		&i.StartedAt,
 		&i.ResolvedAt,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const createCronMonitor = `-- name: CreateCronMonitor :one
-INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at
+INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident
 `
 
 type CreateCronMonitorParams struct {
-	OrgID           uuid.UUID `json:"org_id"`
-	Name            string    `json:"name"`
-	Schedule        string    `json:"schedule"`
-	GracePeriodMins int32     `json:"grace_period_mins"`
-	PingToken       string    `json:"ping_token"`
+	OrgID                uuid.UUID `json:"org_id"`
+	Name                 string    `json:"name"`
+	Schedule             string    `json:"schedule"`
+	GracePeriodMins      int32     `json:"grace_period_mins"`
+	PingToken            string    `json:"ping_token"`
+	MaxAlertsPerIncident int32     `json:"max_alerts_per_incident"`
 }
 
 func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorParams) (CronMonitor, error) {
@@ -62,6 +64,7 @@ func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorPa
 		arg.Schedule,
 		arg.GracePeriodMins,
 		arg.PingToken,
+		arg.MaxAlertsPerIncident,
 	)
 	var i CronMonitor
 	err := row.Scan(
@@ -77,6 +80,7 @@ func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorPa
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
@@ -118,8 +122,17 @@ func (q *Queries) DeleteCronMonitor(ctx context.Context, arg DeleteCronMonitorPa
 	return err
 }
 
+const deleteOldCronPings = `-- name: DeleteOldCronPings :exec
+DELETE FROM cron_pings WHERE received_at < NOW() - INTERVAL '30 days'
+`
+
+func (q *Queries) DeleteOldCronPings(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteOldCronPings)
+	return err
+}
+
 const getCronMonitor = `-- name: GetCronMonitor :one
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at FROM cron_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident FROM cron_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetCronMonitorParams struct {
@@ -143,12 +156,13 @@ func (q *Queries) GetCronMonitor(ctx context.Context, arg GetCronMonitorParams) 
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
 
 const getCronMonitorByToken = `-- name: GetCronMonitorByToken :one
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at FROM cron_monitors WHERE ping_token = $1
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident FROM cron_monitors WHERE ping_token = $1
 `
 
 func (q *Queries) GetCronMonitorByToken(ctx context.Context, pingToken string) (CronMonitor, error) {
@@ -167,12 +181,30 @@ func (q *Queries) GetCronMonitorByToken(ctx context.Context, pingToken string) (
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
+	)
+	return i, err
+}
+
+const incrementCronIncidentAlertCount = `-- name: IncrementCronIncidentAlertCount :one
+UPDATE cron_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count
+`
+
+func (q *Queries) IncrementCronIncidentAlertCount(ctx context.Context, id uuid.UUID) (CronIncident, error) {
+	row := q.db.QueryRow(ctx, incrementCronIncidentAlertCount, id)
+	var i CronIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const listCronIncidents = `-- name: ListCronIncidents :many
-SELECT id, monitor_id, started_at, resolved_at FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC
+SELECT id, monitor_id, started_at, resolved_at, alert_count FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC
 `
 
 func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([]CronIncident, error) {
@@ -189,6 +221,7 @@ func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([
 			&i.MonitorID,
 			&i.StartedAt,
 			&i.ResolvedAt,
+			&i.AlertCount,
 		); err != nil {
 			return nil, err
 		}
@@ -201,7 +234,7 @@ func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([
 }
 
 const listCronMonitors = `-- name: ListCronMonitors :many
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListCronMonitors(ctx context.Context, orgID uuid.UUID) ([]CronMonitor, error) {
@@ -226,6 +259,7 @@ func (q *Queries) ListCronMonitors(ctx context.Context, orgID uuid.UUID) ([]Cron
 			&i.NextPingAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MaxAlertsPerIncident,
 		); err != nil {
 			return nil, err
 		}
@@ -273,7 +307,7 @@ func (q *Queries) ListCronPings(ctx context.Context, arg ListCronPingsParams) ([
 }
 
 const listOverdueCronMonitors = `-- name: ListOverdueCronMonitors :many
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at FROM cron_monitors
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident FROM cron_monitors
 WHERE status = 'up' AND next_ping_at < NOW()
 `
 
@@ -299,6 +333,7 @@ func (q *Queries) ListOverdueCronMonitors(ctx context.Context) ([]CronMonitor, e
 			&i.NextPingAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MaxAlertsPerIncident,
 		); err != nil {
 			return nil, err
 		}
@@ -313,7 +348,7 @@ func (q *Queries) ListOverdueCronMonitors(ctx context.Context) ([]CronMonitor, e
 const pauseCronMonitor = `-- name: PauseCronMonitor :one
 UPDATE cron_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident
 `
 
 type PauseCronMonitorParams struct {
@@ -337,6 +372,7 @@ func (q *Queries) PauseCronMonitor(ctx context.Context, arg PauseCronMonitorPara
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
@@ -350,7 +386,7 @@ WHERE id = (
     ORDER BY ci.started_at DESC
     LIMIT 1
 )
-RETURNING id, monitor_id, started_at, resolved_at
+RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
 func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.UUID) (CronIncident, error) {
@@ -361,6 +397,7 @@ func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.
 		&i.MonitorID,
 		&i.StartedAt,
 		&i.ResolvedAt,
+		&i.AlertCount,
 	)
 	return i, err
 }
@@ -368,7 +405,7 @@ func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.
 const resumeCronMonitor = `-- name: ResumeCronMonitor :one
 UPDATE cron_monitors SET status = 'waiting', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident
 `
 
 type ResumeCronMonitorParams struct {
@@ -392,24 +429,26 @@ func (q *Queries) ResumeCronMonitor(ctx context.Context, arg ResumeCronMonitorPa
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
 
 const updateCronMonitor = `-- name: UpdateCronMonitor :one
 UPDATE cron_monitors
-SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, updated_at = NOW()
+SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident
 `
 
 type UpdateCronMonitorParams struct {
-	ID              uuid.UUID `json:"id"`
-	OrgID           uuid.UUID `json:"org_id"`
-	Name            string    `json:"name"`
-	Schedule        string    `json:"schedule"`
-	GracePeriodMins int32     `json:"grace_period_mins"`
-	AlertsEnabled   bool      `json:"alerts_enabled"`
+	ID                   uuid.UUID `json:"id"`
+	OrgID                uuid.UUID `json:"org_id"`
+	Name                 string    `json:"name"`
+	Schedule             string    `json:"schedule"`
+	GracePeriodMins      int32     `json:"grace_period_mins"`
+	AlertsEnabled        bool      `json:"alerts_enabled"`
+	MaxAlertsPerIncident int32     `json:"max_alerts_per_incident"`
 }
 
 func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorParams) (CronMonitor, error) {
@@ -420,6 +459,7 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		arg.Schedule,
 		arg.GracePeriodMins,
 		arg.AlertsEnabled,
+		arg.MaxAlertsPerIncident,
 	)
 	var i CronMonitor
 	err := row.Scan(
@@ -435,6 +475,7 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
@@ -454,7 +495,7 @@ const updateCronMonitorPing = `-- name: UpdateCronMonitorPing :one
 UPDATE cron_monitors
 SET status = 'up', last_ping_at = $3, next_ping_at = $4, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident
 `
 
 type UpdateCronMonitorPingParams struct {
@@ -485,6 +526,7 @@ func (q *Queries) UpdateCronMonitorPing(ctx context.Context, arg UpdateCronMonit
 		&i.NextPingAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
 	)
 	return i, err
 }
