@@ -13,9 +13,9 @@ type Limits struct {
 }
 
 var planLimits = map[db.Plan]Limits{
-	db.PlanHobbyist: {MonitorTotal: 5, StatusPages: 1, MinIntervalMins: 10},
-	db.PlanIndie:    {MonitorTotal: 20, StatusPages: 3, MinIntervalMins: 5},
-	db.PlanStudio:   {MonitorTotal: 50, StatusPages: 10, MinIntervalMins: 1},
+	db.PlanHobbyist: {MonitorTotal: 10, StatusPages: 1, MinIntervalMins: 5},
+	db.PlanIndie:    {MonitorTotal: 30, StatusPages: 3, MinIntervalMins: 1},
+	db.PlanStudio:   {MonitorTotal: 100, StatusPages: 10, MinIntervalMins: 1},
 	db.PlanAgency:   {MonitorTotal: -1, StatusPages: -1, MinIntervalMins: 1},
 }
 

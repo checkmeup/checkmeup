@@ -11,8 +11,8 @@
 | 3 — Uptime           | 28 h      | 1 h      | -27 h |
 | 4 — SSL              | 22 h      | 1 h      | -21 h |
 | 5 — Status page      | 30 h      | 1 h      | -29 h |
-| 6 — Billing + polish | 40 h      | 0 h      | —     |
-| **Total**            | **233 h** | **20 h** | —     |
+| 6 — Billing + polish | 40 h      | 2 h      | -38 h |
+| **Total**            | **233 h** | **22 h** | —     |
 
 ---
 
@@ -28,3 +28,4 @@
 | 2026-06-15 | Mon | 3 — Uptime         | 1 h   |
 | 2026-06-15 | Mon | 4 — SSL            | 1 h   |
 | 2026-06-15 | Mon | 5 — Status page    | 1 h   |
+| 2026-06-15 | Mon | 6 — Billing        | 2 h   |

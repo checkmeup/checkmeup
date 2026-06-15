@@ -179,7 +179,15 @@ A live public `/status/:slug` page that anyone can visit and bookmark.
 
 [EP-07](stories/ep-07-billing.md) — 3 stories + cross-cutting polish
 
-Stripe Checkout is straightforward but webhooks need careful handling. Keep the second week for polish — launch on a clean product.
+LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for polish — launch on a clean product.
+
+**Plan limits** (revised Jun 2026 after competitor review — see [ADR-019](decisions/019-plan-limits.md)):
+
+| | Hobbyist | Indie ($12) | Studio ($39) | Agency ($99) |
+|---|---|---|---|---|
+| Monitors | 10 | 30 | 100 | unlimited |
+| Status pages | 1 | 3 | 10 | unlimited |
+| Min uptime interval | 5 min | 1 min | 1 min | 1 min |
 
 ### Week 1 — Sun Aug 2 → Sat Aug 8 (~28 h)
 
