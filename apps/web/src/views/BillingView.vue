@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import Button from '@/components/ui/Button.vue'
 import { billingApi, type BillingInfo } from '@/api/billing'
 
 const info = ref<BillingInfo | null>(null)
 const loading = ref(true)
 const error = ref('')
-const upgrading = ref('')
-
 onMounted(async () => {
   try {
     info.value = await billingApi.getInfo()
@@ -18,17 +15,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-async function upgrade(plan: string) {
-  upgrading.value = plan
-  try {
-    const { url } = await billingApi.createCheckout(plan)
-    window.location.href = url
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to start checkout'
-    upgrading.value = ''
-  }
-}
 
 const planLabel: Record<string, string> = {
   hobbyist: 'Hobbyist',
@@ -43,8 +29,6 @@ const planPrice: Record<string, string> = {
   studio: '$39/mo',
   agency: '$99/mo',
 }
-
-const upgradePlans = ['indie', 'studio', 'agency']
 
 const monitorPct = computed(() => {
   if (!info.value) return 0
@@ -144,30 +128,20 @@ function limitLabel(used: number, limit: number) {
           </div>
         </div>
 
-        <!-- Upgrade options -->
-        <div v-if="info.plan !== 'agency'">
-          <h2 class="text-sm font-medium mb-3" style="color: var(--text-dim)">Upgrade your plan</h2>
-          <div class="grid gap-3 sm:grid-cols-3">
-            <div
-              v-for="plan in upgradePlans.filter(p => p !== info!.plan)"
-              :key="plan"
-              class="rounded-xl border p-4 space-y-3"
-              style="background-color: var(--surface); border-color: var(--border)"
-            >
-              <div>
-                <p class="font-semibold" style="color: var(--text-strong)">{{ planLabel[plan] }}</p>
-                <p class="text-sm" style="color: var(--text-muted)">{{ planPrice[plan] }}</p>
-              </div>
-              <Button
-                size="sm"
-                class="w-full"
-                :disabled="upgrading === plan"
-                @click="upgrade(plan)"
-              >
-                {{ upgrading === plan ? 'Redirecting…' : 'Upgrade' }}
-              </Button>
-            </div>
-          </div>
+        <!-- Upgrade coming soon -->
+        <div
+          class="rounded-xl border p-5 text-sm space-y-1"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <p class="font-medium" style="color: var(--text-strong)">Paid plans — coming soon</p>
+          <p style="color: var(--text-muted)">
+            Self-serve upgrades are on the way. In the meantime, email
+            <a
+              href="mailto:andrew@checkmeup.net"
+              style="color: var(--accent)"
+            >andrew@checkmeup.net</a>
+            to discuss your needs.
+          </p>
         </div>
       </template>
     </div>
