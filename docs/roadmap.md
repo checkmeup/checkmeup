@@ -47,7 +47,7 @@ Close all open questions before writing any feature code. A bad foundation compo
 
 **Sun Jun 21 → Sat Jun 27 · ~28 h**
 
-[EP-01](stories/ep-01-auth.md) — 5 stories
+[EP-01](stories/ep-01-auth.md) — 6 stories
 
 Nothing else starts until auth is solid. Invest time here — a shaky auth layer causes pain in every phase that follows.
 
@@ -62,6 +62,8 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 - [x] Dashboard shell (empty) behind auth
 
 > **US-0105 (password reset)** implemented with Resend ([ADR-012](decisions/012-email-resend.md)). Requires `RESEND_API_KEY` + `APP_URL` in env.
+
+> **US-0106 (abuse protection)** added 2026-06-15: `go-chi/httprate` rate limiting on sign-up, sign-in, forgot-password (see [ADR-013](decisions/013-rate-limiting.md)).
 
 ### Deliverable
 
@@ -91,6 +93,20 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 ### Milestone 🟢 First useful version — Jun 14
 
 Point a real cron job at checkmeup. Watch pings arrive. Get a Telegram message when the job stops. The product can be used for real at this point.
+
+---
+
+## Security hardening — Jun 15
+
+Cross-cutting work done before Phase 3. Not a feature phase — no new user-visible functionality.
+
+- [x] US-0106 Rate limiting — `go-chi/httprate` on sign-up, sign-in, forgot-password ([ADR-013](decisions/013-rate-limiting.md))
+- [x] Rate limit `GET /ping/{token}` — 60 req/min per token (prevents DB flooding)
+- [x] Rate limit `POST /webhook/telegram` — 60 req/min per IP
+- [x] Rate limit `POST /settings/telegram/test` — 5 req/min per IP (prevents bot abuse)
+- [x] Global 64 KB request body cap — `http.MaxBytesReader` middleware (prevents OOM on 4 GB server)
+- [x] Telegram webhook secret token — `sha256(TELEGRAM_BOT_TOKEN)` set via `setWebhook`, validated on every incoming update (prevents fake webhook calls)
+- [x] ADR-013 written; `cron_pings` retention added to decision backlog (storage growth risk before Phase 3)
 
 ---
 

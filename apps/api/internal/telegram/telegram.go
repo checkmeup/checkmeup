@@ -32,13 +32,18 @@ type apiResponse struct {
 	Description string `json:"description"`
 }
 
-// SetWebhook registers webhookURL with the Telegram Bot API.
-// Call once at startup in production; Telegram will POST updates there.
-func (c *Client) SetWebhook(webhookURL string) error {
+// SetWebhook registers webhookURL with the Telegram Bot API and sets a
+// secret_token so Telegram includes X-Telegram-Bot-Api-Secret-Token on every
+// incoming update. Pass an empty secret to skip token verification (dev only).
+func (c *Client) SetWebhook(webhookURL, secret string) error {
 	if c.botToken == "" {
 		return fmt.Errorf("telegram bot token not configured")
 	}
-	body, _ := json.Marshal(map[string]string{"url": webhookURL})
+	payload := map[string]string{"url": webhookURL}
+	if secret != "" {
+		payload["secret_token"] = secret
+	}
+	body, _ := json.Marshal(payload)
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/setWebhook", c.botToken)
 	resp, err := c.httpClient.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {

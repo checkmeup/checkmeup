@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
@@ -47,6 +48,12 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, 64*1024) // 64 KB — no legitimate payload exceeds this
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	tg := telegram.NewClient(s.cfg.TelegramBotToken)
 	auth := handler.NewAuthHandler(s.cfg, s.db)
@@ -59,18 +66,20 @@ func (s *Server) buildRouter() *chi.Mux {
 	}
 
 	// No-auth public endpoints
-	r.Get("/ping/{token}", ping.ReceivePing)
-	r.Post("/webhook/telegram", settings.HandleTelegramWebhook)
+	r.With(httprate.Limit(60, time.Minute, httprate.WithKeyFuncs(func(r *http.Request) (string, error) {
+		return chi.URLParam(r, "token"), nil
+	}))).Get("/ping/{token}", ping.ReceivePing)
+	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
 
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/sign-up", auth.SignUp)
-			r.Post("/sign-in", auth.SignIn)
+			r.With(httprate.LimitByIP(5, time.Hour)).Post("/sign-up", auth.SignUp)
+			r.With(httprate.LimitByIP(10, 10*time.Minute)).Post("/sign-in", auth.SignIn)
 			r.Post("/sign-out", auth.SignOut)
 			r.Post("/refresh", auth.Refresh)
-			r.Post("/forgot-password", auth.ForgotPassword)
+			r.With(httprate.LimitByIP(3, 10*time.Minute)).Post("/forgot-password", auth.ForgotPassword)
 			r.Post("/reset-password", auth.ResetPassword)
 		})
 
@@ -82,7 +91,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Route("/settings", func(r chi.Router) {
 				r.Get("/", settings.GetSettings)
 				r.Put("/telegram", settings.SaveTelegram)
-				r.Post("/telegram/test", settings.TestTelegram)
+				r.With(httprate.LimitByIP(5, time.Minute)).Post("/telegram/test", settings.TestTelegram)
 			})
 
 			r.Route("/monitors/cron", func(r chi.Router) {

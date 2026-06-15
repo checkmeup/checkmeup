@@ -7,7 +7,7 @@
 
 | ID                                | Epic                           | Stories |
 | --------------------------------- | ------------------------------ | ------- |
-| [EP-01](ep-01-auth.md)            | Authentication & account setup | 5       |
+| [EP-01](ep-01-auth.md)            | Authentication & account setup | 6       |
 | [EP-02](ep-02-cron-monitor.md)    | Cron monitor                   | 8       |
 | [EP-03](ep-03-uptime-monitor.md)  | Uptime monitor                 | 6       |
 | [EP-04](ep-04-ssl-monitor.md)     | SSL monitor                    | 5       |

@@ -67,3 +67,17 @@ Covers sign-up through to a working session. Prerequisite for every other epic.
 - [x] Token is single-use — invalidated immediately after use
 - [x] Success message shown regardless of whether the email exists (no enumeration)
 - [x] After reset, all existing refresh tokens for that user are revoked
+
+---
+
+### US-0106: Protect auth endpoints from abuse
+
+**As a** platform operator, **I want** auth endpoints to be rate-limited **so that** brute-force attacks cannot compromise accounts and email-bombing cannot exhaust our Resend quota.
+
+**Acceptance criteria:**
+
+- [x] `POST /sign-up`: max 5 requests per IP per hour — prevents account farming and CPU exhaustion via bcrypt
+- [x] `POST /sign-in`: max 10 requests per IP per 10 minutes — raises brute-force cost to an impractical level
+- [x] `POST /forgot-password`: max 3 requests per IP per 10 minutes — prevents email bombing and Resend quota drain
+- [x] Rate-limited responses return HTTP 429 with a `Retry-After` header
+- [x] Limits are enforced in-process (no Redis); reset on restart is acceptable for MVP (see ADR-013)

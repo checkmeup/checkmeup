@@ -86,6 +86,15 @@ func (h *SettingsHandler) SaveTelegram(w http.ResponseWriter, r *http.Request) {
 
 // HandleTelegramWebhook POST /webhook/telegram  (no auth — called by Telegram's servers)
 func (h *SettingsHandler) HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
+	// Reject requests that don't carry the expected secret token.
+	// The token is set via setWebhook at startup; legitimate Telegram calls always include it.
+	if secret := h.cfg.TelegramWebhookSecret; secret != "" {
+		if r.Header.Get("X-Telegram-Bot-Api-Secret-Token") != secret {
+			w.WriteHeader(http.StatusOK) // 200 so random scanners don't learn the path exists
+			return
+		}
+	}
+
 	var update telegram.WebhookUpdate
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		w.WriteHeader(http.StatusOK) // always 200 so Telegram doesn't retry

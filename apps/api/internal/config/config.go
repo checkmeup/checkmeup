@@ -2,6 +2,8 @@ package config
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"log/slog"
 	"os"
 	"strings"
@@ -21,7 +23,8 @@ type Config struct {
 	ResendAPIKey     string
 	AppURL           string
 	BaseURL          string
-	TelegramBotToken string
+	TelegramBotToken      string
+	TelegramWebhookSecret string // sha256(TelegramBotToken) hex — derived, never stored separately
 }
 
 func Load() *Config {
@@ -36,11 +39,15 @@ func Load() *Config {
 		JWTRefreshTTL: parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
 		CORSOrigins:   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
-		StaticDir:        getEnv("STATIC_DIR", ""),
-		ResendAPIKey:     getEnv("RESEND_API_KEY", ""),
-		AppURL:           getEnv("APP_URL", "http://localhost:5173"),
-		BaseURL:          getEnv("BASE_URL", "http://localhost:8080"),
+		StaticDir:     getEnv("STATIC_DIR", ""),
+		ResendAPIKey:  getEnv("RESEND_API_KEY", ""),
+		AppURL:        getEnv("APP_URL", "http://localhost:5173"),
+		BaseURL:       getEnv("BASE_URL", "http://localhost:8080"),
 		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
+	}
+	if cfg.TelegramBotToken != "" {
+		h := sha256.Sum256([]byte(cfg.TelegramBotToken))
+		cfg.TelegramWebhookSecret = hex.EncodeToString(h[:])
 	}
 	return cfg
 }

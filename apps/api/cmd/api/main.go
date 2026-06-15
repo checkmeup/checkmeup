@@ -62,7 +62,7 @@ func main() {
 
 	if cfg.TelegramBotToken != "" && !cfg.IsDev() {
 		webhookURL := cfg.BaseURL + "/webhook/telegram"
-		if err := tg.SetWebhook(webhookURL); err != nil {
+		if err := tg.SetWebhook(webhookURL, cfg.TelegramWebhookSecret); err != nil {
 			logger.Error("telegram webhook registration failed", "err", err)
 		} else {
 			logger.Info("telegram webhook registered", "url", webhookURL)
