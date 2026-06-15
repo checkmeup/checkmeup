@@ -104,6 +104,31 @@ export interface UpdateUptimeMonitorInput {
   maxAlertsPerIncident: number
 }
 
+export interface SSLMonitor {
+  id: string
+  name: string
+  hostname: string
+  status: 'waiting' | 'up' | 'expiring_soon' | 'expired' | 'error' | 'paused'
+  alertsEnabled: boolean
+  expiresAt: string | null
+  issuer: string | null
+  errorMsg: string | null
+  daysUntilExpiry: number | null
+  lastCheckedAt: string | null
+  createdAt: string
+}
+
+export interface CreateSSLMonitorInput {
+  name: string
+  hostname: string
+}
+
+export interface UpdateSSLMonitorInput {
+  name: string
+  hostname: string // passed through but not shown in UI (domain changes require delete + recreate)
+  alertsEnabled: boolean
+}
+
 export const monitorsApi = {
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
@@ -116,6 +141,15 @@ export const monitorsApi = {
   deleteCron: (id: string) => api.delete<void>(`/api/v1/monitors/cron/${id}/`),
   getCronPings: (id: string, page = 1) =>
     api.get<CronPing[]>(`/api/v1/monitors/cron/${id}/pings?page=${page}`),
+
+  listSSL: () => api.get<SSLMonitor[]>('/api/v1/monitors/ssl/'),
+  getSSL: (id: string) => api.get<SSLMonitor>(`/api/v1/monitors/ssl/${id}/`),
+  createSSL: (input: CreateSSLMonitorInput) => api.post<SSLMonitor>('/api/v1/monitors/ssl/', input),
+  updateSSL: (id: string, input: UpdateSSLMonitorInput) =>
+    api.patch<SSLMonitor>(`/api/v1/monitors/ssl/${id}/`, input),
+  pauseSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/pause`, {}),
+  resumeSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/resume`, {}),
+  deleteSSL: (id: string) => api.delete<void>(`/api/v1/monitors/ssl/${id}/`),
 
   listUptime: () => api.get<UptimeMonitor[]>('/api/v1/monitors/uptime/'),
   getUptime: (id: string) => api.get<UptimeMonitorDetail>(`/api/v1/monitors/uptime/${id}/`),

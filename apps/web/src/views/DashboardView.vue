@@ -11,14 +11,17 @@ const router = useRouter()
 
 const cronCount = ref<number | null>(null)
 const uptimeCount = ref<number | null>(null)
+const sslCount = ref<number | null>(null)
 
 onMounted(async () => {
-  const [cron, uptime] = await Promise.allSettled([
+  const [cron, uptime, ssl] = await Promise.allSettled([
     monitorsApi.listCron(),
     monitorsApi.listUptime(),
+    monitorsApi.listSSL(),
   ])
   cronCount.value = cron.status === 'fulfilled' ? cron.value.length : 0
   uptimeCount.value = uptime.status === 'fulfilled' ? uptime.value.length : 0
+  sslCount.value = ssl.status === 'fulfilled' ? ssl.value.length : 0
 })
 </script>
 
@@ -85,19 +88,27 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <!-- SSL monitors (Phase 4 — not yet built) -->
+        <!-- SSL monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
           style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'ssl-monitors' })"
         >
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium" style="color: var(--text-dim)">SSL monitors</span>
-            <span class="text-2xl font-bold" style="color: var(--text-strong)">0</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ sslCount ?? '—' }}
+            </span>
           </div>
           <p class="text-xs" style="color: var(--text-muted)">
             Know before your certificates expire.
           </p>
-          <Button variant="secondary" size="sm" class="w-full" disabled>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'ssl-monitor-create' })"
+          >
             Add SSL monitor
           </Button>
         </div>

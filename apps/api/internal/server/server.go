@@ -118,6 +118,18 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Post("/resume", monitors.ResumeUptimeMonitor)
 				})
 			})
+
+			r.Route("/monitors/ssl", func(r chi.Router) {
+				r.Get("/", monitors.ListSSLMonitors)
+				r.Post("/", monitors.CreateSSLMonitor)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", monitors.GetSSLMonitor)
+					r.Patch("/", monitors.UpdateSSLMonitor)
+					r.Delete("/", monitors.DeleteSSLMonitor)
+					r.Post("/pause", monitors.PauseSSLMonitor)
+					r.Post("/resume", monitors.ResumeSSLMonitor)
+				})
+			})
 		})
 	})
 

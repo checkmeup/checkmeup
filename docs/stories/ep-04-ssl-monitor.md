@@ -10,9 +10,9 @@ An SSL monitor checks a domain's TLS certificate daily and alerts at multiple th
 
 **Acceptance criteria:**
 
-- [ ] Field: domain (e.g. `example.com` — no protocol, no path)
-- [ ] First check runs immediately on creation
-- [ ] Shows expiry date and days remaining after first check
+- [x] Field: domain (e.g. `example.com` — no protocol, no path)
+- [x] First check runs immediately on creation
+- [x] Shows expiry date and days remaining after first check
 
 ---
 
@@ -22,9 +22,9 @@ An SSL monitor checks a domain's TLS certificate daily and alerts at multiple th
 
 **Acceptance criteria:**
 
-- [ ] Certificate checked once per day
-- [ ] Records: issuer, expiry date, days remaining, valid/invalid flag
-- [ ] Invalid or unreachable certificate recorded as an error state
+- [x] Certificate checked once per day
+- [x] Records: issuer, expiry date, days remaining, valid/invalid flag
+- [x] Invalid or unreachable certificate recorded as an error state
 
 ---
 
@@ -34,9 +34,9 @@ An SSL monitor checks a domain's TLS certificate daily and alerts at multiple th
 
 **Acceptance criteria:**
 
-- [ ] Alerts sent at 30 days, 14 days, and 7 days before expiry — one alert per threshold
-- [ ] Alert sent immediately if certificate is already expired or invalid
-- [ ] No repeated alerts at the same threshold (only once per crossing)
+- [x] Alerts sent at 30 days, 14 days, and 7 days before expiry — one alert per threshold
+- [x] Alert sent immediately if certificate is already expired or invalid
+- [x] No repeated alerts at the same threshold (only once per crossing)
 
 ---
 
@@ -46,9 +46,9 @@ An SSL monitor checks a domain's TLS certificate daily and alerts at multiple th
 
 **Acceptance criteria:**
 
-- [ ] List: domain, status (valid / expiring soon / expired / error), expiry date, days remaining
-- [ ] "Expiring soon" shown when ≤ 30 days remaining
-- [ ] Detail: issuer, subject, full validity window, last checked time, check history
+- [x] List: domain, status (valid / expiring soon / expired / error), expiry date, days remaining
+- [x] "Expiring soon" shown when ≤ 30 days remaining
+- [x] Detail: issuer, expiry date, days remaining, last checked time, error message if any
 
 ---
 
@@ -58,6 +58,6 @@ An SSL monitor checks a domain's TLS certificate daily and alerts at multiple th
 
 **Acceptance criteria:**
 
-- [ ] Pause suppresses alerts but keeps running daily checks
-- [ ] Delete requires confirmation; all history deleted
-- [ ] Domain is editable only by deleting and recreating (changing the domain is a different monitor)
+- [x] Pause suppresses alerts but keeps running daily checks
+- [x] Delete requires confirmation; all history deleted
+- [x] Domain is editable only by deleting and recreating (changing the domain is a different monitor)

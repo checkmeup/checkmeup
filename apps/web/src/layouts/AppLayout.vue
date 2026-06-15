@@ -65,6 +65,16 @@ async function signOut() {
           Uptime
         </RouterLink>
 
+        <RouterLink
+          to="/monitors/ssl"
+          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+          style="color: var(--text-dim)"
+          active-class="font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          SSL
+        </RouterLink>
+
         <div class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">
           Account
         </div>

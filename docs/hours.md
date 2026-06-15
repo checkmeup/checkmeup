@@ -9,10 +9,10 @@
 | 2 — Cron + Alerts    | 57 h      | 3 h      | -54 h |
 | Security hardening   | —         | 2 h      | —     |
 | 3 — Uptime           | 28 h      | 6 h      | -22 h |
-| 4 — SSL              | 22 h      | 0 h      | —     |
+| 4 — SSL              | 22 h      | 3 h      | -19 h |
 | 5 — Status page      | 30 h      | 0 h      | —     |
 | 6 — Billing + polish | 40 h      | 0 h      | —     |
-| **Total**            | **233 h** | **24 h** | —     |
+| **Total**            | **233 h** | **27 h** | —     |
 
 ---
 
@@ -26,3 +26,4 @@
 | 2026-06-14 | Sun | 2 — Cron + Alerts  | 3 h   |
 | 2026-06-15 | Mon | Security hardening | 1 h   |
 | 2026-06-15 | Mon | 3 — Uptime         | 1 h   |
+| 2026-06-15 | Mon | 4 — SSL            | 3 h   |

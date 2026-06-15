@@ -100,6 +100,52 @@ func (ns NullPlan) Value() (driver.Value, error) {
 	return string(ns.Plan), nil
 }
 
+type SslMonitorStatus string
+
+const (
+	SslMonitorStatusWaiting      SslMonitorStatus = "waiting"
+	SslMonitorStatusUp           SslMonitorStatus = "up"
+	SslMonitorStatusExpiringSoon SslMonitorStatus = "expiring_soon"
+	SslMonitorStatusExpired      SslMonitorStatus = "expired"
+	SslMonitorStatusError        SslMonitorStatus = "error"
+	SslMonitorStatusPaused       SslMonitorStatus = "paused"
+)
+
+func (e *SslMonitorStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SslMonitorStatus(s)
+	case string:
+		*e = SslMonitorStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SslMonitorStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSslMonitorStatus struct {
+	SslMonitorStatus SslMonitorStatus `json:"ssl_monitor_status"`
+	Valid            bool             `json:"valid"` // Valid is true if SslMonitorStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSslMonitorStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SslMonitorStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SslMonitorStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSslMonitorStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SslMonitorStatus), nil
+}
+
 type CronIncident struct {
 	ID         uuid.UUID          `json:"id"`
 	MonitorID  uuid.UUID          `json:"monitor_id"`
@@ -154,6 +200,25 @@ type RefreshToken struct {
 	TokenHash string             `json:"token_hash"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type SslMonitor struct {
+	ID            uuid.UUID          `json:"id"`
+	OrgID         uuid.UUID          `json:"org_id"`
+	Name          string             `json:"name"`
+	Hostname      string             `json:"hostname"`
+	Status        SslMonitorStatus   `json:"status"`
+	AlertsEnabled bool               `json:"alerts_enabled"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	Issuer        pgtype.Text        `json:"issuer"`
+	ErrorMsg      pgtype.Text        `json:"error_msg"`
+	Alerted30d    bool               `json:"alerted_30d"`
+	Alerted14d    bool               `json:"alerted_14d"`
+	Alerted7d     bool               `json:"alerted_7d"`
+	LastCheckedAt pgtype.Timestamptz `json:"last_checked_at"`
+	NextCheckAt   pgtype.Timestamptz `json:"next_check_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UptimeCheck struct {

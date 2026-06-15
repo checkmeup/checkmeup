@@ -17,7 +17,7 @@
 | [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
 | [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 5 h | EP-02, EP-05 | ✅ Done | **First useful version** |
 | [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 6 h | EP-03 | ✅ Done | URL uptime live |
-| [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | ⬜ Not started | Full monitoring suite |
+| [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 3 h | EP-04 | ✅ Done | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | ⬜ Not started | Public status pages |
 | [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |
 
@@ -134,20 +134,20 @@ URL uptime monitoring is live end-to-end with Telegram alerts.
 
 ## Phase 4 — SSL monitor
 
-**Sun Jul 19 → Fri Jul 24 · ~22 h**
+**Jun 15 · ~3 h (completed ahead of schedule)**
 
 [EP-04](stories/ep-04-ssl-monitor.md) — 5 stories
 
 Simplest monitor type — daily checks, no interval config, fixed alert thresholds at 30/14/7 days.
 
-- [ ] DB schema — ssl_checks
-- [ ] US-0401 Create SSL monitor — CRUD + form
-- [ ] US-0402 Daily cert check worker — TLS dial, record issuer + expiry
-- [ ] US-0403 Threshold alerts — one alert per threshold crossing
-- [ ] US-0404 List + detail views — expiry date, days remaining, status chip
-- [ ] US-0405 Pause, delete
+- [x] DB schema — ssl_monitors table, ssl_monitor_status enum
+- [x] US-0401 Create SSL monitor — CRUD + form
+- [x] US-0402 Daily cert check worker — TLS dial, record issuer + expiry
+- [x] US-0403 Threshold alerts — one alert per threshold crossing (30d/14d/7d + expired)
+- [x] US-0404 List + detail views — expiry date, days remaining, status chip
+- [x] US-0405 Pause, resume, delete
 
-### Milestone 🟢 Full monitoring suite — Fri Jul 24
+### Milestone 🟢 Full monitoring suite — Jun 15
 
 All three monitor types live. Cron, uptime, and SSL are all running and alerting.
 

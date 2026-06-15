@@ -94,6 +94,30 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/monitors/ssl',
+      name: 'ssl-monitors',
+      component: () => import('@/views/SSLMonitorListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/ssl/new',
+      name: 'ssl-monitor-create',
+      component: () => import('@/views/SSLMonitorCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/ssl/:id',
+      name: 'ssl-monitor-detail',
+      component: () => import('@/views/SSLMonitorDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/ssl/:id/edit',
+      name: 'ssl-monitor-edit',
+      component: () => import('@/views/SSLMonitorEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
