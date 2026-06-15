@@ -28,6 +28,7 @@ jobs:
     env:
       DATABASE_URL: postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable
       JWT_SECRET: ci-jwt-secret-not-used-in-production
+      TURBO_TELEMETRY_DISABLED: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -50,9 +51,6 @@ jobs:
 
       - name: Run migrations
         run: goose -dir apps/api/migrations postgres "$DATABASE_URL" up
-
-      - name: Disable telemetry
-        run: turbo telemetry disable
 
       - name: Lint & test
         run: make test
