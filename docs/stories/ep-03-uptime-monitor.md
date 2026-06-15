@@ -10,10 +10,10 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] Fields: name, URL, check interval
-- [ ] URL validated — must be `http://` or `https://`
-- [ ] Interval options: 1, 3, 5, 10, 30 min (Hobbyist: 5 min minimum — enforced by plan limit)
-- [ ] First check runs within one interval of creation
+- [x] Fields: name, URL, check interval
+- [x] URL validated — must be `http://` or `https://`
+- [x] Interval options: 10 min, 30 min (MVP minimum — see ADR-014)
+- [x] First check runs within one interval of creation
 
 ---
 
@@ -23,11 +23,11 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] HEAD request sent first; falls back to GET if HEAD returns 405
-- [ ] 10-second request timeout
-- [ ] 2xx response = up; non-2xx or timeout = failed check
-- [ ] Redirects followed up to 5 hops (redirect chain itself is not considered a failure)
-- [ ] Response time recorded on every check
+- [x] GET request always (see ADR-014 — HEAD eliminated for simplicity)
+- [x] 10-second request timeout
+- [x] HTTP 200 = up; any other status code or timeout = failed check (see ADR-014)
+- [x] Redirects followed automatically
+- [x] Response time recorded on every check
 
 ---
 
@@ -37,10 +37,10 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] 2 consecutive failed checks before status changes to "down" (avoids flapping on transient errors)
-- [ ] Alert sent on transition to "down" (see EP-05)
-- [ ] Alert sent on transition back to "up" (recovery)
-- [ ] No repeat alerts while status stays "down"
+- [x] 2 consecutive failed checks before status changes to "down" (avoids flapping on transient errors)
+- [x] Alert sent on transition to "down" (see EP-05)
+- [x] Alert sent on transition back to "up" (recovery)
+- [x] Alert cap via `max_alerts_per_incident` (0=always, default 3 — see ADR-016)
 
 ---
 
@@ -50,9 +50,9 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] Shows: name, URL, status, uptime % (last 24h), last checked time
-- [ ] Status badges consistent with cron monitors
-- [ ] Empty state with prompt to create first monitor
+- [x] Shows: name, URL, status, uptime % (last 24h), last checked time
+- [x] Status badges consistent with cron monitors
+- [x] Empty state with prompt to create first monitor
 
 ---
 
@@ -62,10 +62,10 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] Response time chart for the last 24 hours
-- [ ] Uptime % for last 24h / 7d / 30d
-- [ ] Incident log: started at, resolved at, duration — paginated, latest first
-- [ ] Check log: timestamp, status code, response time — paginated
+- [x] Response time chart for the last 24 hours
+- [x] Uptime % for last 24h / 7d / 30d
+- [x] Incident log: started at, resolved at, duration — paginated, latest first
+- [x] Check log: timestamp, status code, response time — paginated
 
 ---
 
@@ -75,7 +75,7 @@ An uptime monitor polls a URL on a fixed interval. Two consecutive failures chan
 
 **Acceptance criteria:**
 
-- [ ] Editable: name, URL, check interval
-- [ ] Pause stops checks and suppresses alerts; status shown as "paused"
-- [ ] Resume restarts checks immediately
-- [ ] Delete requires confirmation; all history deleted
+- [x] Editable: name, URL, check interval
+- [x] Pause stops checks and suppresses alerts; status shown as "paused"
+- [x] Resume restarts checks immediately
+- [x] Delete requires confirmation; all history deleted

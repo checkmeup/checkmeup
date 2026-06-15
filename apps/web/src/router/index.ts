@@ -70,6 +70,30 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/monitors/uptime',
+      name: 'uptime-monitors',
+      component: () => import('@/views/UptimeMonitorListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/uptime/new',
+      name: 'uptime-monitor-create',
+      component: () => import('@/views/UptimeMonitorCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/uptime/:id',
+      name: 'uptime-monitor-detail',
+      component: () => import('@/views/UptimeMonitorDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/uptime/:id/edit',
+      name: 'uptime-monitor-edit',
+      component: () => import('@/views/UptimeMonitorEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),

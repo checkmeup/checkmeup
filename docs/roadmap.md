@@ -16,7 +16,7 @@
 | [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
 | [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
 | [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 5 h | EP-02, EP-05 | ✅ Done | **First useful version** |
-| [3 — Uptime](#phase-3--uptime-monitor) | Jul 12–18 | 7 | 28 h | EP-03 | ⬜ Not started | URL uptime live |
+| [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 6 h | EP-03 | ✅ Done | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jul 19–24 | 6 | 22 h | EP-04 | ⬜ Not started | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | ⬜ Not started | Public status pages |
 | [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |

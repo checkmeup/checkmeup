@@ -156,6 +156,39 @@ type RefreshToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type UptimeCheck struct {
+	ID             uuid.UUID          `json:"id"`
+	MonitorID      uuid.UUID          `json:"monitor_id"`
+	CheckedAt      pgtype.Timestamptz `json:"checked_at"`
+	StatusCode     pgtype.Int4        `json:"status_code"`
+	ResponseTimeMs int32              `json:"response_time_ms"`
+	IsUp           bool               `json:"is_up"`
+}
+
+type UptimeIncident struct {
+	ID         uuid.UUID          `json:"id"`
+	MonitorID  uuid.UUID          `json:"monitor_id"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount int32              `json:"alert_count"`
+}
+
+type UptimeMonitor struct {
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Url                  string             `json:"url"`
+	IntervalMins         int32              `json:"interval_mins"`
+	Status               MonitorStatus      `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	ConsecutiveFailures  int32              `json:"consecutive_failures"`
+	LastCheckedAt        pgtype.Timestamptz `json:"last_checked_at"`
+	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
 	ID           uuid.UUID          `json:"id"`
 	OrgID        uuid.UUID          `json:"org_id"`

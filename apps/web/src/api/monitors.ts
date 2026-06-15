@@ -48,6 +48,62 @@ export interface UpdateCronMonitorInput {
   maxAlertsPerIncident: number
 }
 
+export interface UptimeMonitor {
+  id: string
+  name: string
+  url: string
+  intervalMins: number
+  status: 'waiting' | 'up' | 'down' | 'paused'
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+  lastCheckedAt: string | null
+  createdAt: string
+  uptime24h: number | null
+}
+
+export interface UptimeCheck {
+  id: string
+  checkedAt: string
+  statusCode: number | null
+  responseTimeMs: number
+  isUp: boolean
+}
+
+export interface UptimeIncident {
+  id: string
+  startedAt: string
+  resolvedAt: string | null
+}
+
+export interface UptimeStats {
+  uptime24h: number | null
+  uptime7d: number | null
+  uptime30d: number | null
+}
+
+export interface UptimeMonitorDetail {
+  monitor: UptimeMonitor
+  chartData: UptimeCheck[]
+  checks: UptimeCheck[]
+  incidents: UptimeIncident[]
+  stats: UptimeStats
+}
+
+export interface CreateUptimeMonitorInput {
+  name: string
+  url: string
+  intervalMins: number
+  maxAlertsPerIncident: number
+}
+
+export interface UpdateUptimeMonitorInput {
+  name: string
+  url: string
+  intervalMins: number
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+}
+
 export const monitorsApi = {
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
@@ -60,4 +116,14 @@ export const monitorsApi = {
   deleteCron: (id: string) => api.delete<void>(`/api/v1/monitors/cron/${id}/`),
   getCronPings: (id: string, page = 1) =>
     api.get<CronPing[]>(`/api/v1/monitors/cron/${id}/pings?page=${page}`),
+
+  listUptime: () => api.get<UptimeMonitor[]>('/api/v1/monitors/uptime/'),
+  getUptime: (id: string) => api.get<UptimeMonitorDetail>(`/api/v1/monitors/uptime/${id}/`),
+  createUptime: (input: CreateUptimeMonitorInput) =>
+    api.post<UptimeMonitor>('/api/v1/monitors/uptime/', input),
+  updateUptime: (id: string, input: UpdateUptimeMonitorInput) =>
+    api.patch<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/`, input),
+  pauseUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/pause`, {}),
+  resumeUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/resume`, {}),
+  deleteUptime: (id: string) => api.delete<void>(`/api/v1/monitors/uptime/${id}/`),
 }

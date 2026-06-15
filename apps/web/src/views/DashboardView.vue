@@ -10,14 +10,15 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const cronCount = ref<number | null>(null)
+const uptimeCount = ref<number | null>(null)
 
 onMounted(async () => {
-  try {
-    const monitors = await monitorsApi.listCron()
-    cronCount.value = monitors.length
-  } catch {
-    cronCount.value = 0
-  }
+  const [cron, uptime] = await Promise.allSettled([
+    monitorsApi.listCron(),
+    monitorsApi.listUptime(),
+  ])
+  cronCount.value = cron.status === 'fulfilled' ? cron.value.length : 0
+  uptimeCount.value = uptime.status === 'fulfilled' ? uptime.value.length : 0
 })
 </script>
 
@@ -59,19 +60,27 @@ onMounted(async () => {
           </Button>
         </div>
 
-        <!-- Uptime monitors (Phase 3 — not yet built) -->
+        <!-- Uptime monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
           style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'uptime-monitors' })"
         >
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium" style="color: var(--text-dim)">Uptime monitors</span>
-            <span class="text-2xl font-bold" style="color: var(--text-strong)">0</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ uptimeCount ?? '—' }}
+            </span>
           </div>
           <p class="text-xs" style="color: var(--text-muted)">
             Ping your URLs and detect downtime in seconds.
           </p>
-          <Button variant="secondary" size="sm" class="w-full" disabled>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'uptime-monitor-create' })"
+          >
             Add uptime monitor
           </Button>
         </div>

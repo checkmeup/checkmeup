@@ -55,6 +55,16 @@ async function signOut() {
           Cron
         </RouterLink>
 
+        <RouterLink
+          to="/monitors/uptime"
+          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+          style="color: var(--text-dim)"
+          active-class="font-medium"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Uptime
+        </RouterLink>
+
         <div class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">
           Account
         </div>

@@ -106,6 +106,18 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Get("/pings", monitors.GetCronPings)
 				})
 			})
+
+			r.Route("/monitors/uptime", func(r chi.Router) {
+				r.Get("/", monitors.ListUptimeMonitors)
+				r.Post("/", monitors.CreateUptimeMonitor)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", monitors.GetUptimeMonitor)
+					r.Patch("/", monitors.UpdateUptimeMonitor)
+					r.Delete("/", monitors.DeleteUptimeMonitor)
+					r.Post("/pause", monitors.PauseUptimeMonitor)
+					r.Post("/resume", monitors.ResumeUptimeMonitor)
+				})
+			})
 		})
 	})
 
