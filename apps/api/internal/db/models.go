@@ -178,12 +178,16 @@ type CronPing struct {
 }
 
 type Org struct {
-	ID             uuid.UUID          `json:"id"`
-	Name           string             `json:"name"`
-	Plan           Plan               `json:"plan"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	TelegramChatID pgtype.Text        `json:"telegram_chat_id"`
+	ID                 uuid.UUID          `json:"id"`
+	Name               string             `json:"name"`
+	Plan               Plan               `json:"plan"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	TelegramChatID     pgtype.Text        `json:"telegram_chat_id"`
+	LsCustomerID       pgtype.Text        `json:"ls_customer_id"`
+	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
+	SubscriptionStatus string             `json:"subscription_status"`
+	PlanRenewsAt       pgtype.Timestamptz `json:"plan_renews_at"`
 }
 
 type PasswordResetToken struct {

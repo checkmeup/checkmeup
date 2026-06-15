@@ -13,7 +13,7 @@ import (
 )
 
 const getOrgByID = `-- name: GetOrgByID :one
-SELECT id, name, plan, created_at, updated_at, telegram_chat_id FROM orgs WHERE id = $1
+SELECT id, name, plan, created_at, updated_at, telegram_chat_id, ls_customer_id, ls_subscription_id, subscription_status, plan_renews_at FROM orgs WHERE id = $1
 `
 
 func (q *Queries) GetOrgByID(ctx context.Context, id uuid.UUID) (Org, error) {
@@ -26,6 +26,10 @@ func (q *Queries) GetOrgByID(ctx context.Context, id uuid.UUID) (Org, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TelegramChatID,
+		&i.LsCustomerID,
+		&i.LsSubscriptionID,
+		&i.SubscriptionStatus,
+		&i.PlanRenewsAt,
 	)
 	return i, err
 }
@@ -34,7 +38,7 @@ const updateOrgTelegramChatID = `-- name: UpdateOrgTelegramChatID :one
 UPDATE orgs
 SET telegram_chat_id = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id
+RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, ls_customer_id, ls_subscription_id, subscription_status, plan_renews_at
 `
 
 type UpdateOrgTelegramChatIDParams struct {
@@ -52,6 +56,10 @@ func (q *Queries) UpdateOrgTelegramChatID(ctx context.Context, arg UpdateOrgTele
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TelegramChatID,
+		&i.LsCustomerID,
+		&i.LsSubscriptionID,
+		&i.SubscriptionStatus,
+		&i.PlanRenewsAt,
 	)
 	return i, err
 }

@@ -15,7 +15,7 @@ import (
 const createOrg = `-- name: CreateOrg :one
 INSERT INTO orgs (name)
 VALUES ($1)
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id
+RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, ls_customer_id, ls_subscription_id, subscription_status, plan_renews_at
 `
 
 func (q *Queries) CreateOrg(ctx context.Context, name string) (Org, error) {
@@ -28,6 +28,10 @@ func (q *Queries) CreateOrg(ctx context.Context, name string) (Org, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TelegramChatID,
+		&i.LsCustomerID,
+		&i.LsSubscriptionID,
+		&i.SubscriptionStatus,
+		&i.PlanRenewsAt,
 	)
 	return i, err
 }
