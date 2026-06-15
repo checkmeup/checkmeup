@@ -15,10 +15,10 @@
 |-------|-------|------|--------|-------|--------|-----------|
 | [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
 | [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
-| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 5 h | EP-02, EP-05 | ✅ Done | **First useful version** |
-| [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 6 h | EP-03 | ✅ Done | URL uptime live |
-| [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 3 h | EP-04 | ✅ Done | Full monitoring suite |
-| [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 4 h | EP-06 | ✅ Done | Public status pages |
+| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 3 h | EP-02, EP-05 | ✅ Done | **First useful version** |
+| [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 1 h | EP-03 | ✅ Done | URL uptime live |
+| [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 1 h | EP-04 | ✅ Done | Full monitoring suite |
+| [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 1 h | EP-06 | ✅ Done | Public status pages |
 | [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |
 
 ---
@@ -73,7 +73,7 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 
 ## Phase 2 — Cron monitor + Telegram alerts
 
-**Sun Jun 14 · ~5 h (completed ahead of schedule)**
+**Sun Jun 14 · ~3 h (completed ahead of schedule)**
 
 [EP-02](stories/ep-02-cron-monitor.md) — 8 stories  
 [EP-05](stories/ep-05-telegram-alerts.md) — 4 stories
