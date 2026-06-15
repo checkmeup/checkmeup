@@ -18,7 +18,7 @@
 | [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 5 h | EP-02, EP-05 | ✅ Done | **First useful version** |
 | [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 6 h | EP-03 | ✅ Done | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 3 h | EP-04 | ✅ Done | Full monitoring suite |
-| [5 — Status page](#phase-5--status-page) | Jul 25–Aug 1 | 8 | 30 h | EP-06 | ⬜ Not started | Public status pages |
+| [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 4 h | EP-06 | ✅ Done | Public status pages |
 | [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |
 
 ---
@@ -155,22 +155,19 @@ All three monitor types live. Cron, uptime, and SSL are all running and alerting
 
 ## Phase 5 — Status page
 
-**Sat Jul 25 → Sat Aug 1 · ~30 h**
+**Mon Jun 15 · ~4 h (completed ahead of schedule)**
 
 [EP-06](stories/ep-06-status-page.md) — 5 stories
 
-First public-facing surface. Needs to look polished — visitors will judge the product by it.
+- [x] DB schema — status_pages, status_page_monitors (migration 008)
+- [x] ADR-017 — public page served via Go html/template (no JS required)
+- [x] US-0601 Create status page — slug validation with real-time availability check
+- [x] US-0602 Add monitors — multi-select, custom display names, ordering (up/down)
+- [x] US-0603 Public page — overall status banner, 90-day uptime bars, no-login required, SSR
+- [x] US-0604 Customize — title, description, logo URL
+- [x] US-0605 Delete — confirmation dialog, page removed immediately
 
-> **Decide SSR vs static render** for the public page before writing US-0603. Add to decision backlog if not resolved by Phase 4.
-
-- [ ] DB schema — status_pages, status_page_monitors
-- [ ] US-0601 Create status page — slug validation with real-time availability check
-- [ ] US-0602 Add monitors — multi-select, custom display names, ordering
-- [ ] US-0603 Public page — overall status banner, 90-day uptime bars, no-login required
-- [ ] US-0604 Customize — title, description, logo URL
-- [ ] US-0605 Delete
-
-### Deliverable
+### Milestone 🟢 Public status pages — Jun 15
 
 A live public `/status/:slug` page that anyone can visit and bookmark.
 

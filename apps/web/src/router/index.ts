@@ -118,6 +118,30 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/status-pages',
+      name: 'status-pages',
+      component: () => import('@/views/StatusPageListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/status-pages/new',
+      name: 'status-page-create',
+      component: () => import('@/views/StatusPageCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/status-pages/:id',
+      name: 'status-page-detail',
+      component: () => import('@/views/StatusPageDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/status-pages/:id/edit',
+      name: 'status-page-edit',
+      component: () => import('@/views/StatusPageEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),

@@ -221,6 +221,26 @@ type SslMonitor struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StatusPage struct {
+	ID          uuid.UUID          `json:"id"`
+	OrgID       uuid.UUID          `json:"org_id"`
+	Slug        string             `json:"slug"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	LogoUrl     string             `json:"logo_url"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StatusPageMonitor struct {
+	ID           uuid.UUID `json:"id"`
+	PageID       uuid.UUID `json:"page_id"`
+	MonitorType  string    `json:"monitor_type"`
+	MonitorID    uuid.UUID `json:"monitor_id"`
+	DisplayName  string    `json:"display_name"`
+	DisplayOrder int32     `json:"display_order"`
+}
+
 type UptimeCheck struct {
 	ID             uuid.UUID          `json:"id"`
 	MonitorID      uuid.UUID          `json:"monitor_id"`

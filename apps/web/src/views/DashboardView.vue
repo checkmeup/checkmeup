@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import { useAuthStore } from '@/stores/auth'
 import { monitorsApi } from '@/api/monitors'
+import { statusPagesApi } from '@/api/statusPages'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -12,16 +13,19 @@ const router = useRouter()
 const cronCount = ref<number | null>(null)
 const uptimeCount = ref<number | null>(null)
 const sslCount = ref<number | null>(null)
+const statusPageCount = ref<number | null>(null)
 
 onMounted(async () => {
-  const [cron, uptime, ssl] = await Promise.allSettled([
+  const [cron, uptime, ssl, sp] = await Promise.allSettled([
     monitorsApi.listCron(),
     monitorsApi.listUptime(),
     monitorsApi.listSSL(),
+    statusPagesApi.list(),
   ])
   cronCount.value = cron.status === 'fulfilled' ? cron.value.length : 0
   uptimeCount.value = uptime.status === 'fulfilled' ? uptime.value.length : 0
   sslCount.value = ssl.status === 'fulfilled' ? ssl.value.length : 0
+  statusPageCount.value = sp.status === 'fulfilled' ? sp.value.length : 0
 })
 </script>
 
@@ -37,7 +41,7 @@ onMounted(async () => {
         </p>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <!-- Cron monitors -->
         <div
           class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
@@ -110,6 +114,31 @@ onMounted(async () => {
             @click.stop="router.push({ name: 'ssl-monitor-create' })"
           >
             Add SSL monitor
+          </Button>
+        </div>
+
+        <!-- Status pages -->
+        <div
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'status-pages' })"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">Status pages</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ statusPageCount ?? '—' }}
+            </span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Public dashboards your users can bookmark.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'status-page-create' })"
+          >
+            Create status page
           </Button>
         </div>
       </div>

@@ -60,6 +60,11 @@ func (s *Server) buildRouter() *chi.Mux {
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
 	settings := handler.NewSettingsHandler(s.cfg, s.db, tg)
 	ping := handler.NewPingHandler(s.db, tg)
+	statusPages := handler.NewStatusPageHandler(s.db)
+	statusPublic := handler.NewStatusPublicHandler(s.db)
+
+	// Public status page — registered before SPA catch-all so Go handles it
+	r.Get("/status/{slug}", statusPublic.ServeHTTP)
 
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
@@ -116,6 +121,18 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Delete("/", monitors.DeleteUptimeMonitor)
 					r.Post("/pause", monitors.PauseUptimeMonitor)
 					r.Post("/resume", monitors.ResumeUptimeMonitor)
+				})
+			})
+
+			r.Route("/status-pages", func(r chi.Router) {
+				r.Get("/check-slug", statusPages.CheckSlug)
+				r.Get("/", statusPages.ListStatusPages)
+				r.Post("/", statusPages.CreateStatusPage)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", statusPages.GetStatusPage)
+					r.Patch("/", statusPages.UpdateStatusPage)
+					r.Delete("/", statusPages.DeleteStatusPage)
+					r.Put("/monitors", statusPages.SetStatusPageMonitors)
 				})
 			})
 

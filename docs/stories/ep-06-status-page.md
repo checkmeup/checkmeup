@@ -10,11 +10,11 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 **Acceptance criteria:**
 
-- [ ] Fields: page name, slug (URL-safe, globally unique)
-- [ ] Slug validated: lowercase letters, numbers, hyphens only; 3–48 chars
-- [ ] Slug unavailable message shown in real-time if taken
-- [ ] Page created empty — no monitors attached yet
-- [ ] Public URL shown immediately after creation
+- [x] Fields: page name, slug (URL-safe, globally unique)
+- [x] Slug validated: lowercase letters, numbers, hyphens only; 3–48 chars
+- [x] Slug unavailable message shown in real-time if taken
+- [x] Page created empty — no monitors attached yet
+- [x] Public URL shown immediately after creation
 
 ---
 
@@ -24,9 +24,9 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 **Acceptance criteria:**
 
-- [ ] Multi-select from the org's monitors (all types)
-- [ ] Custom display name per monitor (defaults to monitor name)
-- [ ] Display order configurable (up/down arrows on MVP; drag-and-drop post-MVP)
+- [x] Multi-select from the org's monitors (all types)
+- [x] Custom display name per monitor (defaults to monitor name)
+- [x] Display order configurable (up/down arrows on MVP; drag-and-drop post-MVP)
 
 ---
 
@@ -36,11 +36,11 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 **Acceptance criteria:**
 
-- [ ] Publicly accessible — no login required
-- [ ] Overall banner: "All systems operational" / "Partial outage" / "Major outage"
-- [ ] Each monitor shows: display name, current status, 90-day uptime bar
-- [ ] Last updated timestamp visible
-- [ ] Page renders correctly without JavaScript (SSR or static — decision TBD)
+- [x] Publicly accessible — no login required
+- [x] Overall banner: "All systems operational" / "Partial outage" / "Major outage"
+- [x] Each monitor shows: display name, current status, 90-day uptime bar
+- [x] Last updated timestamp visible
+- [x] Page renders correctly without JavaScript (SSR via Go html/template — see [ADR-017](../decisions/017-status-page-ssr.md))
 
 ---
 
@@ -50,8 +50,8 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 **Acceptance criteria:**
 
-- [ ] Editable: page title, description (shown below the title)
-- [ ] Logo: URL input on MVP; file upload post-MVP
+- [x] Editable: page title, description (shown below the title)
+- [x] Logo: URL input on MVP; file upload post-MVP
 
 ---
 
@@ -61,6 +61,6 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 **Acceptance criteria:**
 
-- [ ] Confirmation dialog required
-- [ ] Public URL returns 404 immediately after deletion
-- [ ] Monitors themselves are not deleted — only removed from this page
+- [x] Confirmation dialog required
+- [x] Public URL returns 404 immediately after deletion
+- [x] Monitors themselves are not deleted — only removed from this page
