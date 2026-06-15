@@ -185,10 +185,11 @@ Stripe Checkout is straightforward but webhooks need careful handling. Keep the 
 
 **Billing**
 
-- [ ] Configure Stripe products + prices in the Stripe dashboard
-- [ ] US-0702 Plan limit enforcement — API middleware, inline upgrade prompts in UI
-- [ ] US-0701 Billing page — current plan, usage bars, upgrade CTA
-- [ ] US-0703 Stripe Checkout — session endpoint, success/cancel redirect, webhook → update org plan
+- [ ] Configure LemonSqueezy products + variants in the LS dashboard; add `LS_*` env vars
+- [x] US-0702 Plan limit enforcement — 402 API responses on monitor/status-page create
+- [x] US-0701 Billing page — current plan, usage bars, upgrade CTA, manage subscription link
+- [x] US-0703 LemonSqueezy Checkout — session endpoint, redirect to LS, webhook → update org plan
+- [ ] US-0702 UI inline upgrade prompt on 402 (create form shows upgrade CTA instead of generic error)
 
 ### Week 2 — Sun Aug 9 → Fri Aug 14 (~18 h)
 

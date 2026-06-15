@@ -62,6 +62,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	ping := handler.NewPingHandler(s.db, tg)
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
+	billing := handler.NewBillingHandler(s.cfg, s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -75,6 +76,7 @@ func (s *Server) buildRouter() *chi.Mux {
 		return chi.URLParam(r, "token"), nil
 	}))).Get("/ping/{token}", ping.ReceivePing)
 	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
+	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/lemonsqueezy", billing.Webhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
@@ -124,7 +126,12 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
-			r.Route("/status-pages", func(r chi.Router) {
+			r.Route("/billing", func(r chi.Router) {
+					r.Get("/", billing.GetBillingInfo)
+					r.Post("/checkout", billing.CreateCheckout)
+				})
+
+				r.Route("/status-pages", func(r chi.Router) {
 				r.Get("/check-slug", statusPages.CheckSlug)
 				r.Get("/", statusPages.ListStatusPages)
 				r.Post("/", statusPages.CreateStatusPage)

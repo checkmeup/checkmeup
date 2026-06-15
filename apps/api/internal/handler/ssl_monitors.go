@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -141,6 +142,21 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 	hostname, err := parseHostname(req.Hostname)
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}
 

@@ -25,6 +25,12 @@ type Config struct {
 	BaseURL          string
 	TelegramBotToken      string
 	TelegramWebhookSecret string // sha256(TelegramBotToken) hex — derived, never stored separately
+	LSAPIKey              string // LemonSqueezy API key
+	LSStoreID             string // LemonSqueezy store ID
+	LSWebhookSecret       string // LemonSqueezy webhook signing secret
+	LSIndieVariantID      string // LemonSqueezy variant ID for Indie plan
+	LSStudioVariantID     string // LemonSqueezy variant ID for Studio plan
+	LSAgencyVariantID     string // LemonSqueezy variant ID for Agency plan
 }
 
 func Load() *Config {
@@ -43,7 +49,13 @@ func Load() *Config {
 		ResendAPIKey:  getEnv("RESEND_API_KEY", ""),
 		AppURL:        getEnv("APP_URL", "http://localhost:5173"),
 		BaseURL:       getEnv("BASE_URL", "http://localhost:8080"),
-		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
+		TelegramBotToken:  getEnv("TELEGRAM_BOT_TOKEN", ""),
+		LSAPIKey:          getEnv("LS_API_KEY", ""),
+		LSStoreID:         getEnv("LS_STORE_ID", ""),
+		LSWebhookSecret:   getEnv("LS_WEBHOOK_SECRET", ""),
+		LSIndieVariantID:  getEnv("LS_INDIE_VARIANT_ID", ""),
+		LSStudioVariantID: getEnv("LS_STUDIO_VARIANT_ID", ""),
+		LSAgencyVariantID: getEnv("LS_AGENCY_VARIANT_ID", ""),
 	}
 	if cfg.TelegramBotToken != "" {
 		h := sha256.Sum256([]byte(cfg.TelegramBotToken))

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -187,9 +188,27 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-	if req.IntervalMins < 10 {
-		req.IntervalMins = 10
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
 	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
+	if err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+	req.IntervalMins = int32(clampedInterval)
+
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
 	}

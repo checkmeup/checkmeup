@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
@@ -149,6 +150,21 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	}
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
+	}
+
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
 	}
 
 	tokenBytes := make([]byte, 16)

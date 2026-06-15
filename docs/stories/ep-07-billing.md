@@ -1,8 +1,14 @@
 # EP-07: Billing & plan limits
 
-Stripe handles payment. Plan limits are enforced server-side. Hobbyist ($0) requires no payment flow — it's the default for all new accounts.
+LemonSqueezy (Merchant of Record) handles payment, tax collection, and invoicing. Plan limits are enforced server-side. Hobbyist ($0) requires no payment flow — it's the default for all new accounts. See [ADR-018](../decisions/018-billing-lemonsqueezy-mor.md) and [ADR-019](../decisions/019-plan-limits.md).
 
-Plan limits reference: see [backlog.md](backlog.md).
+Plan limits:
+
+| | Hobbyist | Indie ($12) | Studio ($39) | Agency ($99) |
+|---|---|---|---|---|
+| Total monitors | 5 | 20 | 50 | unlimited |
+| Status pages | 1 | 3 | 10 | unlimited |
+| Min uptime interval | 10 min | 5 min | 1 min | 1 min |
 
 ---
 
@@ -12,10 +18,11 @@ Plan limits reference: see [backlog.md](backlog.md).
 
 **Acceptance criteria:**
 
-- [ ] Shows: plan name, billing period, next renewal date
-- [ ] Usage bars for: monitors used / limit, status pages used / limit
-- [ ] Min check interval shown for the current plan
-- [ ] "Upgrade" CTA shown for non-Agency plans
+- [x] Shows: plan name, price, renewal date (if subscribed)
+- [x] Usage bars for: monitors used / limit, status pages used / limit
+- [x] Min check interval shown for the current plan
+- [x] "Upgrade" CTA shown for non-Agency plans
+- [x] "Manage subscription →" link for active subscribers (LemonSqueezy customer portal)
 
 ---
 
@@ -25,21 +32,22 @@ Plan limits reference: see [backlog.md](backlog.md).
 
 **Acceptance criteria:**
 
-- [ ] API returns `402 Payment Required` with a descriptive message when a limit is exceeded
-- [ ] UI shows an inline upgrade prompt — not a generic error page
-- [ ] Creating a monitor over the limit is blocked at both API and UI level
-- [ ] Setting a check interval below the plan minimum is blocked with an explanation
+- [x] API returns `402 Payment Required` with `code: "plan_limit_reached"` when a limit is exceeded
+- [x] Blocked: creating monitors over the total limit (cron, uptime, SSL)
+- [x] Blocked: creating status pages over the limit
+- [x] Blocked: setting uptime interval below plan minimum (returns 402 with explanation)
+- [ ] UI shows inline upgrade prompt when a 402 is received — not a generic error page
 
 ---
 
-### US-0703: Upgrade plan via Stripe Checkout
+### US-0703: Upgrade plan via LemonSqueezy
 
 **As a** user, **I want** to upgrade my plan **so that** I can add more monitors.
 
 **Acceptance criteria:**
 
-- [ ] Stripe Checkout session created server-side; user redirected to Stripe
-- [ ] On successful payment, Stripe webhook updates the org's plan in DB
-- [ ] New limits applied immediately after webhook received
-- [ ] Failed payment returns user to the billing page with an error
-- [ ] Downgrade takes effect at end of current billing period — no immediate cutoff
+- [x] LemonSqueezy Checkout session created server-side; user redirected to LemonSqueezy
+- [x] On successful payment, LemonSqueezy webhook updates the org's plan in DB
+- [x] New limits applied immediately after webhook received
+- [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobbyist
+- [ ] Failed payment: user lands back on billing page (LemonSqueezy handles this natively)

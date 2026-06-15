@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -174,6 +175,21 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" {
 		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
+		return
+	}
+
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	spCount, err := h.queries.CountOrgStatusPages(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := billing.CheckStatusPageLimit(plan, int(spCount)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}
 
