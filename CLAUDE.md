@@ -10,23 +10,45 @@ Cron, uptime, and SSL monitors with execution logs, Telegram alerts, and white-l
 ## Commands
 
 ```bash
-make dev      # start all apps (hot reload)
-make test     # lint + test + merge coverage
-make lint     # lint only
-make build    # production build
-make clean    # wipe node_modules, dist, coverage
+make dev             # start all apps (hot reload)
+make test            # lint + test + merge coverage
+make lint            # lint only
+make build           # production build
+make clean           # wipe node_modules, dist, coverage
+make migrate         # run goose migrations (reads DATABASE_URL from apps/api/.env)
+make migrate-create name=foo  # create a new goose migration file
 ```
 
 ---
 
 ## Stack
 
-**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · air (hot reload)  
+**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · LemonSqueezy (billing) · go-chi/httprate (rate limiting) · air (hot reload)  
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
 **Infra:** Hetzner CX23 · Kamal · Traefik  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
 
 > `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).
+
+**Key env vars (`apps/api/.env`):**
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `DATABASE_URL` | ✅ | postgres DSN |
+| `JWT_SECRET` | ✅ | random secret |
+| `RESEND_API_KEY` | optional | enables password-reset emails |
+| `APP_URL` | optional | frontend origin (default `http://localhost:5173`) |
+| `BASE_URL` | optional | backend origin (default `http://localhost:8080`) |
+| `TELEGRAM_BOT_TOKEN` | optional | enables Telegram alerts |
+| `LS_API_KEY` | billing | LemonSqueezy API key |
+| `LS_STORE_ID` | billing | LemonSqueezy store ID |
+| `LS_WEBHOOK_SECRET` | billing | LemonSqueezy webhook signing secret |
+| `LS_INDIE_VARIANT_ID` | billing | variant ID for Indie plan |
+| `LS_STUDIO_VARIANT_ID` | billing | variant ID for Studio plan |
+| `LS_AGENCY_VARIANT_ID` | billing | variant ID for Agency plan |
+| `CODACY_API_TOKEN` | CI only | account-level Codacy token |
+
+> `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md).
 
@@ -80,3 +102,4 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - Add subdomains for status pages — `/status/:slug` path is intentional ([ADR-005](docs/decisions/005-status-page-same-domain.md))
 - Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))
 - Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
+- Switch payment providers — LemonSqueezy is the MoR (handles global tax); see [ADR-018](docs/decisions/018-billing-lemonsqueezy-mor.md)
