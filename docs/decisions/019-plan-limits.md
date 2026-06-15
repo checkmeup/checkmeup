@@ -2,13 +2,13 @@
 
 **Date:** 2026-06-15  
 **Status:** Accepted  
-**Revised:** 2026-06-15 — limits loosened after competitor review
+**Revised:** 2026-06-15 — limits loosened + prices reduced after competitor review
 
 ---
 
 ## Context
 
-Four pricing tiers: Hobbyist ($0) / Indie ($12) / Studio ($39) / Agency ($99). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
+Four pricing tiers: Hobbyist ($0) / Indie ($9) / Studio ($29) / Agency ($79). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
 
 Monitors are counted in aggregate across all types (cron + uptime + SSL) because users care about "how many things am I watching", not the internal type split.
 
@@ -30,7 +30,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL) because
 | Cronitor (cron + uptime) | 5 | $2/monitor | $2/monitor | 30 sec |
 | UptimeRobot (uptime only) | 50 | 10 ($10) | 100 ($38) | 60 sec |
 | Better Stack (uptime) | 10 | pay-per-monitor | pay-per-monitor | 30 sec |
-| **checkmeup (cron + uptime + SSL)** | **10** | **30 ($12)** | **100 ($39)** | **1 min** |
+| **checkmeup (cron + uptime + SSL)** | **10** | **30 ($9)** | **100 ($29)** | **1 min** |
 
 checkmeup bundles three monitor types in one product, which justifies slightly lower raw monitor counts than single-purpose tools. The revised limits bring the free tier and Studio tier in line with the market.
 

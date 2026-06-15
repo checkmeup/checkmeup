@@ -7,7 +7,7 @@
 
 ## Context
 
-checkmeup needs a billing system for its subscription plans (Hobbyist $0 / Indie $12 / Studio $39 / Agency $99). The founder is an Israeli resident operating as a self-employed individual (עוסק פטור) without a registered company.
+checkmeup needs a billing system for its subscription plans (Hobbyist $0 / Indie $9 / Studio $29 / Agency $79). The founder is an Israeli resident operating as a self-employed individual (עוסק פטור) without a registered company.
 
 Key constraints:
 - Must handle global tax collection and remittance automatically (VAT, GST, US sales tax) — no capacity to manage multi-country tax compliance manually

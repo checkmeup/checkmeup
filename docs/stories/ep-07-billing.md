@@ -4,7 +4,7 @@ LemonSqueezy (Merchant of Record) handles payment, tax collection, and invoicing
 
 Plan limits:
 
-| | Hobbyist | Indie ($12) | Studio ($39) | Agency ($99) |
+| | Hobbyist | Indie ($9) | Studio ($29) | Agency ($79) |
 |---|---|---|---|---|
 | Total monitors | 5 | 20 | 50 | unlimited |
 | Status pages | 1 | 3 | 10 | unlimited |

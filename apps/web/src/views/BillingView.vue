@@ -25,9 +25,9 @@ const planLabel: Record<string, string> = {
 
 const planPrice: Record<string, string> = {
   hobbyist: 'Free',
-  indie: '$12/mo',
-  studio: '$39/mo',
-  agency: '$99/mo',
+  indie: '$9/mo',
+  studio: '$29/mo',
+  agency: '$79/mo',
 }
 
 const monitorPct = computed(() => {

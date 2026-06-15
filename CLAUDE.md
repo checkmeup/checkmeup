@@ -3,7 +3,7 @@
 Cron, uptime, and SSL monitors with execution logs, Telegram alerts, and white-label status pages for agencies.
 
 **MVP order:** Cron monitor → Uptime monitor → SSL expiry monitor → Status page  
-**Pricing:** Hobbyist $0 / Indie $12 / Studio $39 / Agency $99
+**Pricing:** Hobbyist $0 / Indie $9 / Studio $29 / Agency $79
 
 ---
 
