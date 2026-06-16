@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import logoDark from '@/assets/logo-dark.svg'
+import logoGrey from '@/assets/logo-grey.svg'
 
 const mobileMenuOpen = ref(false)
 </script>
@@ -119,7 +120,7 @@ const mobileMenuOpen = ref(false)
         class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
       >
         <div>
-          <img :src="logoDark" alt="checkmeup" class="h-6 mb-2" />
+          <img :src="logoGrey" alt="checkmeup" class="h-6 mb-2" />
           <p class="text-xs" style="color: var(--text-muted)">
             Cron, uptime, and SSL monitoring for developers.
           </p>
