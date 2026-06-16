@@ -5,7 +5,7 @@
 - Fri–Sat: 5–6 h/day (~5.5 h avg)
 - **Weekly capacity: ~28–30 h/week**
 
-**Target: MVP live by ~14 Aug 2026 (~9 weeks from Jun 14)**
+**🚀 MVP launched Jun 16 2026 — 9 weeks ahead of the original Aug 14 target.**
 
 ---
 
@@ -19,7 +19,7 @@
 | [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 1 h | EP-03 | ✅ Done | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 1 h | EP-04 | ✅ Done | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 1 h | EP-06 | ✅ Done | Public status pages |
-| [6 — Billing + polish](#phase-6--billing--polish) | Jun 15–16 | 2 | 3 h | EP-07 | 🔜 Launch prep | **MVP launch-ready** |
+| [6 — Billing + polish](#phase-6--billing--polish) | Jun 15–16 | 2 | 4 h | EP-07 | ✅ Done | **🚀 MVP live** |
 
 ---
 
@@ -169,7 +169,7 @@ A live public `/status/:slug` page that anyone can visit and bookmark.
 
 ## Phase 6 — Billing + polish
 
-**Sun Aug 2 → Fri Aug 14 · ~40 h**
+**Jun 15–16 · ~4 h (completed ahead of schedule)**
 
 [EP-07](stories/ep-07-billing.md) — 3 stories + cross-cutting polish
 
@@ -196,14 +196,14 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 - [x] Mobile responsiveness — hamburger nav, card layout on small screens
 - [x] US-0105 Password reset (Resend)
 
-### Launch
+### Launch (done — Jun 16)
 
-- [ ] Add 402 plan-limit log line — `logger.Info("plan limit hit", "org_id", "plan", "resource")` so production logs surface upgrade intent
-- [ ] End-to-end smoke test: each monitor type + status page
-- [ ] Production deploy to Hetzner via Kamal (`kamal deploy`)
-- [ ] Smoke test on production
+- [x] Add 402 plan-limit log line — `slog.InfoContext` on every 402, fields: `org_id`, `plan`, `resource`
+- [x] End-to-end smoke test: each monitor type + status page
+- [x] Production deploy to Hetzner via Kamal (`kamal deploy`)
+- [x] Smoke test on production
 
-### Milestone 🚀 MVP launch
+### Milestone 🚀 MVP live — Jun 16
 
 ---
 
