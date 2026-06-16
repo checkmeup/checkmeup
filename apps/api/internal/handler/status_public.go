@@ -34,13 +34,19 @@ type publicBar struct {
 }
 
 type publicMonitorRow struct {
-	DisplayName  string
-	Type         string
-	StatusLabel  string
-	StatusColor  string
-	Bar          []publicBar
-	ExpiresAt    string // SSL only
-	DaysLeft     int    // SSL only
+	DisplayName        string
+	Type               string
+	StatusLabel        string
+	StatusColor        string
+	Bar                []publicBar
+	ExpiresAt          string // SSL only
+	DaysLeft           int    // SSL only
+	MaintenanceMessage string
+}
+
+type activeMaintenance struct {
+	Title   string
+	Message string
 }
 
 type publicPageData struct {
@@ -71,9 +77,22 @@ func (h *StatusPublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	maintenance := map[string]activeMaintenance{}
+	if active, err := h.queries.GetActiveMaintenanceForOrg(ctx, page.OrgID); err == nil {
+		for _, a := range active {
+			key := a.MonitorType + ":" + a.MonitorID.String()
+			maintenance[key] = activeMaintenance{Title: a.Title, Message: a.Message}
+		}
+	}
+
 	rows := make([]publicMonitorRow, 0, len(pageMonitors))
 	for _, m := range pageMonitors {
 		row := h.buildRow(ctx, m)
+		if mw, ok := maintenance[m.MonitorType+":"+m.MonitorID.String()]; ok {
+			row.StatusLabel = "Under maintenance"
+			row.StatusColor = statusColorGray
+			row.MaintenanceMessage = mw.Message
+		}
 		rows = append(rows, row)
 	}
 
@@ -312,6 +331,9 @@ h1{font-size:1.5rem;font-weight:700;color:#0f172a}
       </div>
       {{if and (eq .Type "ssl") .ExpiresAt}}
       <div class="ssl-info">Certificate expires {{.ExpiresAt}} ({{.DaysLeft}} days)</div>
+      {{end}}
+      {{if .MaintenanceMessage}}
+      <div class="ssl-info">{{.MaintenanceMessage}}</div>
       {{end}}
       <div class="bar">
         {{range .Bar}}<div class="seg" style="background:{{.Color}}" title="{{.Label}}"></div>{{end}}

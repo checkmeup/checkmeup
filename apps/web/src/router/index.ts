@@ -168,6 +168,24 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/maintenance',
+      name: 'maintenance',
+      component: () => import('@/views/MaintenanceWindowListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/maintenance/new',
+      name: 'maintenance-create',
+      component: () => import('@/views/MaintenanceWindowCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/maintenance/:id/edit',
+      name: 'maintenance-edit',
+      component: () => import('@/views/MaintenanceWindowEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/billing',
       name: 'billing',
       component: () => import('@/views/BillingView.vue'),

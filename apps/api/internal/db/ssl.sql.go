@@ -96,7 +96,14 @@ func (q *Queries) GetSSLMonitor(ctx context.Context, arg GetSSLMonitorParams) (S
 }
 
 const listDueSSLMonitors = `-- name: ListDueSSLMonitors :many
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM ssl_monitors WHERE next_check_at <= NOW() AND status != 'paused'
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM ssl_monitors
+WHERE next_check_at <= NOW() AND status != 'paused'
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'ssl' AND mwm.monitor_id = ssl_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
 `
 
 func (q *Queries) ListDueSSLMonitors(ctx context.Context) ([]SslMonitor, error) {

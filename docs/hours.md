@@ -11,7 +11,8 @@
 | 4 — SSL              | 22 h      | 1 h      | -21 h |
 | 5 — Status page      | 30 h      | 1 h      | -29 h |
 | 6 — Billing + polish | 40 h      | 4 h      | -36 h |
-| **Total**            | **234 h** | **24 h** | **-210 h** |
+| 7 — Maintenance windows | 5 h    | 5 h      | 0 h   |
+| **Total**            | **239 h** | **29 h** | **-210 h** |
 
 ---
 
@@ -30,3 +31,4 @@
 | 2026-06-15 | Mon | 6 — Billing        | 2 h   |
 | 2026-06-16 | Tue | 6 — Polish         | 1 h   |
 | 2026-06-16 | Tue | 6 — Launch         | 1 h   |
+| 2026-06-16 | Tue | 7 — Maintenance windows | 5 h |

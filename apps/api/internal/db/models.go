@@ -177,6 +177,24 @@ type CronPing struct {
 	SourceIp   string             `json:"source_ip"`
 }
 
+type MaintenanceWindow struct {
+	ID        uuid.UUID          `json:"id"`
+	OrgID     uuid.UUID          `json:"org_id"`
+	Title     string             `json:"title"`
+	Message   string             `json:"message"`
+	StartsAt  pgtype.Timestamptz `json:"starts_at"`
+	EndsAt    pgtype.Timestamptz `json:"ends_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type MaintenanceWindowMonitor struct {
+	ID          uuid.UUID `json:"id"`
+	WindowID    uuid.UUID `json:"window_id"`
+	MonitorType string    `json:"monitor_type"`
+	MonitorID   uuid.UUID `json:"monitor_id"`
+}
+
 type Org struct {
 	ID                 uuid.UUID          `json:"id"`
 	Name               string             `json:"name"`

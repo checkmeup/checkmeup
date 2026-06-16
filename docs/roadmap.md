@@ -20,6 +20,7 @@
 | [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 1 h | EP-04 | ✅ Done | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 1 h | EP-06 | ✅ Done | Public status pages |
 | [6 — Billing + polish](#phase-6--billing--polish) | Jun 15–16 | 2 | 4 h | EP-07 | ✅ Done | **🚀 MVP live** |
+| [7 — Maintenance windows](#phase-7--maintenance-windows) | Jun 16 | 1 | 5 h | EP-09 | ✅ Done | Suppress alerts during planned downtime |
 
 ---
 
@@ -204,6 +205,25 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 - [x] Smoke test on production
 
 ### Milestone 🚀 MVP live — Jun 16
+
+---
+
+## Phase 7 — Maintenance windows
+
+**Jun 16 · ~5 h (post-MVP)**
+
+[EP-09](stories/ep-09-maintenance-windows.md) — 5 stories
+
+The landing page and blog already promised scheduled maintenance windows ahead of the implementation. Built as the first post-MVP feature; see [ADR-020](decisions/020-maintenance-windows.md) for the design (monitors under an active window are excluded from the worker's due/overdue queries, the same mechanism already used for `paused`).
+
+- [x] DB schema — maintenance_windows, maintenance_window_monitors (migration 011)
+- [x] US-0901 Schedule a window — title, optional message, start/end time, open-ended option
+- [x] US-0902 Cover multiple monitors — multi-select across cron/uptime/SSL, reusing the status-page picker pattern
+- [x] US-0903 Suppress checks/incidents/alerts — worker due-query exclusion, uptime stats stay clean
+- [x] US-0904 "Under maintenance" on status pages — chip + optional message, no outage banner triggered
+- [x] US-0905 End early / delete — "End now" action, delete, upcoming/active/ended badges in the list view
+
+### Milestone 🟢 Maintenance windows live — Jun 16
 
 ---
 

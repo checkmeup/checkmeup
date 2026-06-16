@@ -210,7 +210,14 @@ func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid
 }
 
 const listDueUptimeMonitors = `-- name: ListDueUptimeMonitors :many
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM uptime_monitors WHERE next_check_at <= NOW() AND status != 'paused'
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM uptime_monitors
+WHERE next_check_at <= NOW() AND status != 'paused'
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'uptime' AND mwm.monitor_id = uptime_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
 `
 
 func (q *Queries) ListDueUptimeMonitors(ctx context.Context) ([]UptimeMonitor, error) {

@@ -63,6 +63,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
+	maintenance := handler.NewMaintenanceHandler(s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -127,11 +128,11 @@ func (s *Server) buildRouter() *chi.Mux {
 			})
 
 			r.Route("/billing", func(r chi.Router) {
-					r.Get("/", billing.GetBillingInfo)
-					r.Post("/checkout", billing.CreateCheckout)
-				})
+				r.Get("/", billing.GetBillingInfo)
+				r.Post("/checkout", billing.CreateCheckout)
+			})
 
-				r.Route("/status-pages", func(r chi.Router) {
+			r.Route("/status-pages", func(r chi.Router) {
 				r.Get("/check-slug", statusPages.CheckSlug)
 				r.Get("/", statusPages.ListStatusPages)
 				r.Post("/", statusPages.CreateStatusPage)
@@ -152,6 +153,17 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Delete("/", monitors.DeleteSSLMonitor)
 					r.Post("/pause", monitors.PauseSSLMonitor)
 					r.Post("/resume", monitors.ResumeSSLMonitor)
+				})
+			})
+
+			r.Route("/maintenance-windows", func(r chi.Router) {
+				r.Get("/", maintenance.ListMaintenanceWindows)
+				r.Post("/", maintenance.CreateMaintenanceWindow)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", maintenance.GetMaintenanceWindow)
+					r.Patch("/", maintenance.UpdateMaintenanceWindow)
+					r.Delete("/", maintenance.DeleteMaintenanceWindow)
+					r.Post("/end", maintenance.EndMaintenanceWindowNow)
 				})
 			})
 		})

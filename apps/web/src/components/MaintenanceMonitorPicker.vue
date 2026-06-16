@@ -1,0 +1,93 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { monitorsApi, type CronMonitor, type UptimeMonitor, type SSLMonitor } from '@/api/monitors'
+
+interface SelectedMonitor {
+  monitorType: 'cron' | 'uptime' | 'ssl'
+  monitorId: string
+  name: string
+}
+
+const props = defineProps<{ modelValue: SelectedMonitor[] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: SelectedMonitor[]] }>()
+
+const cronMonitors = ref<CronMonitor[]>([])
+const uptimeMonitors = ref<UptimeMonitor[]>([])
+const sslMonitors = ref<SSLMonitor[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    const [cronRes, uptimeRes, sslRes] = await Promise.all([
+      monitorsApi.listCron(),
+      monitorsApi.listUptime(),
+      monitorsApi.listSSL(),
+    ])
+    cronMonitors.value = cronRes
+    uptimeMonitors.value = uptimeRes
+    sslMonitors.value = sslRes
+  } finally {
+    loading.value = false
+  }
+})
+
+const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL' }
+
+const allMonitors = computed(() => {
+  const result: { key: string; type: 'cron' | 'uptime' | 'ssl'; id: string; name: string }[] = []
+  cronMonitors.value.forEach((m) => result.push({ key: `cron:${m.id}`, type: 'cron', id: m.id, name: m.name }))
+  uptimeMonitors.value.forEach((m) => result.push({ key: `uptime:${m.id}`, type: 'uptime', id: m.id, name: m.name }))
+  sslMonitors.value.forEach((m) => result.push({ key: `ssl:${m.id}`, type: 'ssl', id: m.id, name: m.name }))
+  return result
+})
+
+const selectedKeys = computed(() => new Set(props.modelValue.map((m) => `${m.monitorType}:${m.monitorId}`)))
+
+function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl'; id: string; name: string }) {
+  if (selectedKeys.value.has(m.key)) {
+    emit(
+      'update:modelValue',
+      props.modelValue.filter((e) => `${e.monitorType}:${e.monitorId}` !== m.key),
+    )
+  } else {
+    emit('update:modelValue', [...props.modelValue, { monitorType: m.type, monitorId: m.id, name: m.name }])
+  }
+}
+</script>
+
+<template>
+  <div class="rounded-xl border" style="background-color: var(--surface); border-color: var(--border)">
+    <div
+      class="px-4 py-3 border-b text-sm font-medium"
+      style="border-color: var(--border); color: var(--text-strong)"
+    >
+      Monitors ({{ modelValue.length }} selected)
+    </div>
+    <div v-if="loading" class="px-4 py-3 text-xs" style="color: var(--text-muted)">Loading…</div>
+    <div v-else-if="allMonitors.length === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">
+      No monitors yet — create a cron, uptime, or SSL monitor first.
+    </div>
+    <ul v-else class="max-h-72 overflow-y-auto">
+      <li
+        v-for="m in allMonitors"
+        :key="m.key"
+        class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b last:border-0"
+        style="border-color: var(--border)"
+        @click="toggle(m)"
+      >
+        <div
+          class="w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold"
+          :style="{
+            backgroundColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'transparent',
+            borderColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'var(--border)',
+            color: '#fff',
+          }"
+        >
+          {{ selectedKeys.has(m.key) ? '✓' : '' }}
+        </div>
+        <span class="text-sm flex-1 truncate" style="color: var(--text)">{{ m.name }}</span>
+        <span class="text-xs flex-shrink-0" style="color: var(--text-muted)">{{ typeLabel[m.type] }}</span>
+      </li>
+    </ul>
+  </div>
+</template>

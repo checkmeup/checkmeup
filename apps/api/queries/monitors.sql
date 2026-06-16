@@ -44,7 +44,13 @@ WHERE id = $1;
 
 -- name: ListOverdueCronMonitors :many
 SELECT * FROM cron_monitors
-WHERE status = 'up' AND next_ping_at < NOW();
+WHERE status = 'up' AND next_ping_at < NOW()
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'cron' AND mwm.monitor_id = cron_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  );
 
 -- name: CreateCronPing :one
 INSERT INTO cron_pings (monitor_id, received_at, source_ip)

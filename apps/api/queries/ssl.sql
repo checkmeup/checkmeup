@@ -29,7 +29,14 @@ RETURNING *;
 DELETE FROM ssl_monitors WHERE id = $1 AND org_id = $2;
 
 -- name: ListDueSSLMonitors :many
-SELECT * FROM ssl_monitors WHERE next_check_at <= NOW() AND status != 'paused';
+SELECT * FROM ssl_monitors
+WHERE next_check_at <= NOW() AND status != 'paused'
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'ssl' AND mwm.monitor_id = ssl_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  );
 
 -- name: UpdateSSLMonitorCheck :one
 UPDATE ssl_monitors

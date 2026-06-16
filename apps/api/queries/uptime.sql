@@ -32,7 +32,14 @@ DELETE FROM uptime_monitors WHERE id = $1 AND org_id = $2;
 SELECT COUNT(*) FROM uptime_monitors WHERE org_id = $1;
 
 -- name: ListDueUptimeMonitors :many
-SELECT * FROM uptime_monitors WHERE next_check_at <= NOW() AND status != 'paused';
+SELECT * FROM uptime_monitors
+WHERE next_check_at <= NOW() AND status != 'paused'
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'uptime' AND mwm.monitor_id = uptime_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  );
 
 -- name: RecordUptimeCheckUp :one
 UPDATE uptime_monitors

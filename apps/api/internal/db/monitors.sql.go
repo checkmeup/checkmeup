@@ -309,6 +309,12 @@ func (q *Queries) ListCronPings(ctx context.Context, arg ListCronPingsParams) ([
 const listOverdueCronMonitors = `-- name: ListOverdueCronMonitors :many
 SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident FROM cron_monitors
 WHERE status = 'up' AND next_ping_at < NOW()
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'cron' AND mwm.monitor_id = cron_monitors.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
 `
 
 func (q *Queries) ListOverdueCronMonitors(ctx context.Context) ([]CronMonitor, error) {

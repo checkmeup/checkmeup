@@ -70,6 +70,7 @@ const featureRows: TableRow[] = [
   { label: 'SSL expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Telegram alerts', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
   { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
 ]
 
