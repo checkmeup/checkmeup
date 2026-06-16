@@ -160,7 +160,7 @@ export const posts: BlogPost[] = [
       },
       {
         type: 'p',
-        text: 'HTTP checks every minute. Alert on non-200 status or timeout. Response time tracked per check. Incident history with start/end times and duration.',
+        text: 'HTTP checks every 10 minutes. Alert on non-200 status or timeout. Response time tracked per check. Incident history with start/end times and duration.',
       },
       {
         type: 'h3',
@@ -193,10 +193,10 @@ export const posts: BlogPost[] = [
       {
         type: 'ul',
         items: [
-          'Hobbyist — Free — 10 monitors, 5-min checks, 1 status page',
-          'Indie — $9/mo — 30 monitors, 1-min checks, 3 status pages',
-          'Studio — $29/mo — 100 monitors, 1-min checks, 10 status pages',
-          'Agency — $79/mo — Unlimited monitors, 1-min checks, unlimited status pages',
+          'Hobbyist — Free — 10 monitors, 10-min checks, 1 status page',
+          'Indie — $9/mo — 30 monitors, 10-min checks, 3 status pages',
+          'Studio — $29/mo — 100 monitors, 10-min checks, 10 status pages',
+          'Agency — $79/mo — Unlimited monitors, 10-min checks, unlimited status pages',
         ],
       },
       {

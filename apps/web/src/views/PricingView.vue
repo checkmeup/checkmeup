@@ -22,7 +22,7 @@ const plans: Plan[] = [
     cta: 'Get started free',
     monitors: '10',
     statusPages: '1',
-    checkInterval: '5 min',
+    checkInterval: '10 min',
   },
   {
     name: 'Indie',
@@ -32,7 +32,7 @@ const plans: Plan[] = [
     cta: 'Start Indie',
     monitors: '30',
     statusPages: '3',
-    checkInterval: '1 min',
+    checkInterval: '10 min',
   },
   {
     name: 'Studio',
@@ -42,7 +42,7 @@ const plans: Plan[] = [
     cta: 'Start Studio',
     monitors: '100',
     statusPages: '10',
-    checkInterval: '1 min',
+    checkInterval: '10 min',
   },
   {
     name: 'Agency',
@@ -52,7 +52,7 @@ const plans: Plan[] = [
     cta: 'Start Agency',
     monitors: 'Unlimited',
     statusPages: 'Unlimited',
-    checkInterval: '1 min',
+    checkInterval: '10 min',
   },
 ]
 
@@ -63,7 +63,7 @@ interface TableRow {
 
 const featureRows: TableRow[] = [
   { label: 'Monitors (all types combined)', values: ['10', '30', '100', 'Unlimited'] },
-  { label: 'Uptime check interval', values: ['5 min', '1 min', '1 min', '1 min'] },
+  { label: 'Uptime check interval', values: ['10 min', '10 min', '10 min', '10 min'] },
   { label: 'Status pages', values: ['1', '3', '10', 'Unlimited'] },
   { label: 'Cron job monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },

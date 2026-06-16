@@ -7,28 +7,28 @@ const plans = [
     price: 0,
     description: 'For personal projects',
     highlight: false,
-    features: ['10 monitors', '5-min checks', 'Telegram alerts', '1 status page'],
+    features: ['10 monitors', '10-min checks', 'Telegram alerts', '1 status page'],
   },
   {
     name: 'Indie',
     price: 9,
     description: 'For solo builders',
     highlight: false,
-    features: ['30 monitors', '1-min checks', 'Telegram alerts', '3 status pages'],
+    features: ['30 monitors', '10-min checks', 'Telegram alerts', '3 status pages'],
   },
   {
     name: 'Studio',
     price: 29,
     description: 'For small agencies',
     highlight: true,
-    features: ['100 monitors', '1-min checks', 'Telegram alerts', '10 status pages'],
+    features: ['100 monitors', '10-min checks', 'Telegram alerts', '10 status pages'],
   },
   {
     name: 'Agency',
     price: 79,
     description: 'For growing agencies',
     highlight: false,
-    features: ['Unlimited monitors', '1-min checks', 'Telegram alerts', 'Unlimited status pages'],
+    features: ['Unlimited monitors', '10-min checks', 'Telegram alerts', 'Unlimited status pages'],
   },
 ]
 </script>
@@ -148,12 +148,12 @@ const plans = [
           </div>
           <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">Uptime monitoring</h3>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            We poll your URLs every minute and alert you the moment your site goes down or returns an unexpected status code.
+            We poll your URLs every 10 minutes and alert you the moment your site goes down or returns an unexpected status code.
           </p>
           <ul class="mt-4 space-y-2">
             <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--color-green-500)"><polyline points="20 6 9 17 4 12"/></svg>
-              1-minute check intervals
+              10-minute check intervals
             </li>
             <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--color-green-500)"><polyline points="20 6 9 17 4 12"/></svg>
