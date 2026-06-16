@@ -23,14 +23,15 @@ import (
 )
 
 type Server struct {
-	cfg    *config.Config
-	logger *slog.Logger
-	db     *pgxpool.Pool
-	router *chi.Mux
+	cfg     *config.Config
+	logger  *slog.Logger
+	db      *pgxpool.Pool
+	router  *chi.Mux
+	version string
 }
 
-func New(cfg *config.Config, logger *slog.Logger, db *pgxpool.Pool) *Server {
-	s := &Server{cfg: cfg, logger: logger, db: db}
+func New(cfg *config.Config, logger *slog.Logger, db *pgxpool.Pool, version string) *Server {
+	s := &Server{cfg: cfg, logger: logger, db: db, version: version}
 	s.router = s.buildRouter()
 	return s
 }
@@ -206,7 +207,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.version})
 }
 
 func (s *Server) requestLogger() func(http.Handler) http.Handler {

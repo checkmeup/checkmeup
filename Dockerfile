@@ -1,22 +1,25 @@
 # ── Stage 1: Build Vue frontend (native arch — output is platform-independent JS/CSS) ─
 FROM --platform=${BUILDPLATFORM} oven/bun:1.3-alpine AS frontend
+ARG APP_VERSION=dev
 WORKDIR /app
 
 COPY apps/web/package.json ./
 RUN bun install --ignore-scripts
 
 COPY apps/web .
+ENV VITE_APP_VERSION=$APP_VERSION
 RUN ./node_modules/.bin/vite build
 
 # ── Stage 2: Build Go API (native arch + cross-compile target) ──────────────
 FROM --platform=${BUILDPLATFORM} golang:1.25-bookworm AS backend
+ARG APP_VERSION=dev
 WORKDIR /app
 
 COPY apps/api/go.mod apps/api/go.sum ./
 RUN go mod download
 
 COPY apps/api .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-X main.version=${APP_VERSION}" -o /api ./cmd/api
 
 # ── Stage 3: Runtime (amd64 — matches server) ───────────────────────────────
 FROM debian:bookworm-slim

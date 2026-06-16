@@ -35,6 +35,8 @@ ssh:
 
 builder:
   arch: amd64
+  args:
+    APP_VERSION: <%= `git describe --tags --always --dirty 2>/dev/null || echo dev`.strip %>
 
 accessories:
   db:

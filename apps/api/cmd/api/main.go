@@ -17,6 +17,9 @@ import (
 	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
+// version is set at build time via -ldflags "-X main.version=...".
+var version = "dev"
+
 func main() {
 	cfg := config.Load()
 
@@ -73,7 +76,7 @@ func main() {
 	defer workerCancel()
 	go worker.Run(workerCtx, db.New(pool), tg, logger)
 
-	srv := server.New(cfg, logger, pool)
+	srv := server.New(cfg, logger, pool, version)
 	if err := srv.Start(); err != nil {
 		logger.Error("server error", "err", err)
 		os.Exit(1)
