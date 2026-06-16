@@ -23,7 +23,7 @@ async function signOut() {
     await api.post('/api/v1/auth/sign-out', {})
   } finally {
     auth.clear()
-    router.push({ name: 'sign-in' })
+    router.push({ name: 'home' })
   }
 }
 </script>
