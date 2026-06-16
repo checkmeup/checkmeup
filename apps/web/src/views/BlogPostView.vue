@@ -1,0 +1,183 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, RouterLink } from 'vue-router'
+import LandingLayout from '@/layouts/LandingLayout.vue'
+import { getPost } from '@/blog/posts'
+
+const route = useRoute()
+const post = computed(() => getPost(route.params.slug as string))
+</script>
+
+<template>
+  <LandingLayout>
+    <!-- 404 -->
+    <div v-if="!post" class="max-w-3xl mx-auto px-4 sm:px-6 py-24 text-center">
+      <p class="text-lg mb-4" style="color: var(--text-dim)">Post not found.</p>
+      <RouterLink to="/blog" style="color: var(--color-green-500)">← Back to blog</RouterLink>
+    </div>
+
+    <template v-else>
+      <!-- Header -->
+      <header class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
+        <RouterLink
+          to="/blog"
+          class="inline-flex items-center gap-1.5 text-sm mb-8 transition-colors"
+          style="color: var(--text-muted)"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          All posts
+        </RouterLink>
+
+        <div class="flex items-center gap-3 mb-4 text-xs" style="color: var(--text-muted)">
+          <span>{{ post.date }}</span>
+          <span>·</span>
+          <span>{{ post.readTime }}</span>
+        </div>
+
+        <h1
+          class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-6"
+          style="color: var(--text-strong)"
+        >
+          {{ post.title }}
+        </h1>
+
+        <p class="text-lg leading-relaxed" style="color: var(--text-dim)">{{ post.excerpt }}</p>
+
+        <div class="mt-8 border-t" style="border-color: var(--border)"></div>
+      </header>
+
+      <!-- Content -->
+      <article class="max-w-3xl mx-auto px-4 sm:px-6 pb-24 space-y-5">
+        <template v-for="(block, i) in post.content" :key="i">
+          <p
+            v-if="block.type === 'p'"
+            class="text-base leading-relaxed"
+            style="color: var(--text-dim)"
+          >
+            {{ block.text }}
+          </p>
+
+          <h2
+            v-else-if="block.type === 'h2'"
+            class="text-xl font-bold pt-4"
+            style="color: var(--text-strong)"
+          >
+            {{ block.text }}
+          </h2>
+
+          <h3
+            v-else-if="block.type === 'h3'"
+            class="text-base font-semibold pt-2"
+            style="color: var(--text-strong)"
+          >
+            {{ block.text }}
+          </h3>
+
+          <pre
+            v-else-if="block.type === 'code'"
+            class="rounded-xl border p-5 text-xs overflow-x-auto font-mono leading-relaxed"
+            style="
+              background-color: var(--surface);
+              border-color: var(--border);
+              color: var(--color-green-300);
+            "
+          ><code>{{ block.text }}</code></pre>
+
+          <ul v-else-if="block.type === 'ul'" class="space-y-2 pl-1">
+            <li
+              v-for="item in block.items"
+              :key="item"
+              class="flex items-start gap-3 text-sm leading-relaxed"
+              style="color: var(--text-dim)"
+            >
+              <span
+                class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2"
+                style="background-color: var(--color-green-500)"
+              ></span>
+              {{ item }}
+            </li>
+          </ul>
+
+          <blockquote
+            v-else-if="block.type === 'blockquote'"
+            class="border-l-2 pl-5 py-1 text-sm leading-relaxed italic"
+            style="border-color: var(--color-green-500); color: var(--text-dim)"
+          >
+            {{ block.text }}
+          </blockquote>
+
+          <p
+            v-else-if="block.type === 'signature'"
+            class="text-base pt-2 italic"
+            style="color: var(--text-strong); font-family: Georgia, 'Times New Roman', serif"
+          >
+            {{ block.text }}
+          </p>
+
+          <div
+            v-else-if="block.type === 'divider'"
+            class="border-t my-4"
+            style="border-color: var(--border)"
+          ></div>
+        </template>
+      </article>
+
+      <!-- License note -->
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 pb-8">
+        <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
+          This work is licensed under a
+          <a
+            href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="underline hover:no-underline transition-colors"
+            style="color: var(--color-green-500)"
+            >Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a
+          >.
+        </p>
+      </div>
+
+      <!-- Footer nav -->
+      <div
+        class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 border-t pt-8"
+        style="border-color: var(--border)"
+      >
+        <div class="flex items-center justify-between">
+          <RouterLink
+            to="/blog"
+            class="inline-flex items-center gap-1.5 text-sm transition-colors"
+            style="color: var(--text-muted)"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            All posts
+          </RouterLink>
+          <RouterLink
+            to="/sign-up"
+            class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
+            style="background-color: var(--color-green-500); color: #fff"
+          >
+            Try checkmeup free →
+          </RouterLink>
+        </div>
+      </div>
+    </template>
+  </LandingLayout>
+</template>

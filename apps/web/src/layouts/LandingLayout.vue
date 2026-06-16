@@ -1,0 +1,139 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import logoDark from '@/assets/logo-dark.svg'
+
+const mobileMenuOpen = ref(false)
+</script>
+
+<template>
+  <div style="background-color: var(--bg); color: var(--text); min-height: 100vh">
+    <!-- Top navigation -->
+    <header
+      class="sticky top-0 z-50 border-b"
+      style="
+        background-color: rgba(13, 17, 23, 0.9);
+        border-color: var(--border);
+        backdrop-filter: blur(12px);
+      "
+    >
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+        <RouterLink to="/" class="flex-shrink-0">
+          <img :src="logoDark" alt="checkmeup" class="h-7" />
+        </RouterLink>
+
+        <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text-dim)">
+          <a href="/docs" class="hover:text-white transition-colors">Docs</a>
+          <RouterLink to="/pricing" class="hover:text-white transition-colors">Pricing</RouterLink>
+          <RouterLink to="/blog" class="hover:text-white transition-colors">Blog</RouterLink>
+          <RouterLink to="/about" class="hover:text-white transition-colors">About</RouterLink>
+        </nav>
+
+        <div class="hidden md:flex items-center gap-3">
+          <RouterLink
+            to="/sign-in"
+            class="text-sm px-4 py-2 rounded-md transition-colors"
+            style="color: var(--text-dim)"
+          >
+            Sign in
+          </RouterLink>
+          <RouterLink
+            to="/sign-up"
+            class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
+            style="background-color: var(--color-green-500); color: #fff"
+          >
+            Sign up free
+          </RouterLink>
+        </div>
+
+        <button
+          class="md:hidden p-2 rounded-md"
+          style="color: var(--text-muted)"
+          aria-label="Toggle menu"
+          @click="mobileMenuOpen = !mobileMenuOpen"
+        >
+          <svg
+            v-if="!mobileMenuOpen"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+          <svg
+            v-else
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div
+        v-if="mobileMenuOpen"
+        class="md:hidden border-t px-4 py-4 space-y-3"
+        style="border-color: var(--border); background-color: var(--surface)"
+      >
+        <a href="/docs" class="block text-sm py-1" style="color: var(--text-dim)">Docs</a>
+        <RouterLink to="/pricing" class="block text-sm py-1" style="color: var(--text-dim)"
+          >Pricing</RouterLink
+        >
+        <a href="/blog" class="block text-sm py-1" style="color: var(--text-dim)">Blog</a>
+        <a href="/about" class="block text-sm py-1" style="color: var(--text-dim)">About</a>
+        <div class="pt-2 flex flex-col gap-2">
+          <RouterLink
+            to="/sign-in"
+            class="block text-sm text-center px-4 py-2 rounded-md border"
+            style="color: var(--text-dim); border-color: var(--border)"
+          >
+            Sign in
+          </RouterLink>
+          <RouterLink
+            to="/sign-up"
+            class="block text-sm font-medium text-center px-4 py-2 rounded-md"
+            style="background-color: var(--color-green-500); color: #fff"
+          >
+            Sign up free
+          </RouterLink>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <slot />
+
+    <!-- Footer -->
+    <footer class="border-t" style="border-color: var(--border)">
+      <div
+        class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
+      >
+        <div>
+          <img :src="logoDark" alt="checkmeup" class="h-6 mb-2" />
+          <p class="text-xs" style="color: var(--text-muted)">
+            Cron, uptime, and SSL monitoring for developers.
+          </p>
+        </div>
+        <nav class="flex flex-wrap gap-x-6 gap-y-2 text-xs" style="color: var(--text-muted)">
+          <a href="/docs" class="hover:text-white transition-colors">Docs</a>
+          <RouterLink to="/pricing" class="hover:text-white transition-colors">Pricing</RouterLink>
+          <RouterLink to="/blog" class="hover:text-white transition-colors">Blog</RouterLink>
+          <RouterLink to="/about" class="hover:text-white transition-colors">About</RouterLink>
+          <RouterLink to="/sign-in" class="hover:text-white transition-colors">Sign in</RouterLink>
+          <RouterLink to="/sign-up" class="hover:text-white transition-colors">Sign up</RouterLink>
+        </nav>
+        <p class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</p>
+      </div>
+    </footer>
+  </div>
+</template>
