@@ -29,14 +29,14 @@ type BillingHandler struct {
 
 func NewBillingHandler(cfg *config.Config, pool *pgxpool.Pool) *BillingHandler {
 	m := map[string]db.Plan{}
-	if cfg.LSIndieVariantID != "" {
-		m[cfg.LSIndieVariantID] = db.PlanIndie
+	if cfg.LSSoloVariantID != "" {
+		m[cfg.LSSoloVariantID] = db.PlanSolo
 	}
-	if cfg.LSStudioVariantID != "" {
-		m[cfg.LSStudioVariantID] = db.PlanStudio
+	if cfg.LSStartupVariantID != "" {
+		m[cfg.LSStartupVariantID] = db.PlanStartup
 	}
-	if cfg.LSAgencyVariantID != "" {
-		m[cfg.LSAgencyVariantID] = db.PlanAgency
+	if cfg.LSEnterpriseVariantID != "" {
+		m[cfg.LSEnterpriseVariantID] = db.PlanEnterprise
 	}
 	return &BillingHandler{cfg: cfg, queries: db.New(pool), variantMap: m}
 }
@@ -186,9 +186,9 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	subscriptionID := payload.Data.ID
 	customerID := fmt.Sprintf("%d", payload.Data.Attributes.CustomerID)
 
-	// On cancellation, downgrade to hobbyist at period end
+	// On cancellation, downgrade to hobby at period end
 	if status == "cancelled" || status == "expired" {
-		plan = db.PlanHobbyist
+		plan = db.PlanHobby
 		customerID = ""
 		subscriptionID = ""
 	}
@@ -218,12 +218,12 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 
 func (h *BillingHandler) variantIDForPlan(plan string) string {
 	switch plan {
-	case "indie":
-		return h.cfg.LSIndieVariantID
-	case "studio":
-		return h.cfg.LSStudioVariantID
-	case "agency":
-		return h.cfg.LSAgencyVariantID
+	case "solo":
+		return h.cfg.LSSoloVariantID
+	case "startup":
+		return h.cfg.LSStartupVariantID
+	case "enterprise":
+		return h.cfg.LSEnterpriseVariantID
 	}
 	return ""
 }

@@ -59,10 +59,10 @@ func (ns NullMonitorStatus) Value() (driver.Value, error) {
 type Plan string
 
 const (
-	PlanHobbyist Plan = "hobbyist"
-	PlanIndie    Plan = "indie"
-	PlanStudio   Plan = "studio"
-	PlanAgency   Plan = "agency"
+	PlanHobby      Plan = "hobby"
+	PlanSolo       Plan = "solo"
+	PlanStartup    Plan = "startup"
+	PlanEnterprise Plan = "enterprise"
 )
 
 func (e *Plan) Scan(src interface{}) error {

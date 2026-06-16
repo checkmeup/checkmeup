@@ -3,12 +3,14 @@
 **Date:** 2026-06-15  
 **Status:** Accepted  
 **Revised:** 2026-06-15 — limits loosened + prices reduced after competitor review
+**Revised:** 2026-06-16 — plans renamed Hobbyist/Indie/Studio/Agency → Hobby/Solo/Startup/Enterprise
+**Revised:** 2026-06-16 — Enterprise capped at 1000 monitors / 100 status pages, price raised to $99
 
 ---
 
 ## Context
 
-Four pricing tiers: Hobbyist ($0) / Indie ($9) / Studio ($29) / Agency ($79). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
+Four pricing tiers: Hobby ($0) / Solo ($9) / Startup ($29) / Enterprise ($99). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
 
 Monitors are counted in aggregate across all types (cron + uptime + SSL) because users care about "how many things am I watching", not the internal type split.
 
@@ -16,10 +18,10 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL) because
 
 ## Limits
 
-| | Hobbyist | Indie | Studio | Agency |
+| | Hobby | Solo | Startup | Enterprise |
 |---|---|---|---|---|
-| Total monitors (cron + uptime + SSL) | 10 | 30 | 100 | unlimited |
-| Status pages | 1 | 3 | 10 | unlimited |
+| Total monitors (cron + uptime + SSL) | 10 | 30 | 100 | 1000 |
+| Status pages | 1 | 3 | 10 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |
 
 ### Competitor reference (Jun 2026)
@@ -32,7 +34,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL) because
 | Better Stack (uptime) | 10 | pay-per-monitor | pay-per-monitor | 30 sec |
 | **checkmeup (cron + uptime + SSL)** | **10** | **30 ($9)** | **100 ($29)** | **1 min** |
 
-checkmeup bundles three monitor types in one product, which justifies slightly lower raw monitor counts than single-purpose tools. The revised limits bring the free tier and Studio tier in line with the market.
+checkmeup bundles three monitor types in one product, which justifies slightly lower raw monitor counts than single-purpose tools. The revised limits bring the free tier and Startup tier in line with the market.
 
 ### 30-second interval — deferred
 

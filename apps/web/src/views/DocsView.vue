@@ -89,7 +89,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
         <section id="uptime" class="scroll-mt-24">
           <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Uptime monitoring</h2>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
-            Point an uptime monitor at any URL. We send a GET request on your chosen interval — 10 or 30 minutes — with a 10-second timeout, and expect an HTTP 200 back. Anything else (a different status code, a timeout, a connection error) opens an incident.
+            Point an uptime monitor at any URL. We send a GET request on your chosen interval — 5, 10, or 30 minutes on Hobby, plus 1 minute on paid plans — with a 10-second timeout, and expect an HTTP 200 back. Anything else (a different status code, a timeout, a connection error) opens an incident.
           </p>
           <ul class="space-y-2 text-sm" style="color: var(--text-dim)">
             <li class="flex items-start gap-2">
@@ -153,7 +153,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
         <section id="plans" class="scroll-mt-24">
           <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Plans & limits</h2>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
-            Limits are per organization and apply across all monitor types combined. The free Hobbyist plan is meant to be genuinely usable, not a trial.
+            Limits are per organization and apply across all monitor types combined. The free Hobby plan is meant to be genuinely usable, not a trial.
           </p>
           <div class="rounded-xl border overflow-hidden" style="border-color: var(--border)">
             <table class="w-full text-sm">
@@ -166,24 +166,24 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
               </thead>
               <tbody>
                 <tr style="border-top: 1px solid var(--border)">
-                  <td class="px-4 py-3" style="color: var(--text-strong)">Hobbyist — Free</td>
+                  <td class="px-4 py-3" style="color: var(--text-strong)">Hobby — Free</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">10</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">1</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
-                  <td class="px-4 py-3" style="color: var(--text-strong)">Indie — $9/mo</td>
+                  <td class="px-4 py-3" style="color: var(--text-strong)">Solo — $9/mo</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">30</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">3</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
-                  <td class="px-4 py-3" style="color: var(--text-strong)">Studio — $29/mo</td>
+                  <td class="px-4 py-3" style="color: var(--text-strong)">Startup — $29/mo</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">100</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">10</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
-                  <td class="px-4 py-3" style="color: var(--text-strong)">Agency — $79/mo</td>
-                  <td class="px-4 py-3" style="color: var(--text-dim)">Unlimited</td>
-                  <td class="px-4 py-3" style="color: var(--text-dim)">Unlimited</td>
+                  <td class="px-4 py-3" style="color: var(--text-strong)">Enterprise — $99/mo</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">1000</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">100</td>
                 </tr>
               </tbody>
             </table>

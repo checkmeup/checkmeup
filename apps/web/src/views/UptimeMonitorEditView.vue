@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
+import { billingApi } from '@/api/billing'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,11 +20,14 @@ const maxAlertsPerIncident = ref(3)
 const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
+const minIntervalMins = ref(5)
 
-const intervalOptions = [
+const intervalOptions = computed(() => [
+  ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
+  { label: '5 minutes', value: 5 },
   { label: '10 minutes', value: 10 },
   { label: '30 minutes', value: 30 },
-]
+])
 
 const alertLimitOptions = [
   { label: 'Always alert', value: 0 },
@@ -36,13 +40,14 @@ const alertLimitOptions = [
 
 onMounted(async () => {
   try {
-    const detail = await monitorsApi.getUptime(id)
+    const [detail, info] = await Promise.all([monitorsApi.getUptime(id), billingApi.getInfo()])
     const m = detail.monitor
     name.value = m.name
     url.value = m.url
     intervalMins.value = m.intervalMins
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
+    minIntervalMins.value = info.minIntervalMins
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load monitor'
   } finally {

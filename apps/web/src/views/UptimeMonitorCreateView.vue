@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
+import { billingApi } from '@/api/billing'
 
 const router = useRouter()
 
@@ -15,11 +16,23 @@ const intervalMins = ref(10)
 const maxAlertsPerIncident = ref(3)
 const submitting = ref(false)
 const error = ref('')
+const minIntervalMins = ref(5)
 
-const intervalOptions = [
+const intervalOptions = computed(() => [
+  ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
+  { label: '5 minutes', value: 5 },
   { label: '10 minutes', value: 10 },
   { label: '30 minutes', value: 30 },
-]
+])
+
+onMounted(async () => {
+  try {
+    const info = await billingApi.getInfo()
+    minIntervalMins.value = info.minIntervalMins
+  } catch {
+    // keep defaults if billing info can't be loaded
+  }
+})
 
 const alertLimitOptions = [
   { label: 'Always alert', value: 0 },

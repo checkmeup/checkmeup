@@ -28,9 +28,9 @@ type Config struct {
 	LSAPIKey              string // LemonSqueezy API key
 	LSStoreID             string // LemonSqueezy store ID
 	LSWebhookSecret       string // LemonSqueezy webhook signing secret
-	LSIndieVariantID      string // LemonSqueezy variant ID for Indie plan
-	LSStudioVariantID     string // LemonSqueezy variant ID for Studio plan
-	LSAgencyVariantID     string // LemonSqueezy variant ID for Agency plan
+	LSSoloVariantID       string // LemonSqueezy variant ID for Solo plan
+	LSStartupVariantID    string // LemonSqueezy variant ID for Startup plan
+	LSEnterpriseVariantID string // LemonSqueezy variant ID for Enterprise plan
 }
 
 func Load() *Config {
@@ -53,9 +53,9 @@ func Load() *Config {
 		LSAPIKey:          getEnv("LS_API_KEY", ""),
 		LSStoreID:         getEnv("LS_STORE_ID", ""),
 		LSWebhookSecret:   getEnv("LS_WEBHOOK_SECRET", ""),
-		LSIndieVariantID:  getEnv("LS_INDIE_VARIANT_ID", ""),
-		LSStudioVariantID: getEnv("LS_STUDIO_VARIANT_ID", ""),
-		LSAgencyVariantID: getEnv("LS_AGENCY_VARIANT_ID", ""),
+		LSSoloVariantID:       getEnv("LS_SOLO_VARIANT_ID", ""),
+		LSStartupVariantID:    getEnv("LS_STARTUP_VARIANT_ID", ""),
+		LSEnterpriseVariantID: getEnv("LS_ENTERPRISE_VARIANT_ID", ""),
 	}
 	if cfg.TelegramBotToken != "" {
 		h := sha256.Sum256([]byte(cfg.TelegramBotToken))

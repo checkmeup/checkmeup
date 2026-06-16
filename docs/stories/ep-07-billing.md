@@ -1,13 +1,13 @@
 # EP-07: Billing & plan limits
 
-LemonSqueezy (Merchant of Record) handles payment, tax collection, and invoicing. Plan limits are enforced server-side. Hobbyist ($0) requires no payment flow — it's the default for all new accounts. See [ADR-018](../decisions/018-billing-lemonsqueezy-mor.md) and [ADR-019](../decisions/019-plan-limits.md).
+LemonSqueezy (Merchant of Record) handles payment, tax collection, and invoicing. Plan limits are enforced server-side. Hobby ($0) requires no payment flow — it's the default for all new accounts. See [ADR-018](../decisions/018-billing-lemonsqueezy-mor.md) and [ADR-019](../decisions/019-plan-limits.md).
 
 Plan limits:
 
-| | Hobbyist | Indie ($9) | Studio ($29) | Agency ($79) |
+| | Hobby | Solo ($9) | Startup ($29) | Enterprise ($99) |
 |---|---|---|---|---|
-| Total monitors | 10 | 30 | 100 | unlimited |
-| Status pages | 1 | 3 | 10 | unlimited |
+| Total monitors | 10 | 30 | 100 | 1000 |
+| Status pages | 1 | 3 | 10 | 100 |
 | Min uptime interval | 5 min | 1 min | 1 min | 1 min |
 
 ---
@@ -21,7 +21,7 @@ Plan limits:
 - [x] Shows: plan name, price, renewal date (if subscribed)
 - [x] Usage bars for: monitors used / limit, status pages used / limit
 - [x] Min check interval shown for the current plan
-- [x] "Upgrade" CTA shown for non-Agency plans
+- [x] "Upgrade" CTA shown for non-Enterprise plans
 - [x] "Manage subscription →" link for active subscribers (LemonSqueezy customer portal)
 
 ---
@@ -49,5 +49,5 @@ Plan limits:
 - [x] LemonSqueezy Checkout session created server-side; user redirected to LemonSqueezy
 - [x] On successful payment, LemonSqueezy webhook updates the org's plan in DB
 - [x] New limits applied immediately after webhook received
-- [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobbyist
+- [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobby
 - [ ] Failed payment: user lands back on billing page (LemonSqueezy handles this natively) *(deferred post-MVP — verify redirect URL when activating billing)*

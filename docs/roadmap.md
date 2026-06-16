@@ -177,10 +177,10 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 
 **Plan limits** (revised Jun 2026 after competitor review — see [ADR-019](decisions/019-plan-limits.md)):
 
-| | Hobbyist | Indie ($9) | Studio ($29) | Agency ($79) |
+| | Hobby | Solo ($9) | Startup ($29) | Enterprise ($99) |
 |---|---|---|---|---|
-| Monitors | 10 | 30 | 100 | unlimited |
-| Status pages | 1 | 3 | 10 | unlimited |
+| Monitors | 10 | 30 | 100 | 1000 |
+| Status pages | 1 | 3 | 10 | 100 |
 | Min uptime interval | 5 min | 1 min | 1 min | 1 min |
 
 ### Billing (done)

@@ -13,10 +13,10 @@ type Limits struct {
 }
 
 var planLimits = map[db.Plan]Limits{
-	db.PlanHobbyist: {MonitorTotal: 10, StatusPages: 1, MinIntervalMins: 5},
-	db.PlanIndie:    {MonitorTotal: 30, StatusPages: 3, MinIntervalMins: 1},
-	db.PlanStudio:   {MonitorTotal: 100, StatusPages: 10, MinIntervalMins: 1},
-	db.PlanAgency:   {MonitorTotal: -1, StatusPages: -1, MinIntervalMins: 1},
+	db.PlanHobby:      {MonitorTotal: 10, StatusPages: 1, MinIntervalMins: 5},
+	db.PlanSolo:       {MonitorTotal: 30, StatusPages: 3, MinIntervalMins: 1},
+	db.PlanStartup:    {MonitorTotal: 100, StatusPages: 10, MinIntervalMins: 1},
+	db.PlanEnterprise: {MonitorTotal: 1000, StatusPages: 100, MinIntervalMins: 1},
 }
 
 var (
@@ -28,7 +28,7 @@ func GetLimits(plan db.Plan) Limits {
 	if l, ok := planLimits[plan]; ok {
 		return l
 	}
-	return planLimits[db.PlanHobbyist]
+	return planLimits[db.PlanHobby]
 }
 
 func CheckMonitorLimit(plan db.Plan, current int) error {

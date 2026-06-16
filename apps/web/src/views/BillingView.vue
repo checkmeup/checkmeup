@@ -17,17 +17,17 @@ onMounted(async () => {
 })
 
 const planLabel: Record<string, string> = {
-  hobbyist: 'Hobbyist',
-  indie: 'Indie',
-  studio: 'Studio',
-  agency: 'Agency',
+  hobby: 'Hobby',
+  solo: 'Solo',
+  startup: 'Startup',
+  enterprise: 'Enterprise',
 }
 
 const planPrice: Record<string, string> = {
-  hobbyist: 'Free',
-  indie: '$9/mo',
-  studio: '$29/mo',
-  agency: '$79/mo',
+  hobby: 'Free',
+  solo: '$9/mo',
+  startup: '$29/mo',
+  enterprise: '$99/mo',
 }
 
 const monitorPct = computed(() => {
@@ -72,7 +72,7 @@ function limitLabel(used: number, limit: number) {
               </p>
             </div>
             <a
-              v-if="info.customerPortalUrl && info.plan !== 'hobbyist'"
+              v-if="info.customerPortalUrl && info.plan !== 'hobby'"
               :href="info.customerPortalUrl"
               target="_blank"
               rel="noopener"

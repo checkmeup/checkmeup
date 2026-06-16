@@ -1,7 +1,7 @@
 import { api } from './client'
 
 export interface BillingInfo {
-  plan: 'hobbyist' | 'indie' | 'studio' | 'agency'
+  plan: 'hobby' | 'solo' | 'startup' | 'enterprise'
   subscriptionStatus: string
   planRenewsAt: string | null
   monitorCount: number

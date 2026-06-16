@@ -13,11 +13,11 @@ Status pages could be served at:
 
 ## Decision
 
-MVP serves status pages at `checkmeup.net/status/:slug`. Custom domain mapping (white-label) is deferred to a post-MVP feature for the Agency tier.
+MVP serves status pages at `checkmeup.net/status/:slug`. Custom domain mapping (white-label) is deferred to a post-MVP feature for the Enterprise tier.
 
 ## Consequences
 
 - **Simpler DNS/TLS:** no wildcard certificate or per-tenant subdomain provisioning needed on MVP
 - **Simpler routing:** a single route pattern handles all status pages
-- **Branding limitation:** the URL shows `checkmeup.net`, which is acceptable for Hobbyist/Indie tiers but a gap for Agency customers — addressed by the deferred custom domain feature
+- **Branding limitation:** the URL shows `checkmeup.net`, which is acceptable for Hobby/Solo tiers but a gap for Enterprise customers — addressed by the deferred custom domain feature
 - **Custom domain path:** when implemented, Traefik can route `status.acme.com` to the same handler with a `Host` header match; a `domains` table maps custom hostnames to org slugs

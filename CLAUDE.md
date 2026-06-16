@@ -3,7 +3,7 @@
 Cron, uptime, and SSL monitors with execution logs, Telegram alerts, and white-label status pages for agencies.
 
 **MVP order:** Cron monitor → Uptime monitor → SSL expiry monitor → Status page  
-**Pricing:** Hobbyist $0 / Indie $9 / Studio $29 / Agency $79
+**Pricing:** Hobby $0 / Solo $9 / Startup $29 / Enterprise $99
 
 ---
 
@@ -43,9 +43,9 @@ make migrate-create name=foo  # create a new goose migration file
 | `LS_API_KEY` | billing | LemonSqueezy API key |
 | `LS_STORE_ID` | billing | LemonSqueezy store ID |
 | `LS_WEBHOOK_SECRET` | billing | LemonSqueezy webhook signing secret |
-| `LS_INDIE_VARIANT_ID` | billing | variant ID for Indie plan |
-| `LS_STUDIO_VARIANT_ID` | billing | variant ID for Studio plan |
-| `LS_AGENCY_VARIANT_ID` | billing | variant ID for Agency plan |
+| `LS_SOLO_VARIANT_ID` | billing | variant ID for Solo plan |
+| `LS_STARTUP_VARIANT_ID` | billing | variant ID for Startup plan |
+| `LS_ENTERPRISE_VARIANT_ID` | billing | variant ID for Enterprise plan |
 | `CODACY_API_TOKEN` | CI only | account-level Codacy token |
 
 > `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
