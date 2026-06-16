@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -199,11 +200,13 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor")
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}
 	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
 	if err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}

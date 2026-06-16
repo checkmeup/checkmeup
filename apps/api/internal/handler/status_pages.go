@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -189,6 +190,7 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := billing.CheckStatusPageLimit(plan, int(spCount)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "status_page")
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}

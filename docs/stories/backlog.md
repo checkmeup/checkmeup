@@ -14,6 +14,7 @@
 | [EP-05](ep-05-telegram-alerts.md) | Telegram alerts                | 4       |
 | [EP-06](ep-06-status-page.md)     | Status page                    | 5       |
 | [EP-07](ep-07-billing.md)         | Billing & plan limits          | 3       |
+| [EP-08](ep-08-security-hardening.md) | Security hardening          | 4       |
 
 ## Story status key
 
@@ -25,9 +26,11 @@
 
 ## Plan limits reference
 
-|                    | Hobbyist | Indie  | Studio | Agency    |
-| ------------------ | -------- | ------ | ------ | --------- |
-| Price              | $0       | $12/mo | $39/mo | $99/mo    |
-| Monitors           | 3        | 20     | 75     | 300       |
-| Min check interval | 5 min    | 1 min  | 1 min  | 1 min     |
-| Status pages       | 1        | 3      | 10     | unlimited |
+(Revised Jun 2026 after competitor review — see [ADR-019](../decisions/019-plan-limits.md))
+
+|                    | Hobbyist | Indie | Studio | Agency    |
+| ------------------ | -------- | ----- | ------ | --------- |
+| Price              | $0       | $9/mo | $29/mo | $79/mo    |
+| Monitors           | 10       | 30    | 100    | unlimited |
+| Min check interval | 5 min    | 1 min | 1 min  | 1 min     |
+| Status pages       | 1        | 3     | 10     | unlimited |

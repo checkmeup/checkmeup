@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -156,6 +157,7 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "ssl_monitor")
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}

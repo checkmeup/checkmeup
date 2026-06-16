@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
 import logoIcon from '@/assets/logo-icon.svg'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+const sidebarOpen = ref(false)
+
+watch(() => route.path, () => { sidebarOpen.value = false })
 
 async function signOut() {
   try {
@@ -19,9 +24,19 @@ async function signOut() {
 
 <template>
   <div class="flex h-screen" style="background-color: var(--bg)">
-    <!-- Sidebar -->
-    <aside class="w-56 flex-shrink-0 flex flex-col border-r"
-           style="background-color: var(--surface); border-color: var(--border)">
+    <!-- Mobile backdrop -->
+    <div
+      v-if="sidebarOpen"
+      class="fixed inset-0 z-20 bg-black/50 md:hidden"
+      @click="sidebarOpen = false"
+    />
+
+    <!-- Sidebar — fixed overlay on mobile, static column on desktop -->
+    <aside
+      class="fixed inset-y-0 left-0 z-30 w-56 flex-shrink-0 flex flex-col border-r transition-transform duration-200 md:static md:translate-x-0"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+      style="background-color: var(--surface); border-color: var(--border)"
+    >
       <!-- Logo -->
       <div class="flex items-center gap-2 px-4 py-5 border-b" style="border-color: var(--border)">
         <img :src="logoIcon" alt="" class="h-6 w-6" />
@@ -35,7 +50,6 @@ async function signOut() {
           class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
           style="color: var(--text-dim)"
           active-class="font-medium"
-          :style="{ color: 'var(--text-dim)' }"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           Dashboard
@@ -129,9 +143,33 @@ async function signOut() {
       </div>
     </aside>
 
-    <!-- Main -->
-    <main class="flex-1 overflow-y-auto">
-      <slot />
-    </main>
+    <!-- Main column -->
+    <div class="flex flex-col flex-1 min-w-0">
+      <!-- Mobile header (hidden on desktop) -->
+      <header
+        class="flex md:hidden items-center gap-3 px-4 h-14 border-b flex-shrink-0"
+        style="background-color: var(--surface); border-color: var(--border)"
+      >
+        <button
+          class="p-1 -ml-1 rounded"
+          style="color: var(--text-muted)"
+          aria-label="Open menu"
+          @click="sidebarOpen = true"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <img :src="logoIcon" alt="" class="h-5 w-5" />
+        <span class="text-sm font-semibold" style="color: var(--text-strong)">checkmeup</span>
+      </header>
+
+      <!-- Page content -->
+      <main class="flex-1 overflow-y-auto">
+        <slot />
+      </main>
+    </div>
   </div>
 </template>

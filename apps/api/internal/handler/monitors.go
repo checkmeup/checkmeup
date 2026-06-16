@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -163,6 +164,7 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "cron_monitor")
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}

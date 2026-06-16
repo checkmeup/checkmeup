@@ -15,11 +15,11 @@
 |-------|-------|------|--------|-------|--------|-----------|
 | [0 — Foundation](#phase-0--foundation) | Jun 14–20 | 7 | 28 h | — | ✅ Done | Dev stack + scaffold running |
 | [1 — Auth](#phase-1--auth) | Jun 21–27 | 7 | 28 h | EP-01 | ✅ Done | Sign up · sign in · sessions |
-| [2 — Cron + Alerts](#phase-2--cron-monitor--telegram-alerts) | Jun 14 | 1 | 3 h | EP-02, EP-05 | ✅ Done | **First useful version** |
+| [2 — Cron + Alerts + Security](#phase-2--cron-monitor--telegram-alerts--security-hardening) | Jun 14–15 | 2 | 4 h | EP-02, EP-05, EP-08 | ✅ Done | **First useful version** |
 | [3 — Uptime](#phase-3--uptime-monitor) | Jun 15 | 1 | 1 h | EP-03 | ✅ Done | URL uptime live |
 | [4 — SSL](#phase-4--ssl-monitor) | Jun 15 | 1 | 1 h | EP-04 | ✅ Done | Full monitoring suite |
 | [5 — Status page](#phase-5--status-page) | Jun 15 | 1 | 1 h | EP-06 | ✅ Done | Public status pages |
-| [6 — Billing + polish](#phase-6--billing--polish) | Aug 2–14 | 13 | 40 h | EP-07 | ⬜ Not started | **MVP launch-ready** |
+| [6 — Billing + polish](#phase-6--billing--polish) | Jun 15–16 | 2 | 3 h | EP-07 | 🔜 Launch prep | **MVP launch-ready** |
 
 ---
 
@@ -71,12 +71,13 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 
 ---
 
-## Phase 2 — Cron monitor + Telegram alerts
+## Phase 2 — Cron monitor + Telegram alerts + Security hardening
 
-**Sun Jun 14 · ~3 h (completed ahead of schedule)**
+**Jun 14–15 · ~4 h (completed ahead of schedule)**
 
 [EP-02](stories/ep-02-cron-monitor.md) — 8 stories  
-[EP-05](stories/ep-05-telegram-alerts.md) — 4 stories
+[EP-05](stories/ep-05-telegram-alerts.md) — 4 stories  
+[EP-08](stories/ep-08-security-hardening.md) — 4 stories
 
 - [x] DB schema — monitors, pings, incidents (migration 003)
 - [x] US-0501 Connect Telegram — org settings page, chat ID input, test message button; bot webhook so `/start` replies with chat ID
@@ -94,19 +95,14 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 
 Point a real cron job at checkmeup. Watch pings arrive. Get a Telegram message when the job stops. The product can be used for real at this point.
 
----
-
-## Security hardening — Jun 15
-
-Cross-cutting work done before Phase 3. Not a feature phase — no new user-visible functionality.
+### Security hardening — Jun 15
 
 - [x] US-0106 Rate limiting — `go-chi/httprate` on sign-up, sign-in, forgot-password ([ADR-013](decisions/013-rate-limiting.md))
-- [x] Rate limit `GET /ping/{token}` — 60 req/min per token (prevents DB flooding)
-- [x] Rate limit `POST /webhook/telegram` — 60 req/min per IP
-- [x] Rate limit `POST /settings/telegram/test` — 5 req/min per IP (prevents bot abuse)
-- [x] Global 64 KB request body cap — `http.MaxBytesReader` middleware (prevents OOM on 4 GB server)
-- [x] Telegram webhook secret token — `sha256(TELEGRAM_BOT_TOKEN)` set via `setWebhook`, validated on every incoming update (prevents fake webhook calls)
-- [x] ADR-013 written; `cron_pings` retention added to decision backlog (storage growth risk before Phase 3)
+- [x] US-0801 Rate limit `GET /ping/{token}` — 60 req/min per token (prevents DB flooding)
+- [x] US-0802 Rate limit Telegram endpoints — webhook 60 req/min, test-message 5 req/min per IP
+- [x] US-0803 Global 64 KB request body cap — `http.MaxBytesReader` middleware (prevents OOM on 4 GB server)
+- [x] US-0804 Telegram webhook secret token — `sha256(TELEGRAM_BOT_TOKEN)` validated on every incoming update
+- [x] ADR-013 written; `cron_pings` retention added to decision backlog
 
 ---
 
@@ -187,35 +183,40 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 | Status pages | 1 | 3 | 10 | unlimited |
 | Min uptime interval | 5 min | 1 min | 1 min | 1 min |
 
-### Week 1 — Sun Aug 2 → Sat Aug 8 (~28 h)
+### Billing (done)
 
-**Billing**
-
-- [ ] Configure LemonSqueezy products + variants in the LS dashboard; add `LS_*` env vars
 - [x] US-0702 Plan limit enforcement — 402 API responses on monitor/status-page create
 - [x] US-0701 Billing page — current plan, usage bars, upgrade CTA, manage subscription link
 - [x] US-0703 LemonSqueezy Checkout — session endpoint, redirect to LS, webhook → update org plan
-- [ ] US-0702 UI inline upgrade prompt on 402 (create form shows upgrade CTA instead of generic error)
 
-### Week 2 — Sun Aug 9 → Fri Aug 14 (~18 h)
+### Polish (done — Jun 16)
 
-**Polish + launch**
+- [x] Empty states on all list views
+- [x] Error states + retry buttons on all list views
+- [x] Mobile responsiveness — hamburger nav, card layout on small screens
+- [x] US-0105 Password reset (Resend)
 
-- [ ] Empty states on all list views
-- [ ] Error states and network failure handling in the frontend
-- [ ] Mobile responsiveness pass
-- [ ] End-to-end smoke test: each monitor type + billing upgrade + status page
-- [ ] US-0105 Password reset — if an email provider is wired up by now
+### Launch
+
+- [ ] Add 402 plan-limit log line — `logger.Info("plan limit hit", "org_id", "plan", "resource")` so production logs surface upgrade intent
+- [ ] End-to-end smoke test: each monitor type + status page
 - [ ] Production deploy to Hetzner via Kamal (`kamal deploy`)
 - [ ] Smoke test on production
 
-### Milestone 🚀 MVP launch — ~Fri Aug 14
+### Milestone 🚀 MVP launch
+
+---
+
+## Deferred to post-MVP (trigger: first 402 hit in production or user asks about paid plan)
+
+- [ ] Configure LemonSqueezy products + variants in the LS dashboard; add `LS_*` env vars
+- [ ] US-0702 UI inline upgrade prompt on 402 (create form shows upgrade CTA instead of generic error)
+- [ ] Verify failed-payment redirect URL in LemonSqueezy checkout settings
 
 ---
 
 ## Buffer notes
 
-- Phase 2 is the riskiest (first real workers, 12 stories). If it slips into the weekend of Jul 11–12 that's fine — the following phases are lighter.
-- Phase 4 finishes Thursday–Friday, giving a natural buffer before Phase 5 starts Saturday.
-- Billing (Stripe webhook handling) often takes longer than expected. If Phase 6 week 1 runs long, cut polish scope — not billing.
+- Phase 2 was the riskiest (first real workers). Completed in 4 h instead of estimated 58 h.
+- Billing (LemonSqueezy webhook handling) is implemented but activation deferred until first real upgrade intent is observed.
 - Shabbat (Sat evening) is a natural reset point each week.

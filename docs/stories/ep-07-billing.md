@@ -6,9 +6,9 @@ Plan limits:
 
 | | Hobbyist | Indie ($9) | Studio ($29) | Agency ($79) |
 |---|---|---|---|---|
-| Total monitors | 5 | 20 | 50 | unlimited |
+| Total monitors | 10 | 30 | 100 | unlimited |
 | Status pages | 1 | 3 | 10 | unlimited |
-| Min uptime interval | 10 min | 5 min | 1 min | 1 min |
+| Min uptime interval | 5 min | 1 min | 1 min | 1 min |
 
 ---
 
@@ -36,7 +36,7 @@ Plan limits:
 - [x] Blocked: creating monitors over the total limit (cron, uptime, SSL)
 - [x] Blocked: creating status pages over the limit
 - [x] Blocked: setting uptime interval below plan minimum (returns 402 with explanation)
-- [ ] UI shows inline upgrade prompt when a 402 is received — not a generic error page
+- [ ] UI shows inline upgrade prompt when a 402 is received — not a generic error page *(deferred post-MVP)*
 
 ---
 
@@ -50,4 +50,4 @@ Plan limits:
 - [x] On successful payment, LemonSqueezy webhook updates the org's plan in DB
 - [x] New limits applied immediately after webhook received
 - [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobbyist
-- [ ] Failed payment: user lands back on billing page (LemonSqueezy handles this natively)
+- [ ] Failed payment: user lands back on billing page (LemonSqueezy handles this natively) *(deferred post-MVP — verify redirect URL when activating billing)*
