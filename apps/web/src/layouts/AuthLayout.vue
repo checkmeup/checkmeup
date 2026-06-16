@@ -7,7 +7,9 @@ import logoDark from '@/assets/logo-dark.svg'
     <div class="w-full max-w-sm space-y-6">
       <!-- Logo -->
       <div class="flex justify-center">
-        <img :src="logoDark" alt="checkmeup" class="h-8" />
+        <RouterLink to="/">
+          <img :src="logoDark" alt="checkmeup" class="h-8" />
+        </RouterLink>
       </div>
 
       <!-- Card -->
