@@ -4,7 +4,6 @@
     "BUILDPLATFORM",
     "buildx",
     "bunx",
-    "usermod",
     "checkmeup",
     "codacy",
     "commandhistory",
@@ -40,7 +39,9 @@
     "stdlib",
     "stretchr",
     "trimpath",
+    "usermod",
     "wagoid",
+    "wordmark",
     "zerolog"
   ]
 }

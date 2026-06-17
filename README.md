@@ -25,6 +25,20 @@ make test   # lint + test + coverage
 make build  # production build
 ```
 
+## Documentation
+
+| Doc                                                | What's there                                          |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| [docs/roadmap.md](docs/roadmap.md)                 | Current priorities — Now / Next / Later               |
+| [docs/stories/backlog.md](docs/stories/backlog.md) | Epics and user stories                                |
+| [docs/decisions/](docs/decisions/)                 | Architecture decision records (ADRs)                  |
+| [docs/design.md](docs/design.md)                   | Design tokens — colors, logo usage                     |
+| [docs/deploy.md](docs/deploy.md)                   | Deployment guide                                       |
+| [docs/reports/](docs/reports/)                     | Monthly snapshots — what shipped, ADRs added            |
+| [docs/incidents/](docs/incidents/)                 | Production incident write-ups (one file per incident)  |
+| [docs/mvp-history.md](docs/mvp-history.md)         | How the MVP was built (archived, frozen record)       |
+| [CLAUDE.md](CLAUDE.md)                             | Conventions and guardrails for contributors            |
+
 ## License
 
 MIT © 2026 Andrew Molyuk
