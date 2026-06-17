@@ -6,8 +6,10 @@ import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { settingsApi } from '@/api/settings'
 import { useAuthStore } from '@/stores/auth'
+import { useTheme } from '@/lib/theme'
 
 const auth = useAuthStore()
+const { theme, setTheme } = useTheme()
 
 function formatDate(iso: string | null): string {
   if (!iso) return ''
@@ -64,6 +66,42 @@ async function test() {
   <AppLayout>
     <div class="p-8 max-w-2xl mx-auto">
       <h1 class="text-2xl font-semibold mb-6" style="color: var(--text-strong)">Settings</h1>
+
+      <!-- Appearance -->
+      <div
+        class="rounded-xl border p-6 mb-6"
+        style="background-color: var(--surface); border-color: var(--border)"
+      >
+        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Appearance</h2>
+        <p class="text-sm mb-5" style="color: var(--text-muted)">Choose how checkmeup looks on this device.</p>
+
+        <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
+            :style="
+              theme === 'dark'
+                ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+                : 'color: var(--text-muted)'
+            "
+            @click="setTheme('dark')"
+          >
+            Dark
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
+            :style="
+              theme === 'light'
+                ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+                : 'color: var(--text-muted)'
+            "
+            @click="setTheme('light')"
+          >
+            Light
+          </button>
+        </div>
+      </div>
 
       <!-- Telegram -->
       <div class="rounded-xl border p-6" style="background-color: var(--surface); border-color: var(--border)">

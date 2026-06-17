@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useTheme } from '@/lib/theme'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import logoDark from '@/assets/logo-dark.svg'
+import logoLight from '@/assets/logo-light.svg'
 import logoGrey from '@/assets/logo-grey.svg'
 
+const { theme } = useTheme()
+const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 const mobileMenuOpen = ref(false)
 </script>
 
@@ -13,24 +18,25 @@ const mobileMenuOpen = ref(false)
     <header
       class="sticky top-0 z-50 border-b"
       style="
-        background-color: rgba(13, 17, 23, 0.9);
+        background-color: color-mix(in srgb, var(--bg) 90%, transparent);
         border-color: var(--border);
         backdrop-filter: blur(12px);
       "
     >
       <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         <RouterLink to="/" class="flex-shrink-0">
-          <img :src="logoDark" alt="checkmeup" class="h-7" />
+          <img :src="logo" alt="checkmeup" class="h-7" />
         </RouterLink>
 
         <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text-dim)">
-          <RouterLink to="/docs" class="hover:text-white transition-colors">Docs</RouterLink>
-          <RouterLink to="/pricing" class="hover:text-white transition-colors">Pricing</RouterLink>
-          <RouterLink to="/blog" class="hover:text-white transition-colors">Blog</RouterLink>
-          <RouterLink to="/about" class="hover:text-white transition-colors">About</RouterLink>
+          <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
+          <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
+          <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
+          <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
         </nav>
 
         <div class="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           <RouterLink
             to="/sign-in"
             class="text-sm px-4 py-2 rounded-md transition-colors"
@@ -126,14 +132,14 @@ const mobileMenuOpen = ref(false)
           </p>
         </div>
         <nav class="flex flex-wrap gap-x-6 gap-y-2 text-xs" style="color: var(--text-muted)">
-          <RouterLink to="/docs" class="hover:text-white transition-colors">Docs</RouterLink>
-          <RouterLink to="/pricing" class="hover:text-white transition-colors">Pricing</RouterLink>
-          <RouterLink to="/blog" class="hover:text-white transition-colors">Blog</RouterLink>
-          <RouterLink to="/about" class="hover:text-white transition-colors">About</RouterLink>
-          <RouterLink to="/sign-in" class="hover:text-white transition-colors">Sign in</RouterLink>
-          <RouterLink to="/sign-up" class="hover:text-white transition-colors">Sign up</RouterLink>
-          <RouterLink to="/terms" class="hover:text-white transition-colors">Terms</RouterLink>
-          <RouterLink to="/privacy" class="hover:text-white transition-colors">Privacy</RouterLink>
+          <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
+          <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
+          <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
+          <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
+          <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors">Sign in</RouterLink>
+          <RouterLink to="/sign-up" class="hover:text-[var(--text-strong)] transition-colors">Sign up</RouterLink>
+          <RouterLink to="/terms" class="hover:text-[var(--text-strong)] transition-colors">Terms</RouterLink>
+          <RouterLink to="/privacy" class="hover:text-[var(--text-strong)] transition-colors">Privacy</RouterLink>
         </nav>
         <p class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</p>
       </div>

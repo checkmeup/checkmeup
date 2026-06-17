@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
+import { useTheme } from '@/lib/theme'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import logoDark from '@/assets/logo-dark.svg'
+import logoLight from '@/assets/logo-light.svg'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { theme } = useTheme()
+const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 const sidebarOpen = ref(false)
 const appVersion = import.meta.env.VITE_APP_VERSION ?? 'dev'
 
@@ -45,7 +50,7 @@ async function signOut() {
     >
       <!-- Logo -->
       <div class="flex items-center gap-2 px-4 py-5 border-b" style="border-color: var(--border)">
-        <img :src="logoDark" alt="" class="h-6" />
+        <img :src="logo" alt="" class="h-6" />
         <div class="text-xs mt-1" style="color: var(--text-muted)">
           {{ appVersion }}
         </div>
@@ -242,17 +247,20 @@ async function signOut() {
       </nav>
 
       <!-- User -->
-      <div class="px-4 py-3 border-t" style="border-color: var(--border)">
-        <div class="text-xs truncate mb-2" style="color: var(--text-muted)">
-          {{ auth.user?.email }}
+      <div class="px-4 py-3 border-t flex items-center justify-between gap-2" style="border-color: var(--border)">
+        <div class="min-w-0">
+          <div class="text-xs truncate mb-2" style="color: var(--text-muted)">
+            {{ auth.user?.email }}
+          </div>
+          <button
+            class="text-xs text-left transition-colors hover:cursor-pointer"
+            style="color: var(--text-muted)"
+            @click="signOut"
+          >
+            Sign out
+          </button>
         </div>
-        <button
-          class="text-xs w-full text-left transition-colors hover:cursor-pointer"
-          style="color: var(--text-muted)"
-          @click="signOut"
-        >
-          Sign out
-        </button>
+        <ThemeToggle />
       </div>
     </aside>
 
@@ -282,7 +290,7 @@ async function signOut() {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <img :src="logoDark" alt="" class="h-5" />
+        <img :src="logo" alt="" class="h-5" />
         <div class="text-xs mt-1" style="color: var(--text-muted)">
           {{ appVersion }}
         </div>

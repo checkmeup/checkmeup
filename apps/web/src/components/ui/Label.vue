@@ -10,7 +10,7 @@ const props = defineProps<{
 <template>
   <label
     :for="props.for"
-    :class="cn('text-sm font-medium text-[--text-dim] leading-none', props.class)"
+    :class="cn('text-sm font-medium text-[var(--text-dim)] leading-none', props.class)"
   >
     <slot />
   </label>

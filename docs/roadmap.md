@@ -10,7 +10,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-- [EP-10](stories/ep-10-theme.md) — Light & dark theme
+(empty)
 
 ### Next
 

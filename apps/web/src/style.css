@@ -21,6 +21,34 @@
   --status-degraded: #F59E0B;
   --status-down: #EF4444;
   --status-paused: #94A3B8;
+  --accent: var(--color-green-500);
+
+  /* CTA banner gradient (HomeView, PricingView, AboutView) — dark and heavy by
+     design in dark mode; overridden to a light, airy wash below for light mode. */
+  --cta-gradient-start: var(--color-green-900);
+  --cta-gradient-end: var(--color-green-700);
+  --cta-border: var(--color-green-700);
+  --cta-text: #FFFFFF;
+  --cta-text-dim: rgba(255, 255, 255, 0.8);
+}
+
+/* Light theme — brand greens and status colors stay the same (docs/design.md),
+   only the neutrals invert. Applied via data-theme set on <html> (see lib/theme.ts). */
+:root[data-theme='light'] {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-raised: #F1F5F9;
+  --border: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-dim: #475569;
+  --text: #1E293B;
+  --text-strong: #0F172A;
+
+  --cta-gradient-start: var(--color-green-100);
+  --cta-gradient-end: var(--surface);
+  --cta-border: var(--color-green-300);
+  --cta-text: var(--text-strong);
+  --cta-text-dim: var(--text-dim);
 }
 
 @layer base {

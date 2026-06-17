@@ -15,7 +15,7 @@
 | [EP-07](ep-07-billing.md)             | Billing & plan limits           | 3/3*          |
 | [EP-08](ep-08-security-hardening.md)  | Security hardening              | 4/4           |
 | [EP-09](ep-09-maintenance-windows.md) | Maintenance windows             | 5/5           |
-| [EP-10](ep-10-theme.md)               | Light & dark theme              | 0/3           |
+| [EP-10](ep-10-theme.md)               | Light & dark theme              | 3/3*          |
 | [EP-11](ep-11-keyword-monitoring.md)  | Keyword monitoring              | 0/5           |
 | [EP-12](ep-12-team-management.md)     | Team management                 | 0/5           |
 | [EP-13](ep-13-email-alerts.md)        | Email alerts                    | 0/5           |
@@ -33,6 +33,6 @@
 | [EP-25](ep-25-two-factor-auth.md)     | Two-factor authentication       | 0/5           |
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |
 
-`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-07: 2 acceptance criteria across US-0702/US-0703 are intentionally deferred post-MVP — see [roadmap.md § Later](../roadmap.md#later).
+`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-07: 2 acceptance criteria across US-0702/US-0703 are intentionally deferred post-MVP — see [roadmap.md § Later](../roadmap.md#later). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why.
 
 See [roadmap.md](../roadmap.md) for the Now / Next / Later priority order ([ADR-022](../decisions/022-post-mvp-docs-organization.md)).

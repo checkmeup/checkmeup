@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useTheme } from '@/lib/theme'
 import logoDark from '@/assets/logo-dark.svg'
+import logoLight from '@/assets/logo-light.svg'
+
+const { theme } = useTheme()
+const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 </script>
 
 <template>
@@ -8,7 +14,7 @@ import logoDark from '@/assets/logo-dark.svg'
       <!-- Logo -->
       <div class="flex justify-center">
         <RouterLink to="/">
-          <img :src="logoDark" alt="checkmeup" class="h-8" />
+          <img :src="logo" alt="checkmeup" class="h-8" />
         </RouterLink>
       </div>
 
