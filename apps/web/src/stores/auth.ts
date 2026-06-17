@@ -5,6 +5,9 @@ export interface User {
   id: string
   email: string
   orgId: string
+  termsVersion: string | null
+  termsAcceptedAt: string | null
+  needsTermsAcceptance: boolean
 }
 
 type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated'

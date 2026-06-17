@@ -10,7 +10,6 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-- [EP-21](stories/ep-21-terms-and-privacy.md) — Terms and Privacy. Real gap today — live product, no published legal docs.
 - [EP-10](stories/ep-10-theme.md) — Light & dark theme
 
 ### Next

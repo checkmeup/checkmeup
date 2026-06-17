@@ -132,6 +132,8 @@ const mobileMenuOpen = ref(false)
           <RouterLink to="/about" class="hover:text-white transition-colors">About</RouterLink>
           <RouterLink to="/sign-in" class="hover:text-white transition-colors">Sign in</RouterLink>
           <RouterLink to="/sign-up" class="hover:text-white transition-colors">Sign up</RouterLink>
+          <RouterLink to="/terms" class="hover:text-white transition-colors">Terms</RouterLink>
+          <RouterLink to="/privacy" class="hover:text-white transition-colors">Privacy</RouterLink>
         </nav>
         <p class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</p>
       </div>

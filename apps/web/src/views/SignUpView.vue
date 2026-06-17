@@ -14,11 +14,13 @@ const auth = useAuthStore()
 
 const email = ref('')
 const password = ref('')
+const acceptedTerms = ref(false)
 const error = ref('')
 const loading = ref(false)
 
 function validate(): string | null {
   if (password.value.length < 8) return 'Password must be at least 8 characters.'
+  if (!acceptedTerms.value) return 'You must accept the Terms of Service and Privacy Policy.'
   return null
 }
 
@@ -31,6 +33,7 @@ async function submit() {
     const user = await api.post<User>('/api/v1/auth/sign-up', {
       email: email.value,
       password: password.value,
+      acceptedTerms: acceptedTerms.value,
     })
     auth.setUser(user)
     router.push({ name: 'dashboard' })
@@ -78,9 +81,23 @@ async function submit() {
         />
       </div>
 
+      <label class="flex items-start gap-2 text-sm" style="color: var(--text-dim)">
+        <input v-model="acceptedTerms" type="checkbox" class="mt-0.5" />
+        <span>
+          I agree to the
+          <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--color-green-500)"
+            >Terms of Service</RouterLink
+          >
+          and
+          <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--color-green-500)"
+            >Privacy Policy</RouterLink
+          >.
+        </span>
+      </label>
+
       <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
 
-      <Button type="submit" class="w-full" :disabled="loading">
+      <Button type="submit" class="w-full" :disabled="loading || !acceptedTerms">
         {{ loading ? 'Creating account…' : 'Create account' }}
       </Button>
     </form>

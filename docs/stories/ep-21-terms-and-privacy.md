@@ -12,10 +12,10 @@ The product is live, collecting emails and payment data (via LemonSqueezy) and s
 
 **Acceptance criteria:**
 
-- [ ] Two public, unauthenticated pages: `/terms` and `/privacy`
-- [ ] Privacy Policy lists every third-party processor handling user/visitor data (Resend, Telegram, LemonSqueezy, Hetzner) and what each is used for
-- [ ] Both pages linked from the site footer on every public page (landing, blog, status pages)
-- [ ] Static content for MVP, edited directly in the repo — same pattern already used for blog posts (no CMS)
+- [x] Two public, unauthenticated pages: `/terms` and `/privacy`
+- [x] Privacy Policy lists every third-party processor handling user/visitor data (Resend, Telegram, LemonSqueezy, Hetzner) and what each is used for
+- [x] Both pages linked from the site footer on every public page (landing, blog, status pages)
+- [x] Static content for MVP, edited directly in the repo — same pattern already used for blog posts (no CMS)
 
 ---
 
@@ -27,9 +27,9 @@ The product is live, collecting emails and payment data (via LemonSqueezy) and s
 
 **Acceptance criteria:**
 
-- [ ] Sign-up form has a required checkbox — "I agree to the Terms of Service and Privacy Policy" with inline links to both — unchecked by default
-- [ ] Sign-up is blocked until the checkbox is checked, enforced client- and server-side
-- [ ] Acceptance timestamp and the accepted document version/date stored on the user record
+- [x] Sign-up form has a required checkbox — "I agree to the Terms of Service and Privacy Policy" with inline links to both — unchecked by default
+- [x] Sign-up is blocked until the checkbox is checked, enforced client- and server-side
+- [x] Acceptance timestamp and the accepted document version/date stored on the user record
 
 ---
 
@@ -41,9 +41,9 @@ The product is live, collecting emails and payment data (via LemonSqueezy) and s
 
 **Acceptance criteria:**
 
-- [ ] Each document carries a version/effective date in its content
-- [ ] On sign-in, if the user's stored accepted version is older than the current one, show a blocking re-accept screen before the dashboard loads
-- [ ] Re-acceptance updates the stored version/timestamp the same way as initial sign-up acceptance (US-2102)
+- [x] Each document carries a version/effective date in its content
+- [x] On sign-in, if the user's stored accepted version is older than the current one, show a blocking re-accept screen before the dashboard loads
+- [x] Re-acceptance updates the stored version/timestamp the same way as initial sign-up acceptance (US-2102)
 
 ---
 
@@ -55,5 +55,5 @@ The product is live, collecting emails and payment data (via LemonSqueezy) and s
 
 **Acceptance criteria:**
 
-- [ ] Settings shows: "You accepted the Terms of Service and Privacy Policy (version X) on `<date>`" with links to both documents
-- [ ] Read-only — no re-acceptance action here (that's US-2103's job, triggered automatically on sign-in)
+- [x] Settings shows: "You accepted the Terms of Service and Privacy Policy (version X) on `<date>`" with links to both documents
+- [x] Read-only — no re-acceptance action here (that's US-2103's job, triggered automatically on sign-in)

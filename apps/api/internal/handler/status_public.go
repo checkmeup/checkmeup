@@ -349,6 +349,7 @@ h1{font-size:1.5rem;font-weight:700;color:#0f172a}
   <div class="footer">
     <p>Last updated {{.UpdatedAt}}</p>
     <p style="margin-top:6px">Powered by <a href="https://checkmeup.net">checkmeup</a></p>
+    <p style="margin-top:6px"><a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
   </div>
 </div>
 </body>

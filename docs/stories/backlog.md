@@ -26,7 +26,7 @@
 | [EP-18](ep-18-teams-alerts.md)        | Microsoft Teams alerts          | 0/5           |
 | [EP-19](ep-19-sms-alerts.md)          | SMS alerts                      | 0/5           |
 | [EP-20](ep-20-viber-alerts.md)        | Viber alerts                    | 0/5           |
-| [EP-21](ep-21-terms-and-privacy.md)   | Terms and Privacy               | 0/4           |
+| [EP-21](ep-21-terms-and-privacy.md)   | Terms and Privacy               | 4/4           |
 | [EP-22](ep-22-faq.md)                 | FAQ                             | 0/3           |
 | [EP-23](ep-23-suggest-a-feature.md)   | Suggest a feature               | 0/3           |
 | [EP-24](ep-24-incident-management.md) | Incident management             | 0/5           |

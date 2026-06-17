@@ -22,6 +22,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
+	"github.com/checkmeup/checkmeup/internal/legal"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -130,8 +131,9 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 type signUpRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	AcceptedTerms bool   `json:"acceptedTerms"`
 }
 
 type signInRequest struct {
@@ -140,9 +142,30 @@ type signInRequest struct {
 }
 
 type userResponse struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	OrgID string `json:"orgId"`
+	ID                   string  `json:"id"`
+	Email                string  `json:"email"`
+	OrgID                string  `json:"orgId"`
+	TermsVersion         *string `json:"termsVersion"`
+	TermsAcceptedAt      *string `json:"termsAcceptedAt"`
+	NeedsTermsAcceptance bool    `json:"needsTermsAcceptance"`
+}
+
+func toUserResponse(user db.User) userResponse {
+	resp := userResponse{
+		ID:                   user.ID.String(),
+		Email:                user.Email,
+		OrgID:                user.OrgID.String(),
+		NeedsTermsAcceptance: true,
+	}
+	if user.TermsVersion.Valid {
+		resp.TermsVersion = &user.TermsVersion.String
+		resp.NeedsTermsAcceptance = user.TermsVersion.String != legal.CurrentVersion
+	}
+	if user.TermsAcceptedAt.Valid {
+		acceptedAt := user.TermsAcceptedAt.Time.Format(time.RFC3339)
+		resp.TermsAcceptedAt = &acceptedAt
+	}
+	return resp
 }
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -175,6 +198,7 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		OrgID:        org.ID,
 		Email:        req.Email,
 		PasswordHash: string(hash),
+		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -190,16 +214,15 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusCreated, userResponse{
-		ID:    user.ID.String(),
-		Email: user.Email,
-		OrgID: user.OrgID.String(),
-	})
+	respond.JSON(w, http.StatusCreated, toUserResponse(user))
 }
 
 func validateSignUp(req signUpRequest) string {
 	if req.Email == "" || req.Password == "" {
 		return "email and password are required"
+	}
+	if !req.AcceptedTerms {
+		return "you must accept the Terms of Service and Privacy Policy"
 	}
 	if len(req.Password) < 8 {
 		return "password must be at least 8 characters"
@@ -240,11 +263,7 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, userResponse{
-		ID:    user.ID.String(),
-		Email: user.Email,
-		OrgID: user.OrgID.String(),
-	})
+	respond.JSON(w, http.StatusOK, toUserResponse(user))
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -285,11 +304,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, userResponse{
-		ID:    user.ID.String(),
-		Email: user.Email,
-		OrgID: user.OrgID.String(),
-	})
+	respond.JSON(w, http.StatusOK, toUserResponse(user))
 }
 
 func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
@@ -326,11 +341,34 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, userResponse{
-		ID:    user.ID.String(),
-		Email: user.Email,
-		OrgID: user.OrgID.String(),
+	respond.JSON(w, http.StatusOK, toUserResponse(user))
+}
+
+// AcceptTerms POST /api/v1/auth/accept-terms — records (re-)acceptance of the
+// current Terms of Service / Privacy Policy version for the signed-in user.
+func (h *AuthHandler) AcceptTerms(w http.ResponseWriter, r *http.Request) {
+	claims := apimiddleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+		return
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "invalid token", "invalid_token")
+		return
+	}
+
+	user, err := h.queries.AcceptUserTerms(r.Context(), db.AcceptUserTermsParams{
+		ID:           userID,
+		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
 	})
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, toUserResponse(user))
 }
 
 func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, user db.User) error {

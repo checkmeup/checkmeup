@@ -96,6 +96,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Use(apimiddleware.RequireAuth(s.cfg.JWTSecret))
 
 			r.Get("/me", auth.Me)
+			r.Post("/auth/accept-terms", auth.AcceptTerms)
 
 			r.Route("/settings", func(r chi.Router) {
 				r.Get("/", settings.GetSettings)

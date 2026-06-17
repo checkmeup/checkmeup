@@ -12,6 +12,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const acceptUserTerms = `-- name: AcceptUserTerms :one
+UPDATE users SET terms_version = $2, terms_accepted_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING id, org_id, email, password_hash, created_at, updated_at, terms_version, terms_accepted_at
+`
+
+type AcceptUserTermsParams struct {
+	ID           uuid.UUID   `json:"id"`
+	TermsVersion pgtype.Text `json:"terms_version"`
+}
+
+func (q *Queries) AcceptUserTerms(ctx context.Context, arg AcceptUserTermsParams) (User, error) {
+	row := q.db.QueryRow(ctx, acceptUserTerms, arg.ID, arg.TermsVersion)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+	)
+	return i, err
+}
+
 const createOrg = `-- name: CreateOrg :one
 INSERT INTO orgs (name)
 VALUES ($1)
@@ -87,19 +112,25 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (org_id, email, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, org_id, email, password_hash, created_at, updated_at
+INSERT INTO users (org_id, email, password_hash, terms_version, terms_accepted_at)
+VALUES ($1, $2, $3, $4, NOW())
+RETURNING id, org_id, email, password_hash, created_at, updated_at, terms_version, terms_accepted_at
 `
 
 type CreateUserParams struct {
-	OrgID        uuid.UUID `json:"org_id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
+	OrgID        uuid.UUID   `json:"org_id"`
+	Email        string      `json:"email"`
+	PasswordHash string      `json:"password_hash"`
+	TermsVersion pgtype.Text `json:"terms_version"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.OrgID, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.OrgID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.TermsVersion,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -108,6 +139,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
 	)
 	return i, err
 }
@@ -183,7 +216,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, org_id, email, password_hash, created_at, updated_at FROM users WHERE email = $1
+SELECT id, org_id, email, password_hash, created_at, updated_at, terms_version, terms_accepted_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -196,12 +229,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, org_id, email, password_hash, created_at, updated_at FROM users WHERE id = $1
+SELECT id, org_id, email, password_hash, created_at, updated_at, terms_version, terms_accepted_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -214,6 +249,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
 	)
 	return i, err
 }

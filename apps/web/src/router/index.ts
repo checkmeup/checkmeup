@@ -32,6 +32,16 @@ export const router = createRouter({
       component: () => import('@/views/AboutView.vue'),
     },
     {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('@/views/TermsView.vue'),
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('@/views/PrivacyView.vue'),
+    },
+    {
       path: '/blog',
       name: 'blog',
       component: () => import('@/views/BlogView.vue'),
@@ -197,6 +207,12 @@ export const router = createRouter({
       component: () => import('@/views/SettingsView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/accept-terms',
+      name: 'accept-terms',
+      component: () => import('@/views/AcceptTermsView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
@@ -212,6 +228,15 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'sign-in' }
+  }
+
+  if (
+    to.meta.requiresAuth &&
+    auth.isAuthenticated &&
+    auth.user?.needsTermsAcceptance &&
+    to.name !== 'accept-terms'
+  ) {
+    return { name: 'accept-terms' }
   }
 
   if (to.meta.guest && auth.isAuthenticated) {

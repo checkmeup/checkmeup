@@ -5,6 +5,14 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { settingsApi } from '@/api/settings'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+function formatDate(iso: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
 const chatId = ref('')
 const savedChatId = ref<string | null>(null)
@@ -127,6 +135,25 @@ async function test() {
             Currently connected: {{ savedChatId }}
           </p>
         </div>
+      </div>
+
+      <!-- Legal -->
+      <div
+        class="rounded-xl border p-6 mt-6"
+        style="background-color: var(--surface); border-color: var(--border)"
+      >
+        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Terms and Privacy</h2>
+        <p v-if="auth.user?.termsAcceptedAt" class="text-sm" style="color: var(--text-muted)">
+          You accepted the
+          <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)"
+            >Terms of Service</RouterLink
+          >
+          and
+          <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)"
+            >Privacy Policy</RouterLink
+          >
+          (version {{ auth.user?.termsVersion }}) on {{ formatDate(auth.user.termsAcceptedAt) }}.
+        </p>
       </div>
     </div>
   </AppLayout>
