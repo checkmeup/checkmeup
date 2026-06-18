@@ -1,26 +1,26 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-green-100: #D3F5E9;
-  --color-green-300: #4DC9A0;
-  --color-green-500: #1D9E75;
-  --color-green-700: #0F6E56;
-  --color-green-900: #08392E;
+  --color-green-100: #d3f5e9;
+  --color-green-300: #4dc9a0;
+  --color-green-500: #1d9e75;
+  --color-green-700: #0f6e56;
+  --color-green-900: #08392e;
 }
 
 :root {
-  --bg: #0D1117;
-  --surface: #161B22;
-  --surface-raised: #1E2530;
-  --border: #2D3748;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-raised: #1e2530;
+  --border: #2d3748;
   --text-muted: #718096;
-  --text-dim: #A0AEC0;
-  --text: #E2E8F0;
-  --text-strong: #FFFFFF;
-  --status-up: #1D9E75;
-  --status-degraded: #F59E0B;
-  --status-down: #EF4444;
-  --status-paused: #94A3B8;
+  --text-dim: #a0aec0;
+  --text: #e2e8f0;
+  --text-strong: #ffffff;
+  --status-up: #1d9e75;
+  --status-degraded: #f59e0b;
+  --status-down: #ef4444;
+  --status-paused: #94a3b8;
   --accent: var(--color-green-500);
 
   /* CTA banner gradient (HomeView, PricingView, AboutView) — dark and heavy by
@@ -28,22 +28,21 @@
   --cta-gradient-start: var(--color-green-900);
   --cta-gradient-end: var(--color-green-700);
   --cta-border: var(--color-green-700);
-  --cta-text: #FFFFFF;
-  --cta-text-dim: rgba(255, 255, 255, 0.8);
+  --cta-text: #fff;
+  --cta-text-dim: rgba(255, 255, 255, 80%);
 }
 
 /* Light theme — brand greens and status colors stay the same (docs/design.md),
    only the neutrals invert. Applied via data-theme set on <html> (see lib/theme.ts). */
 :root[data-theme='light'] {
-  --bg: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface-raised: #F1F5F9;
-  --border: #E2E8F0;
-  --text-muted: #94A3B8;
+  --bg: #f8fafc;
+  --surface: #fff;
+  --surface-raised: #f1f5f9;
+  --border: #e2e8f0;
+  --text-muted: #94a3b8;
   --text-dim: #475569;
-  --text: #1E293B;
-  --text-strong: #0F172A;
-
+  --text: #1e293b;
+  --text-strong: #0f172a;
   --cta-gradient-start: var(--color-green-100);
   --cta-gradient-end: var(--surface);
   --cta-border: var(--color-green-300);
@@ -52,14 +51,23 @@
 }
 
 @layer base {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
