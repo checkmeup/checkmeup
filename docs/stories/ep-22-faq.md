@@ -12,10 +12,10 @@ A billing-specific FAQ already exists, hardcoded as a local array in `PricingVie
 
 **Acceptance criteria:**
 
-- [ ] Public, unauthenticated `/faq` page
-- [ ] Covers areas beyond billing: monitor types and check intervals, status pages, alert channels, data retention
-- [ ] The existing 6 billing entries move here as the single source of truth — `PricingView.vue` either links to `/faq#billing` or imports the same entries, not a second copy
-- [ ] Linked from the site footer and nav, same placement as Terms/Privacy ([EP-21](ep-21-terms-and-privacy.md))
+- [x] Public, unauthenticated `/faq` page
+- [x] Covers areas beyond billing: monitor types and check intervals, status pages, alert channels, data retention
+- [x] The existing 6 billing entries move here as the single source of truth — `PricingView.vue` either links to `/faq#billing` or imports the same entries, not a second copy
+- [x] Linked from the site footer and nav, same placement as Terms/Privacy ([EP-21](ep-21-terms-and-privacy.md))
 
 ---
 
@@ -27,9 +27,9 @@ A billing-specific FAQ already exists, hardcoded as a local array in `PricingVie
 
 **Acceptance criteria:**
 
-- [ ] Categories: Getting started, Billing & plans, Monitors & alerts, Status pages, Privacy & security
-- [ ] The existing 6 billing entries slot into "Billing & plans" unchanged
-- [ ] Anchor links per category (e.g. `/faq#billing`) so other pages can deep-link into a specific section
+- [x] Categories: Getting started, Billing & plans, Monitors & alerts, Status pages, Privacy & security
+- [x] The existing 6 billing entries slot into "Billing & plans" unchanged
+- [x] Anchor links per category (e.g. `/faq#billing`) so other pages can deep-link into a specific section
 
 ---
 
@@ -41,6 +41,6 @@ A billing-specific FAQ already exists, hardcoded as a local array in `PricingVie
 
 **Acceptance criteria:**
 
-- [ ] `PricingView.vue`'s FAQ section replaced with a link to `/faq#billing` (or the shared entries, per US-2201) instead of its own copy
-- [ ] Footer link present on every public page (landing, blog, status pages), alongside Terms/Privacy
-- [ ] Sign-up page links to the "Getting started" category
+- [x] `PricingView.vue`'s FAQ section replaced with a link to `/faq#billing` (or the shared entries, per US-2201) instead of its own copy
+- [x] Footer link present on every public page (landing, blog, status pages), alongside Terms/Privacy
+- [x] Sign-up page links to the "Getting started" category

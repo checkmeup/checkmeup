@@ -22,3 +22,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-17 | Wed | EP-21                        | 2 h   |
 | 2026-06-17 | Wed | EP-10                        | 2 h   |
 | 2026-06-18 | Thu | EP-23                        | 1 h   |
+| 2026-06-18 | Thu | EP-22                        | 1 h   |

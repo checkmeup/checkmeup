@@ -108,5 +108,12 @@ async function submit() {
         Sign in
       </RouterLink>
     </p>
+
+    <p class="text-center text-xs" style="color: var(--text-muted)">
+      Questions?
+      <RouterLink to="/faq#getting-started" style="color: var(--color-green-500)">
+        See the FAQ
+      </RouterLink>
+    </p>
   </AuthLayout>
 </template>

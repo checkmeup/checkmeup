@@ -30,6 +30,7 @@ const mobileMenuOpen = ref(false)
 
         <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text-dim)">
           <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
+          <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
           <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
           <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
           <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
@@ -93,6 +94,7 @@ const mobileMenuOpen = ref(false)
         style="border-color: var(--border); background-color: var(--surface)"
       >
         <RouterLink to="/docs" class="block text-sm py-1" style="color: var(--text-dim)">Docs</RouterLink>
+        <RouterLink to="/faq" class="block text-sm py-1" style="color: var(--text-dim)">FAQ</RouterLink>
         <RouterLink to="/pricing" class="block text-sm py-1" style="color: var(--text-dim)"
           >Pricing</RouterLink
         >
@@ -133,6 +135,7 @@ const mobileMenuOpen = ref(false)
         </div>
         <nav class="flex flex-wrap gap-x-6 gap-y-2 text-xs" style="color: var(--text-muted)">
           <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
+          <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
           <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
           <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
           <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
