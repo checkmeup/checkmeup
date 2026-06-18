@@ -5,7 +5,7 @@
 
 ## Context
 
-Transactional email is needed for password reset (US-0105). Future use: welcome email. Alerts remain Telegram-only.
+Transactional email is needed for password reset (US-0105). Future use: welcome email. Alerts remain Telegram-only at the time of this writing — [EP-13](../stories/ep-13-email-alerts.md) later adds email as a second alert channel, reusing this same Resend integration.
 
 Options considered:
 

@@ -13,16 +13,18 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
 type PingHandler struct {
 	queries *db.Queries
 	tg      *telegram.Client
+	mailer  *email.Sender
 }
 
-func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client) *PingHandler {
-	return &PingHandler{queries: db.New(pool), tg: tg}
+func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender) *PingHandler {
+	return &PingHandler{queries: db.New(pool), tg: tg, mailer: mailer}
 }
 
 // ReceivePing handles GET /ping/{token}
@@ -67,14 +69,16 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		inc, err := h.queries.ResolveLatestCronIncident(r.Context(), monitor.ID)
 		if err == nil {
 			org, err := h.queries.GetOrgByID(r.Context(), monitor.OrgID)
-			if err == nil && org.TelegramChatID.Valid {
-				downtime := now.Sub(inc.StartedAt.Time).Round(time.Second)
-				msg := fmt.Sprintf(
-					"✅ <b>%s</b> recovered\n\nDown for: %s",
-					monitor.Name,
-					formatDuration(downtime),
-				)
-				_ = h.tg.SendMessage(org.TelegramChatID.String, msg)
+			if err == nil {
+				downtime := formatDuration(now.Sub(inc.StartedAt.Time).Round(time.Second))
+				if org.TelegramChatID.Valid {
+					msg := fmt.Sprintf("✅ <b>%s</b> recovered\n\nDown for: %s", monitor.Name, downtime)
+					_ = h.tg.SendMessage(org.TelegramChatID.String, msg)
+				}
+				if org.EmailAlertsEnabled && org.AlertEmail.Valid {
+					html := fmt.Sprintf("<p>✅ <b>%s</b> recovered</p><p>Down for: %s</p>", monitor.Name, downtime)
+					_ = h.mailer.SendAlertEmail(org.AlertEmail.String, fmt.Sprintf("%s recovered", monitor.Name), html)
+				}
 			}
 		}
 	}

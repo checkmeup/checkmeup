@@ -11,16 +11,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
 // Run starts the background worker loops. Returns when ctx is cancelled.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
 //   - Every 24 h: ping retention cleanup (ADR-015)
-func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger) {
+func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
 	ticker := time.NewTicker(30 * time.Second)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
@@ -32,13 +34,49 @@ func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *
 			logger.Info("worker stopped")
 			return
 		case <-ticker.C:
-			checkOverdue(ctx, queries, tg, logger)
-			checkUptimeMonitors(ctx, queries, tg, logger)
-			checkSSLMonitors(ctx, queries, tg, logger)
+			checkOverdue(ctx, queries, tg, mailer, logger)
+			checkUptimeMonitors(ctx, queries, tg, mailer, logger)
+			checkSSLMonitors(ctx, queries, tg, mailer, logger)
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, queries, logger)
 		}
 	}
+}
+
+// alertMessage carries the per-channel content for a single alert event.
+type alertMessage struct {
+	telegram     string
+	emailSubject string
+	emailHTML    string
+}
+
+// hasAlertChannel reports whether the org has at least one alert channel configured.
+func hasAlertChannel(org db.Org) bool {
+	return org.TelegramChatID.Valid || (org.EmailAlertsEnabled && org.AlertEmail.Valid)
+}
+
+// dispatchAlert sends msg on every channel the org has configured, logging
+// per-channel failures without aborting the other channel. It reports
+// whether the alert was delivered on at least one channel — per ADR-016 /
+// US-1305, the per-incident alert cap counts one notification event
+// regardless of how many channels it went out on.
+func dispatchAlert(tg *telegram.Client, mailer *email.Sender, org db.Org, msg alertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
+	sent := false
+	if org.TelegramChatID.Valid {
+		if err := tg.SendMessage(org.TelegramChatID.String, msg.telegram); err != nil {
+			logger.Error("worker: send telegram alert", "monitor_id", monitorID, "err", err)
+		} else {
+			sent = true
+		}
+	}
+	if org.EmailAlertsEnabled && org.AlertEmail.Valid {
+		if err := mailer.SendAlertEmail(org.AlertEmail.String, msg.emailSubject, msg.emailHTML); err != nil {
+			logger.Error("worker: send email alert", "monitor_id", monitorID, "err", err)
+		} else {
+			sent = true
+		}
+	}
+	return sent
 }
 
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
@@ -51,7 +89,7 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 
 // ─── cron monitor checks ─────────────────────────────────────────────────────
 
-func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger) {
+func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
 	monitors, err := queries.ListOverdueCronMonitors(ctx)
 	if err != nil {
 		logger.Error("worker: list overdue monitors", "err", err)
@@ -80,20 +118,24 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 		}
 
 		org, err := queries.GetOrgByID(ctx, m.OrgID)
-		if err != nil || !org.TelegramChatID.Valid {
+		if err != nil || !hasAlertChannel(org) {
 			continue
 		}
 
 		missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
-		msg := fmt.Sprintf(
-			"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
-			m.Name,
-			m.Schedule,
-			m.NextPingAt.Time.Format("15:04:05 MST"),
-			missedBy,
-		)
-		if err := tg.SendMessage(org.TelegramChatID.String, msg); err != nil {
-			logger.Error("worker: send down alert", "monitor_id", m.ID, "err", err)
+		expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
+		msg := alertMessage{
+			telegram: fmt.Sprintf(
+				"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
+				m.Name, m.Schedule, expectedAt, missedBy,
+			),
+			emailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
+			emailHTML: fmt.Sprintf(
+				"<p>🔴 <b>%s</b> missed its ping</p><p>Schedule: <code>%s</code><br>Expected at: %s<br>Missed by: %s</p>",
+				m.Name, m.Schedule, expectedAt, missedBy,
+			),
+		}
+		if !dispatchAlert(tg, mailer, org, msg, logger, m.ID) {
 			continue
 		}
 		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -104,7 +146,7 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 
 // ─── uptime monitor checks ───────────────────────────────────────────────────
 
-func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger) {
+func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
 	monitors, err := queries.ListDueUptimeMonitors(ctx)
 	if err != nil {
 		logger.Error("uptime worker: list due monitors", "err", err)
@@ -117,13 +159,13 @@ func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneUptimeMonitor(ctx, queries, tg, logger, m)
+			checkOneUptimeMonitor(ctx, queries, tg, mailer, logger, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger, m db.UptimeMonitor) {
+func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, m db.UptimeMonitor) {
 	statusCode, responseTimeMs, isUp := performHTTPCheck(m.Url)
 
 	var codeParam pgtype.Int4
@@ -154,11 +196,13 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			}
 			if m.AlertsEnabled {
 				org, err := queries.GetOrgByID(ctx, m.OrgID)
-				if err == nil && org.TelegramChatID.Valid {
-					msg := fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url)
-					if err := tg.SendMessage(org.TelegramChatID.String, msg); err != nil {
-						logger.Error("uptime worker: send recovery alert", "monitor_id", m.ID, "err", err)
+				if err == nil && hasAlertChannel(org) {
+					msg := alertMessage{
+						telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
+						emailSubject: fmt.Sprintf("%s recovered", m.Name),
+						emailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
 					}
+					dispatchAlert(tg, mailer, org, msg, logger, m.ID)
 				}
 			}
 		}
@@ -190,13 +234,17 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			return
 		}
 		org, err := queries.GetOrgByID(ctx, m.OrgID)
-		if err != nil || !org.TelegramChatID.Valid {
+		if err != nil || !hasAlertChannel(org) {
 			return
 		}
-		msg := fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nStatus: %s",
-			m.Name, m.Url, httpStatusDesc(statusCode))
-		if err := tg.SendMessage(org.TelegramChatID.String, msg); err != nil {
-			logger.Error("uptime worker: send down alert", "monitor_id", m.ID, "err", err)
+		msg := alertMessage{
+			telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nStatus: %s",
+				m.Name, m.Url, httpStatusDesc(statusCode)),
+			emailSubject: fmt.Sprintf("DOWN: %s", m.Name),
+			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Status: %s</p>",
+				m.Name, m.Url, httpStatusDesc(statusCode)),
+		}
+		if !dispatchAlert(tg, mailer, org, msg, logger, m.ID) {
 			return
 		}
 		if _, err := queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -227,7 +275,7 @@ func httpStatusDesc(code int) string {
 
 // ─── SSL monitor checks ──────────────────────────────────────────────────────
 
-func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger) {
+func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
 	monitors, err := queries.ListDueSSLMonitors(ctx)
 	if err != nil {
 		logger.Error("ssl worker: list due monitors", "err", err)
@@ -240,13 +288,13 @@ func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Cli
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneSSLMonitor(ctx, queries, tg, logger, m)
+			checkOneSSLMonitor(ctx, queries, tg, mailer, logger, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, logger *slog.Logger, m db.SslMonitor) {
+func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, m db.SslMonitor) {
 	expiresAt, issuer, daysLeft, err := performTLSCheck(m.Hostname)
 
 	var newStatus db.SslMonitorStatus
@@ -277,30 +325,45 @@ func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.C
 	// Send threshold alerts (one per crossing)
 	if m.AlertsEnabled && (newStatus == db.SslMonitorStatusExpiringSoon || newStatus == db.SslMonitorStatusExpired) {
 		org, orgErr := queries.GetOrgByID(ctx, m.OrgID)
-		if orgErr == nil && org.TelegramChatID.Valid {
-			var alertMsg string
+		if orgErr == nil && hasAlertChannel(org) {
+			var subject, telegramMsg, emailHTML string
+			expiresStr := expiresAt.Format("2006-01-02")
 			switch {
 			case daysLeft < 0 && !alerted7d:
-				alertMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
-					m.Name, m.Hostname, expiresAt.Format("2006-01-02"))
+				subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
+				telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
+					m.Name, m.Hostname, expiresStr)
+				emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
+					m.Name, m.Hostname, expiresStr)
 				alerted7d = true
 			case daysLeft <= 7 && !alerted7d:
-				alertMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresAt.Format("2006-01-02"))
+				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+					m.Name, daysLeft, m.Hostname, expiresStr)
+				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+					m.Name, daysLeft, m.Hostname, expiresStr)
 				alerted7d = true
 			case daysLeft <= 14 && !alerted14d:
-				alertMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresAt.Format("2006-01-02"))
+				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+					m.Name, daysLeft, m.Hostname, expiresStr)
+				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+					m.Name, daysLeft, m.Hostname, expiresStr)
 				alerted14d = true
 			case daysLeft <= 30 && !alerted30d:
-				alertMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresAt.Format("2006-01-02"))
+				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+					m.Name, daysLeft, m.Hostname, expiresStr)
+				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+					m.Name, daysLeft, m.Hostname, expiresStr)
 				alerted30d = true
 			}
-			if alertMsg != "" {
-				if sendErr := tg.SendMessage(org.TelegramChatID.String, alertMsg); sendErr != nil {
-					logger.Error("ssl worker: send alert", "monitor_id", m.ID, "err", sendErr)
-				}
+			if telegramMsg != "" {
+				dispatchAlert(tg, mailer, org, alertMessage{
+					telegram:     telegramMsg,
+					emailSubject: subject,
+					emailHTML:    emailHTML,
+				}, logger, m.ID)
 			}
 		}
 	}

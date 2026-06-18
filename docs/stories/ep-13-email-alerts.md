@@ -12,10 +12,10 @@ A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), r
 
 **Acceptance criteria:**
 
-- [ ] Org setting: alert email address, defaults to the account owner's email at signup
-- [ ] Editable independently — e.g. to route to a shared address like `alerts@yourteam.com`
-- [ ] "Send test email" button verifies deliverability before saving
-- [ ] Email alerts can be enabled whether or not Telegram is connected — neither channel is required
+- [x] Org setting: alert email address, defaults to the account owner's email at signup
+- [x] Editable independently — e.g. to route to a shared address like `alerts@yourteam.com`
+- [x] "Send test email" button verifies deliverability before saving
+- [x] Email alerts can be enabled whether or not Telegram is connected — neither channel is required
 
 ---
 
@@ -27,10 +27,10 @@ A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), r
 
 **Acceptance criteria:**
 
-- [ ] Content: monitor name, type (cron / uptime / SSL), reason, timestamp — same information as the Telegram message ([US-0502](ep-05-telegram-alerts.md))
-- [ ] Sent within one check cycle of the transition to "down"
-- [ ] Not sent if alerts are disabled for that monitor ([US-0504](ep-05-telegram-alerts.md)) or email alerts are off at the org level
-- [ ] Subject line includes the monitor name and "DOWN" for inbox scanning/filtering
+- [x] Content: monitor name, type (cron / uptime / SSL), reason, timestamp — same information as the Telegram message ([US-0502](ep-05-telegram-alerts.md))
+- [x] Sent within one check cycle of the transition to "down"
+- [x] Not sent if alerts are disabled for that monitor ([US-0504](ep-05-telegram-alerts.md)) or email alerts are off at the org level
+- [x] Subject line includes the monitor name and "DOWN" for inbox scanning/filtering
 
 ---
 
@@ -42,9 +42,9 @@ A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), r
 
 **Acceptance criteria:**
 
-- [ ] Content: monitor name, downtime duration — same information as the Telegram recovery message ([US-0503](ep-05-telegram-alerts.md))
-- [ ] Always sent on genuine recovery regardless of the per-incident alert cap ([ADR-016](../decisions/016-alert-debounce.md)) — matches existing Telegram behavior
-- [ ] Not sent if alerts are disabled for that monitor or email alerts are off at the org level
+- [x] Content: monitor name, downtime duration — same information as the Telegram recovery message ([US-0503](ep-05-telegram-alerts.md))
+- [x] Always sent on genuine recovery regardless of the per-incident alert cap ([ADR-016](../decisions/016-alert-debounce.md)) — matches existing Telegram behavior
+- [x] Not sent if alerts are disabled for that monitor or email alerts are off at the org level
 
 ---
 
@@ -56,9 +56,9 @@ A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), r
 
 **Acceptance criteria:**
 
-- [ ] Org-level toggle for email alerts, independent of the Telegram connection
-- [ ] Per-monitor mute ([US-0504](ep-05-telegram-alerts.md)) suppresses both channels — no separate per-monitor, per-channel mute for MVP
-- [ ] Both channels can be enabled at once; each fires independently for the same event
+- [x] Org-level toggle for email alerts, independent of the Telegram connection
+- [x] Per-monitor mute ([US-0504](ep-05-telegram-alerts.md)) suppresses both channels — no separate per-monitor, per-channel mute for MVP
+- [x] Both channels can be enabled at once; each fires independently for the same event
 
 ---
 
@@ -70,6 +70,6 @@ A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), r
 
 **Acceptance criteria:**
 
-- [ ] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts alerts across all enabled channels together, not per channel — a cap of 3 means 3 total notification events, regardless of how many channels each was sent on
-- [ ] When both channels are enabled, a single triggered alert is sent on every enabled channel and counts as one increment of `alert_count`
-- [ ] Recovery alert is exempt from the cap on every enabled channel, same as today's Telegram-only behavior
+- [x] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts alerts across all enabled channels together, not per channel — a cap of 3 means 3 total notification events, regardless of how many channels each was sent on
+- [x] When both channels are enabled, a single triggered alert is sent on every enabled channel and counts as one increment of `alert_count`
+- [x] Recovery alert is exempt from the cap on every enabled channel, same as today's Telegram-only behavior

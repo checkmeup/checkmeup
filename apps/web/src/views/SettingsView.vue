@@ -33,7 +33,11 @@ async function submitSuggestion() {
 
 function formatDate(iso: string | null): string {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 const chatId = ref('')
@@ -49,6 +53,9 @@ onMounted(async () => {
     const s = await settingsApi.get()
     savedChatId.value = s.telegramChatId
     chatId.value = s.telegramChatId ?? ''
+    savedAlertEmail.value = s.alertEmail
+    alertEmail.value = s.alertEmail ?? ''
+    emailAlertsEnabled.value = s.emailAlertsEnabled
   } catch {
     // not critical
   }
@@ -80,6 +87,59 @@ async function test() {
     testing.value = false
   }
 }
+
+const alertEmail = ref('')
+const savedAlertEmail = ref<string | null>(null)
+const emailAlertsEnabled = ref(false)
+const savingEmail = ref(false)
+const testingEmail = ref(false)
+const togglingEmail = ref(false)
+const saveEmailError = ref('')
+const testEmailError = ref('')
+const testEmailSuccess = ref(false)
+const toggleEmailError = ref('')
+
+async function saveEmail() {
+  savingEmail.value = true
+  saveEmailError.value = ''
+  try {
+    const s = await settingsApi.saveEmail(alertEmail.value)
+    savedAlertEmail.value = s.alertEmail
+  } catch (e: unknown) {
+    saveEmailError.value = e instanceof Error ? e.message : 'Failed to save'
+  } finally {
+    savingEmail.value = false
+  }
+}
+
+async function testEmail() {
+  testingEmail.value = true
+  testEmailError.value = ''
+  testEmailSuccess.value = false
+  try {
+    await settingsApi.testEmail(alertEmail.value)
+    testEmailSuccess.value = true
+  } catch (e: unknown) {
+    testEmailError.value = e instanceof Error ? e.message : 'Failed to send test email'
+  } finally {
+    testingEmail.value = false
+  }
+}
+
+async function toggleEmailAlerts() {
+  togglingEmail.value = true
+  toggleEmailError.value = ''
+  const desired = emailAlertsEnabled.value
+  try {
+    const s = await settingsApi.setEmailAlertsEnabled(desired)
+    emailAlertsEnabled.value = s.emailAlertsEnabled
+  } catch (e: unknown) {
+    emailAlertsEnabled.value = !desired
+    toggleEmailError.value = e instanceof Error ? e.message : 'Failed to update'
+  } finally {
+    togglingEmail.value = false
+  }
+}
 </script>
 
 <template>
@@ -93,7 +153,9 @@ async function test() {
         style="background-color: var(--surface); border-color: var(--border)"
       >
         <h2 class="font-medium mb-1" style="color: var(--text-strong)">Appearance</h2>
-        <p class="text-sm mb-5" style="color: var(--text-muted)">Choose how checkmeup looks on this device.</p>
+        <p class="text-sm mb-5" style="color: var(--text-muted)">
+          Choose how checkmeup looks on this device.
+        </p>
 
         <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
           <button
@@ -124,7 +186,10 @@ async function test() {
       </div>
 
       <!-- Telegram -->
-      <div class="rounded-xl border p-6" style="background-color: var(--surface); border-color: var(--border)">
+      <div
+        class="rounded-xl border p-6"
+        style="background-color: var(--surface); border-color: var(--border)"
+      >
         <h2 class="font-medium mb-1" style="color: var(--text-strong)">Telegram alerts</h2>
         <p class="text-sm mb-5" style="color: var(--text-muted)">
           Connect a Telegram chat to receive down and recovery alerts.
@@ -139,43 +204,29 @@ async function test() {
               rel="noopener"
               class="underline"
               style="color: var(--color-green-500)"
-            >@checkmeupnet_bot</a>
-            in Telegram and send <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">/start</code>
+              >@checkmeupnet_bot</a
+            >
+            in Telegram and send
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >/start</code
+            >
             — the bot will reply with your Chat ID
           </li>
           <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
           <li>Click <strong>Save</strong></li>
         </ol>
-        <p class="text-xs mb-5 p-3 rounded-lg" style="background-color: var(--surface-raised); color: var(--text-muted)">
-          <strong style="color: var(--text-dim)">Note:</strong> The bot only works once it's deployed with a webhook registered.
-          In local dev, get your Chat ID from
-          <a href="https://t.me/userinfobot" target="_blank" rel="noopener" class="underline" style="color: var(--color-green-500)">@userinfobot</a>
-          instead.
-        </p>
 
         <div class="space-y-4">
           <div>
             <Label for="chat-id">Chat ID</Label>
-            <Input
-              id="chat-id"
-              v-model="chatId"
-              placeholder="-1001234567890"
-              class="mt-1"
-            />
+            <Input id="chat-id" v-model="chatId" placeholder="-1001234567890" class="mt-1" />
           </div>
 
           <div class="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              :disabled="!chatId || testing"
-              @click="test"
-            >
+            <Button variant="secondary" :disabled="!chatId || testing" @click="test">
               {{ testing ? 'Sending…' : 'Send test message' }}
             </Button>
-            <Button
-              :disabled="!chatId || saving"
-              @click="save"
-            >
+            <Button :disabled="!chatId || saving" @click="save">
               {{ saving ? 'Saving…' : 'Save' }}
             </Button>
           </div>
@@ -191,6 +242,71 @@ async function test() {
           </p>
           <p v-if="savedChatId && !saveError" class="text-xs" style="color: var(--text-muted)">
             Currently connected: {{ savedChatId }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="rounded-xl border p-6 mt-6" style="background-color: var(--surface); border-color: var(--border)">
+        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Email alerts</h2>
+        <p class="text-sm mb-5" style="color: var(--text-muted)">
+          Receive down and recovery alerts by email, independent of Telegram.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <Label for="alert-email">Alert email address</Label>
+            <Input
+              id="alert-email"
+              v-model="alertEmail"
+              type="email"
+              placeholder="alerts@yourteam.com"
+              class="mt-1"
+            />
+          </div>
+
+          <div class="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              :disabled="!alertEmail || testingEmail"
+              @click="testEmail"
+            >
+              {{ testingEmail ? 'Sending…' : 'Send test email' }}
+            </Button>
+            <Button
+              :disabled="!alertEmail || savingEmail"
+              @click="saveEmail"
+            >
+              {{ savingEmail ? 'Saving…' : 'Save' }}
+            </Button>
+          </div>
+
+          <p v-if="testEmailSuccess" class="text-sm" style="color: var(--status-up)">
+            Test email sent! Check your inbox.
+          </p>
+          <p v-if="testEmailError" class="text-sm" style="color: var(--status-down)">
+            {{ testEmailError }}
+          </p>
+          <p v-if="saveEmailError" class="text-sm" style="color: var(--status-down)">
+            {{ saveEmailError }}
+          </p>
+          <p v-if="savedAlertEmail && !saveEmailError" class="text-xs" style="color: var(--text-muted)">
+            Currently set: {{ savedAlertEmail }}
+          </p>
+
+          <div class="flex items-center gap-3 pt-2 border-t" style="border-color: var(--border)">
+            <input
+              id="email-alerts-enabled"
+              v-model="emailAlertsEnabled"
+              type="checkbox"
+              class="rounded"
+              :disabled="togglingEmail"
+              @change="toggleEmailAlerts"
+            />
+            <Label for="email-alerts-enabled" class="cursor-pointer">Enable email alerts</Label>
+          </div>
+          <p v-if="toggleEmailError" class="text-sm" style="color: var(--status-down)">
+            {{ toggleEmailError }}
           </p>
         </div>
       </div>
@@ -233,15 +349,20 @@ async function test() {
               rows="4"
               placeholder="What should checkmeup do better?"
               class="mt-1 flex w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-              style="border-color: var(--border); background-color: var(--surface); color: var(--text)"
+              style="
+                border-color: var(--border);
+                background-color: var(--surface);
+                color: var(--text);
+              "
             ></textarea>
           </div>
 
           <div class="flex items-center justify-between gap-3">
-            <p class="text-xs" style="color: var(--text-muted)">
-              Sent as {{ auth.user?.email }}
-            </p>
-            <Button :disabled="!suggestionText.trim() || submittingSuggestion" @click="submitSuggestion">
+            <p class="text-xs" style="color: var(--text-muted)">Sent as {{ auth.user?.email }}</p>
+            <Button
+              :disabled="!suggestionText.trim() || submittingSuggestion"
+              @click="submitSuggestion"
+            >
               {{ submittingSuggestion ? 'Sending…' : 'Send suggestion' }}
             </Button>
           </div>

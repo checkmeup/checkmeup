@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
@@ -58,10 +59,11 @@ func (s *Server) buildRouter() *chi.Mux {
 	})
 
 	tg := telegram.NewClient(s.cfg.TelegramBotToken)
+	mailer := email.NewSender(s.cfg.ResendAPIKey)
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
-	settings := handler.NewSettingsHandler(s.cfg, s.db, tg)
-	ping := handler.NewPingHandler(s.db, tg)
+	settings := handler.NewSettingsHandler(s.cfg, s.db, tg, mailer)
+	ping := handler.NewPingHandler(s.db, tg, mailer)
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
@@ -108,6 +110,9 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Get("/", settings.GetSettings)
 				r.Put("/telegram", settings.SaveTelegram)
 				r.With(httprate.LimitByIP(5, time.Minute)).Post("/telegram/test", settings.TestTelegram)
+				r.Put("/email", settings.SaveEmail)
+				r.Put("/email/enabled", settings.SetEmailAlertsEnabled)
+				r.With(httprate.LimitByIP(5, time.Minute)).Post("/email/test", settings.TestEmail)
 			})
 
 			r.Route("/monitors/cron", func(r chi.Router) {

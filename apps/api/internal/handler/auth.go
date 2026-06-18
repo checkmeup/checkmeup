@@ -188,7 +188,10 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgName := strings.SplitN(req.Email, "@", 2)[0]
-	org, err := h.queries.CreateOrg(r.Context(), orgName)
+	org, err := h.queries.CreateOrg(r.Context(), db.CreateOrgParams{
+		Name:       orgName,
+		AlertEmail: pgtype.Text{String: req.Email, Valid: true},
+	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return

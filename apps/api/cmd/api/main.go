@@ -12,6 +12,7 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/server"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/worker"
@@ -62,6 +63,7 @@ func main() {
 	logger.Info("database connected")
 
 	tg := telegram.NewClient(cfg.TelegramBotToken)
+	mailer := email.NewSender(cfg.ResendAPIKey)
 
 	if cfg.TelegramBotToken != "" && !cfg.IsDev() {
 		webhookURL := cfg.BaseURL + "/webhook/telegram"
@@ -74,7 +76,7 @@ func main() {
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
-	go worker.Run(workerCtx, db.New(pool), tg, logger)
+	go worker.Run(workerCtx, db.New(pool), tg, mailer, logger)
 
 	srv := server.New(cfg, logger, pool, version)
 	if err := srv.Start(); err != nil {

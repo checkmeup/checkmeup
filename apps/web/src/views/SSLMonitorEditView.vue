@@ -91,7 +91,7 @@ async function submit() {
 
         <div class="flex items-center gap-3">
           <input id="alerts" v-model="alertsEnabled" type="checkbox" class="rounded" />
-          <Label for="alerts" class="cursor-pointer">Send Telegram alerts</Label>
+          <Label for="alerts" class="cursor-pointer">Send alerts</Label>
         </div>
 
         <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

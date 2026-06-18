@@ -38,13 +38,18 @@ func (q *Queries) AcceptUserTerms(ctx context.Context, arg AcceptUserTermsParams
 }
 
 const createOrg = `-- name: CreateOrg :one
-INSERT INTO orgs (name)
-VALUES ($1)
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, ls_customer_id, ls_subscription_id, subscription_status, plan_renews_at, billing_cycle
+INSERT INTO orgs (name, alert_email)
+VALUES ($1, $2)
+RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, ls_customer_id, ls_subscription_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled
 `
 
-func (q *Queries) CreateOrg(ctx context.Context, name string) (Org, error) {
-	row := q.db.QueryRow(ctx, createOrg, name)
+type CreateOrgParams struct {
+	Name       string      `json:"name"`
+	AlertEmail pgtype.Text `json:"alert_email"`
+}
+
+func (q *Queries) CreateOrg(ctx context.Context, arg CreateOrgParams) (Org, error) {
+	row := q.db.QueryRow(ctx, createOrg, arg.Name, arg.AlertEmail)
 	var i Org
 	err := row.Scan(
 		&i.ID,
@@ -58,6 +63,8 @@ func (q *Queries) CreateOrg(ctx context.Context, name string) (Org, error) {
 		&i.SubscriptionStatus,
 		&i.PlanRenewsAt,
 		&i.BillingCycle,
+		&i.AlertEmail,
+		&i.EmailAlertsEnabled,
 	)
 	return i, err
 }

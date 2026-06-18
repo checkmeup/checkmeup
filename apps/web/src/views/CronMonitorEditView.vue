@@ -148,7 +148,7 @@ async function submit() {
             type="checkbox"
             class="rounded"
           />
-          <Label for="alerts" class="cursor-pointer">Send Telegram alerts</Label>
+          <Label for="alerts" class="cursor-pointer">Send alerts</Label>
         </div>
 
         <div>

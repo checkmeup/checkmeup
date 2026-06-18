@@ -47,6 +47,27 @@ func (s *Sender) SendPasswordReset(to, resetURL string) error {
 	return err
 }
 
+// SendAlertEmail sends a monitor alert (down/recovery) to an org's alert email address.
+func (s *Sender) SendAlertEmail(to, subject, html string) error {
+	if s.client == nil {
+		slog.Warn("email sending skipped: RESEND_API_KEY not set", "to", to)
+		return nil
+	}
+
+	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
+		From:    fromAddress,
+		To:      []string{to},
+		Subject: subject,
+		Html:    html,
+	})
+	return err
+}
+
+// SendTestAlertEmail verifies deliverability before a user saves an alert email address.
+func (s *Sender) SendTestAlertEmail(to string) error {
+	return s.SendAlertEmail(to, "checkmeup: test alert", "<p>✅ checkmeup is connected! You'll receive alerts here.</p>")
+}
+
 func (s *Sender) SendFeatureSuggestion(fromEmail, text string) error {
 	if s.client == nil {
 		slog.Warn("email sending skipped: RESEND_API_KEY not set", "from", fromEmail)

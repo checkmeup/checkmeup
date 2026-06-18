@@ -1,6 +1,6 @@
 -- name: CreateOrg :one
-INSERT INTO orgs (name)
-VALUES ($1)
+INSERT INTO orgs (name, alert_email)
+VALUES ($1, $2)
 RETURNING *;
 
 -- name: CreateUser :one

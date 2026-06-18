@@ -18,7 +18,7 @@
 | [EP-10](ep-10-theme.md)               | Light & dark theme              | 3/3*          |
 | [EP-11](ep-11-keyword-monitoring.md)  | Keyword monitoring              | 0/5           |
 | [EP-12](ep-12-team-management.md)     | Team management                 | 0/5           |
-| [EP-13](ep-13-email-alerts.md)        | Email alerts                    | 0/5           |
+| [EP-13](ep-13-email-alerts.md)        | Email alerts                    | 5/5           |
 | [EP-14](ep-14-webhook-alerts.md)      | Webhook alerts                  | 0/5           |
 | [EP-15](ep-15-whatsapp-alerts.md)     | WhatsApp alerts                 | 0/5           |
 | [EP-16](ep-16-signal-alerts.md)       | Signal alerts                   | 0/5           |
