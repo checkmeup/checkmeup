@@ -12,10 +12,10 @@ Today, feature requests go through a `mailto:` link and a GitHub Issues link on 
 
 **Acceptance criteria:**
 
-- [ ] "Suggest a feature" entry point inside the app (e.g. Settings)
-- [ ] Simple form: free-text description, account email pre-filled (read-only)
-- [ ] Submission stored (`org_id`, `user_id`, text, `created_at`) and emailed via Resend to the founder — no ticket statuses, no public board, no comments/voting
-- [ ] Confirmation shown after submit, consistent with the existing "reaches an engineer directly" framing
+- [x] "Suggest a feature" entry point inside the app (e.g. Settings)
+- [x] Simple form: free-text description, account email pre-filled (read-only)
+- [x] Submission stored (`org_id`, `user_id`, text, `created_at`) and emailed via Resend to the founder — no ticket statuses, no public board, no comments/voting
+- [x] Confirmation shown after submit, consistent with the existing "reaches an engineer directly" framing
 
 ---
 

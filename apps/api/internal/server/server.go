@@ -65,6 +65,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
 	maintenance := handler.NewMaintenanceHandler(s.db)
+	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -97,6 +98,7 @@ func (s *Server) buildRouter() *chi.Mux {
 
 			r.Get("/me", auth.Me)
 			r.Post("/auth/accept-terms", auth.AcceptTerms)
+			r.Post("/suggestions", suggestions.SubmitSuggestion)
 
 			r.Route("/settings", func(r chi.Router) {
 				r.Get("/", settings.GetSettings)

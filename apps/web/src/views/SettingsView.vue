@@ -5,11 +5,31 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { settingsApi } from '@/api/settings'
+import { suggestionsApi } from '@/api/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/lib/theme'
 
 const auth = useAuthStore()
 const { theme, setTheme } = useTheme()
+
+const suggestionText = ref('')
+const submittingSuggestion = ref(false)
+const suggestionError = ref('')
+const suggestionSent = ref(false)
+
+async function submitSuggestion() {
+  submittingSuggestion.value = true
+  suggestionError.value = ''
+  try {
+    await suggestionsApi.submit(suggestionText.value)
+    suggestionSent.value = true
+    suggestionText.value = ''
+  } catch (e: unknown) {
+    suggestionError.value = e instanceof Error ? e.message : 'Failed to send'
+  } finally {
+    submittingSuggestion.value = false
+  }
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return ''
@@ -192,6 +212,47 @@ async function test() {
           >
           (version {{ auth.user?.termsVersion }}) on {{ formatDate(auth.user.termsAcceptedAt) }}.
         </p>
+      </div>
+
+      <!-- Suggest a feature -->
+      <div
+        class="rounded-xl border p-6 mt-6"
+        style="background-color: var(--surface); border-color: var(--border)"
+      >
+        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Suggest a feature</h2>
+        <p class="text-sm mb-5" style="color: var(--text-muted)">
+          There's no support ticket queue — this goes straight to the founder.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <Label for="suggestion">Your suggestion</Label>
+            <textarea
+              id="suggestion"
+              v-model="suggestionText"
+              rows="4"
+              placeholder="What should checkmeup do better?"
+              class="mt-1 flex w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+              style="border-color: var(--border); background-color: var(--surface); color: var(--text)"
+            ></textarea>
+          </div>
+
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs" style="color: var(--text-muted)">
+              Sent as {{ auth.user?.email }}
+            </p>
+            <Button :disabled="!suggestionText.trim() || submittingSuggestion" @click="submitSuggestion">
+              {{ submittingSuggestion ? 'Sending…' : 'Send suggestion' }}
+            </Button>
+          </div>
+
+          <p v-if="suggestionSent" class="text-sm" style="color: var(--status-up)">
+            Thanks — this reaches an engineer directly.
+          </p>
+          <p v-if="suggestionError" class="text-sm" style="color: var(--status-down)">
+            {{ suggestionError }}
+          </p>
+        </div>
       </div>
     </div>
   </AppLayout>

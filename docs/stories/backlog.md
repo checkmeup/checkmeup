@@ -28,7 +28,7 @@
 | [EP-20](ep-20-viber-alerts.md)        | Viber alerts                    | 0/5           |
 | [EP-21](ep-21-terms-and-privacy.md)   | Terms and Privacy               | 4/4           |
 | [EP-22](ep-22-faq.md)                 | FAQ                             | 0/3           |
-| [EP-23](ep-23-suggest-a-feature.md)   | Suggest a feature               | 0/3           |
+| [EP-23](ep-23-suggest-a-feature.md)   | Suggest a feature               | 1/3           |
 | [EP-24](ep-24-incident-management.md) | Incident management             | 0/5           |
 | [EP-25](ep-25-two-factor-auth.md)     | Two-factor authentication       | 0/5           |
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |

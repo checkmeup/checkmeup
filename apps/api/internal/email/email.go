@@ -2,12 +2,15 @@ package email
 
 import (
 	"fmt"
+	"html"
 	"log/slog"
+	"strings"
 
 	"github.com/resend/resend-go/v2"
 )
 
 const fromAddress = "checkmeup <noreply@checkmeup.net>"
+const founderAddress = "andrew@checkmeup.net"
 
 type Sender struct {
 	client *resend.Client
@@ -40,6 +43,27 @@ func (s *Sender) SendPasswordReset(to, resetURL string) error {
 		To:      []string{to},
 		Subject: "Reset your checkmeup password",
 		Html:    html,
+	})
+	return err
+}
+
+func (s *Sender) SendFeatureSuggestion(fromEmail, text string) error {
+	if s.client == nil {
+		slog.Warn("email sending skipped: RESEND_API_KEY not set", "from", fromEmail)
+		return nil
+	}
+
+	escapedText := strings.ReplaceAll(html.EscapeString(text), "\n", "<br>")
+	body := fmt.Sprintf(`
+<p>New feature suggestion from %s:</p>
+<blockquote>%s</blockquote>
+`, html.EscapeString(fromEmail), escapedText)
+
+	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
+		From:    fromAddress,
+		To:      []string{founderAddress},
+		Subject: "checkmeup: new feature suggestion",
+		Html:    body,
 	})
 	return err
 }

@@ -177,6 +177,14 @@ type CronPing struct {
 	SourceIp   string             `json:"source_ip"`
 }
 
+type FeatureSuggestion struct {
+	ID        uuid.UUID          `json:"id"`
+	OrgID     uuid.UUID          `json:"org_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Text      string             `json:"text"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type MaintenanceWindow struct {
 	ID        uuid.UUID          `json:"id"`
 	OrgID     uuid.UUID          `json:"org_id"`
