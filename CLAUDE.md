@@ -43,9 +43,12 @@ make migrate-create name=foo  # create a new goose migration file
 | `LS_API_KEY` | billing | LemonSqueezy API key |
 | `LS_STORE_ID` | billing | LemonSqueezy store ID |
 | `LS_WEBHOOK_SECRET` | billing | LemonSqueezy webhook signing secret |
-| `LS_SOLO_VARIANT_ID` | billing | variant ID for Solo plan |
-| `LS_STARTUP_VARIANT_ID` | billing | variant ID for Startup plan |
-| `LS_ENTERPRISE_VARIANT_ID` | billing | variant ID for Enterprise plan |
+| `LS_SOLO_VARIANT_ID` | billing | variant ID for Solo plan (monthly) |
+| `LS_STARTUP_VARIANT_ID` | billing | variant ID for Startup plan (monthly) |
+| `LS_ENTERPRISE_VARIANT_ID` | billing | variant ID for Enterprise plan (monthly) |
+| `LS_SOLO_ANNUAL_VARIANT_ID` | billing | variant ID for Solo plan (annual, [EP-27](docs/stories/ep-27-annual-billing.md)) |
+| `LS_STARTUP_ANNUAL_VARIANT_ID` | billing | variant ID for Startup plan (annual) |
+| `LS_ENTERPRISE_ANNUAL_VARIANT_ID` | billing | variant ID for Enterprise plan (annual) |
 | `CODACY_API_TOKEN` | CI only | account-level Codacy token |
 
 > `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.

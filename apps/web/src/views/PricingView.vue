@@ -1,13 +1,18 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { findFaqCategory } from '@/faq/faqs'
 
 const billingFaqs = findFaqCategory('billing')?.entries ?? []
 
+// Annual price is always exactly 10x the monthly price — ~2 months free (EP-27).
+const cycle = ref<'monthly' | 'annual'>('monthly')
+
 interface Plan {
   name: string
   price: number
+  annualPrice: number
   description: string
   highlight: boolean
   cta: string
@@ -20,6 +25,7 @@ const plans: Plan[] = [
   {
     name: 'Hobby',
     price: 0,
+    annualPrice: 0,
     description: 'Side projects and personal tools',
     highlight: false,
     cta: 'Get started free',
@@ -30,6 +36,7 @@ const plans: Plan[] = [
   {
     name: 'Solo',
     price: 9,
+    annualPrice: 90,
     description: 'Solo builders shipping products',
     highlight: false,
     cta: 'Start Solo',
@@ -40,6 +47,7 @@ const plans: Plan[] = [
   {
     name: 'Startup',
     price: 29,
+    annualPrice: 290,
     description: 'Small teams and agencies',
     highlight: true,
     cta: 'Start Startup',
@@ -50,6 +58,7 @@ const plans: Plan[] = [
   {
     name: 'Enterprise',
     price: 99,
+    annualPrice: 990,
     description: 'Agencies with many clients',
     highlight: false,
     cta: 'Start Enterprise',
@@ -58,6 +67,10 @@ const plans: Plan[] = [
     checkInterval: '1 min',
   },
 ]
+
+function effectiveMonthly(plan: Plan): string {
+  return (plan.annualPrice / 12).toFixed(2).replace(/\.00$/, '')
+}
 
 interface TableRow {
   label: string
@@ -90,9 +103,37 @@ const featureRows: TableRow[] = [
       >
         Simple, honest pricing
       </h1>
-      <p class="text-lg sm:text-xl max-w-xl mx-auto" style="color: var(--text-dim)">
+      <p class="text-lg sm:text-xl max-w-xl mx-auto mb-8" style="color: var(--text-dim)">
         Start free. Pay only when you grow. No per-seat fees, no hidden costs.
       </p>
+
+      <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
+        <button
+          type="button"
+          class="px-4 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
+          :style="
+            cycle === 'monthly'
+              ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+              : 'color: var(--text-muted)'
+          "
+          @click="cycle = 'monthly'"
+        >
+          Monthly
+        </button>
+        <button
+          type="button"
+          class="px-4 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
+          :style="
+            cycle === 'annual'
+              ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+              : 'color: var(--text-muted)'
+          "
+          @click="cycle = 'annual'"
+        >
+          Annual
+          <span class="ml-1" style="color: var(--color-green-500)">— 2 months free</span>
+        </button>
+      </div>
     </section>
 
     <!-- Plan cards -->
@@ -126,12 +167,20 @@ const featureRows: TableRow[] = [
           </div>
 
           <div class="mb-6">
-            <span class="text-4xl font-bold" style="color: var(--text-strong)">
-              {{ plan.price === 0 ? 'Free' : `$${plan.price}` }}
-            </span>
-            <span v-if="plan.price > 0" class="text-sm ml-1" style="color: var(--text-muted)"
-              >/month</span
-            >
+            <template v-if="plan.price === 0">
+              <span class="text-4xl font-bold" style="color: var(--text-strong)">Free</span>
+            </template>
+            <template v-else-if="cycle === 'monthly'">
+              <span class="text-4xl font-bold" style="color: var(--text-strong)">${{ plan.price }}</span>
+              <span class="text-sm ml-1" style="color: var(--text-muted)">/month</span>
+            </template>
+            <template v-else>
+              <span class="text-4xl font-bold" style="color: var(--text-strong)">${{ plan.annualPrice }}</span>
+              <span class="text-sm ml-1" style="color: var(--text-muted)">/year</span>
+              <p class="text-xs mt-1" style="color: var(--text-muted)">
+                (${{ effectiveMonthly(plan) }}/mo, billed annually)
+              </p>
+            </template>
           </div>
 
           <ul class="space-y-3 mb-8 flex-1">

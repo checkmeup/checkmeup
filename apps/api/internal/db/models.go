@@ -214,6 +214,7 @@ type Org struct {
 	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
 	SubscriptionStatus string             `json:"subscription_status"`
 	PlanRenewsAt       pgtype.Timestamptz `json:"plan_renews_at"`
+	BillingCycle       string             `json:"billing_cycle"`
 }
 
 type PasswordResetToken struct {

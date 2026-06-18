@@ -21,23 +21,38 @@ import (
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
 
+// planCycle is what a LemonSqueezy variant ID resolves to — a plan tier and
+// its billing cycle (EP-27). "monthly" is the only cycle that existed before
+// annual billing; it's also the zero-value/default for Hobby, which has none.
+type planCycle struct {
+	Plan  db.Plan
+	Cycle string
+}
+
+const (
+	cycleMonthly = "monthly"
+	cycleAnnual  = "annual"
+)
+
 type BillingHandler struct {
-	cfg       *config.Config
-	queries   *db.Queries
-	variantMap map[string]db.Plan // variantID → plan
+	cfg        *config.Config
+	queries    *db.Queries
+	variantMap map[string]planCycle // variantID → plan + cycle
 }
 
 func NewBillingHandler(cfg *config.Config, pool *pgxpool.Pool) *BillingHandler {
-	m := map[string]db.Plan{}
-	if cfg.LSSoloVariantID != "" {
-		m[cfg.LSSoloVariantID] = db.PlanSolo
+	m := map[string]planCycle{}
+	add := func(variantID string, plan db.Plan, cycle string) {
+		if variantID != "" {
+			m[variantID] = planCycle{Plan: plan, Cycle: cycle}
+		}
 	}
-	if cfg.LSStartupVariantID != "" {
-		m[cfg.LSStartupVariantID] = db.PlanStartup
-	}
-	if cfg.LSEnterpriseVariantID != "" {
-		m[cfg.LSEnterpriseVariantID] = db.PlanEnterprise
-	}
+	add(cfg.LSSoloVariantID, db.PlanSolo, cycleMonthly)
+	add(cfg.LSStartupVariantID, db.PlanStartup, cycleMonthly)
+	add(cfg.LSEnterpriseVariantID, db.PlanEnterprise, cycleMonthly)
+	add(cfg.LSSoloAnnualVariantID, db.PlanSolo, cycleAnnual)
+	add(cfg.LSStartupAnnualVariantID, db.PlanStartup, cycleAnnual)
+	add(cfg.LSEnterpriseAnnualVariantID, db.PlanEnterprise, cycleAnnual)
 	return &BillingHandler{cfg: cfg, queries: db.New(pool), variantMap: m}
 }
 
@@ -59,11 +74,12 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 
 	type response struct {
 		Plan               string  `json:"plan"`
+		BillingCycle       string  `json:"billingCycle"`
 		SubscriptionStatus string  `json:"subscriptionStatus"`
 		PlanRenewsAt       *string `json:"planRenewsAt"`
-		MonitorCount       int32 `json:"monitorCount"`
-		MonitorLimit       int   `json:"monitorLimit"`
-		StatusPageCount    int32 `json:"statusPageCount"`
+		MonitorCount       int32   `json:"monitorCount"`
+		MonitorLimit       int     `json:"monitorLimit"`
+		StatusPageCount    int32   `json:"statusPageCount"`
 		StatusPageLimit    int     `json:"statusPageLimit"`
 		MinIntervalMins    int     `json:"minIntervalMins"`
 		CustomerPortalURL  string  `json:"customerPortalUrl"`
@@ -82,6 +98,7 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 
 	respond.JSON(w, http.StatusOK, response{
 		Plan:               string(info.Plan),
+		BillingCycle:       info.BillingCycle,
 		SubscriptionStatus: info.SubscriptionStatus,
 		PlanRenewsAt:       renewsAt,
 		MonitorCount:       info.MonitorCount,
@@ -102,14 +119,22 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		Plan string `json:"plan"`
+		Plan  string `json:"plan"`
+		Cycle string `json:"cycle"` // "monthly" or "annual"; defaults to monthly
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, http.StatusBadRequest, "invalid request", "bad_request")
 		return
 	}
+	if req.Cycle == "" {
+		req.Cycle = cycleMonthly
+	}
+	if req.Cycle != cycleMonthly && req.Cycle != cycleAnnual {
+		respond.Error(w, http.StatusBadRequest, "invalid cycle", "bad_request")
+		return
+	}
 
-	variantID := h.variantIDForPlan(req.Plan)
+	variantID := h.variantIDForPlan(req.Plan, req.Cycle)
 	if variantID == "" {
 		respond.Error(w, http.StatusBadRequest, "invalid plan", "bad_request")
 		return
@@ -175,20 +200,23 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	variantIDStr := fmt.Sprintf("%d", payload.Data.Attributes.VariantID)
-	plan, ok := h.variantMap[variantIDStr]
+	pc, ok := h.variantMap[variantIDStr]
 	if !ok {
 		// Unknown variant — ignore
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	plan, cycle := pc.Plan, pc.Cycle
 
 	status := payload.Data.Attributes.Status
 	subscriptionID := payload.Data.ID
 	customerID := fmt.Sprintf("%d", payload.Data.Attributes.CustomerID)
 
-	// On cancellation, downgrade to hobby at period end
+	// On cancellation, downgrade to hobby at period end — billing_cycle resets
+	// to the column default since Hobby has no cycle of its own.
 	if status == "cancelled" || status == "expired" {
 		plan = db.PlanHobby
+		cycle = cycleMonthly
 		customerID = ""
 		subscriptionID = ""
 	}
@@ -207,6 +235,7 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	_ = h.queries.UpdateOrgPlan(r.Context(), db.UpdateOrgPlanParams{
 		ID:                 orgID,
 		Plan:               plan,
+		BillingCycle:       cycle,
 		LsCustomerID:       pgtype.Text{String: customerID, Valid: customerID != ""},
 		LsSubscriptionID:   pgtype.Text{String: subscriptionID, Valid: subscriptionID != ""},
 		SubscriptionStatus: status,
@@ -216,13 +245,23 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *BillingHandler) variantIDForPlan(plan string) string {
+func (h *BillingHandler) variantIDForPlan(plan, cycle string) string {
+	annual := cycle == cycleAnnual
 	switch plan {
 	case "solo":
+		if annual {
+			return h.cfg.LSSoloAnnualVariantID
+		}
 		return h.cfg.LSSoloVariantID
 	case "startup":
+		if annual {
+			return h.cfg.LSStartupAnnualVariantID
+		}
 		return h.cfg.LSStartupVariantID
 	case "enterprise":
+		if annual {
+			return h.cfg.LSEnterpriseAnnualVariantID
+		}
 		return h.cfg.LSEnterpriseVariantID
 	}
 	return ""

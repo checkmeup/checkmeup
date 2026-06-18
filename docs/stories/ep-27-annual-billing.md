@@ -1,0 +1,51 @@
+# EP-27: Annual billing
+
+Today, paid plans are monthly-only (Solo $9, Startup $29, Enterprise $99 — see [ADR-019](../decisions/019-plan-limits.md)). This epic adds an annual option at roughly 2 months free — Solo $90/yr, Startup $290/yr, Enterprise $990/yr (each is exactly 10× the monthly price) — reusing the existing LemonSqueezy MoR integration ([ADR-018](../decisions/018-billing-lemonsqueezy-mor.md)).
+
+**Depends on the "Activate billing" item already in [roadmap.md § Later](../roadmap.md#later)**: the 3 monthly LemonSqueezy variants haven't been configured in the LS dashboard yet either. This epic needs 3 *more* variants (one annual variant per paid plan, alongside each existing monthly one) — same manual setup step, just doubled.
+
+---
+
+### US-2701: Choose annual or monthly at checkout
+
+**As a** user, **I want** to pick annual or monthly billing when upgrading **so that** I can save money if I commit for a year.
+
+**Estimate:** 1.5 h
+
+**Acceptance criteria:**
+
+- [x] Pricing page shows a monthly/annual toggle; annual prices display as `$X/yr` with a "2 months free" callout
+- [ ]\* Billing page's upgrade flow offers the same toggle before creating a checkout
+- [x] Checkout request includes the chosen cycle, mapped server-side to the correct LemonSqueezy variant (monthly or annual) for that plan — new env vars `LS_SOLO_ANNUAL_VARIANT_ID`, `LS_STARTUP_ANNUAL_VARIANT_ID`, `LS_ENTERPRISE_ANNUAL_VARIANT_ID`
+
+\* Descoped on purpose: the Billing page has no real upgrade-checkout buttons yet (still "Paid plans — coming soon" — EP-07's deferred `US-0702`, see [roadmap.md § Later](../roadmap.md#later)). There's no upgrade flow to attach a toggle to until that's built. The backend (`POST /billing/checkout` accepting `cycle`) is ready for whenever it is.
+
+---
+
+### US-2702: Track billing cycle per org
+
+**As a** platform operator, **I want** to know whether an org is on monthly or annual billing **so that** the billing page and renewal date reflect the real cycle.
+
+**Estimate:** 1 h
+
+**Acceptance criteria:**
+
+- [x] New `orgs.billing_cycle` column (`monthly` / `annual`), set from the LemonSqueezy webhook's variant ID — same mechanism already used to set `plan`
+- [x] Billing page shows the current cycle and renewal date correctly for annual subscribers (yearly, not monthly)
+- [x] Existing subscribers default to `monthly` — no backfill needed, matches reality for every org so far
+
+---
+
+### US-2703: Show annual pricing on the Pricing page
+
+**As a** visitor, **I want** to see annual prices clearly **so that** I can compare the savings before signing up.
+
+**Estimate:** 1 h
+
+**Acceptance criteria:**
+
+- [x]\* Toggle switches all plan cards between monthly and annual pricing, including the feature comparison table
+- [x] Annual price shown as both the total (`$90/yr`) and the effective monthly rate (`$7.50/mo`) for easy comparison
+- [x] Hobby stays `$0` regardless of toggle position — it has no billing cycle
+
+\* The feature comparison table doesn't display any price figures (just monitor/interval/page counts and checkmarks), so there's nothing in it for the toggle to switch — only the plan cards above it show prices.

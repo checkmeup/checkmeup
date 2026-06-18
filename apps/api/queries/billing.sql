@@ -13,6 +13,7 @@ SELECT COUNT(*)::int AS total FROM status_pages WHERE org_id = $1;
 -- name: GetOrgBillingInfo :one
 SELECT
     o.plan,
+    o.billing_cycle,
     o.ls_customer_id,
     o.ls_subscription_id,
     o.subscription_status,
@@ -30,9 +31,10 @@ WHERE o.id = $1;
 UPDATE orgs
 SET
     plan                = $2,
-    ls_customer_id      = $3,
-    ls_subscription_id  = $4,
-    subscription_status = $5,
-    plan_renews_at      = $6,
+    billing_cycle        = $3,
+    ls_customer_id      = $4,
+    ls_subscription_id  = $5,
+    subscription_status = $6,
+    plan_renews_at      = $7,
     updated_at          = NOW()
 WHERE id = $1;

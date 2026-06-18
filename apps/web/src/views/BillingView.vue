@@ -23,12 +23,15 @@ const planLabel: Record<string, string> = {
   enterprise: 'Enterprise',
 }
 
-const planPrice: Record<string, string> = {
-  hobby: 'Free',
-  solo: '$9/mo',
-  startup: '$29/mo',
-  enterprise: '$99/mo',
-}
+// Annual prices are each exactly 10x the monthly price (~2 months free, EP-27).
+const monthlyPrice: Record<string, number> = { solo: 9, startup: 29, enterprise: 99 }
+const annualPrice: Record<string, number> = { solo: 90, startup: 290, enterprise: 990 }
+
+const planPrice = computed(() => {
+  if (!info.value || info.value.plan === 'hobby') return 'Free'
+  const plan = info.value.plan
+  return info.value.billingCycle === 'annual' ? `$${annualPrice[plan]}/yr` : `$${monthlyPrice[plan]}/mo`
+})
 
 const monitorPct = computed(() => {
   if (!info.value) return 0
@@ -67,7 +70,7 @@ function limitLabel(used: number, limit: number) {
               <p class="text-2xl font-bold" style="color: var(--text-strong)">
                 {{ planLabel[info.plan] }}
                 <span class="text-base font-normal ml-1" style="color: var(--text-muted)">
-                  {{ planPrice[info.plan] }}
+                  {{ planPrice }}
                 </span>
               </p>
             </div>

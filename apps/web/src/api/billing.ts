@@ -1,7 +1,10 @@
 import { api } from './client'
 
+export type BillingCycle = 'monthly' | 'annual'
+
 export interface BillingInfo {
   plan: 'hobby' | 'solo' | 'startup' | 'enterprise'
+  billingCycle: BillingCycle
   subscriptionStatus: string
   planRenewsAt: string | null
   monitorCount: number
@@ -17,7 +20,7 @@ export const billingApi = {
     return api.get('/api/v1/billing')
   },
 
-  async createCheckout(plan: string): Promise<{ url: string }> {
-    return api.post('/api/v1/billing/checkout', { plan })
+  async createCheckout(plan: string, cycle: BillingCycle = 'monthly'): Promise<{ url: string }> {
+    return api.post('/api/v1/billing/checkout', { plan, cycle })
   },
 }

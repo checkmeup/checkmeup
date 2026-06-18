@@ -32,7 +32,8 @@
 | [EP-24](ep-24-incident-management.md) | Incident management             | 0/5           |
 | [EP-25](ep-25-two-factor-auth.md)     | Two-factor authentication       | 0/5           |
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |
+| [EP-27](ep-27-annual-billing.md)      | Annual billing                  | 2/3*          |
 
-`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-07: 2 acceptance criteria across US-0702/US-0703 are intentionally deferred post-MVP — see [roadmap.md § Later](../roadmap.md#later). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why.
+`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-07: 2 acceptance criteria across US-0702/US-0703 are intentionally deferred post-MVP — see [roadmap.md § Later](../roadmap.md#later). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \* EP-27: US-2701's Billing-page-toggle criterion is blocked on EP-07's still-deferred upgrade-checkout UI — see the epic file.
 
 See [roadmap.md](../roadmap.md) for the Now / Next / Later priority order ([ADR-022](../decisions/022-post-mvp-docs-organization.md)).

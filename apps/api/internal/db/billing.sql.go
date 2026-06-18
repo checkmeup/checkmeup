@@ -40,6 +40,7 @@ func (q *Queries) CountOrgStatusPages(ctx context.Context, orgID uuid.UUID) (int
 const getOrgBillingInfo = `-- name: GetOrgBillingInfo :one
 SELECT
     o.plan,
+    o.billing_cycle,
     o.ls_customer_id,
     o.ls_subscription_id,
     o.subscription_status,
@@ -56,6 +57,7 @@ WHERE o.id = $1
 
 type GetOrgBillingInfoRow struct {
 	Plan               Plan               `json:"plan"`
+	BillingCycle       string             `json:"billing_cycle"`
 	LsCustomerID       pgtype.Text        `json:"ls_customer_id"`
 	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
 	SubscriptionStatus string             `json:"subscription_status"`
@@ -69,6 +71,7 @@ func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBi
 	var i GetOrgBillingInfoRow
 	err := row.Scan(
 		&i.Plan,
+		&i.BillingCycle,
 		&i.LsCustomerID,
 		&i.LsSubscriptionID,
 		&i.SubscriptionStatus,
@@ -94,10 +97,11 @@ const updateOrgPlan = `-- name: UpdateOrgPlan :exec
 UPDATE orgs
 SET
     plan                = $2,
-    ls_customer_id      = $3,
-    ls_subscription_id  = $4,
-    subscription_status = $5,
-    plan_renews_at      = $6,
+    billing_cycle        = $3,
+    ls_customer_id      = $4,
+    ls_subscription_id  = $5,
+    subscription_status = $6,
+    plan_renews_at      = $7,
     updated_at          = NOW()
 WHERE id = $1
 `
@@ -105,6 +109,7 @@ WHERE id = $1
 type UpdateOrgPlanParams struct {
 	ID                 uuid.UUID          `json:"id"`
 	Plan               Plan               `json:"plan"`
+	BillingCycle       string             `json:"billing_cycle"`
 	LsCustomerID       pgtype.Text        `json:"ls_customer_id"`
 	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
 	SubscriptionStatus string             `json:"subscription_status"`
@@ -115,6 +120,7 @@ func (q *Queries) UpdateOrgPlan(ctx context.Context, arg UpdateOrgPlanParams) er
 	_, err := q.db.Exec(ctx, updateOrgPlan,
 		arg.ID,
 		arg.Plan,
+		arg.BillingCycle,
 		arg.LsCustomerID,
 		arg.LsSubscriptionID,
 		arg.SubscriptionStatus,
