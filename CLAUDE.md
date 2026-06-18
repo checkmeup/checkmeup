@@ -51,6 +51,8 @@ make migrate-create name=foo  # create a new goose migration file
 | `LS_ENTERPRISE_ANNUAL_VARIANT_ID` | billing | variant ID for Enterprise plan (annual) |
 | `CODACY_API_TOKEN` | CI only | account-level Codacy token |
 
+> All `LS_*` vars are unset by default — see [`docs/billing-setup.md`](docs/billing-setup.md) for the LemonSqueezy dashboard checklist to activate billing.
+
 > `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)).

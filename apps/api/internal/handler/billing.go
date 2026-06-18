@@ -275,6 +275,13 @@ func (h *BillingHandler) createLSCheckout(orgID uuid.UUID, variantID string) (st
 				"checkout_data": map[string]any{
 					"custom": map[string]string{"org_id": orgID.String()},
 				},
+				// Explicit success redirect rather than relying on the LemonSqueezy
+				// store/product dashboard default (EP-07 US-0703). Failed payments
+				// stay on LemonSqueezy's own hosted checkout page natively — no
+				// redirect needed for that case.
+				"product_options": map[string]any{
+					"redirect_url": h.cfg.AppURL + "/billing?upgraded=true",
+				},
 			},
 			"relationships": map[string]any{
 				"store":   map[string]any{"data": map[string]string{"type": "stores", "id": h.cfg.LSStoreID}},

@@ -34,6 +34,7 @@ make build  # production build
 | [docs/decisions/](docs/decisions/)                 | Architecture decision records (ADRs)                  |
 | [docs/design.md](docs/design.md)                   | Design tokens — colors, logo usage                     |
 | [docs/deploy.md](docs/deploy.md)                   | Deployment guide                                       |
+| [docs/billing-setup.md](docs/billing-setup.md)     | LemonSqueezy activation checklist                       |
 | [docs/reports/](docs/reports/)                     | Monthly snapshots — what shipped, ADRs added            |
 | [docs/incidents/](docs/incidents/)                 | Production incident write-ups (one file per incident)  |
 | [docs/mvp-history.md](docs/mvp-history.md)         | How the MVP was built (archived, frozen record)       |

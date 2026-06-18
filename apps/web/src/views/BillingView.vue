@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { billingApi, type BillingInfo } from '@/api/billing'
+import Button from '@/components/ui/Button.vue'
+import { billingApi, type BillingInfo, type BillingCycle } from '@/api/billing'
+import { ApiError } from '@/api/client'
 
 const info = ref<BillingInfo | null>(null)
 const loading = ref(true)
@@ -26,12 +28,44 @@ const planLabel: Record<string, string> = {
 // Annual prices are each exactly 10x the monthly price (~2 months free, EP-27).
 const monthlyPrice: Record<string, number> = { solo: 9, startup: 29, enterprise: 99 }
 const annualPrice: Record<string, number> = { solo: 90, startup: 290, enterprise: 990 }
+const planRank: Record<string, number> = { hobby: 0, solo: 1, startup: 2, enterprise: 3 }
 
 const planPrice = computed(() => {
   if (!info.value || info.value.plan === 'hobby') return 'Free'
   const plan = info.value.plan
   return info.value.billingCycle === 'annual' ? `$${annualPrice[plan]}/yr` : `$${monthlyPrice[plan]}/mo`
 })
+
+const upgradeOptions = computed(() => {
+  if (!info.value) return []
+  const currentRank = planRank[info.value.plan]
+  return (['solo', 'startup', 'enterprise'] as const).filter((p) => planRank[p] > currentRank)
+})
+
+const cycle = ref<BillingCycle>('monthly')
+const checkingOut = ref<string | null>(null)
+const checkoutError = ref('')
+
+function effectiveMonthly(plan: string): string {
+  return (annualPrice[plan] / 12).toFixed(2).replace(/\.00$/, '')
+}
+
+async function upgrade(plan: string) {
+  checkingOut.value = plan
+  checkoutError.value = ''
+  try {
+    const { url } = await billingApi.createCheckout(plan, cycle.value)
+    window.location.href = url
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.code === 'not_configured') {
+      checkoutError.value = "Billing isn't activated yet — check back soon, or email andrew@checkmeup.net."
+    } else {
+      checkoutError.value = e instanceof Error ? e.message : 'Failed to start checkout'
+    }
+  } finally {
+    checkingOut.value = null
+  }
+}
 
 const monitorPct = computed(() => {
   if (!info.value) return 0
@@ -131,20 +165,66 @@ function limitLabel(used: number, limit: number) {
           </div>
         </div>
 
-        <!-- Upgrade coming soon -->
+        <!-- Upgrade -->
         <div
-          class="rounded-xl border p-5 text-sm space-y-1"
+          v-if="upgradeOptions.length > 0"
+          class="rounded-xl border p-6"
           style="background-color: var(--surface); border-color: var(--border)"
         >
-          <p class="font-medium" style="color: var(--text-strong)">Paid plans — coming soon</p>
-          <p style="color: var(--text-muted)">
-            Self-serve upgrades are on the way. In the meantime, email
-            <a
-              href="mailto:andrew@checkmeup.net"
-              style="color: var(--accent)"
-            >andrew@checkmeup.net</a>
-            to discuss your needs.
-          </p>
+          <div class="flex items-center justify-between mb-5">
+            <p class="font-medium" style="color: var(--text-strong)">Upgrade</p>
+            <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
+              <button
+                type="button"
+                class="px-3 py-1 rounded text-xs transition-colors hover:cursor-pointer"
+                :style="
+                  cycle === 'monthly'
+                    ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+                    : 'color: var(--text-muted)'
+                "
+                @click="cycle = 'monthly'"
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1 rounded text-xs transition-colors hover:cursor-pointer"
+                :style="
+                  cycle === 'annual'
+                    ? 'background-color: var(--surface-raised); color: var(--text-strong)'
+                    : 'color: var(--text-muted)'
+                "
+                @click="cycle = 'annual'"
+              >
+                Annual <span style="color: var(--color-green-500)">— 2 months free</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              v-for="plan in upgradeOptions"
+              :key="plan"
+              class="flex items-center justify-between p-3 rounded-lg"
+              style="background-color: var(--surface-raised)"
+            >
+              <div>
+                <p class="text-sm font-medium" style="color: var(--text-strong)">{{ planLabel[plan] }}</p>
+                <p class="text-xs" style="color: var(--text-muted)">
+                  {{
+                    cycle === 'annual'
+                      ? `$${annualPrice[plan]}/yr ($${effectiveMonthly(plan)}/mo)`
+                      : `$${monthlyPrice[plan]}/mo`
+                  }}
+                </p>
+              </div>
+              <Button size="sm" :disabled="checkingOut === plan" @click="upgrade(plan)">
+                {{ checkingOut === plan ? 'Redirecting…' : `Upgrade to ${planLabel[plan]}` }}
+              </Button>
+            </div>
+          </div>
+
+          <p v-if="checkoutError" class="text-sm mt-4" style="color: var(--status-down)">{{ checkoutError }}</p>
         </div>
       </template>
     </div>

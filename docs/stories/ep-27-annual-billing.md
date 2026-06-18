@@ -2,7 +2,7 @@
 
 Today, paid plans are monthly-only (Solo $9, Startup $29, Enterprise $99 — see [ADR-019](../decisions/019-plan-limits.md)). This epic adds an annual option at roughly 2 months free — Solo $90/yr, Startup $290/yr, Enterprise $990/yr (each is exactly 10× the monthly price) — reusing the existing LemonSqueezy MoR integration ([ADR-018](../decisions/018-billing-lemonsqueezy-mor.md)).
 
-**Depends on the "Activate billing" item already in [roadmap.md § Later](../roadmap.md#later)**: the 3 monthly LemonSqueezy variants haven't been configured in the LS dashboard yet either. This epic needs 3 *more* variants (one annual variant per paid plan, alongside each existing monthly one) — same manual setup step, just doubled.
+All 3 stories are done in code. The only remaining step is LemonSqueezy dashboard setup (3 more variants, one annual per paid plan, alongside the 3 monthly ones) — see [`docs/billing-setup.md`](../billing-setup.md). That's account/business setup only the account holder can do, not engineering work.
 
 ---
 
@@ -15,10 +15,8 @@ Today, paid plans are monthly-only (Solo $9, Startup $29, Enterprise $99 — see
 **Acceptance criteria:**
 
 - [x] Pricing page shows a monthly/annual toggle; annual prices display as `$X/yr` with a "2 months free" callout
-- [ ]\* Billing page's upgrade flow offers the same toggle before creating a checkout
+- [x] Billing page's upgrade flow offers the same toggle before creating a checkout — built alongside EP-07's previously-deferred checkout buttons
 - [x] Checkout request includes the chosen cycle, mapped server-side to the correct LemonSqueezy variant (monthly or annual) for that plan — new env vars `LS_SOLO_ANNUAL_VARIANT_ID`, `LS_STARTUP_ANNUAL_VARIANT_ID`, `LS_ENTERPRISE_ANNUAL_VARIANT_ID`
-
-\* Descoped on purpose: the Billing page has no real upgrade-checkout buttons yet (still "Paid plans — coming soon" — EP-07's deferred `US-0702`, see [roadmap.md § Later](../roadmap.md#later)). There's no upgrade flow to attach a toggle to until that's built. The backend (`POST /billing/checkout` accepting `cycle`) is ready for whenever it is.
 
 ---
 

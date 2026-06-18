@@ -25,8 +25,8 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 Ordered by how easy the blocker is to clear — internal decisions first, external dependencies (providers, approval processes) last.
 
-- Activate billing — configure LemonSqueezy products/variants + `LS_*` env vars, inline upgrade prompt on 402 (US-0702), verify failed-payment redirect URL. Trigger: first 402 hit in production, or a user asks about a paid plan — not blocked on a decision, just deferred until that trigger fires.
-- [EP-27](stories/ep-27-annual-billing.md) — Annual billing. 2/3 stories landed (backend variant/cycle tracking, Pricing page toggle); the remaining piece (Billing page upgrade-flow toggle) is blocked on "Activate billing" above landing first.
+- Activate billing — all code is done (inline upgrade prompt on 402, Billing page checkout buttons with monthly/annual toggle, explicit checkout redirect URL). What's left is account setup in the LemonSqueezy dashboard, which only the account holder can do — see [`docs/billing-setup.md`](billing-setup.md) for the exact checklist. Trigger: first 402 hit in production, or a user asks about a paid plan.
+- [EP-27](stories/ep-27-annual-billing.md) — Annual billing. All 3 stories landed in code; same LemonSqueezy dashboard setup above also activates this.
 - [EP-25](stories/ep-25-two-factor-auth.md) — Two-factor authentication. Blocked on the secret-encryption decision in [decision backlog](decisions/backlog.md) — an internal technical choice, quick to resolve.
 - [EP-26](stories/ep-26-public-api-keys.md) — Public API and API keys. Blocked on amending ADR-003 in [decision backlog](decisions/backlog.md) — a policy call, not an external dependency.
 - [EP-24](stories/ep-24-incident-management.md) — Incident management. Blocked on the manual-incident schema decision in [decision backlog](decisions/backlog.md) — internal schema design.

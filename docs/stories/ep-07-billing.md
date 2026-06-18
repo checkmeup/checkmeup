@@ -36,7 +36,7 @@ Plan limits:
 - [x] Blocked: creating monitors over the total limit (cron, uptime, SSL)
 - [x] Blocked: creating status pages over the limit
 - [x] Blocked: setting uptime interval below plan minimum (returns 402 with explanation)
-- [ ] UI shows inline upgrade prompt when a 402 is received — not a generic error page *(deferred post-MVP)*
+- [x] UI shows inline upgrade prompt when a 402 is received — not a generic error page (`UpgradePrompt.vue`, wired into all 4 create views via `ApiError.code === 'plan_limit_reached'`)
 
 ---
 
@@ -50,4 +50,4 @@ Plan limits:
 - [x] On successful payment, LemonSqueezy webhook updates the org's plan in DB
 - [x] New limits applied immediately after webhook received
 - [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobby
-- [ ] Failed payment: user lands back on billing page (LemonSqueezy handles this natively) *(deferred post-MVP — verify redirect URL when activating billing)*
+- [x] Failed payment: user stays on LemonSqueezy's hosted checkout page natively, can retry — nothing for us to configure. Success redirect is now explicit in code (`product_options.redirect_url` → `/billing?upgraded=true`) rather than relying on a LemonSqueezy dashboard default — see [`docs/billing-setup.md`](../billing-setup.md)

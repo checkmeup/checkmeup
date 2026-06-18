@@ -1,10 +1,12 @@
 export class ApiError extends Error {
   readonly status: number
+  readonly code: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code = '') {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -49,8 +51,8 @@ async function request<T>(path: string, init?: RequestInit, retry = true): Promi
   }
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new ApiError(res.status, body.error ?? res.statusText)
+    const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+    throw new ApiError(res.status, body.error ?? res.statusText, body.code ?? '')
   }
 
   if (res.status === 204) return undefined as T
