@@ -8,6 +8,7 @@ const sections = [
   { id: 'uptime', label: 'Uptime monitoring' },
   { id: 'ssl', label: 'SSL expiry monitoring' },
   { id: 'telegram', label: 'Telegram alerts' },
+  { id: 'email', label: 'Email alerts' },
   { id: 'status-pages', label: 'Status pages' },
   { id: 'maintenance', label: 'Maintenance windows' },
   { id: 'appearance', label: 'Appearance' },
@@ -56,7 +57,7 @@ const sections = [
             Sign up, pick a monitor type from the dashboard, and fill in the form. There's no setup wizard and no required onboarding call — the whole thing takes under a minute for your first monitor.
           </p>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            checkmeup watches three kinds of things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), and TLS certificates that shouldn't be allowed to quietly expire (SSL monitors). Connect Telegram once and every monitor type alerts through the same channel.
+            checkmeup watches three kinds of things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), and TLS certificates that shouldn't be allowed to quietly expire (SSL monitors). Connect Telegram, add an alert email, or both — every monitor type alerts through whichever channels you enable.
           </p>
         </section>
 
@@ -106,6 +107,12 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
               <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5" style="background-color: var(--color-green-500)"></span>
               <span><strong style="color: var(--text-strong)">Uptime percentage</strong> — rolling 24-hour, 7-day, and 30-day uptime shown on the monitor detail page.</span>
             </li>
+            <li class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5" style="background-color: var(--color-green-500)"></span>
+              <span>
+                <strong style="color: var(--text-strong)">Keyword monitoring</strong> (paid plans) — add an optional keyword check alongside the status code, so a maintenance page served with a 200 or an error embedded in a JSON response still trips an alert. Set it to require the keyword (<code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">Contains</code>) or to fail when it's present (<code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">Does not contain</code>), with an optional case-sensitive toggle. We search the first 512 KB of the response body — no extra request, and the body itself is never stored, only the pass/fail reason.
+              </span>
+            </li>
           </ul>
         </section>
 
@@ -137,6 +144,22 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           </ol>
           <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
             Alerts are capped per incident — by default, 3 alerts and then silence until the monitor recovers, so a flapping check doesn't spam your phone. The recovery alert always sends, regardless of the cap. The alert limit is configurable per monitor.
+          </p>
+        </section>
+
+        <!-- Email -->
+        <section id="email" class="scroll-mt-24">
+          <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Email alerts</h2>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            A second alert channel alongside Telegram — use one, the other, or both. Set it up in <strong style="color: var(--text-strong)">Settings → Email alerts</strong>:
+          </p>
+          <ol class="space-y-2 text-sm list-decimal list-inside" style="color: var(--text-dim)">
+            <li>An alert email address is pre-filled with your account email when you sign up — change it anytime, e.g. to a shared address like <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">alerts@yourteam.com</code>.</li>
+            <li>Click <strong style="color: var(--text-strong)">Send test email</strong> to confirm it's deliverable, then <strong style="color: var(--text-strong)">Save</strong>.</li>
+            <li>Flip <strong style="color: var(--text-strong)">Enable email alerts</strong> to turn the channel on — it's off by default even after an address is saved.</li>
+          </ol>
+          <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
+            Down and recovery alerts carry the same information as the Telegram message — monitor name, reason, and timestamp — with a subject line that includes the monitor name and "DOWN" for inbox filtering. If both channels are enabled, a single alert event fires on each independently; the per-incident alert cap still counts it as one notification, not two, so turning on email never doubles your alert volume.
           </p>
         </section>
 
@@ -221,6 +244,9 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
               </tbody>
             </table>
           </div>
+          <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
+            Keyword monitoring is available on Solo and above — Hobby covers status-code checks only. See the full feature comparison for everything else that's the same across every plan.
+          </p>
           <RouterLink to="/pricing" class="inline-flex items-center gap-1 mt-4 text-sm transition-colors" style="color: var(--color-green-500)">
             Full pricing details →
           </RouterLink>

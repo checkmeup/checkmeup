@@ -64,11 +64,15 @@ export const faqCategories: FaqCategory[] = [
     entries: [
       {
         q: 'How do alerts work?',
-        a: "Connect a Telegram chat once in Settings and every monitor type alerts through it. Alerts are capped at 3 per incident by default (configurable per monitor) so a flapping check doesn't spam you — the recovery alert always sends regardless of the cap.",
+        a: "Connect a Telegram chat, set an alert email, or both in Settings — every monitor type alerts through whichever channels you enable. Alerts are capped at 3 per incident by default (configurable per monitor) so a flapping check doesn't spam you; that cap counts one notification event even if it goes out on both channels. The recovery alert always sends regardless of the cap.",
       },
       {
         q: "What's the minimum check interval?",
         a: "5 minutes for uptime monitors on Hobby, 1 minute on paid plans. SSL certificates are checked once a day. Cron monitors alert based on your job's own schedule plus a grace period you choose.",
+      },
+      {
+        q: 'Can I check the response body, not just the status code?',
+        a: "Yes — uptime monitors on Solo and above support an optional keyword check: require text to be present, or fail if it is. Useful for catching a maintenance page served with a 200 or an error embedded in a JSON response. We search the first 512 KB of the body; it's never stored, only the pass/fail reason.",
       },
       {
         q: 'Can I mute alerts for a noisy monitor?',
