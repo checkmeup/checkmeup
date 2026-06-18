@@ -223,6 +223,17 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             There's no support ticket queue — questions, bug reports, and feature requests all reach an engineer directly.
           </p>
           <div class="flex flex-wrap gap-4">
+            <RouterLink
+              to="/settings"
+              class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors"
+              style="color: var(--text-dim); border-color: var(--border); background-color: var(--surface)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a7 7 0 0 0-4 12.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26A7 7 0 0 0 12 2z" />
+                <line x1="9" y1="22" x2="15" y2="22" />
+              </svg>
+              Suggest a feature
+            </RouterLink>
             <a
               href="mailto:andrew@checkmeup.net"
               class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors"

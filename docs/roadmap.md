@@ -14,14 +14,13 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-1. [EP-23](stories/ep-23-suggest-a-feature.md) — Suggest a feature. Cheapest item here; ships the feedback loop first so it can help inform the priority of everything below.
-2. [EP-22](stories/ep-22-faq.md) — FAQ
-3. [EP-13](stories/ep-13-email-alerts.md) — Email alerts. Reuses the existing Resend integration, no new infra.
-4. [EP-11](stories/ep-11-keyword-monitoring.md) — Keyword monitoring
-5. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Moved up from Later — EP-17 and EP-18 are both built on top of this; it has to land first.
-6. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
-7. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
-8. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
+1. [EP-22](stories/ep-22-faq.md) — FAQ
+2. [EP-13](stories/ep-13-email-alerts.md) — Email alerts. Reuses the existing Resend integration, no new infra.
+3. [EP-11](stories/ep-11-keyword-monitoring.md) — Keyword monitoring
+4. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Moved up from Later — EP-17 and EP-18 are both built on top of this; it has to land first.
+5. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
+6. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
+7. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
 
 ### Later
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -98,7 +99,10 @@ func (s *Server) buildRouter() *chi.Mux {
 
 			r.Get("/me", auth.Me)
 			r.Post("/auth/accept-terms", auth.AcceptTerms)
-			r.Post("/suggestions", suggestions.SubmitSuggestion)
+			r.With(
+				httprate.Limit(5, time.Hour, httprate.WithKeyByIP(), httprate.WithLimitHandler(suggestionRateLimited)),
+				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(suggestionOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
+			).Post("/suggestions", suggestions.SubmitSuggestion)
 
 			r.Route("/settings", func(r chi.Router) {
 				r.Get("/", settings.GetSettings)
@@ -189,6 +193,21 @@ func (s *Server) Start() error {
 	}
 
 	return srv.ListenAndServe()
+}
+
+// suggestionOrgKey rate-limits POST /suggestions per org, on top of the
+// per-IP limit, so a single abusive org can't bypass the IP limit via
+// rotating addresses. Runs after RequireAuth, so claims are always present.
+func suggestionOrgKey(r *http.Request) (string, error) {
+	claims := apimiddleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		return "", errors.New("no claims in context")
+	}
+	return claims.OrgID, nil
+}
+
+func suggestionRateLimited(w http.ResponseWriter, r *http.Request) {
+	respond.Error(w, http.StatusTooManyRequests, "Too many suggestions submitted — try again later.", "rate_limited")
 }
 
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {

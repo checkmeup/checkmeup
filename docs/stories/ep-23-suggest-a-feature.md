@@ -27,8 +27,8 @@ Today, feature requests go through a `mailto:` link and a GitHub Issues link on 
 
 **Acceptance criteria:**
 
-- [ ] Rate limit per IP and per org, same pattern as existing endpoints ([ADR-013](../decisions/013-rate-limiting.md)) — e.g. 5 per hour
-- [ ] Limit-exceeded response shows a clear message, not a generic error
+- [x] Rate limit per IP and per org, same pattern as existing endpoints ([ADR-013](../decisions/013-rate-limiting.md)) — 5/hour per IP, 20/hour per org
+- [x] Limit-exceeded response shows a clear message, not a generic error
 
 ---
 
@@ -40,5 +40,5 @@ Today, feature requests go through a `mailto:` link and a GitHub Issues link on 
 
 **Acceptance criteria:**
 
-- [ ] Docs page "Need help?" section ([DocsView.vue](../../apps/web/src/views/DocsView.vue)) gains the in-app suggestion link alongside the existing email and GitHub links — those stay, this is additive
-- [ ] Settings nav includes the same entry point for signed-in users
+- [x] Docs page "Need help?" section ([DocsView.vue](../../apps/web/src/views/DocsView.vue)) gains the in-app suggestion link alongside the existing email and GitHub links — those stay, this is additive
+- [x] Settings nav includes the same entry point for signed-in users — the form lives directly on the Settings page, already a top-level nav item
