@@ -63,4 +63,20 @@ The icon is a stylized `C`/bracket that morphs into a checkmark. Two greens in t
 
 Brand greens and status colors are unchanged in both themes — never swap those per-theme.
 
+**Accent**
+| Token | Value | Use |
+|---|---|---|
+| `--accent` | `var(--color-green-500)` | Selected/active state (checkboxes, progress bars) — alias, not a new color |
+
+**CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." gradient box; see [EP-10](stories/ep-10-theme.md))
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `--cta-gradient-start` | `--color-green-900` | `--color-green-100` | Gradient start |
+| `--cta-gradient-end` | `--color-green-700` | `--surface` | Gradient end |
+| `--cta-border` | `--color-green-700` | `--color-green-300` | Box border |
+| `--cta-text` | `#FFFFFF` | `--text-strong` | Heading |
+| `--cta-text-dim` | `rgba(255,255,255,0.8)` | `--text-dim` | Subtitle |
+
+This box is intentionally always a green wash (dark gradient in dark mode, light mint in light mode) rather than using `--bg`/`--surface` directly — those two tokens flip from dark to white between themes, which previously broke this banner's contrast in light mode (see `reports/2026-06.md`, EP-10 entry).
+
 Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates and is out of scope for EP-10's theme toggle. See EP-10's epic note for why.

@@ -61,6 +61,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
 - **Colors/logo:** never hardcode hex values — use tokens from [`docs/design.md`](docs/design.md)
+- **Theme:** the app supports light/dark via `data-theme` on `<html>` — design tokens (`--bg`, `--text`, etc.) already flip per theme, so styling with tokens is theme-safe by default; hardcoding a token's current value isn't (see [EP-10](docs/stories/ep-10-theme.md))
 
 ---
 
@@ -103,3 +104,5 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))
 - Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
 - Switch payment providers — LemonSqueezy is the MoR (handles global tax); see [ADR-018](docs/decisions/018-billing-lemonsqueezy-mor.md)
+- Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`. Found broken across `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` during EP-10 — e.g. the sign-in button had no background in *either* theme until fixed
+- Build a public feature-request board, voting system, or ticketing queue — feedback goes straight to the founder via the in-app form (Settings, EP-23), email, and GitHub Issues; that's a deliberate choice, not a gap (see `DocsView.vue`'s "Need help?" section)

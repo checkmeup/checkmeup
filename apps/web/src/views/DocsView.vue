@@ -10,6 +10,7 @@ const sections = [
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'status-pages', label: 'Status pages' },
   { id: 'maintenance', label: 'Maintenance windows' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'plans', label: 'Plans & limits' },
   { id: 'help', label: 'Need help?' },
 ]
@@ -170,6 +171,15 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
               <span><strong style="color: var(--text-strong)">Visible on status pages</strong> — any covered monitor shows "Under maintenance" with an optional message instead of up/down, and doesn't trigger an outage banner.</span>
             </li>
           </ul>
+        </section>
+
+        <!-- Appearance -->
+        <section id="appearance" class="scroll-mt-24">
+          <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Appearance</h2>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            checkmeup supports light and dark themes. Switch anytime from the toggle in the app shell or
+            <strong style="color: var(--text-strong)">Settings → Appearance</strong> — it applies instantly, no reload. First visit defaults to your OS-level light/dark preference; after that, your choice is remembered on this device.
+          </p>
         </section>
 
         <!-- Plans -->
