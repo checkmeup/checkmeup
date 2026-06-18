@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -166,7 +167,7 @@ func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.
 }
 
 func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, m db.UptimeMonitor) {
-	statusCode, responseTimeMs, isUp := performHTTPCheck(m.Url)
+	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m)
 
 	var codeParam pgtype.Int4
 	if statusCode > 0 {
@@ -178,6 +179,7 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 		StatusCode:     codeParam,
 		ResponseTimeMs: int32(responseTimeMs),
 		IsUp:           isUp,
+		FailureReason:  pgtype.Text{String: failureReason, Valid: failureReason != ""},
 	}); err != nil {
 		logger.Error("uptime worker: create check", "monitor_id", m.ID, "err", err)
 		return
@@ -238,11 +240,11 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			return
 		}
 		msg := alertMessage{
-			telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nStatus: %s",
-				m.Name, m.Url, httpStatusDesc(statusCode)),
+			telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
+				m.Name, m.Url, failureReason),
 			emailSubject: fmt.Sprintf("DOWN: %s", m.Name),
-			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Status: %s</p>",
-				m.Name, m.Url, httpStatusDesc(statusCode)),
+			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
+				m.Name, m.Url, failureReason),
 		}
 		if !dispatchAlert(tg, mailer, org, msg, logger, m.ID) {
 			return
@@ -253,17 +255,63 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 	}
 }
 
-func performHTTPCheck(rawURL string) (statusCode int, responseTimeMs int64, isUp bool) {
+// maxKeywordCheckBytes caps how much of the response body is read for a
+// keyword search, regardless of Content-Length (US-1102).
+const maxKeywordCheckBytes = 512 * 1024
+
+// performHTTPCheck runs the monitor's HTTP check and, if a keyword is
+// configured, searches the (capped) response body for it as part of the
+// same request. failureReason is empty on success, or describes which
+// check failed (HTTP status vs. keyword mismatch) for alerting/display.
+func performHTTPCheck(m db.UptimeMonitor) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	start := time.Now()
-	resp, err := client.Get(rawURL)
+	resp, err := client.Get(m.Url)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
-		return 0, elapsed, false
+		return 0, elapsed, false, "timeout / connection error"
 	}
 	defer func() { _ = resp.Body.Close() }()
-	_, _ = io.Copy(io.Discard, resp.Body)
-	return resp.StatusCode, elapsed, resp.StatusCode == http.StatusOK
+
+	keyword := strings.TrimSpace(m.Keyword.String)
+	if keyword == "" {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		if resp.StatusCode != http.StatusOK {
+			return resp.StatusCode, elapsed, false, httpStatusDesc(resp.StatusCode)
+		}
+		return resp.StatusCode, elapsed, true, ""
+	}
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKeywordCheckBytes))
+
+	if resp.StatusCode != http.StatusOK {
+		return resp.StatusCode, elapsed, false, httpStatusDesc(resp.StatusCode)
+	}
+	if !keywordCheckPasses(string(body), keyword, m.KeywordMode, m.KeywordCaseSensitive) {
+		return resp.StatusCode, elapsed, false, keywordFailureReason(m.KeywordMode)
+	}
+	return resp.StatusCode, elapsed, true, ""
+}
+
+// keywordCheckPasses reports whether body satisfies the monitor's keyword
+// mode. Plain substring search only — no regex, to avoid a ReDoS surface.
+func keywordCheckPasses(body, keyword string, mode db.KeywordMode, caseSensitive bool) bool {
+	if !caseSensitive {
+		body = strings.ToLower(body)
+		keyword = strings.ToLower(keyword)
+	}
+	contains := strings.Contains(body, keyword)
+	if mode == db.KeywordModeNotContains {
+		return !contains
+	}
+	return contains
+}
+
+func keywordFailureReason(mode db.KeywordMode) string {
+	if mode == db.KeywordModeNotContains {
+		return "Keyword found"
+	}
+	return "Keyword not found"
 }
 
 func httpStatusDesc(code int) string {

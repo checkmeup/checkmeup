@@ -12,6 +12,7 @@ export interface BillingInfo {
   statusPageCount: number
   statusPageLimit: number
   minIntervalMins: number
+  keywordMonitoringEnabled: boolean
   customerPortalUrl: string
 }
 

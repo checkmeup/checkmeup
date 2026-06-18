@@ -240,7 +240,7 @@ func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UU
 }
 
 const getUptimeMonitorPublic = `-- name: GetUptimeMonitorPublic :one
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM uptime_monitors WHERE id = $1
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive FROM uptime_monitors WHERE id = $1
 `
 
 func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -260,6 +260,9 @@ func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (Upt
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Keyword,
+		&i.KeywordMode,
+		&i.KeywordCaseSensitive,
 	)
 	return i, err
 }

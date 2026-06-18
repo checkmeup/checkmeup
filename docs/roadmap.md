@@ -14,11 +14,10 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-1. [EP-11](stories/ep-11-keyword-monitoring.md) — Keyword monitoring
-2. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Moved up from Later — EP-17 and EP-18 are both built on top of this; it has to land first.
-3. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
-4. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
-5. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
+1. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Moved up from Later — EP-17 and EP-18 are both built on top of this; it has to land first.
+2. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
+3. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
+4. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
 
 ### Later
 

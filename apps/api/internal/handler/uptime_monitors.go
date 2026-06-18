@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -21,16 +22,19 @@ import (
 // ─── response types ──────────────────────────────────────────────────────────
 
 type uptimeMonitorResponse struct {
-	ID                   string  `json:"id"`
-	Name                 string  `json:"name"`
-	URL                  string  `json:"url"`
-	IntervalMins         int32   `json:"intervalMins"`
-	Status               string  `json:"status"`
-	AlertsEnabled        bool    `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32   `json:"maxAlertsPerIncident"`
-	LastCheckedAt        *string `json:"lastCheckedAt"`
-	CreatedAt            string  `json:"createdAt"`
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	URL                  string   `json:"url"`
+	IntervalMins         int32    `json:"intervalMins"`
+	Status               string   `json:"status"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	LastCheckedAt        *string  `json:"lastCheckedAt"`
+	CreatedAt            string   `json:"createdAt"`
 	Uptime24h            *float64 `json:"uptime24h"`
+	Keyword              *string  `json:"keyword"`
+	KeywordMode          string   `json:"keywordMode"`
+	KeywordCaseSensitive bool     `json:"keywordCaseSensitive"`
 }
 
 type uptimeCheckResponse struct {
@@ -39,6 +43,7 @@ type uptimeCheckResponse struct {
 	StatusCode     *int32  `json:"statusCode"`
 	ResponseTimeMs int32   `json:"responseTimeMs"`
 	IsUp           bool    `json:"isUp"`
+	FailureReason  *string `json:"failureReason"`
 }
 
 type uptimeIncidentResponse struct {
@@ -73,10 +78,15 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		KeywordMode:          string(m.KeywordMode),
+		KeywordCaseSensitive: m.KeywordCaseSensitive,
 	}
 	if m.LastCheckedAt.Valid {
 		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
 		r.LastCheckedAt = &t
+	}
+	if m.Keyword.Valid {
+		r.Keyword = &m.Keyword.String
 	}
 	return r
 }
@@ -90,6 +100,9 @@ func uptimeCheckToResponse(c db.UptimeCheck) uptimeCheckResponse {
 	}
 	if c.StatusCode.Valid {
 		r.StatusCode = &c.StatusCode.Int32
+	}
+	if c.FailureReason.Valid {
+		r.FailureReason = &c.FailureReason.String
 	}
 	return r
 }
@@ -132,6 +145,25 @@ func validateURL(raw string) error {
 	return nil
 }
 
+// validateKeyword allows an empty keyword (US-1105: clearing it disables the
+// check) but enforces the 1-500 char bound from US-1101 when one is set.
+func validateKeyword(raw string) error {
+	if raw == "" {
+		return nil
+	}
+	if len(raw) > 500 {
+		return errors.New("keyword must be 500 characters or fewer")
+	}
+	return nil
+}
+
+func parseKeywordMode(raw string) db.KeywordMode {
+	if raw == string(db.KeywordModeNotContains) {
+		return db.KeywordModeNotContains
+	}
+	return db.KeywordModeContains
+}
+
 // ─── handlers ────────────────────────────────────────────────────────────────
 
 // ListUptimeMonitors GET /api/v1/monitors/uptime
@@ -164,6 +196,9 @@ type createUptimeMonitorRequest struct {
 	URL                  string `json:"url"`
 	IntervalMins         int32  `json:"intervalMins"`
 	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
+	Keyword              string `json:"keyword"`
+	KeywordMode          string `json:"keywordMode"`
+	KeywordCaseSensitive bool   `json:"keywordCaseSensitive"`
 }
 
 // CreateUptimeMonitor POST /api/v1/monitors/uptime
@@ -189,10 +224,22 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+	req.Keyword = strings.TrimSpace(req.Keyword)
+	if err := validateKeyword(req.Keyword); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
 	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
+	}
+	if req.Keyword != "" {
+		if err := billing.CheckKeywordMonitoringAllowed(plan); err != nil {
+			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_keyword")
+			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+			return
+		}
 	}
 	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
 	if err != nil {
@@ -222,6 +269,9 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		Url:                  strings.TrimSpace(req.URL),
 		IntervalMins:         req.IntervalMins,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
+		KeywordMode:          parseKeywordMode(req.KeywordMode),
+		KeywordCaseSensitive: req.KeywordCaseSensitive,
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -318,6 +368,9 @@ type updateUptimeMonitorRequest struct {
 	IntervalMins         int32  `json:"intervalMins"`
 	AlertsEnabled        bool   `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
+	Keyword              string `json:"keyword"`
+	KeywordMode          string `json:"keywordMode"`
+	KeywordCaseSensitive bool   `json:"keywordCaseSensitive"`
 }
 
 // UpdateUptimeMonitor PATCH /api/v1/monitors/uptime/{id}
@@ -342,6 +395,23 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+	req.Keyword = strings.TrimSpace(req.Keyword)
+	if err := validateKeyword(req.Keyword); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	if req.Keyword != "" {
+		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		if err := billing.CheckKeywordMonitoringAllowed(plan); err != nil {
+			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_keyword")
+			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+			return
+		}
+	}
 	if req.IntervalMins < 10 {
 		req.IntervalMins = 10
 	}
@@ -357,6 +427,9 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		IntervalMins:         req.IntervalMins,
 		AlertsEnabled:        req.AlertsEnabled,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
+		KeywordMode:          parseKeywordMode(req.KeywordMode),
+		KeywordCaseSensitive: req.KeywordCaseSensitive,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

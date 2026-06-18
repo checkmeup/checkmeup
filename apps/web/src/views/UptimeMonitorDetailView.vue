@@ -157,6 +157,11 @@ const chart = computed(() => {
               Every {{ detail.monitor.intervalMins }} min
               · Last checked {{ relativeTime(detail.monitor.lastCheckedAt) }}
             </p>
+            <p v-if="detail.monitor.keyword" class="text-xs" style="color: var(--text-muted)">
+              🔍 {{ detail.monitor.keywordMode === 'not_contains' ? 'Does not contain' : 'Contains' }}
+              "{{ detail.monitor.keyword }}"
+              <span v-if="detail.monitor.keywordCaseSensitive">(case-sensitive)</span>
+            </p>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             <Button
@@ -303,6 +308,7 @@ const chart = computed(() => {
                 <th class="text-left px-5 py-2 font-medium text-xs" style="color: var(--text-muted)">Status</th>
                 <th class="text-left px-5 py-2 font-medium text-xs" style="color: var(--text-muted)">Code</th>
                 <th class="text-left px-5 py-2 font-medium text-xs" style="color: var(--text-muted)">Response time</th>
+                <th class="text-left px-5 py-2 font-medium text-xs" style="color: var(--text-muted)">Reason</th>
               </tr>
             </thead>
             <tbody>
@@ -324,6 +330,7 @@ const chart = computed(() => {
                   {{ c.statusCode ?? '—' }}
                 </td>
                 <td class="px-5 py-2.5" style="color: var(--text-dim)">{{ c.responseTimeMs }}ms</td>
+                <td class="px-5 py-2.5 text-xs" style="color: var(--text-dim)">{{ c.failureReason ?? '—' }}</td>
               </tr>
             </tbody>
           </table>

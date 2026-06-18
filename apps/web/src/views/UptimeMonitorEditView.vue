@@ -5,8 +5,9 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
-import { monitorsApi } from '@/api/monitors'
+import { monitorsApi, type KeywordMode } from '@/api/monitors'
 import { billingApi } from '@/api/billing'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,10 +18,24 @@ const url = ref('')
 const intervalMins = ref(10)
 const alertsEnabled = ref(true)
 const maxAlertsPerIncident = ref(3)
+const keyword = ref('')
+const keywordMode = ref<KeywordMode>('contains')
+const keywordCaseSensitive = ref(false)
 const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const minIntervalMins = ref(5)
+const keywordMonitoringEnabled = ref(false)
+
+const keywordModeOptions: { label: string; value: KeywordMode }[] = [
+  { label: 'Contains', value: 'contains' },
+  { label: 'Does not contain', value: 'not_contains' },
+]
+
+// A keyword set while on a paid plan stays editable-to-clear after a
+// downgrade, but can't be changed to new text until re-upgrading — same
+// "keep what you have, can't add more" policy as monitor/status-page limits.
+const keywordLocked = computed(() => !keywordMonitoringEnabled.value && !!keyword.value)
 
 const intervalOptions = computed(() => [
   ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
@@ -47,7 +62,11 @@ onMounted(async () => {
     intervalMins.value = m.intervalMins
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
+    keyword.value = m.keyword ?? ''
+    keywordMode.value = m.keywordMode
+    keywordCaseSensitive.value = m.keywordCaseSensitive
     minIntervalMins.value = info.minIntervalMins
+    keywordMonitoringEnabled.value = info.keywordMonitoringEnabled
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load monitor'
   } finally {
@@ -65,6 +84,10 @@ async function submit() {
     error.value = 'URL must start with http:// or https://'
     return
   }
+  if (keyword.value.trim().length > 500) {
+    error.value = 'Keyword must be 500 characters or fewer'
+    return
+  }
 
   submitting.value = true
   try {
@@ -74,6 +97,9 @@ async function submit() {
       intervalMins: intervalMins.value,
       alertsEnabled: alertsEnabled.value,
       maxAlertsPerIncident: maxAlertsPerIncident.value,
+      keyword: keyword.value.trim(),
+      keywordMode: keywordMode.value,
+      keywordCaseSensitive: keywordCaseSensitive.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id } })
   } catch (e: unknown) {
@@ -117,6 +143,61 @@ async function submit() {
           <p class="text-xs mt-1" style="color: var(--text-muted)">
             Must return HTTP 200. GET request, 10-second timeout.
           </p>
+        </div>
+
+        <UpgradePrompt
+          v-if="!keywordMonitoringEnabled"
+          :message="
+            keywordLocked
+              ? 'Your keyword check is paused — keyword monitoring is available on paid plans. You can still clear it below.'
+              : 'Keyword monitoring is available on paid plans.'
+          "
+        />
+
+        <div>
+          <Label for="keyword">Keyword (optional)</Label>
+          <div class="flex items-start gap-2 mt-1">
+            <Input
+              id="keyword"
+              v-model="keyword"
+              placeholder="e.g. Welcome back"
+              class="flex-1"
+              maxlength="500"
+              :disabled="keywordLocked"
+            />
+            <Button v-if="keywordLocked" type="button" variant="secondary" @click="keyword = ''">
+              Clear
+            </Button>
+          </div>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Leave blank to check status code only. Searches the first 512 KB of the response body.
+          </p>
+        </div>
+
+        <div v-if="keyword.trim() && keywordMonitoringEnabled" class="space-y-4 pl-4 border-l-2" style="border-color: var(--border)">
+          <div>
+            <Label for="keywordMode">Mode</Label>
+            <select
+              id="keywordMode"
+              v-model="keywordMode"
+              class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+            >
+              <option v-for="opt in keywordModeOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input
+              id="keywordCaseSensitive"
+              v-model="keywordCaseSensitive"
+              type="checkbox"
+              class="rounded"
+            />
+            <Label for="keywordCaseSensitive" class="cursor-pointer">Case-sensitive</Label>
+          </div>
         </div>
 
         <div>

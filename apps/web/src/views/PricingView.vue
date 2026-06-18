@@ -83,6 +83,7 @@ const featureRows: TableRow[] = [
   { label: 'Status pages', values: ['1', '3', '10', '100'] },
   { label: 'Cron job monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Keyword monitoring', values: ['—', '✓', '✓', '✓'] },
   { label: 'SSL expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Telegram alerts', values: ['✓', '✓', '✓', '✓'] },

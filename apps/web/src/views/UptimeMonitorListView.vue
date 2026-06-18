@@ -62,6 +62,12 @@ function fmtPct(v: number | null): string {
 function truncate(s: string, n = 40) {
   return s.length > n ? s.slice(0, n) + '…' : s
 }
+
+function keywordLabel(m: UptimeMonitor): string {
+  if (!m.keyword) return ''
+  const verb = m.keywordMode === 'not_contains' ? 'does not contain' : 'contains'
+  return `🔍 ${verb} "${truncate(m.keyword, 24)}"`
+}
 </script>
 
 <template>
@@ -118,6 +124,9 @@ function truncate(s: string, n = 40) {
               <span class="font-mono truncate max-w-[60%]">{{ m.url }}</span>
               <span>{{ fmtPct(m.uptime24h) }} · {{ relativeTime(m.lastCheckedAt) }}</span>
             </div>
+            <div v-if="m.keyword" class="text-xs mt-1" style="color: var(--text-muted)">
+              {{ keywordLabel(m) }}
+            </div>
           </div>
         </div>
 
@@ -142,7 +151,12 @@ function truncate(s: string, n = 40) {
                 @click="router.push({ name: 'uptime-monitor-detail', params: { id: m.id } })"
               >
                 <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ m.name }}</td>
-                <td class="px-4 py-3 font-mono text-xs" style="color: var(--text-dim)">{{ truncate(m.url) }}</td>
+                <td class="px-4 py-3 font-mono text-xs" style="color: var(--text-dim)">
+                  {{ truncate(m.url) }}
+                  <div v-if="m.keyword" class="font-sans mt-0.5" style="color: var(--text-muted)">
+                    {{ keywordLabel(m) }}
+                  </div>
+                </td>
                 <td class="px-4 py-3">
                   <span
                     class="inline-flex items-center gap-1.5 text-xs font-medium"

@@ -12,6 +12,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type KeywordMode string
+
+const (
+	KeywordModeContains    KeywordMode = "contains"
+	KeywordModeNotContains KeywordMode = "not_contains"
+)
+
+func (e *KeywordMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = KeywordMode(s)
+	case string:
+		*e = KeywordMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for KeywordMode: %T", src)
+	}
+	return nil
+}
+
+type NullKeywordMode struct {
+	KeywordMode KeywordMode `json:"keyword_mode"`
+	Valid       bool        `json:"valid"` // Valid is true if KeywordMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullKeywordMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.KeywordMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.KeywordMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullKeywordMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.KeywordMode), nil
+}
+
 type MonitorStatus string
 
 const (
@@ -281,6 +323,7 @@ type UptimeCheck struct {
 	StatusCode     pgtype.Int4        `json:"status_code"`
 	ResponseTimeMs int32              `json:"response_time_ms"`
 	IsUp           bool               `json:"is_up"`
+	FailureReason  pgtype.Text        `json:"failure_reason"`
 }
 
 type UptimeIncident struct {
@@ -305,6 +348,9 @@ type UptimeMonitor struct {
 	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	Keyword              pgtype.Text        `json:"keyword"`
+	KeywordMode          KeywordMode        `json:"keyword_mode"`
+	KeywordCaseSensitive bool               `json:"keyword_case_sensitive"`
 }
 
 type User struct {

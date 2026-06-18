@@ -48,6 +48,8 @@ export interface UpdateCronMonitorInput {
   maxAlertsPerIncident: number
 }
 
+export type KeywordMode = 'contains' | 'not_contains'
+
 export interface UptimeMonitor {
   id: string
   name: string
@@ -59,6 +61,9 @@ export interface UptimeMonitor {
   lastCheckedAt: string | null
   createdAt: string
   uptime24h: number | null
+  keyword: string | null
+  keywordMode: KeywordMode
+  keywordCaseSensitive: boolean
 }
 
 export interface UptimeCheck {
@@ -67,6 +72,7 @@ export interface UptimeCheck {
   statusCode: number | null
   responseTimeMs: number
   isUp: boolean
+  failureReason: string | null
 }
 
 export interface UptimeIncident {
@@ -94,6 +100,9 @@ export interface CreateUptimeMonitorInput {
   url: string
   intervalMins: number
   maxAlertsPerIncident: number
+  keyword: string
+  keywordMode: KeywordMode
+  keywordCaseSensitive: boolean
 }
 
 export interface UpdateUptimeMonitorInput {
@@ -102,6 +111,9 @@ export interface UpdateUptimeMonitorInput {
   intervalMins: number
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  keyword: string
+  keywordMode: KeywordMode
+  keywordCaseSensitive: boolean
 }
 
 export interface SSLMonitor {

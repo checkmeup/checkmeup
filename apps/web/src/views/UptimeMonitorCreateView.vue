@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
-import { monitorsApi } from '@/api/monitors'
+import { monitorsApi, type KeywordMode } from '@/api/monitors'
 import { billingApi } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
@@ -16,10 +16,19 @@ const name = ref('')
 const url = ref('')
 const intervalMins = ref(10)
 const maxAlertsPerIncident = ref(3)
+const keyword = ref('')
+const keywordMode = ref<KeywordMode>('contains')
+const keywordCaseSensitive = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
 const minIntervalMins = ref(5)
+const keywordMonitoringEnabled = ref(false)
+
+const keywordModeOptions: { label: string; value: KeywordMode }[] = [
+  { label: 'Contains', value: 'contains' },
+  { label: 'Does not contain', value: 'not_contains' },
+]
 
 const intervalOptions = computed(() => [
   ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
@@ -32,6 +41,7 @@ onMounted(async () => {
   try {
     const info = await billingApi.getInfo()
     minIntervalMins.value = info.minIntervalMins
+    keywordMonitoringEnabled.value = info.keywordMonitoringEnabled
   } catch {
     // keep defaults if billing info can't be loaded
   }
@@ -61,6 +71,10 @@ async function submit() {
     error.value = 'URL must start with http:// or https://'
     return
   }
+  if (keyword.value.trim().length > 500) {
+    error.value = 'Keyword must be 500 characters or fewer'
+    return
+  }
 
   submitting.value = true
   try {
@@ -69,6 +83,9 @@ async function submit() {
       url: url.value.trim(),
       intervalMins: intervalMins.value,
       maxAlertsPerIncident: maxAlertsPerIncident.value,
+      keyword: keyword.value.trim(),
+      keywordMode: keywordMode.value,
+      keywordCaseSensitive: keywordCaseSensitive.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -126,6 +143,53 @@ async function submit() {
             Must return HTTP 200. GET request, 10-second timeout.
           </p>
         </div>
+
+        <UpgradePrompt
+          v-if="!keywordMonitoringEnabled"
+          message="Keyword monitoring is available on paid plans."
+        />
+
+        <template v-else>
+          <div>
+            <Label for="keyword">Keyword (optional)</Label>
+            <Input
+              id="keyword"
+              v-model="keyword"
+              placeholder="e.g. Welcome back"
+              class="mt-1"
+              maxlength="500"
+            />
+            <p class="text-xs mt-1" style="color: var(--text-muted)">
+              Leave blank to check status code only. Searches the first 512 KB of the response body.
+            </p>
+          </div>
+
+          <div v-if="keyword.trim()" class="space-y-4 pl-4 border-l-2" style="border-color: var(--border)">
+            <div>
+              <Label for="keywordMode">Mode</Label>
+              <select
+                id="keywordMode"
+                v-model="keywordMode"
+                class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+              >
+                <option v-for="opt in keywordModeOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <input
+                id="keywordCaseSensitive"
+                v-model="keywordCaseSensitive"
+                type="checkbox"
+                class="rounded"
+              />
+              <Label for="keywordCaseSensitive" class="cursor-pointer">Case-sensitive</Label>
+            </div>
+          </div>
+        </template>
 
         <div>
           <Label for="interval">Check interval</Label>
