@@ -7,6 +7,7 @@ export type ContentBlock =
   | { type: 'blockquote'; text: string }
   | { type: 'divider' }
   | { type: 'signature'; text: string }
+  | { type: 'image'; src: string; alt: string; caption?: string }
 
 export interface BlogPost {
   slug: string

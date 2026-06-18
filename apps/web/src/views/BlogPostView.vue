@@ -107,6 +107,23 @@ const post = computed(() => getPost(route.params.slug as string))
             </li>
           </ul>
 
+          <figure v-else-if="block.type === 'image'" class="py-2">
+            <img
+              :src="block.src"
+              :alt="block.alt"
+              class="rounded-xl border w-full"
+              style="border-color: var(--border)"
+              loading="lazy"
+            />
+            <figcaption
+              v-if="block.caption"
+              class="text-xs text-center mt-2"
+              style="color: var(--text-muted)"
+            >
+              {{ block.caption }}
+            </figcaption>
+          </figure>
+
           <blockquote
             v-else-if="block.type === 'blockquote'"
             class="border-l-2 pl-5 py-1 text-sm leading-relaxed italic"
