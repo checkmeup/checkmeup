@@ -133,15 +133,22 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 		respond.Error(w, http.StatusBadRequest, "invalid cycle", "bad_request")
 		return
 	}
-
-	variantID := h.variantIDForPlan(req.Plan, req.Cycle)
-	if variantID == "" {
+	if req.Plan != "solo" && req.Plan != "startup" && req.Plan != "enterprise" {
 		respond.Error(w, http.StatusBadRequest, "invalid plan", "bad_request")
 		return
 	}
 
+	// Check configuration before resolving a variant ID, so an unconfigured
+	// store reports "not configured" rather than the misleading "invalid plan"
+	// for a plan name that was perfectly valid.
 	if h.cfg.LSAPIKey == "" || h.cfg.LSStoreID == "" {
 		respond.Error(w, http.StatusServiceUnavailable, "billing not configured", "not_configured")
+		return
+	}
+
+	variantID := h.variantIDForPlan(req.Plan, req.Cycle)
+	if variantID == "" {
+		respond.Error(w, http.StatusServiceUnavailable, "this plan isn't available yet", "not_configured")
 		return
 	}
 
