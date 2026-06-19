@@ -2,7 +2,7 @@
 
 Known architecture/code smells that aren't worth an ADR or an immediate fix, but shouldn't be forgotten. Add an entry when you spot something during other work rather than stopping to fix it; remove an entry once it's addressed (reference the commit/PR in the removal, not here).
 
-This list came out of an architecture review on 2026-06-19. Two items found in the same review — a billing webhook silently swallowing a DB error, and a fail-open webhook signature check — were real bugs, not debt, and were fixed directly rather than tracked here.
+This list came out of an architecture review on 2026-06-19. Real bugs found while writing tests are fixed directly and not tracked here — a billing webhook silently swallowing a DB error, a fail-open webhook signature check, a SignUp orphaned-org row on a failed user creation, and `ping.go`'s cron recovery only resolving the open incident when `AlertsEnabled` was true (now matches the uptime-monitor worker's pattern: resolution always happens, only the alert send is gated).
 
 ---
 
@@ -10,8 +10,8 @@ This list came out of an architecture review on 2026-06-19. Two items found in t
 
 ### Risk
 
-- **Near-zero test coverage outside auth, billing, maintenance windows, and cron monitors.** `internal/middleware/auth_test.go`, `internal/handler/auth_test.go`, `internal/handler/billing_test.go`, `internal/handler/maintenance_test.go`, and `internal/handler/monitors_test.go` (all added 2026-06-19) are the only test files in the whole `internal/` tree. Cross-tenant isolation is now covered for both maintenance windows and cron monitors (org B can't read/update/pause/delete org A's monitor, or attach org A's monitor to its own maintenance window) — `uptime_monitors.go`, `ssl_monitors.go`, and `status_pages.go` still need the same pattern applied directly (they're only incidentally exercised today as test fixtures via their Create handlers, called from monitors_test.go/maintenance_test.go). [ADR-002](decisions/002-multi-tenancy.md)'s "every tenant query filters by `org_id`" rule is still enforced by code-review convention only — there's no DB-level RLS.
-  → Priority: extend the same cross-tenant-isolation pattern from monitors_test.go/maintenance_test.go to uptime_monitors.go, ssl_monitors.go, and status_pages.go.
+- **Near-zero test coverage outside auth, billing, maintenance windows, cron monitors, and ping.** `internal/middleware/auth_test.go`, `internal/handler/auth_test.go`, `internal/handler/billing_test.go`, `internal/handler/maintenance_test.go`, `internal/handler/monitors_test.go`, and `internal/handler/ping_test.go` (all added 2026-06-19) are the only test files in the whole `internal/` tree. Cross-tenant isolation is now covered for both maintenance windows and cron monitors (org B can't read/update/pause/delete org A's monitor, or attach org A's monitor to its own maintenance window) — `uptime_monitors.go`, `ssl_monitors.go`, and `status_pages.go` still need the same pattern applied directly (they're only incidentally exercised today as test fixtures via their Create handlers, called from monitors_test.go/maintenance_test.go). `worker.go` (the goroutine-per-monitor scheduler that actually marks monitors down/overdue and triggers the alert paths ping_test.go's recovery tests sit downstream of) remains completely untested. [ADR-002](decisions/002-multi-tenancy.md)'s "every tenant query filters by `org_id`" rule is still enforced by code-review convention only — there's no DB-level RLS.
+  → Priority: extend the same cross-tenant-isolation pattern from monitors_test.go/maintenance_test.go to uptime_monitors.go, ssl_monitors.go, and status_pages.go. worker.go is the next big untested surface — it's where incidents actually get created (CreateCronIncident/CreateUptimeIncident) and alerts dispatched.
 
 ### Maintainability
 

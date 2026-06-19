@@ -64,10 +64,12 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Recovery alert: monitor was down and just checked in again.
-	if wasDown && monitor.AlertsEnabled {
+	// Recovery: monitor was down and just checked in again. The incident is
+	// resolved regardless of AlertsEnabled — only the alert send itself is
+	// gated by that setting (matches the uptime-monitor worker's pattern).
+	if wasDown {
 		inc, err := h.queries.ResolveLatestCronIncident(r.Context(), monitor.ID)
-		if err == nil {
+		if err == nil && monitor.AlertsEnabled {
 			org, err := h.queries.GetOrgByID(r.Context(), monitor.OrgID)
 			if err == nil {
 				downtime := formatDuration(now.Sub(inc.StartedAt.Time).Round(time.Second))
