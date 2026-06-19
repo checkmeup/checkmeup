@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -171,12 +172,15 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.cfg.LSWebhookSecret != "" {
-		sig := r.Header.Get("X-Signature")
-		if !verifyLSSignature(body, sig, h.cfg.LSWebhookSecret) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+	if h.cfg.LSWebhookSecret == "" {
+		slog.ErrorContext(r.Context(), "lemonsqueezy webhook received but LS_WEBHOOK_SECRET is not configured")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	sig := r.Header.Get("X-Signature")
+	if !verifyLSSignature(body, sig, h.cfg.LSWebhookSecret) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	var payload struct {
@@ -241,7 +245,7 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = h.queries.UpdateOrgPlan(r.Context(), db.UpdateOrgPlanParams{
+	if err := h.queries.UpdateOrgPlan(r.Context(), db.UpdateOrgPlanParams{
 		ID:                 orgID,
 		Plan:               plan,
 		BillingCycle:       cycle,
@@ -249,7 +253,11 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		LsSubscriptionID:   pgtype.Text{String: subscriptionID, Valid: subscriptionID != ""},
 		SubscriptionStatus: status,
 		PlanRenewsAt:       renewsAt,
-	})
+	}); err != nil {
+		slog.ErrorContext(r.Context(), "failed to update org plan from lemonsqueezy webhook", "org_id", orgID, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
