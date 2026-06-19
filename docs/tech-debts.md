@@ -10,8 +10,8 @@ This list came out of an architecture review on 2026-06-19. Two items found in t
 
 ### Risk
 
-- **Near-zero test coverage outside auth middleware.** Only `internal/middleware/auth_test.go` exists across the whole `internal/` tree. [ADR-002](decisions/002-multi-tenancy.md)'s "every tenant query filters by `org_id`" rule is enforced by code-review convention only — there's no DB-level RLS and no tenant-isolation test suite as a regression net. Audited as correct as of 2026-06-19, but nothing would catch a future query that forgets the filter.
-  → Priority: a tenant-isolation test suite (org A can't read/mutate org B's monitors) before this grows much further. Billing webhook handling and auth login/refresh flows are also untested.
+- **Near-zero test coverage outside auth.** `internal/middleware/auth_test.go` and `internal/handler/auth_test.go` (added 2026-06-19 — covers sign-up/in/out, refresh rotation, password reset, terms acceptance) are the only test files in the whole `internal/` tree. [ADR-002](decisions/002-multi-tenancy.md)'s "every tenant query filters by `org_id`" rule is still enforced by code-review convention only — there's no DB-level RLS and no tenant-isolation test suite as a regression net. Audited as correct as of 2026-06-19, but nothing would catch a future query that forgets the filter.
+  → Priority: a tenant-isolation test suite (org A can't read/mutate org B's monitors) before this grows much further. Billing webhook handling is still untested.
 
 ### Maintainability
 

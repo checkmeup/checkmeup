@@ -187,8 +187,19 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Org and user are created in the same transaction — if CreateUser fails
+	// (e.g. duplicate email), the org is rolled back too instead of being
+	// left as a permanent orphan row.
+	tx, err := h.db.Begin(r.Context())
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+	qtx := h.queries.WithTx(tx)
+
 	orgName := strings.SplitN(req.Email, "@", 2)[0]
-	org, err := h.queries.CreateOrg(r.Context(), db.CreateOrgParams{
+	org, err := qtx.CreateOrg(r.Context(), db.CreateOrgParams{
 		Name:       orgName,
 		AlertEmail: pgtype.Text{String: req.Email, Valid: true},
 	})
@@ -197,7 +208,7 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.queries.CreateUser(r.Context(), db.CreateUserParams{
+	user, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
 		OrgID:        org.ID,
 		Email:        req.Email,
 		PasswordHash: string(hash),
@@ -208,6 +219,11 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusConflict, "an account with this email already exists", "email_taken")
 			return
 		}
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
