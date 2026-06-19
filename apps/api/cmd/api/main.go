@@ -23,31 +23,10 @@ var version = "dev"
 
 func main() {
 	cfg := config.Load()
-
-	var logger *slog.Logger
-	if cfg.IsDev() {
-		logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
-	} else {
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	}
+	logger := newLogger(cfg)
 	slog.SetDefault(logger)
 
-	sqlDB, err := sql.Open("pgx", cfg.DatabaseURL)
-	if err != nil {
-		logger.Error("failed to open database", "err", err)
-		os.Exit(1)
-	}
-	defer func() { _ = sqlDB.Close() }()
-
-	if err := goose.SetDialect("postgres"); err != nil {
-		logger.Error("goose set dialect", "err", err)
-		os.Exit(1)
-	}
-	if err := goose.Up(sqlDB, cfg.MigrationsDir); err != nil {
-		logger.Error("migrations failed", "err", err)
-		os.Exit(1)
-	}
-	logger.Info("migrations applied", "dir", cfg.MigrationsDir)
+	runMigrations(cfg, logger)
 
 	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
@@ -64,15 +43,7 @@ func main() {
 
 	tg := telegram.NewClient(cfg.TelegramBotToken)
 	mailer := email.NewSender(cfg.ResendAPIKey)
-
-	if cfg.TelegramBotToken != "" && !cfg.IsDev() {
-		webhookURL := cfg.BaseURL + "/webhook/telegram"
-		if err := tg.SetWebhook(webhookURL, cfg.TelegramWebhookSecret); err != nil {
-			logger.Error("telegram webhook registration failed", "err", err)
-		} else {
-			logger.Info("telegram webhook registered", "url", webhookURL)
-		}
-	}
+	registerTelegramWebhook(cfg, tg, logger)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
@@ -83,4 +54,42 @@ func main() {
 		logger.Error("server error", "err", err)
 		os.Exit(1)
 	}
+}
+
+func newLogger(cfg *config.Config) *slog.Logger {
+	if cfg.IsDev() {
+		return slog.New(slog.NewTextHandler(os.Stdout, nil))
+	}
+	return slog.New(slog.NewJSONHandler(os.Stdout, nil))
+}
+
+func runMigrations(cfg *config.Config, logger *slog.Logger) {
+	sqlDB, err := sql.Open("pgx", cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("failed to open database", "err", err)
+		os.Exit(1)
+	}
+	defer func() { _ = sqlDB.Close() }()
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		logger.Error("goose set dialect", "err", err)
+		os.Exit(1)
+	}
+	if err := goose.Up(sqlDB, cfg.MigrationsDir); err != nil {
+		logger.Error("migrations failed", "err", err)
+		os.Exit(1)
+	}
+	logger.Info("migrations applied", "dir", cfg.MigrationsDir)
+}
+
+func registerTelegramWebhook(cfg *config.Config, tg *telegram.Client, logger *slog.Logger) {
+	if cfg.TelegramBotToken == "" || cfg.IsDev() {
+		return
+	}
+	webhookURL := cfg.BaseURL + "/webhook/telegram"
+	if err := tg.SetWebhook(webhookURL, cfg.TelegramWebhookSecret); err != nil {
+		logger.Error("telegram webhook registration failed", "err", err)
+		return
+	}
+	logger.Info("telegram webhook registered", "url", webhookURL)
 }
