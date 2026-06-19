@@ -14,7 +14,7 @@ export const post: BlogPost = {
     },
     {
       type: 'image',
-      src: '/blog/pomodoro-and-checkmeup.jpg',
+      src: '/blog-images/pomodoro-and-checkmeup.jpg',
       alt: 'A black cube-shaped Pomodoro timer showing 21:33 on its display, resting in a hand next to a mechanical keyboard and a laptop.',
       caption: '25 minutes of focus, then a break before the next one.',
     },
