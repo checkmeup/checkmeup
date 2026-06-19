@@ -2,7 +2,7 @@
 
 Known architecture/code smells that aren't worth an ADR or an immediate fix, but shouldn't be forgotten. Add an entry when you spot something during other work rather than stopping to fix it; remove an entry once it's addressed (reference the commit/PR in the removal, not here).
 
-This list came out of an architecture review on 2026-06-19. Real bugs found while writing tests are fixed directly and not tracked here — a billing webhook silently swallowing a DB error, a fail-open webhook signature check, a SignUp orphaned-org row on a failed user creation, and `ping.go`'s cron recovery only resolving the open incident when `AlertsEnabled` was true (now matches the uptime-monitor worker's pattern: resolution always happens, only the alert send is gated).
+This list came out of an architecture review on 2026-06-19. Real bugs found while writing tests are fixed directly and not tracked here — a billing webhook silently swallowing a DB error, a fail-open webhook signature check, a SignUp orphaned-org row on a failed user creation, `ping.go`'s cron recovery only resolving the open incident when `AlertsEnabled` was true (now matches the uptime-monitor worker's pattern: resolution always happens, only the alert send is gated), and a CI gap where Turborepo 2.x's default env-var filtering silently dropped `DATABASE_URL` from the `test` task — invisible until the new DB-backed handler tests existed to need it, fixed by adding `passThroughEnv: ["DATABASE_URL"]` to `turbo.json`'s `test` task.
 
 ---
 
