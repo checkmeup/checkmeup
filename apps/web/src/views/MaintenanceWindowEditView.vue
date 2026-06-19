@@ -7,6 +7,8 @@ import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import MaintenanceMonitorPicker from '@/components/MaintenanceMonitorPicker.vue'
 import { maintenanceApi } from '@/api/maintenance'
+import { ApiError } from '@/api/client'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +24,7 @@ const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const confirmDelete = ref(false)
+const limitReached = ref(false)
 
 function toLocalInputValue(iso: string): string {
   const d = new Date(iso)
@@ -58,6 +61,7 @@ onMounted(async () => {
 
 async function submit() {
   error.value = ''
+  limitReached.value = false
   if (!title.value.trim()) {
     error.value = 'Title is required'
     return
@@ -86,7 +90,12 @@ async function submit() {
     })
     router.push({ name: 'maintenance' })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update maintenance window'
+    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+      limitReached.value = true
+      error.value = e.message
+    } else {
+      error.value = e instanceof Error ? e.message : 'Failed to update maintenance window'
+    }
   } finally {
     submitting.value = false
   }
@@ -177,7 +186,8 @@ async function deleteWindow() {
           <MaintenanceMonitorPicker v-model="monitors" class="mt-1" />
         </div>
 
-        <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <UpgradePrompt v-if="limitReached" :message="error" />
+        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
 
         <div class="flex items-center justify-between pt-1">
           <div class="flex gap-3">

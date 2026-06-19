@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
+import { ApiError } from '@/api/client'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +19,7 @@ const alertsEnabled = ref(true)
 const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
+const limitReached = ref(false)
 
 onMounted(async () => {
   try {
@@ -33,6 +36,7 @@ onMounted(async () => {
 
 async function submit() {
   error.value = ''
+  limitReached.value = false
   if (!name.value.trim()) {
     error.value = 'Name is required'
     return
@@ -47,7 +51,12 @@ async function submit() {
     })
     router.push({ name: 'ssl-monitor-detail', params: { id } })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to update monitor'
+    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+      limitReached.value = true
+      error.value = e.message
+    } else {
+      error.value = e instanceof Error ? e.message : 'Failed to update monitor'
+    }
   } finally {
     submitting.value = false
   }
@@ -94,7 +103,8 @@ async function submit() {
           <Label for="alerts" class="cursor-pointer">Send alerts</Label>
         </div>
 
-        <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <UpgradePrompt v-if="limitReached" :message="error" />
+        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
 
         <div class="flex gap-3 pt-1">
           <Button type="submit" :disabled="submitting">
