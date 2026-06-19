@@ -1,4 +1,4 @@
-.PHONY: install update lint test dev build clean migrate migrate-create deploy
+.PHONY: install update lint test dev build clean migrate migrate-create deploy next
 
 install:
 	bun install
@@ -43,3 +43,9 @@ migrate:
 migrate-create:
 	@test -n "$(name)" || (echo "Usage: make migrate-create name=your_migration_name" && exit 1)
 	goose -dir apps/api/migrations create $(name) sql
+
+merge:
+	git pull origin main
+	git checkout main
+	git merge next
+	git push -u origin main
