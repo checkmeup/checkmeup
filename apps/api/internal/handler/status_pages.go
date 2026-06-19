@@ -335,16 +335,32 @@ func (h *StatusPageHandler) SetStatusPageMonitors(w http.ResponseWriter, r *http
 		return
 	}
 
-	validTypes := map[string]bool{"cron": true, "uptime": true, "ssl": true}
+	// Resolve each monitor against this org before touching the DB.
+	// resolveMonitorName (shared with maintenance.go) scopes its lookup by
+	// org_id, so this also confirms ownership — a status page can never
+	// reference another org's monitor. It also supplies the real monitor
+	// name as the displayName fallback (EP-06 US-0602: "defaults to monitor
+	// name"), rather than falling back to the raw UUID string.
+	type resolvedStatusPageMonitor struct {
+		monitorType  string
+		monitorID    uuid.UUID
+		displayName  string
+		displayOrder int32
+	}
+	resolved := make([]resolvedStatusPageMonitor, 0, len(req.Monitors))
 	for _, m := range req.Monitors {
-		if !validTypes[m.MonitorType] {
-			respond.Error(w, http.StatusBadRequest, "invalid monitor type: "+m.MonitorType, "bad_request")
+		id, name, err := resolveMonitorName(r.Context(), h.queries, orgID, m.MonitorType, m.MonitorID)
+		if err != nil {
+			respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 			return
 		}
-		if _, err := uuid.Parse(m.MonitorID); err != nil {
-			respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-			return
+		displayName := strings.TrimSpace(m.DisplayName)
+		if displayName == "" {
+			displayName = name
 		}
+		resolved = append(resolved, resolvedStatusPageMonitor{
+			monitorType: m.MonitorType, monitorID: id, displayName: displayName, displayOrder: m.DisplayOrder,
+		})
 	}
 
 	// Replace all monitors atomically (delete + insert)
@@ -352,19 +368,14 @@ func (h *StatusPageHandler) SetStatusPageMonitors(w http.ResponseWriter, r *http
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	result := make([]statusPageMonitorResponse, 0, len(req.Monitors))
-	for _, m := range req.Monitors {
-		monID, _ := uuid.Parse(m.MonitorID)
-		displayName := strings.TrimSpace(m.DisplayName)
-		if displayName == "" {
-			displayName = m.MonitorID // fallback, shouldn't happen
-		}
+	result := make([]statusPageMonitorResponse, 0, len(resolved))
+	for _, m := range resolved {
 		inserted, err := h.queries.InsertStatusPageMonitor(r.Context(), db.InsertStatusPageMonitorParams{
 			PageID:       pageID,
-			MonitorType:  m.MonitorType,
-			MonitorID:    monID,
-			DisplayName:  displayName,
-			DisplayOrder: m.DisplayOrder,
+			MonitorType:  m.monitorType,
+			MonitorID:    m.monitorID,
+			DisplayName:  m.displayName,
+			DisplayOrder: m.displayOrder,
 		})
 		if err != nil {
 			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
