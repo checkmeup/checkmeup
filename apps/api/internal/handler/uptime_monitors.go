@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -300,66 +301,95 @@ func (h *MonitorHandler) GetUptimeMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chartData, err := h.queries.ListUptimeChecks24h(r.Context(), monitorID)
+	detail, err := h.loadUptimeMonitorDetail(r.Context(), monitorID, parsePageParam(r))
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 
-	page := int32(0)
-	if p := r.URL.Query().Get("page"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil && n > 0 {
-			page = int32(n - 1)
-		}
+	respond.JSON(w, http.StatusOK, map[string]any{
+		"monitor":   h.uptimeMonitorToResponse(monitor),
+		"chartData": detail.chart,
+		"checks":    detail.checks,
+		"incidents": detail.incidents,
+		"stats": uptimeStatsResponse{
+			Uptime24h: uptimePct(detail.stats.Up24h, detail.stats.Total24h),
+			Uptime7d:  uptimePct(detail.stats.Up7d, detail.stats.Total7d),
+			Uptime30d: uptimePct(detail.stats.Up30d, detail.stats.Total30d),
+		},
+	})
+}
+
+// parsePageParam parses the 1-based "page" query param into a 0-based page
+// index, defaulting to 0 for missing/invalid/non-positive values.
+func parsePageParam(r *http.Request) int32 {
+	p := r.URL.Query().Get("page")
+	if p == "" {
+		return 0
 	}
-	checks, err := h.queries.ListUptimeChecks(r.Context(), db.ListUptimeChecksParams{
+	n, err := strconv.Atoi(p)
+	if err != nil || n <= 0 {
+		return 0
+	}
+	return int32(n - 1)
+}
+
+type uptimeMonitorDetail struct {
+	chart     []uptimeCheckResponse
+	checks    []uptimeCheckResponse
+	incidents []uptimeIncidentResponse
+	stats     db.GetUptimeStatsRow
+}
+
+// loadUptimeMonitorDetail fetches the chart/checks/incidents/stats data shown
+// on the uptime monitor detail page and converts it to response types.
+func (h *MonitorHandler) loadUptimeMonitorDetail(ctx context.Context, monitorID uuid.UUID, page int32) (uptimeMonitorDetail, error) {
+	chartData, err := h.queries.ListUptimeChecks24h(ctx, monitorID)
+	if err != nil {
+		return uptimeMonitorDetail{}, err
+	}
+
+	checks, err := h.queries.ListUptimeChecks(ctx, db.ListUptimeChecksParams{
 		MonitorID: monitorID,
 		Limit:     50,
 		Offset:    page * 50,
 	})
 	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
+		return uptimeMonitorDetail{}, err
 	}
 
-	incidents, err := h.queries.ListUptimeIncidents(r.Context(), monitorID)
+	incidents, err := h.queries.ListUptimeIncidents(ctx, monitorID)
 	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
+		return uptimeMonitorDetail{}, err
 	}
 
-	stats, err := h.queries.GetUptimeStats(r.Context(), monitorID)
+	stats, err := h.queries.GetUptimeStats(ctx, monitorID)
 	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
+		return uptimeMonitorDetail{}, err
 	}
 
-	chartResp := make([]uptimeCheckResponse, len(chartData))
-	for i, c := range chartData {
-		chartResp[i] = uptimeCheckToResponse(c)
-	}
+	return uptimeMonitorDetail{
+		chart:     uptimeChecksToResponse(chartData),
+		checks:    uptimeChecksToResponse(checks),
+		incidents: uptimeIncidentsToResponse(incidents),
+		stats:     stats,
+	}, nil
+}
 
-	checksResp := make([]uptimeCheckResponse, len(checks))
+func uptimeChecksToResponse(checks []db.UptimeCheck) []uptimeCheckResponse {
+	resp := make([]uptimeCheckResponse, len(checks))
 	for i, c := range checks {
-		checksResp[i] = uptimeCheckToResponse(c)
+		resp[i] = uptimeCheckToResponse(c)
 	}
+	return resp
+}
 
-	incidentResp := make([]uptimeIncidentResponse, len(incidents))
+func uptimeIncidentsToResponse(incidents []db.UptimeIncident) []uptimeIncidentResponse {
+	resp := make([]uptimeIncidentResponse, len(incidents))
 	for i, inc := range incidents {
-		incidentResp[i] = uptimeIncidentToResponse(inc)
+		resp[i] = uptimeIncidentToResponse(inc)
 	}
-
-	respond.JSON(w, http.StatusOK, map[string]any{
-		"monitor":   h.uptimeMonitorToResponse(monitor),
-		"chartData": chartResp,
-		"checks":    checksResp,
-		"incidents": incidentResp,
-		"stats": uptimeStatsResponse{
-			Uptime24h: uptimePct(stats.Up24h, stats.Total24h),
-			Uptime7d:  uptimePct(stats.Up7d, stats.Total7d),
-			Uptime30d: uptimePct(stats.Up30d, stats.Total30d),
-		},
-	})
+	return resp
 }
 
 type updateUptimeMonitorRequest struct {
