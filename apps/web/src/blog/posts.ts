@@ -4,6 +4,7 @@ import { post as v11ReleaseNotes } from './posts/v1-1-release-notes'
 import { post as v12ReleaseNotes } from './posts/v1-2-release-notes'
 import { post as pomodoroAndCheckmeup } from './posts/pomodoro-and-checkmeup'
 import { post as v13ReleaseNotes } from './posts/v1-3-release-notes'
+import { post as v14ReleaseNotes } from './posts/v1-4-release-notes'
 
 export type { ContentBlock, BlogPost } from './types'
 
@@ -14,6 +15,7 @@ export const posts = [
   v12ReleaseNotes,
   pomodoroAndCheckmeup,
   v13ReleaseNotes,
+  v14ReleaseNotes,
 ]
 
 export function getPost(slug: string) {
