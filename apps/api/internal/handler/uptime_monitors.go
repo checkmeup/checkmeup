@@ -430,21 +430,31 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
 	if req.Keyword != "" {
-		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-		if err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
 		if err := billing.CheckKeywordMonitoringAllowed(plan); err != nil {
 			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_keyword")
 			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 			return
 		}
 	}
-	if req.IntervalMins < 10 {
-		req.IntervalMins = 10
+	// Same plan-aware clamp as CreateUptimeMonitor — a request below the
+	// org's plan minimum is rejected, not silently floored to a fixed value
+	// that could be either too strict (Hobby's 5-min minimum) or too loose
+	// (denying a paid plan's 1-min minimum).
+	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
+	if err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
 	}
+	req.IntervalMins = int32(clampedInterval)
+
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
 	}
