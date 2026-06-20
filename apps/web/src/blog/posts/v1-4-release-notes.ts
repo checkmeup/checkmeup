@@ -55,7 +55,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Releases land here on the blog. The Telegram channel (@checkmeup) gets faster updates. The GitHub repo has the full commit history and architecture decision records if you want the why behind any of this.',
+      text: 'Releases land here on the blog. The GitHub repo has the full commit history and architecture decision records if you want the why behind any of this.',
     },
     {
       type: 'signature',

@@ -38,7 +38,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Check the roadmap for what's queued after this. Releases land here on the blog, faster updates go out on the Telegram channel (@checkmeup), and the GitHub repo has the full commit history if you want the why behind any of it.",
+      text: "Check the roadmap for what's queued after this. Releases land here on the blog, and the GitHub repo has the full commit history if you want the why behind any of it.",
     },
     {
       type: 'signature',

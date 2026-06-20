@@ -123,7 +123,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Releases and product updates go here on the blog. For faster updates, the Telegram channel (@checkmeup) gets announcements as they happen. The GitHub repo has the full commit history and all 19 architecture decision records if you want to see exactly how things are built.',
+      text: 'Releases and product updates go here on the blog. The GitHub repo has the full commit history and all 19 architecture decision records if you want to see exactly how things are built.',
     },
     {
       type: 'p',
