@@ -38,7 +38,9 @@
           "go.mod": "go.sum, .air.toml, sqlc.yaml, .env, .env.*",
           "vite.config.*": "vitest.config.*",
           "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json"
-        }
+        },
+        "coverage-gutters.coverageBaseDir": "coverage",
+        "coverage-gutters.coverageFileNames": ["lcov.info"]
       },
       "extensions": [
         "anthropic.claude-code",
@@ -47,6 +49,7 @@
         "juanlb.claude-commit",
         "ms-azuretools.vscode-containers",
         "oxc.oxc-vscode",
+        "ryanluker.vscode-coverage-gutters",
         "streetsidesoftware.code-spell-checker",
         "vitest.explorer",
         "vue.volar"
