@@ -1,28 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { statusPagesApi, type StatusPage } from '@/api/statusPages'
+import type { StatusPage } from '@/api/statusPages'
+import { useStatusPages } from '@/composables/useStatusPages'
 
 const router = useRouter()
-const pages = ref<StatusPage[]>([])
-const loading = ref(true)
-const error = ref('')
+const { data, isPending: loading, error: queryError, refetch } = useStatusPages()
+const pages = computed<StatusPage[]>(() => data.value ?? [])
+const error = computed(() => queryError.value?.message ?? '')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    pages.value = await statusPagesApi.list()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load status pages'
-  } finally {
-    loading.value = false
-  }
+function load() {
+  refetch()
 }
-
-onMounted(load)
 </script>
 
 <template>

@@ -21,16 +21,7 @@ Known architecture/code smells that aren't worth an ADR or an immediate fix, but
 
 ## Frontend (Vue)
 
-### Risk
-
-- **TanStack Query installed and globally registered but unused** — `apps/web/src/main.ts:3,8`, `package.json:14`. Zero `useQuery`/`useMutation` call sites anywhere. All 19 data-fetching views hand-roll `loading`/`error` `ref()` + `onMounted` + try/catch instead. Biggest gap between the stated stack (CLAUDE.md) and reality — currently dead weight in `package.json`.
-  → Either wire views onto `useQuery`/`useMutation` for caching/dedup, or drop the dependency. Decide deliberately rather than letting it drift further.
-
 ### Maintainability
-
-- **No `composables/` directory** — all data-fetching/business logic lives inline in view `<script setup>` blocks, the same `loading`/`error`/`onMounted` pattern repeated ~19 times. Same root cause as the TanStack Query gap above; a `useApiResource`-style composable (or adopting TanStack Query) would remove most of the duplication.
-
-- **Only one Pinia store (`stores/auth.ts`, 48 lines)** — no store for monitors/billing/settings; all state is view-local. Billing/plan info is fetched independently in `BillingView.vue`, `UptimeMonitorCreateView.vue`, and `UptimeMonitorEditView.vue` — three separate round-trips for the same data in a typical session, no shared cache.
 
 - **Hardcoded `#fff` / raw hex colors instead of design tokens** — `color: #fff` paired with `var(--color-green-500)` across 9 files (`LandingLayout.vue:51,114`, `AboutView.vue:267`, `PricingView.vue:156,279,389`, `HomeView.vue:72,415,484,549`, `BlogPostView.vue:192`, `MaintenanceMonitorPicker.vue:83`, `StatusPageDetailView.vue:240`), plus raw hex dots in `HomeView.vue:94-96` (`#ef4444`, `#f59e0b`, `#1d9e75`) that likely duplicate existing tokens. Not the documented `bg-[--token]` bug (already fixed, doesn't reappear anywhere) — these are valid CSS, just not theme-token-driven.
   → Low risk since white-on-green badges are probably theme-invariant by design, but a `--on-accent` token would be more consistent and future-proof against a new theme.

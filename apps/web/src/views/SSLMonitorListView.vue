@@ -1,28 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type SSLMonitor } from '@/api/monitors'
+import type { SSLMonitor } from '@/api/monitors'
+import { useSSLMonitors } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
-const monitors = ref<SSLMonitor[]>([])
-const loading = ref(true)
-const error = ref('')
+const { data, isPending: loading, error: queryError, refetch } = useSSLMonitors()
+const monitors = computed<SSLMonitor[]>(() => data.value ?? [])
+const error = computed(() => queryError.value?.message ?? '')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    monitors.value = await monitorsApi.listSSL()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitors'
-  } finally {
-    loading.value = false
-  }
+function load() {
+  refetch()
 }
-
-onMounted(load)
 
 const statusColors: Record<string, string> = {
   up: 'var(--status-up)',

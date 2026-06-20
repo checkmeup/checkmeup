@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
@@ -8,6 +8,7 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { useSSLMonitor } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,22 +17,23 @@ const id = route.params.id as string
 const name = ref('')
 const hostname = ref('') // read-only; passed through on save
 const alertsEnabled = ref(true)
-const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
 
-onMounted(async () => {
-  try {
-    const m = await monitorsApi.getSSL(id)
+const { data: monitor, isPending: loading, error: loadError } = useSSLMonitor(id)
+watch(
+  monitor,
+  (m) => {
+    if (!m) return
     name.value = m.name
     hostname.value = m.hostname
     alertsEnabled.value = m.alertsEnabled
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
+  },
+  { immediate: true },
+)
+watch(loadError, (e) => {
+  if (e) error.value = e.message
 })
 
 async function submit() {

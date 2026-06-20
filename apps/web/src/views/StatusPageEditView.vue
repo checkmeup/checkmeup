@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { statusPagesApi } from '@/api/statusPages'
+import { useStatusPage } from '@/composables/useStatusPages'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,22 +16,23 @@ const title = ref('')
 const description = ref('')
 const logoUrl = ref('')
 const slug = ref('')
-const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 
-onMounted(async () => {
-  try {
-    const page = await statusPagesApi.get(id)
-    title.value = page.title
-    description.value = page.description
-    logoUrl.value = page.logoUrl
-    slug.value = page.slug
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load page'
-  } finally {
-    loading.value = false
-  }
+const { data: page, isPending: loading, error: loadError } = useStatusPage(id)
+watch(
+  page,
+  (p) => {
+    if (!p) return
+    title.value = p.title
+    description.value = p.description
+    logoUrl.value = p.logoUrl
+    slug.value = p.slug
+  },
+  { immediate: true },
+)
+watch(loadError, (e) => {
+  if (e) error.value = e.message
 })
 
 async function submit() {

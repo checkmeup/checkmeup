@@ -1,26 +1,35 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { statusPagesApi, type StatusPageDetail, type StatusPageMonitorItem } from '@/api/statusPages'
-import { monitorsApi, type CronMonitor, type UptimeMonitor, type SSLMonitor } from '@/api/monitors'
+import { statusPagesApi } from '@/api/statusPages'
+import { useStatusPage } from '@/composables/useStatusPages'
+import { useCronMonitors } from '@/composables/useCronMonitors'
+import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
+import { useSSLMonitors } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const detail = ref<StatusPageDetail | null>(null)
-const loading = ref(true)
-const error = ref('')
+const { data: detail, isPending: pageLoading, error: pageError, refetch: refetchPage } = useStatusPage(id)
+const { data: cronData, isPending: cronLoading } = useCronMonitors()
+const { data: uptimeData, isPending: uptimeLoading } = useUptimeMonitors()
+const { data: sslData, isPending: sslLoading } = useSSLMonitors()
+
+const loading = computed(
+  () => pageLoading.value || cronLoading.value || uptimeLoading.value || sslLoading.value,
+)
+const error = computed(() => pageError.value?.message ?? '')
 const actionError = ref('')
 const confirmDelete = ref(false)
 const savingMonitors = ref(false)
 
 // All monitors from all types
-const cronMonitors = ref<CronMonitor[]>([])
-const uptimeMonitors = ref<UptimeMonitor[]>([])
-const sslMonitors = ref<SSLMonitor[]>([])
+const cronMonitors = computed(() => cronData.value ?? [])
+const uptimeMonitors = computed(() => uptimeData.value ?? [])
+const sslMonitors = computed(() => sslData.value ?? [])
 
 // Local editable list of selected monitors (copy from detail)
 interface MonitorEntry {
@@ -34,29 +43,18 @@ interface MonitorEntry {
 
 const monitorEntries = ref<MonitorEntry[]>([])
 
-onMounted(async () => {
-  try {
-    const [pageRes, cronRes, uptimeRes, sslRes] = await Promise.all([
-      statusPagesApi.get(id),
-      monitorsApi.listCron(),
-      monitorsApi.listUptime(),
-      monitorsApi.listSSL(),
-    ])
-    detail.value = pageRes
-    cronMonitors.value = cronRes
-    uptimeMonitors.value = uptimeRes
-    sslMonitors.value = sslRes
-    monitorEntries.value = pageRes.monitors.map((m, i) => ({
+watch(
+  detail,
+  (page) => {
+    if (!page) return
+    monitorEntries.value = page.monitors.map((m, i) => ({
       ...m,
       key: `${m.monitorType}:${m.monitorId}`,
       displayOrder: i,
     }))
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load page'
-  } finally {
-    loading.value = false
-  }
-})
+  },
+  { immediate: true },
+)
 
 // All available monitors across all types
 const allMonitors = computed(() => {
@@ -117,9 +115,7 @@ async function saveMonitors() {
       displayOrder: i,
     }))
     await statusPagesApi.setMonitors(id, { monitors })
-    if (detail.value) {
-      detail.value.monitors = monitorEntries.value as StatusPageMonitorItem[]
-    }
+    await refetchPage()
   } catch (e: unknown) {
     actionError.value = e instanceof Error ? e.message : 'Failed to save monitors'
   } finally {

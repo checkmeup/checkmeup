@@ -1,29 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import { maintenanceApi, type MaintenanceWindow } from '@/api/maintenance'
+import { useMaintenanceWindows } from '@/composables/useMaintenanceWindows'
 
 const router = useRouter()
-const windows = ref<MaintenanceWindow[]>([])
-const loading = ref(true)
-const error = ref('')
+const queryClient = useQueryClient()
+const { data, isPending: loading, error: queryError, refetch } = useMaintenanceWindows()
+const windows = computed<MaintenanceWindow[]>(() => data.value ?? [])
+const actionError = ref('')
+const error = computed(() => actionError.value || queryError.value?.message || '')
 const endingId = ref('')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    windows.value = await maintenanceApi.list()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load maintenance windows'
-  } finally {
-    loading.value = false
-  }
+function load() {
+  refetch()
 }
-
-onMounted(load)
 
 const statusColors: Record<string, string> = {
   upcoming: 'var(--text-dim)',
@@ -47,12 +41,14 @@ function formatDate(iso: string | null) {
 
 async function endNow(w: MaintenanceWindow) {
   endingId.value = w.id
-  error.value = ''
+  actionError.value = ''
   try {
     const updated = await maintenanceApi.endNow(w.id)
-    windows.value = windows.value.map((x) => (x.id === updated.id ? updated : x))
+    queryClient.setQueryData<MaintenanceWindow[]>(['maintenance-windows'], (old) =>
+      old?.map((x) => (x.id === updated.id ? updated : x)),
+    )
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to end maintenance window'
+    actionError.value = e instanceof Error ? e.message : 'Failed to end maintenance window'
   } finally {
     endingId.value = ''
   }

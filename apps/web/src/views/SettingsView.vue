@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -8,6 +8,7 @@ import { settingsApi } from '@/api/settings'
 import { suggestionsApi } from '@/api/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/lib/theme'
+import { useSettings } from '@/composables/useSettings'
 
 const auth = useAuthStore()
 const { theme, setTheme } = useTheme()
@@ -47,19 +48,6 @@ const testing = ref(false)
 const saveError = ref('')
 const testError = ref('')
 const testSuccess = ref(false)
-
-onMounted(async () => {
-  try {
-    const s = await settingsApi.get()
-    savedChatId.value = s.telegramChatId
-    chatId.value = s.telegramChatId ?? ''
-    savedAlertEmail.value = s.alertEmail
-    alertEmail.value = s.alertEmail ?? ''
-    emailAlertsEnabled.value = s.emailAlertsEnabled
-  } catch {
-    // not critical
-  }
-})
 
 async function save() {
   saving.value = true
@@ -140,6 +128,22 @@ async function toggleEmailAlerts() {
     togglingEmail.value = false
   }
 }
+
+const { data: settings } = useSettings()
+watch(
+  settings,
+  (s) => {
+    if (!s) return
+    savedChatId.value = s.telegramChatId
+    chatId.value = s.telegramChatId ?? ''
+    savedAlertEmail.value = s.alertEmail
+    alertEmail.value = s.alertEmail ?? ''
+    emailAlertsEnabled.value = s.emailAlertsEnabled
+  },
+  { immediate: true },
+)
+// Load failures stay silent, same as the original onMounted's empty catch —
+// not critical, the form just starts blank/unconfigured.
 </script>
 
 <template>

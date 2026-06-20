@@ -1,35 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type CronMonitorDetail } from '@/api/monitors'
+import { monitorsApi } from '@/api/monitors'
+import { useCronMonitor } from '@/composables/useCronMonitors'
 
 const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const detail = ref<CronMonitorDetail | null>(null)
-const loading = ref(true)
-const error = ref('')
+const { data: detail, isPending: loading, error: queryError, refetch } = useCronMonitor(id)
+const error = computed(() => queryError.value?.message ?? '')
 const actionPending = ref(false)
 const showDeleteConfirm = ref(false)
-
-onMounted(async () => {
-  await load()
-})
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    detail.value = await monitorsApi.getCron(id)
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
-}
 
 const monitor = computed(() => detail.value?.monitor)
 
@@ -59,7 +43,7 @@ async function pause() {
   actionPending.value = true
   try {
     await monitorsApi.pauseCron(id)
-    await load()
+    await refetch()
   } finally {
     actionPending.value = false
   }
@@ -69,7 +53,7 @@ async function resume() {
   actionPending.value = true
   try {
     await monitorsApi.resumeCron(id)
-    await load()
+    await refetch()
   } finally {
     actionPending.value = false
   }

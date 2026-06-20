@@ -1,32 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import { useAuthStore } from '@/stores/auth'
-import { monitorsApi } from '@/api/monitors'
-import { statusPagesApi } from '@/api/statusPages'
+import { useCronMonitors } from '@/composables/useCronMonitors'
+import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
+import { useSSLMonitors } from '@/composables/useSSLMonitors'
+import { useStatusPages } from '@/composables/useStatusPages'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-const cronCount = ref<number | null>(null)
-const uptimeCount = ref<number | null>(null)
-const sslCount = ref<number | null>(null)
-const statusPageCount = ref<number | null>(null)
+// Per-card counts fail independently (each query has its own error state),
+// matching the original Promise.allSettled behavior — one slow/broken
+// resource doesn't block the others from showing their counts.
+const { data: cronData } = useCronMonitors()
+const { data: uptimeData } = useUptimeMonitors()
+const { data: sslData } = useSSLMonitors()
+const { data: statusPageData } = useStatusPages()
 
-onMounted(async () => {
-  const [cron, uptime, ssl, sp] = await Promise.allSettled([
-    monitorsApi.listCron(),
-    monitorsApi.listUptime(),
-    monitorsApi.listSSL(),
-    statusPagesApi.list(),
-  ])
-  cronCount.value = cron.status === 'fulfilled' ? cron.value.length : 0
-  uptimeCount.value = uptime.status === 'fulfilled' ? uptime.value.length : 0
-  sslCount.value = ssl.status === 'fulfilled' ? ssl.value.length : 0
-  statusPageCount.value = sp.status === 'fulfilled' ? sp.value.length : 0
-})
+const cronCount = computed(() => cronData.value?.length ?? null)
+const uptimeCount = computed(() => uptimeData.value?.length ?? null)
+const sslCount = computed(() => sslData.value?.length ?? null)
+const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 </script>
 
 <template>

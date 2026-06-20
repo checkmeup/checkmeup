@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi, type KeywordMode } from '@/api/monitors'
-import { billingApi } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { useBilling } from '@/composables/useBilling'
 
 const router = useRouter()
 
@@ -37,15 +37,17 @@ const intervalOptions = computed(() => [
   { label: '30 minutes', value: 30 },
 ])
 
-onMounted(async () => {
-  try {
-    const info = await billingApi.getInfo()
+const { data: billingInfo } = useBilling()
+watch(
+  billingInfo,
+  (info) => {
+    if (!info) return
     minIntervalMins.value = info.minIntervalMins
     keywordMonitoringEnabled.value = info.keywordMonitoringEnabled
-  } catch {
-    // keep defaults if billing info can't be loaded
-  }
-})
+  },
+  { immediate: true },
+)
+// Load failures stay silent (keep defaults), same as the original try/catch.
 
 const alertLimitOptions = [
   { label: 'Always alert', value: 0 },

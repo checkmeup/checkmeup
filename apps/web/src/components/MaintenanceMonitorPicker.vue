@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { monitorsApi, type CronMonitor, type UptimeMonitor, type SSLMonitor } from '@/api/monitors'
+import { computed } from 'vue'
+import { useCronMonitors } from '@/composables/useCronMonitors'
+import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
+import { useSSLMonitors } from '@/composables/useSSLMonitors'
 
 interface SelectedMonitor {
   monitorType: 'cron' | 'uptime' | 'ssl'
@@ -11,25 +13,13 @@ interface SelectedMonitor {
 const props = defineProps<{ modelValue: SelectedMonitor[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: SelectedMonitor[]] }>()
 
-const cronMonitors = ref<CronMonitor[]>([])
-const uptimeMonitors = ref<UptimeMonitor[]>([])
-const sslMonitors = ref<SSLMonitor[]>([])
-const loading = ref(true)
-
-onMounted(async () => {
-  try {
-    const [cronRes, uptimeRes, sslRes] = await Promise.all([
-      monitorsApi.listCron(),
-      monitorsApi.listUptime(),
-      monitorsApi.listSSL(),
-    ])
-    cronMonitors.value = cronRes
-    uptimeMonitors.value = uptimeRes
-    sslMonitors.value = sslRes
-  } finally {
-    loading.value = false
-  }
-})
+const { data: cronData, isPending: cronLoading } = useCronMonitors()
+const { data: uptimeData, isPending: uptimeLoading } = useUptimeMonitors()
+const { data: sslData, isPending: sslLoading } = useSSLMonitors()
+const cronMonitors = computed(() => cronData.value ?? [])
+const uptimeMonitors = computed(() => uptimeData.value ?? [])
+const sslMonitors = computed(() => sslData.value ?? [])
+const loading = computed(() => cronLoading.value || uptimeLoading.value || sslLoading.value)
 
 const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL' }
 

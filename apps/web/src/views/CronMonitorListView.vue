@@ -1,28 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type CronMonitor } from '@/api/monitors'
+import type { CronMonitor } from '@/api/monitors'
+import { useCronMonitors } from '@/composables/useCronMonitors'
 
 const router = useRouter()
-const monitors = ref<CronMonitor[]>([])
-const loading = ref(true)
-const error = ref('')
+const { data, isPending: loading, error: queryError, refetch } = useCronMonitors()
+const monitors = computed<CronMonitor[]>(() => data.value ?? [])
+const error = computed(() => queryError.value?.message ?? '')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    monitors.value = await monitorsApi.listCron()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitors'
-  } finally {
-    loading.value = false
-  }
+function load() {
+  refetch()
 }
-
-onMounted(load)
 
 const statusColors: Record<string, string> = {
   up: 'var(--status-up)',

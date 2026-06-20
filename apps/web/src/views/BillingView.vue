@@ -1,22 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { billingApi, type BillingInfo, type BillingCycle } from '@/api/billing'
+import { billingApi, type BillingCycle } from '@/api/billing'
 import { ApiError } from '@/api/client'
+import { useBilling } from '@/composables/useBilling'
 
-const info = ref<BillingInfo | null>(null)
-const loading = ref(true)
-const error = ref('')
-onMounted(async () => {
-  try {
-    info.value = await billingApi.getInfo()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load billing info'
-  } finally {
-    loading.value = false
-  }
-})
+const { data: info, isPending: loading, error: queryError } = useBilling()
+const error = computed(() => queryError.value?.message ?? '')
 
 const planLabel: Record<string, string> = {
   hobby: 'Hobby',

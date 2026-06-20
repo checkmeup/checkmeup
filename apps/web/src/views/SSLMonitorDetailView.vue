@@ -1,39 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type SSLMonitor } from '@/api/monitors'
+import { monitorsApi } from '@/api/monitors'
+import { useSSLMonitor } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const monitor = ref<SSLMonitor | null>(null)
-const loading = ref(true)
-const error = ref('')
+const { data: monitor, isPending: loading, error: queryError, refetch } = useSSLMonitor(id)
+const error = computed(() => queryError.value?.message ?? '')
 const actionError = ref('')
 const confirmDelete = ref(false)
-
-onMounted(async () => {
-  try {
-    monitor.value = await monitorsApi.getSSL(id)
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
-})
 
 async function togglePause() {
   if (!monitor.value) return
   actionError.value = ''
   try {
     if (monitor.value.status === 'paused') {
-      monitor.value = await monitorsApi.resumeSSL(id)
+      await monitorsApi.resumeSSL(id)
     } else {
-      monitor.value = await monitorsApi.pauseSSL(id)
+      await monitorsApi.pauseSSL(id)
     }
+    await refetch()
   } catch (e: unknown) {
     actionError.value = e instanceof Error ? e.message : 'Action failed'
   }

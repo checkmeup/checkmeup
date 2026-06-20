@@ -1,28 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type UptimeMonitor } from '@/api/monitors'
+import type { UptimeMonitor } from '@/api/monitors'
+import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 
 const router = useRouter()
-const monitors = ref<UptimeMonitor[]>([])
-const loading = ref(true)
-const error = ref('')
+const { data, isPending: loading, error: queryError, refetch } = useUptimeMonitors()
+const monitors = computed<UptimeMonitor[]>(() => data.value ?? [])
+const error = computed(() => queryError.value?.message ?? '')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    monitors.value = await monitorsApi.listUptime()
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitors'
-  } finally {
-    loading.value = false
-  }
+function load() {
+  refetch()
 }
-
-onMounted(load)
 
 const statusColors: Record<string, string> = {
   up: 'var(--status-up)',

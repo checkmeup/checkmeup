@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
@@ -9,6 +9,7 @@ import MaintenanceMonitorPicker from '@/components/MaintenanceMonitorPicker.vue'
 import { maintenanceApi } from '@/api/maintenance'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { useMaintenanceWindow } from '@/composables/useMaintenanceWindows'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,7 +21,6 @@ const startsAt = ref('')
 const noEnd = ref(false)
 const endsAt = ref('')
 const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl'; monitorId: string; name: string }[]>([])
-const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const confirmDelete = ref(false)
@@ -36,27 +36,29 @@ function toIso(local: string): string {
   return new Date(local).toISOString()
 }
 
-onMounted(async () => {
-  try {
-    const win = await maintenanceApi.get(id)
-    title.value = win.title
-    message.value = win.message
-    startsAt.value = toLocalInputValue(win.startsAt)
-    if (win.endsAt) {
-      endsAt.value = toLocalInputValue(win.endsAt)
+const { data: win, isPending: loading, error: loadError } = useMaintenanceWindow(id)
+watch(
+  win,
+  (w) => {
+    if (!w) return
+    title.value = w.title
+    message.value = w.message
+    startsAt.value = toLocalInputValue(w.startsAt)
+    if (w.endsAt) {
+      endsAt.value = toLocalInputValue(w.endsAt)
     } else {
       noEnd.value = true
     }
-    monitors.value = (win.monitors ?? []).map((m) => ({
+    monitors.value = (w.monitors ?? []).map((m) => ({
       monitorType: m.monitorType,
       monitorId: m.monitorId,
       name: m.name,
     }))
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load maintenance window'
-  } finally {
-    loading.value = false
-  }
+  },
+  { immediate: true },
+)
+watch(loadError, (e) => {
+  if (e) error.value = e.message
 })
 
 async function submit() {

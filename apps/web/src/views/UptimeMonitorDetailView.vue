@@ -1,42 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import { monitorsApi, type UptimeMonitorDetail } from '@/api/monitors'
+import { monitorsApi } from '@/api/monitors'
+import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
 
 const router = useRouter()
 const route = useRoute()
 const id = route.params.id as string
 
-const detail = ref<UptimeMonitorDetail | null>(null)
-const loading = ref(true)
-const error = ref('')
+const { data: detail, isPending: loading, error: queryError, refetch } = useUptimeMonitor(id)
+const error = computed(() => queryError.value?.message ?? '')
 const actionError = ref('')
 const confirmDelete = ref(false)
-
-onMounted(async () => {
-  try {
-    detail.value = await monitorsApi.getUptime(id)
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
-})
 
 async function togglePause() {
   if (!detail.value) return
   actionError.value = ''
   try {
-    const m = detail.value.monitor
-    if (m.status === 'paused') {
-      const updated = await monitorsApi.resumeUptime(id)
-      detail.value.monitor = updated
+    if (detail.value.monitor.status === 'paused') {
+      await monitorsApi.resumeUptime(id)
     } else {
-      const updated = await monitorsApi.pauseUptime(id)
-      detail.value.monitor = updated
+      await monitorsApi.pauseUptime(id)
     }
+    await refetch()
   } catch (e: unknown) {
     actionError.value = e instanceof Error ? e.message : 'Action failed'
   }

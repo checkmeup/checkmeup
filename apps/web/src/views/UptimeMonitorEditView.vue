@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi, type KeywordMode } from '@/api/monitors'
-import { billingApi } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
+import { useBilling } from '@/composables/useBilling'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,7 +23,6 @@ const maxAlertsPerIncident = ref(3)
 const keyword = ref('')
 const keywordMode = ref<KeywordMode>('contains')
 const keywordCaseSensitive = ref(false)
-const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const minIntervalMins = ref(5)
@@ -55,10 +55,15 @@ const alertLimitOptions = [
   { label: '10 times', value: 10 },
 ]
 
-onMounted(async () => {
-  try {
-    const [detail, info] = await Promise.all([monitorsApi.getUptime(id), billingApi.getInfo()])
-    const m = detail.monitor
+const { data: detail, isPending: monitorLoading, error: loadError } = useUptimeMonitor(id)
+const { data: billingInfo, isPending: billingLoading } = useBilling()
+const loading = computed(() => monitorLoading.value || billingLoading.value)
+
+watch(
+  detail,
+  (d) => {
+    if (!d) return
+    const m = d.monitor
     name.value = m.name
     url.value = m.url
     intervalMins.value = m.intervalMins
@@ -67,13 +72,20 @@ onMounted(async () => {
     keyword.value = m.keyword ?? ''
     keywordMode.value = m.keywordMode
     keywordCaseSensitive.value = m.keywordCaseSensitive
+  },
+  { immediate: true },
+)
+watch(
+  billingInfo,
+  (info) => {
+    if (!info) return
     minIntervalMins.value = info.minIntervalMins
     keywordMonitoringEnabled.value = info.keywordMonitoringEnabled
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
+  },
+  { immediate: true },
+)
+watch(loadError, (e) => {
+  if (e) error.value = e.message
 })
 
 async function submit() {

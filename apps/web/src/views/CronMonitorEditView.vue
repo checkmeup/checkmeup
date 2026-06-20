@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
@@ -8,6 +8,7 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { useCronMonitor } from '@/composables/useCronMonitors'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,7 +19,6 @@ const schedule = ref('')
 const gracePeriodMins = ref(5)
 const alertsEnabled = ref(true)
 const maxAlertsPerIncident = ref(3)
-const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -40,20 +40,22 @@ const alertLimitOptions = [
   { label: '10 times', value: 10 },
 ]
 
-onMounted(async () => {
-  try {
-    const detail = await monitorsApi.getCron(id)
-    const m = detail.monitor
+const { data: detail, isPending: loading, error: loadError } = useCronMonitor(id)
+watch(
+  detail,
+  (d) => {
+    if (!d) return
+    const m = d.monitor
     name.value = m.name
     schedule.value = m.schedule
     gracePeriodMins.value = m.gracePeriodMins
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load monitor'
-  } finally {
-    loading.value = false
-  }
+  },
+  { immediate: true },
+)
+watch(loadError, (e) => {
+  if (e) error.value = e.message
 })
 
 async function submit() {
