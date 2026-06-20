@@ -2,6 +2,8 @@
 
 A third, generic alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)) and email ([EP-13](ep-13-email-alerts.md)) — lets users wire monitor events into their own automation (Slack incoming webhooks, PagerDuty, custom scripts) without checkmeup building a first-class integration for each target. Distinct from the existing *incoming* Telegram webhook (`/telegram/webhook`, used to receive bot updates) — this is checkmeup acting as the sender.
 
+Builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)), which must land first — each saved webhook becomes a `notification_channels` row, not a single org-level field. "Off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 ---
 
 ### US-1401: Configure a webhook URL
@@ -12,7 +14,7 @@ A third, generic alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts
 
 **Acceptance criteria:**
 
-- [ ] Org setting: webhook URL, must be `https://`, validated
+- [ ] Add a webhook notification channel: URL must be `https://`, validated; multiple webhook channels can be added (EP-28)
 - [ ] "Send test webhook" button posts a sample payload and shows success/failure (status code or error) before saving
 - [ ] Webhook can be enabled independent of Telegram/email
 - [ ] A signing secret is generated automatically the first time the webhook is saved (used in US-1403)

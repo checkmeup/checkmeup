@@ -33,6 +33,7 @@
 | [EP-25](ep-25-two-factor-auth.md)     | Two-factor authentication       | 0/5           |
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |
 | [EP-27](ep-27-annual-billing.md)      | Annual billing                  | 3/3           |
+| [EP-28](ep-28-notification-channels.md) | Notification channels         | 0/5           |
 
 `x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why.
 

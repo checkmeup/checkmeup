@@ -2,6 +2,8 @@
 
 A sixth alert channel, built as a thin Slack-specific formatter on top of the generic webhook delivery already built in [EP-14](ep-14-webhook-alerts.md) — Slack Incoming Webhooks are a plain HTTPS POST endpoint, official, free, and need no OAuth app or approval process (unlike [WhatsApp](ep-15-whatsapp-alerts.md)). The only real difference from EP-14 is the payload shape: Slack expects `text`/Block Kit, not checkmeup's generic event JSON.
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — "off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 ---
 
 ### US-1701: Connect a Slack channel
@@ -15,7 +17,7 @@ A sixth alert channel, built as a thin Slack-specific formatter on top of the ge
 - [ ] Setup instructions: create a Slack Incoming Webhook in the target workspace/channel, paste the URL into Settings
 - [ ] URL validated against the `hooks.slack.com/...` pattern
 - [ ] "Send test message" button verifies the connection before saving
-- [ ] One Slack webhook per org on MVP, matching the existing one-Telegram-chat-per-org pattern ([US-0501](ep-05-telegram-alerts.md))
+- [ ] Multiple Slack webhooks can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 
 ---
 

@@ -2,6 +2,8 @@
 
 An eighth alert channel — unlike Slack/Teams ([EP-17](ep-17-slack-alerts.md)/[EP-18](ep-18-teams-alerts.md)), this needs a real SMS provider (Twilio, Vonage, AWS SNS) and a per-message cost, and is subject to anti-spam regulation (TCPA-style rules in the US and equivalents elsewhere) that requires explicit opt-in before sending automated texts — not just collecting a phone number.
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — adds an `sms` value to `notification_channel_type`. "Off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 **Needs a provider decision before implementation** (add to [decision backlog](../decisions/backlog.md)): which SMS provider, and confirm the opt-in flow satisfies applicable regulations in the markets checkmeup's users are in.
 
 ---
@@ -17,7 +19,7 @@ An eighth alert channel — unlike Slack/Teams ([EP-17](ep-17-slack-alerts.md)/[
 - [ ] Org setting: phone number, validated in E.164 format
 - [ ] Explicit opt-in confirmation required before alerts start (regulatory requirement for automated texts, not just providing a number)
 - [ ] "Send test SMS" button verifies delivery before saving
-- [ ] One phone number per org on MVP, matching the existing one-Telegram-chat-per-org pattern ([US-0501](ep-05-telegram-alerts.md))
+- [ ] Multiple phone numbers can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 
 ---
 

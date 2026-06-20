@@ -2,6 +2,8 @@
 
 A seventh alert channel, built the same way as [Slack](ep-17-slack-alerts.md): a thin formatter on top of the generic webhook delivery already built in [EP-14](ep-14-webhook-alerts.md). One wrinkle specific to Teams: Microsoft is retiring the legacy Office 365 Connector "Incoming Webhook" in favor of **Power Automate workflows** ("Post to a channel when a webhook request is received"), which also hand the user a POST URL but expect an **Adaptive Card** JSON payload instead of Slack's `text`/Block Kit shape. Verify Microsoft's current retirement timeline before implementing — don't build against the legacy connector.
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — "off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 ---
 
 ### US-1801: Connect a Teams channel
@@ -15,7 +17,7 @@ A seventh alert channel, built the same way as [Slack](ep-17-slack-alerts.md): a
 - [ ] Setup instructions: create a Power Automate workflow ("Post to a channel when a webhook request is received") in the target Teams channel, paste the generated URL into Settings
 - [ ] URL validated against the expected Power Automate webhook URL pattern
 - [ ] "Send test message" button verifies the connection before saving
-- [ ] One Teams webhook per org on MVP, matching the existing one-Telegram-chat-per-org pattern ([US-0501](ep-05-telegram-alerts.md))
+- [ ] Multiple Teams webhooks can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 
 ---
 

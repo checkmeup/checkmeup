@@ -2,6 +2,8 @@
 
 One Telegram chat per organization on MVP. Alert logic (debounce, thresholds) is shared across all monitor types.
 
+**Update 2026-06-20:** migrated to the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — the "one chat per org" constraint in US-0501 below describes the original MVP behavior, not the current one.
+
 ---
 
 ### US-0501: Connect a Telegram chat

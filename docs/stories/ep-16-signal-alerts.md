@@ -2,6 +2,8 @@
 
 A fifth alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), email ([EP-13](ep-13-email-alerts.md)), webhook ([EP-14](ep-14-webhook-alerts.md)), and WhatsApp ([EP-15](ep-15-whatsapp-alerts.md)).
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — adds a `signal` value to `notification_channel_type`. "Off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands. Note ADR-023 also flags that Signal's `signal-cli` dependency doesn't fit the stateless `config` JSONB shape the other types share as cleanly — worth a second look when this epic is actually picked up.
+
 **Needs a go/no-go decision before implementation** (add to [decision backlog](../decisions/backlog.md) / write an ADR): unlike Telegram (official, free Bot API) or WhatsApp (official, paid Business API), **Signal has no official bot or business messaging API at all**. The only practical way to send Signal messages programmatically is self-hosting `signal-cli` (or a REST wrapper around it) and registering a dedicated phone number as a bot account — an always-on extra process, plus a phone number Signal's anti-abuse systems could rate-limit or ban for automated use. This conflicts with this repo's minimal-infra philosophy ([ADR-001](../decisions/001-worker-model.md): no Redis, job queue, or external broker — goroutine workers only) and is a meaningfully different operational commitment than the other channels. Worth confirming there's real user demand before taking this on.
 
 ---
@@ -16,7 +18,7 @@ A fifth alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), em
 
 - [ ] User provides their Signal-registered phone number in Settings
 - [ ] "Send test alert" button verifies delivery through the self-hosted `signal-cli` service before saving
-- [ ] One Signal number per org on MVP, matching the existing one-Telegram-chat-per-org pattern
+- [ ] Multiple Signal numbers can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 - [ ] Setup instructions note this depends on a self-hosted `signal-cli` service, not a first-party Signal feature
 
 ---

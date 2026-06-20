@@ -2,6 +2,8 @@
 
 A ninth alert channel. Viber's official Bots REST API is closer in shape to Telegram ([EP-05](ep-05-telegram-alerts.md)) than WhatsApp ([EP-15](ep-15-whatsapp-alerts.md)): free, official, and once a user subscribes to the checkmeup bot, messages are sent as plain text with no pre-approved template required. The one prerequisite is that subscription step — a user must message the bot first before it can message them back, the same constraint as Telegram's `/start`.
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — "off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 ---
 
 ### US-2001: Connect a Viber account
@@ -15,7 +17,7 @@ A ninth alert channel. Viber's official Bots REST API is closer in shape to Tele
 - [ ] Setup instructions: open a link to start a conversation with the checkmeup Viber bot, which subscribes the user (required before the bot can message them, same constraint as Telegram's `/start` — [US-0501](ep-05-telegram-alerts.md))
 - [ ] Viber user ID captured via the bot's subscribe webhook callback, or pasted manually into Settings
 - [ ] "Send test message" button verifies the connection before saving
-- [ ] One Viber subscriber per org on MVP, matching the existing one-Telegram-chat-per-org pattern
+- [ ] Multiple Viber subscribers can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 
 ---
 

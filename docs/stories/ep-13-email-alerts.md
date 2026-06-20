@@ -2,6 +2,8 @@
 
 A second alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), reusing the Resend integration already built for password reset ([ADR-012](../decisions/012-email-resend.md)). Note: ADR-012 currently states "alerts remain Telegram-only" — that line needs updating once this ships, since it's no longer accurate.
 
+**Update 2026-06-20:** migrated to the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — the org-level `alert_email` field below is replaced by `notification_channels` rows; the "off at the org level" phrasing in US-1302/1303/1304 describes the original MVP behavior, not the current one.
+
 ---
 
 ### US-1301: Set an alert email address

@@ -2,6 +2,8 @@
 
 A fourth alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), email ([EP-13](ep-13-email-alerts.md)), and webhook ([EP-14](ep-14-webhook-alerts.md)).
 
+Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — adds a `whatsapp` value to `notification_channel_type`. "Off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+
 **Needs a provider decision before implementation** (add to [decision backlog](../decisions/backlog.md) / write an ADR): unlike Telegram's free bot API and freeform messages, WhatsApp business-initiated messages outside an active user conversation must use a **pre-approved Meta message template** — arbitrary text isn't allowed. This needs: a choice of provider (Meta Cloud API directly vs. a BSP like Twilio or MessageBird), template content submitted for Meta's approval (lead time, not instant), and a per-message cost (unlike Telegram, which is free) that varies by recipient country.
 
 ---
@@ -17,7 +19,7 @@ A fourth alert channel alongside Telegram ([EP-05](ep-05-telegram-alerts.md)), e
 - [ ] User provides their WhatsApp number in Settings
 - [ ] Opt-in confirmation step required before alerts start (WhatsApp policy for business-initiated templates) — same role as Telegram's `/start` step ([US-0501](ep-05-telegram-alerts.md))
 - [ ] "Send test alert" button verifies the connection before saving
-- [ ] One WhatsApp number per org on MVP, matching the existing one-Telegram-chat-per-org pattern
+- [ ] Multiple WhatsApp numbers can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
 
 ---
 
