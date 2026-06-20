@@ -13,6 +13,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['lcov'],
       reportsDirectory: 'coverage',
+      exclude: ['vite**.ts', 'dist/**', 'src/blog/**'],
     },
   },
 })
