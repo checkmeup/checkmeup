@@ -48,7 +48,7 @@ const mobileMenuOpen = ref(false)
           <RouterLink
             to="/sign-up"
             class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Sign up free
           </RouterLink>
@@ -111,7 +111,7 @@ const mobileMenuOpen = ref(false)
           <RouterLink
             to="/sign-up"
             class="block text-sm font-medium text-center px-4 py-2 rounded-md"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Sign up free
           </RouterLink>

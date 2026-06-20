@@ -16,12 +16,3 @@ Known architecture/code smells that aren't worth an ADR or an immediate fix, but
 
 - **Duplicated alert-message string building** across `checkOverdue`, `checkOneUptimeMonitor`, `checkOneSSLMonitor` in `worker.go` — near-identical `fmt.Sprintf` pairs (Telegram/email subject/HTML) repeated per monitor type, e.g. lines 128-138, 202-206, 242-248, 380-407. The SSL threshold-alert block (374-417) is four near-duplicate `case` arms differing only by day count.
   → Factor into a small templated helper shared across monitor types.
-
----
-
-## Frontend (Vue)
-
-### Maintainability
-
-- **Hardcoded `#fff` / raw hex colors instead of design tokens** — `color: #fff` paired with `var(--color-green-500)` across 9 files (`LandingLayout.vue:51,114`, `AboutView.vue:267`, `PricingView.vue:156,279,389`, `HomeView.vue:72,415,484,549`, `BlogPostView.vue:192`, `MaintenanceMonitorPicker.vue:83`, `StatusPageDetailView.vue:240`), plus raw hex dots in `HomeView.vue:94-96` (`#ef4444`, `#f59e0b`, `#1d9e75`) that likely duplicate existing tokens. Not the documented `bg-[--token]` bug (already fixed, doesn't reappear anywhere) — these are valid CSS, just not theme-token-driven.
-  → Low risk since white-on-green badges are probably theme-invariant by design, but a `--on-accent` token would be more consistent and future-proof against a new theme.

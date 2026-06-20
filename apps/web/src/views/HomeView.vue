@@ -69,7 +69,7 @@ const plans = [
         <RouterLink
           to="/sign-up"
           class="w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: #fff"
+          style="background-color: var(--color-green-500); color: var(--on-accent)"
         >
           Start free — no credit card
         </RouterLink>
@@ -91,9 +91,9 @@ const plans = [
           class="flex items-center gap-1.5 px-4 py-3 border-b"
           style="border-color: var(--border)"
         >
-          <span class="w-3 h-3 rounded-full" style="background-color: #ef4444; opacity: 0.6"></span>
-          <span class="w-3 h-3 rounded-full" style="background-color: #f59e0b; opacity: 0.6"></span>
-          <span class="w-3 h-3 rounded-full" style="background-color: #1d9e75; opacity: 0.6"></span>
+          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-down); opacity: 0.6"></span>
+          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-degraded); opacity: 0.6"></span>
+          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-up); opacity: 0.6"></span>
           <span class="ml-3 text-xs" style="color: var(--text-muted)">bash</span>
         </div>
         <div
@@ -412,7 +412,7 @@ const plans = [
           <RouterLink
             to="/sign-up"
             class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-md transition-colors"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Create a status page →
           </RouterLink>
@@ -481,7 +481,7 @@ const plans = [
           <div
             v-if="plan.highlight"
             class="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Popular
           </div>
@@ -546,7 +546,7 @@ const plans = [
         <RouterLink
           to="/sign-up"
           class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: #fff"
+          style="background-color: var(--color-green-500); color: var(--on-accent)"
         >
           Create free account →
         </RouterLink>

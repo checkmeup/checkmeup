@@ -70,7 +70,7 @@ function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl'; id: string; n
           :style="{
             backgroundColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'transparent',
             borderColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'var(--border)',
-            color: '#fff',
+            color: 'var(--on-accent)',
           }"
         >
           {{ selectedKeys.has(m.key) ? '✓' : '' }}

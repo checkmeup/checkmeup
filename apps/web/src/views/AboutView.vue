@@ -264,7 +264,7 @@ const values = [
         <RouterLink
           to="/sign-up"
           class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: #fff"
+          style="background-color: var(--color-green-500); color: var(--on-accent)"
         >
           Create free account →
         </RouterLink>

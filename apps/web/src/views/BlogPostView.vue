@@ -189,7 +189,7 @@ const post = computed(() => getPost(route.params.slug as string))
           <RouterLink
             to="/sign-up"
             class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Try checkmeup free →
           </RouterLink>

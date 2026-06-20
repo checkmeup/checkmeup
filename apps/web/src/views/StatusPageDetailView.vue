@@ -233,7 +233,7 @@ const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl:
                   :style="{
                     backgroundColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'transparent',
                     borderColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'var(--border)',
-                    color: '#fff',
+                    color: 'var(--on-accent)',
                   }"
                 >
                   {{ selectedKeys.has(m.key) ? '✓' : '' }}

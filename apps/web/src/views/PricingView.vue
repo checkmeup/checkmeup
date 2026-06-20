@@ -153,7 +153,7 @@ const featureRows: TableRow[] = [
           <div
             v-if="plan.highlight"
             class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full"
-            style="background-color: var(--color-green-500); color: #fff"
+            style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Most popular
           </div>
@@ -276,7 +276,7 @@ const featureRows: TableRow[] = [
             class="block text-sm font-semibold text-center px-4 py-2.5 rounded-md transition-colors"
             :style="{
               backgroundColor: plan.highlight ? 'var(--color-green-500)' : 'var(--surface-raised)',
-              color: plan.highlight ? '#fff' : 'var(--text)',
+              color: plan.highlight ? 'var(--on-accent)' : 'var(--text)',
               border: plan.highlight ? 'none' : '1px solid var(--border)',
             }"
           >
@@ -386,7 +386,7 @@ const featureRows: TableRow[] = [
         <RouterLink
           to="/sign-up"
           class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: #fff"
+          style="background-color: var(--color-green-500); color: var(--on-accent)"
         >
           Create free account →
         </RouterLink>
