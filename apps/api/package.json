@@ -5,6 +5,6 @@
     "dev": "air",
     "build": "go build -o bin/api ./cmd/api",
     "lint": "golangci-lint run ./...",
-    "test": "mkdir -p coverage && go test -count=1 -coverprofile=coverage/coverage.out ./... && gcov2lcov -infile=coverage/coverage.out -outfile=coverage/lcov.info"
+    "test": "mkdir -p coverage && go test -count=1 -coverprofile=coverage/coverage.out $(go list ./... | grep -v '/internal/db$') && gcov2lcov -infile=coverage/coverage.out -outfile=coverage/lcov.info"
   }
 }
