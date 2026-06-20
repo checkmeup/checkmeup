@@ -22,6 +22,7 @@
   --status-down: #ef4444;
   --status-paused: #94a3b8;
   --accent: var(--color-green-500);
+
   /* Text/icon color on top of --accent or a brand-green background (buttons,
      selected-state checkmarks). No light-theme override needed — brand
      greens don't change per-theme (docs/design.md), so white stays readable
