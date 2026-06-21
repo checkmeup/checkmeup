@@ -98,6 +98,48 @@ func (ns NullMonitorStatus) Value() (driver.Value, error) {
 	return string(ns.MonitorStatus), nil
 }
 
+type NotificationChannelType string
+
+const (
+	NotificationChannelTypeTelegram NotificationChannelType = "telegram"
+	NotificationChannelTypeEmail    NotificationChannelType = "email"
+)
+
+func (e *NotificationChannelType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotificationChannelType(s)
+	case string:
+		*e = NotificationChannelType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotificationChannelType: %T", src)
+	}
+	return nil
+}
+
+type NullNotificationChannelType struct {
+	NotificationChannelType NotificationChannelType `json:"notification_channel_type"`
+	Valid                   bool                    `json:"valid"` // Valid is true if NotificationChannelType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotificationChannelType) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotificationChannelType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotificationChannelType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotificationChannelType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotificationChannelType), nil
+}
+
 type Plan string
 
 const (
@@ -243,6 +285,24 @@ type MaintenanceWindowMonitor struct {
 	WindowID    uuid.UUID `json:"window_id"`
 	MonitorType string    `json:"monitor_type"`
 	MonitorID   uuid.UUID `json:"monitor_id"`
+}
+
+type MonitorNotificationChannel struct {
+	ID          uuid.UUID `json:"id"`
+	ChannelID   uuid.UUID `json:"channel_id"`
+	MonitorType string    `json:"monitor_type"`
+	MonitorID   uuid.UUID `json:"monitor_id"`
+}
+
+type NotificationChannel struct {
+	ID        uuid.UUID               `json:"id"`
+	OrgID     uuid.UUID               `json:"org_id"`
+	Type      NotificationChannelType `json:"type"`
+	Name      string                  `json:"name"`
+	Config    []byte                  `json:"config"`
+	Enabled   bool                    `json:"enabled"`
+	CreatedAt pgtype.Timestamptz      `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz      `json:"updated_at"`
 }
 
 type Org struct {

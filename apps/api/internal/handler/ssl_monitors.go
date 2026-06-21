@@ -20,17 +20,18 @@ import (
 // ─── response types ──────────────────────────────────────────────────────────
 
 type sslMonitorResponse struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Hostname       string  `json:"hostname"`
-	Status         string  `json:"status"`
-	AlertsEnabled  bool    `json:"alertsEnabled"`
-	ExpiresAt      *string `json:"expiresAt"`
-	Issuer         *string `json:"issuer"`
-	ErrorMsg       *string `json:"errorMsg"`
-	DaysUntilExpiry *int    `json:"daysUntilExpiry"`
-	LastCheckedAt  *string `json:"lastCheckedAt"`
-	CreatedAt      string  `json:"createdAt"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	Hostname        string   `json:"hostname"`
+	Status          string   `json:"status"`
+	AlertsEnabled   bool     `json:"alertsEnabled"`
+	ExpiresAt       *string  `json:"expiresAt"`
+	Issuer          *string  `json:"issuer"`
+	ErrorMsg        *string  `json:"errorMsg"`
+	DaysUntilExpiry *int     `json:"daysUntilExpiry"`
+	LastCheckedAt   *string  `json:"lastCheckedAt"`
+	CreatedAt       string   `json:"createdAt"`
+	ChannelIDs      []string `json:"channelIds,omitempty"`
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -171,8 +172,11 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
+	h.attachDefaultNotificationChannels(r.Context(), orgID, "ssl", monitor.ID)
 
-	respond.JSON(w, http.StatusCreated, sslMonitorToResponse(monitor))
+	resp := sslMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "ssl", monitor.ID)
+	respond.JSON(w, http.StatusCreated, resp)
 }
 
 // GetSSLMonitor GET /api/v1/monitors/ssl/{id}
@@ -194,13 +198,16 @@ func (h *MonitorHandler) GetSSLMonitor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, sslMonitorToResponse(monitor))
+	resp := sslMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "ssl", monitor.ID)
+	respond.JSON(w, http.StatusOK, resp)
 }
 
 type updateSSLMonitorRequest struct {
-	Name          string `json:"name"`
-	Hostname      string `json:"hostname"`
-	AlertsEnabled bool   `json:"alertsEnabled"`
+	Name          string   `json:"name"`
+	Hostname      string   `json:"hostname"`
+	AlertsEnabled bool     `json:"alertsEnabled"`
+	ChannelIDs    []string `json:"channelIds"`
 }
 
 // UpdateSSLMonitor PATCH /api/v1/monitors/ssl/{id}
@@ -242,7 +249,14 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	respond.JSON(w, http.StatusOK, sslMonitorToResponse(monitor))
+	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	resp := sslMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "ssl", monitorID)
+	respond.JSON(w, http.StatusOK, resp)
 }
 
 // PauseSSLMonitor POST /api/v1/monitors/ssl/{id}/pause

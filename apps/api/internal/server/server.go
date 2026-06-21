@@ -62,7 +62,8 @@ func (s *Server) buildRouter() *chi.Mux {
 	mailer := email.NewSender(s.cfg.ResendAPIKey)
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
-	settings := handler.NewSettingsHandler(s.cfg, s.db, tg, mailer)
+	settings := handler.NewSettingsHandler(s.cfg, tg)
+	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer)
 	ping := handler.NewPingHandler(s.db, tg, mailer)
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
@@ -106,13 +107,14 @@ func (s *Server) buildRouter() *chi.Mux {
 				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(suggestionOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
 			).Post("/suggestions", suggestions.SubmitSuggestion)
 
-			r.Route("/settings", func(r chi.Router) {
-				r.Get("/", settings.GetSettings)
-				r.Put("/telegram", settings.SaveTelegram)
-				r.With(httprate.LimitByIP(5, time.Minute)).Post("/telegram/test", settings.TestTelegram)
-				r.Put("/email", settings.SaveEmail)
-				r.Put("/email/enabled", settings.SetEmailAlertsEnabled)
-				r.With(httprate.LimitByIP(5, time.Minute)).Post("/email/test", settings.TestEmail)
+			r.Route("/notification-channels", func(r chi.Router) {
+				r.Get("/", notifChannels.ListNotificationChannels)
+				r.Post("/", notifChannels.CreateNotificationChannel)
+				r.With(httprate.LimitByIP(5, time.Minute)).Post("/test", notifChannels.TestNotificationChannel)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Patch("/", notifChannels.UpdateNotificationChannel)
+					r.Delete("/", notifChannels.DeleteNotificationChannel)
+				})
 			})
 
 			r.Route("/monitors/cron", func(r chi.Router) {

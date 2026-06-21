@@ -36,6 +36,7 @@ type uptimeMonitorResponse struct {
 	Keyword              *string  `json:"keyword"`
 	KeywordMode          string   `json:"keywordMode"`
 	KeywordCaseSensitive bool     `json:"keywordCaseSensitive"`
+	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
 type uptimeCheckResponse struct {
@@ -278,8 +279,11 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
+	h.attachDefaultNotificationChannels(r.Context(), orgID, "uptime", monitor.ID)
 
-	respond.JSON(w, http.StatusCreated, h.uptimeMonitorToResponse(monitor))
+	resp := h.uptimeMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitor.ID)
+	respond.JSON(w, http.StatusCreated, resp)
 }
 
 // GetUptimeMonitor GET /api/v1/monitors/uptime/{id}
@@ -307,8 +311,11 @@ func (h *MonitorHandler) GetUptimeMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	resp := h.uptimeMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitor.ID)
+
 	respond.JSON(w, http.StatusOK, map[string]any{
-		"monitor":   h.uptimeMonitorToResponse(monitor),
+		"monitor":   resp,
 		"chartData": detail.chart,
 		"checks":    detail.checks,
 		"incidents": detail.incidents,
@@ -393,14 +400,15 @@ func uptimeIncidentsToResponse(incidents []db.UptimeIncident) []uptimeIncidentRe
 }
 
 type updateUptimeMonitorRequest struct {
-	Name                 string `json:"name"`
-	URL                  string `json:"url"`
-	IntervalMins         int32  `json:"intervalMins"`
-	AlertsEnabled        bool   `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
-	Keyword              string `json:"keyword"`
-	KeywordMode          string `json:"keywordMode"`
-	KeywordCaseSensitive bool   `json:"keywordCaseSensitive"`
+	Name                 string   `json:"name"`
+	URL                  string   `json:"url"`
+	IntervalMins         int32    `json:"intervalMins"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	Keyword              string   `json:"keyword"`
+	KeywordMode          string   `json:"keywordMode"`
+	KeywordCaseSensitive bool     `json:"keywordCaseSensitive"`
+	ChannelIDs           []string `json:"channelIds"`
 }
 
 // UpdateUptimeMonitor PATCH /api/v1/monitors/uptime/{id}
@@ -479,7 +487,14 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	respond.JSON(w, http.StatusOK, h.uptimeMonitorToResponse(monitor))
+	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "uptime", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	resp := h.uptimeMonitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitorID)
+	respond.JSON(w, http.StatusOK, resp)
 }
 
 // PauseUptimeMonitor POST /api/v1/monitors/uptime/{id}/pause

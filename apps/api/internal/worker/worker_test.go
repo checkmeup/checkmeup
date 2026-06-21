@@ -22,6 +22,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -61,15 +62,14 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-// testOrg creates an org with an alert email already set and email alerts
-// enabled, so dispatchAlert has a real (no-op-safe) channel to succeed on —
-// see the package doc comment above for why that's the only deliverable
-// channel available without live credentials.
+// testOrg creates a bare org with no notification channels — tests that need
+// a deliverable channel create one explicitly via testNotificationChannel,
+// since dispatchAlert reads monitor_notification_channels, not org fields
+// (ADR-023).
 func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 	t.Helper()
 	org, err := queries.CreateOrg(context.Background(), db.CreateOrgParams{
-		Name:       "test-" + uuid.NewString(),
-		AlertEmail: pgtype.Text{String: "ops-" + uuid.NewString() + "@example.com", Valid: true},
+		Name: "test-" + uuid.NewString(),
 	})
 	if err != nil {
 		t.Fatalf("create test org: %v", err)
@@ -80,11 +80,43 @@ func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 	return org
 }
 
-func enableEmailAlerts(t *testing.T, pool *pgxpool.Pool, orgID uuid.UUID) {
+// testNotificationChannel creates an enabled channel for orgID. Caller still
+// needs attachNotificationChannel to wire it to a specific monitor.
+func testNotificationChannel(t *testing.T, queries *db.Queries, orgID uuid.UUID, channelType db.NotificationChannelType, config map[string]string) db.NotificationChannel {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), "UPDATE orgs SET email_alerts_enabled = true WHERE id = $1", orgID); err != nil {
-		t.Fatalf("enable email alerts: %v", err)
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		t.Fatalf("marshal channel config: %v", err)
 	}
+	c, err := queries.CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+		OrgID: orgID, Type: channelType, Name: string(channelType), Config: configBytes,
+	})
+	if err != nil {
+		t.Fatalf("create test notification channel: %v", err)
+	}
+	return c
+}
+
+func attachNotificationChannel(t *testing.T, queries *db.Queries, channelID uuid.UUID, monitorType string, monitorID uuid.UUID) {
+	t.Helper()
+	if err := queries.InsertMonitorNotificationChannel(context.Background(), db.InsertMonitorNotificationChannelParams{
+		ChannelID: channelID, MonitorType: monitorType, MonitorID: monitorID,
+	}); err != nil {
+		t.Fatalf("attach test notification channel: %v", err)
+	}
+}
+
+// testUser creates a user for orgID, so dispatchAlert's no-channel fallback
+// (ADR-023: email every user in the org) has someone to email.
+func testUser(t *testing.T, queries *db.Queries, orgID uuid.UUID) db.User {
+	t.Helper()
+	u, err := queries.CreateUser(context.Background(), db.CreateUserParams{
+		OrgID: orgID, Email: "user-" + uuid.NewString() + "@example.com", PasswordHash: "x",
+	})
+	if err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+	return u
 }
 
 func testCronMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, schedule string) db.CronMonitor {
@@ -154,22 +186,22 @@ func forceDueNow(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) {
 
 // ─── pure function tests ──────────────────────────────────────────────────
 
-func TestHasAlertChannel(t *testing.T) {
+func TestChannelConfigValue(t *testing.T) {
 	cases := []struct {
 		name string
-		org  db.Org
-		want bool
+		raw  string
+		key  string
+		want string
 	}{
-		{"telegram configured", db.Org{TelegramChatID: pgtype.Text{String: "123", Valid: true}}, true},
-		{"email enabled and address set", db.Org{EmailAlertsEnabled: true, AlertEmail: pgtype.Text{String: "a@b.com", Valid: true}}, true},
-		{"email enabled but no address", db.Org{EmailAlertsEnabled: true}, false},
-		{"email address set but not enabled", db.Org{AlertEmail: pgtype.Text{String: "a@b.com", Valid: true}}, false},
-		{"nothing configured", db.Org{}, false},
+		{"present", `{"chatId":"123"}`, "chatId", "123"},
+		{"trims whitespace", `{"email":"  a@b.com  "}`, "email", "a@b.com"},
+		{"missing key", `{"chatId":"123"}`, "email", ""},
+		{"invalid JSON", `not json`, "chatId", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := hasAlertChannel(tc.org); got != tc.want {
-				t.Fatalf("hasAlertChannel(%+v) = %v, want %v", tc.org, got, tc.want)
+			if got := channelConfigValue([]byte(tc.raw), tc.key); got != tc.want {
+				t.Fatalf("channelConfigValue(%q, %q) = %q, want %q", tc.raw, tc.key, got, tc.want)
 			}
 		})
 	}
@@ -323,35 +355,53 @@ func TestPerformTLSCheck(t *testing.T) {
 // ─── dispatchAlert ─────────────────────────────────────────────────────────
 
 func TestDispatchAlert(t *testing.T) {
-	tg := telegram.NewClient("")    // no token: SendMessage always errors, no network call
+	pool := testPool(t)
+	queries := db.New(pool)
+	tg := telegram.NewClient("")  // no token: SendMessage always errors, no network call
 	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR-012)
 	logger := testLogger()
 	msg := alertMessage{telegram: "down", emailSubject: "down", emailHTML: "<p>down</p>"}
 
-	t.Run("no channel configured", func(t *testing.T) {
-		sent := dispatchAlert(tg, mailer, db.Org{}, msg, logger, uuid.New())
+	t.Run("no channel attached and no org user falls back to nothing", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", uuid.New(), msg, logger)
 		if sent {
-			t.Fatal("want no alert delivered with no channel configured")
+			t.Fatal("want no alert delivered with no channel attached and no org user")
 		}
 	})
 
-	t.Run("telegram configured but unreachable in this environment does not count as delivered", func(t *testing.T) {
-		org := db.Org{TelegramChatID: pgtype.Text{String: "123", Valid: true}}
-		sent := dispatchAlert(tg, mailer, org, msg, logger, uuid.New())
-		if sent {
-			t.Fatal("want telegram-only delivery to fail with no bot token configured")
-		}
-	})
-
-	t.Run("email channel succeeds (no-op-safe in dev) even when telegram fails", func(t *testing.T) {
-		org := db.Org{
-			TelegramChatID:     pgtype.Text{String: "123", Valid: true},
-			EmailAlertsEnabled: true,
-			AlertEmail:         pgtype.Text{String: "a@b.com", Valid: true},
-		}
-		sent := dispatchAlert(tg, mailer, org, msg, logger, uuid.New())
+	t.Run("no channel attached falls back to emailing every org user (ADR-023)", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		testUser(t, queries, org.ID)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", uuid.New(), msg, logger)
 		if !sent {
-			t.Fatal("want the email channel's success to count as delivered, even though telegram failed")
+			t.Fatal("want the fallback email to org users to count as delivered")
+		}
+	})
+
+	t.Run("telegram channel attached but unreachable in this environment does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeTelegram, map[string]string{"chatId": "123"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", monitorID, msg, logger)
+		if sent {
+			t.Fatal("want telegram-only delivery to fail with no bot token configured, and no fallback since a channel is attached")
+		}
+	})
+
+	t.Run("email channel succeeds (no-op-safe in dev) even when a telegram channel on the same monitor fails", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		tgChannel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeTelegram, map[string]string{"chatId": "123"})
+		emailChannel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, tgChannel.ID, "cron", monitorID)
+		attachNotificationChannel(t, queries, emailChannel.ID, "cron", monitorID)
+
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", monitorID, msg, logger)
+		if !sent {
+			t.Fatal("want the email channel's success to count as delivered, even though the telegram channel failed")
 		}
 	})
 }
@@ -367,8 +417,9 @@ func TestCheckOverdue(t *testing.T) {
 
 	t.Run("marks an overdue monitor down, opens an incident, and delivers an alert", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
-		enableEmailAlerts(t, pool, org.ID)
 		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
 
 		checkOverdue(context.Background(), queries, tg, mailer, logger)
@@ -393,7 +444,6 @@ func TestCheckOverdue(t *testing.T) {
 
 	t.Run("an incident still opens when alerts are disabled, but no alert is sent", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
-		enableEmailAlerts(t, pool, org.ID)
 		mon := testCronMonitor(t, queries, org.ID, "every 1h")
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour', alerts_enabled = false WHERE id = $1", mon.ID)
 
@@ -473,8 +523,9 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		defer srv.Close()
 
 		org := testOrg(t, queries, pool)
-		enableEmailAlerts(t, pool, org.ID)
 		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
 
 		// First failure: recorded, but one failure alone doesn't trip "down".
 		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)

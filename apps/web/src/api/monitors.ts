@@ -13,6 +13,7 @@ export interface CronMonitor {
   lastPingAt: string | null
   nextPingAt: string | null
   createdAt: string
+  channelIds?: string[]
 }
 
 export interface CronPing {
@@ -46,6 +47,7 @@ export interface UpdateCronMonitorInput {
   gracePeriodMins: number
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  channelIds: string[]
 }
 
 export type KeywordMode = 'contains' | 'not_contains'
@@ -64,6 +66,7 @@ export interface UptimeMonitor {
   keyword: string | null
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
+  channelIds?: string[]
 }
 
 export interface UptimeCheck {
@@ -114,6 +117,7 @@ export interface UpdateUptimeMonitorInput {
   keyword: string
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
+  channelIds: string[]
 }
 
 export interface SSLMonitor {
@@ -128,6 +132,7 @@ export interface SSLMonitor {
   daysUntilExpiry: number | null
   lastCheckedAt: string | null
   createdAt: string
+  channelIds?: string[]
 }
 
 export interface CreateSSLMonitorInput {
@@ -139,6 +144,7 @@ export interface UpdateSSLMonitorInput {
   name: string
   hostname: string // passed through but not shown in UI (domain changes require delete + recreate)
   alertsEnabled: boolean
+  channelIds: string[]
 }
 
 export const monitorsApi = {

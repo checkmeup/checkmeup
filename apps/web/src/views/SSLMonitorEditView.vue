@@ -8,6 +8,7 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useSSLMonitor } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
@@ -17,6 +18,7 @@ const id = route.params.id as string
 const name = ref('')
 const hostname = ref('') // read-only; passed through on save
 const alertsEnabled = ref(true)
+const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -29,6 +31,7 @@ watch(
     name.value = m.name
     hostname.value = m.hostname
     alertsEnabled.value = m.alertsEnabled
+    channelIds.value = m.channelIds ?? []
   },
   { immediate: true },
 )
@@ -50,6 +53,7 @@ async function submit() {
       name: name.value.trim(),
       hostname: hostname.value,
       alertsEnabled: alertsEnabled.value,
+      channelIds: channelIds.value,
     })
     router.push({ name: 'ssl-monitor-detail', params: { id } })
   } catch (e: unknown) {
@@ -104,6 +108,8 @@ async function submit() {
           <input id="alerts" v-model="alertsEnabled" type="checkbox" class="rounded" />
           <Label for="alerts" class="cursor-pointer">Send alerts</Label>
         </div>
+
+        <NotificationChannelPicker v-model="channelIds" />
 
         <UpgradePrompt v-if="limitReached" :message="error" />
         <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

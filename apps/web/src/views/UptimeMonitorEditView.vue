@@ -8,6 +8,7 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi, type KeywordMode } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
 import { useBilling } from '@/composables/useBilling'
 
@@ -23,6 +24,7 @@ const maxAlertsPerIncident = ref(3)
 const keyword = ref('')
 const keywordMode = ref<KeywordMode>('contains')
 const keywordCaseSensitive = ref(false)
+const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
 const minIntervalMins = ref(5)
@@ -72,6 +74,7 @@ watch(
     keyword.value = m.keyword ?? ''
     keywordMode.value = m.keywordMode
     keywordCaseSensitive.value = m.keywordCaseSensitive
+    channelIds.value = m.channelIds ?? []
   },
   { immediate: true },
 )
@@ -115,6 +118,7 @@ async function submit() {
       keyword: keyword.value.trim(),
       keywordMode: keywordMode.value,
       keywordCaseSensitive: keywordCaseSensitive.value,
+      channelIds: channelIds.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id } })
   } catch (e: unknown) {
@@ -255,6 +259,8 @@ async function submit() {
             Stop alerting after this many notifications per incident.
           </p>
         </div>
+
+        <NotificationChannelPicker v-model="channelIds" />
 
         <UpgradePrompt v-if="limitReached" :message="error" />
         <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

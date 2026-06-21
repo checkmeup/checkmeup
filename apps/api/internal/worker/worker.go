@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -51,33 +52,83 @@ type alertMessage struct {
 	emailHTML    string
 }
 
-// hasAlertChannel reports whether the org has at least one alert channel configured.
-func hasAlertChannel(org db.Org) bool {
-	return org.TelegramChatID.Valid || (org.EmailAlertsEnabled && org.AlertEmail.Valid)
-}
-
-// dispatchAlert sends msg on every channel the org has configured, logging
-// per-channel failures without aborting the other channel. It reports
-// whether the alert was delivered on at least one channel — per ADR-016 /
-// US-1305, the per-incident alert cap counts one notification event
-// regardless of how many channels it went out on.
-func dispatchAlert(tg *telegram.Client, mailer *email.Sender, org db.Org, msg alertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
-	sent := false
-	if org.TelegramChatID.Valid {
-		if err := tg.SendMessage(org.TelegramChatID.String, msg.telegram); err != nil {
-			logger.Error("worker: send telegram alert", "monitor_id", monitorID, "err", err)
-		} else {
-			sent = true
-		}
+// dispatchAlert sends msg to every channel attached to the monitor, logging
+// per-channel failures without aborting the others. If the monitor has no
+// attached, enabled channels, it falls back to emailing every user in the
+// org instead of staying silent (ADR-023) — a monitor always has somewhere
+// to send an alert. Reports whether the alert was delivered at all — per
+// ADR-016 / US-2805, the per-incident alert cap counts one notification
+// event regardless of how many channels (or the fallback) it went out on.
+func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, msg alertMessage, logger *slog.Logger) bool {
+	channels, err := queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
+		MonitorType: monitorType, MonitorID: monitorID,
+	})
+	if err != nil {
+		logger.Error("worker: list monitor notification channels", "monitor_id", monitorID, "err", err)
+		return false
 	}
-	if org.EmailAlertsEnabled && org.AlertEmail.Valid {
-		if err := mailer.SendAlertEmail(org.AlertEmail.String, msg.emailSubject, msg.emailHTML); err != nil {
-			logger.Error("worker: send email alert", "monitor_id", monitorID, "err", err)
-		} else {
+
+	if len(channels) == 0 {
+		return dispatchFallbackEmail(ctx, queries, mailer, orgID, msg, logger, monitorID)
+	}
+
+	sent := false
+	for _, c := range channels {
+		switch c.Type {
+		case db.NotificationChannelTypeTelegram:
+			chatID := channelConfigValue(c.Config, "chatId")
+			if chatID == "" {
+				continue
+			}
+			if err := tg.SendMessage(chatID, msg.telegram); err != nil {
+				logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+				continue
+			}
+			sent = true
+		case db.NotificationChannelTypeEmail:
+			addr := channelConfigValue(c.Config, "email")
+			if addr == "" {
+				continue
+			}
+			if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
+				logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+				continue
+			}
 			sent = true
 		}
 	}
 	return sent
+}
+
+// dispatchFallbackEmail emails every user in the org when a monitor has no
+// attached channels. Every org has exactly one user today (EP-12 team
+// invites aren't built), but this is written against org_id rather than a
+// single user so it doesn't need touching when that ships.
+func dispatchFallbackEmail(ctx context.Context, queries *db.Queries, mailer *email.Sender, orgID uuid.UUID, msg alertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
+	emails, err := queries.ListOrgUserEmails(ctx, orgID)
+	if err != nil {
+		logger.Error("worker: list org user emails", "org_id", orgID, "err", err)
+		return false
+	}
+	sent := false
+	for _, addr := range emails {
+		if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
+			logger.Error("worker: send fallback alert email", "monitor_id", monitorID, "err", err)
+			continue
+		}
+		sent = true
+	}
+	return sent
+}
+
+// channelConfigValue reads a single string field out of a channel's config
+// JSONB blob — e.g. "chatId" for telegram, "email" for email.
+func channelConfigValue(raw []byte, key string) string {
+	var cfg map[string]string
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cfg[key])
 }
 
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
@@ -118,11 +169,6 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 			continue
 		}
 
-		org, err := queries.GetOrgByID(ctx, m.OrgID)
-		if err != nil || !hasAlertChannel(org) {
-			continue
-		}
-
 		missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
 		expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
 		msg := alertMessage{
@@ -136,7 +182,7 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 				m.Name, m.Schedule, expectedAt, missedBy,
 			),
 		}
-		if !dispatchAlert(tg, mailer, org, msg, logger, m.ID) {
+		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "cron", m.ID, msg, logger) {
 			continue
 		}
 		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -197,15 +243,12 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 				logger.Error("uptime worker: resolve incident", "monitor_id", m.ID, "err", err)
 			}
 			if m.AlertsEnabled {
-				org, err := queries.GetOrgByID(ctx, m.OrgID)
-				if err == nil && hasAlertChannel(org) {
-					msg := alertMessage{
-						telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
-						emailSubject: fmt.Sprintf("%s recovered", m.Name),
-						emailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
-					}
-					dispatchAlert(tg, mailer, org, msg, logger, m.ID)
+				msg := alertMessage{
+					telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
+					emailSubject: fmt.Sprintf("%s recovered", m.Name),
+					emailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
 				}
+				dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "uptime", m.ID, msg, logger)
 			}
 		}
 		return
@@ -235,10 +278,6 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 		if max > 0 && inc.AlertCount >= max {
 			return
 		}
-		org, err := queries.GetOrgByID(ctx, m.OrgID)
-		if err != nil || !hasAlertChannel(org) {
-			return
-		}
 		msg := alertMessage{
 			telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
 				m.Name, m.Url, failureReason),
@@ -246,7 +285,7 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
 				m.Name, m.Url, failureReason),
 		}
-		if !dispatchAlert(tg, mailer, org, msg, logger, m.ID) {
+		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "uptime", m.ID, msg, logger) {
 			return
 		}
 		if _, err := queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -372,47 +411,44 @@ func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.C
 
 	// Send threshold alerts (one per crossing)
 	if m.AlertsEnabled && (newStatus == db.SslMonitorStatusExpiringSoon || newStatus == db.SslMonitorStatusExpired) {
-		org, orgErr := queries.GetOrgByID(ctx, m.OrgID)
-		if orgErr == nil && hasAlertChannel(org) {
-			var subject, telegramMsg, emailHTML string
-			expiresStr := expiresAt.Format("2006-01-02")
-			switch {
-			case daysLeft < 0 && !alerted7d:
-				subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
-				telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
-					m.Name, m.Hostname, expiresStr)
-				emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
-					m.Name, m.Hostname, expiresStr)
-				alerted7d = true
-			case daysLeft <= 7 && !alerted7d:
-				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				alerted7d = true
-			case daysLeft <= 14 && !alerted14d:
-				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				alerted14d = true
-			case daysLeft <= 30 && !alerted30d:
-				subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-				telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-					m.Name, daysLeft, m.Hostname, expiresStr)
-				alerted30d = true
-			}
-			if telegramMsg != "" {
-				dispatchAlert(tg, mailer, org, alertMessage{
-					telegram:     telegramMsg,
-					emailSubject: subject,
-					emailHTML:    emailHTML,
-				}, logger, m.ID)
-			}
+		var subject, telegramMsg, emailHTML string
+		expiresStr := expiresAt.Format("2006-01-02")
+		switch {
+		case daysLeft < 0 && !alerted7d:
+			subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
+			telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
+				m.Name, m.Hostname, expiresStr)
+			emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
+				m.Name, m.Hostname, expiresStr)
+			alerted7d = true
+		case daysLeft <= 7 && !alerted7d:
+			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			alerted7d = true
+		case daysLeft <= 14 && !alerted14d:
+			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			alerted14d = true
+		case daysLeft <= 30 && !alerted30d:
+			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+				m.Name, daysLeft, m.Hostname, expiresStr)
+			alerted30d = true
+		}
+		if telegramMsg != "" {
+			dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "ssl", m.ID, alertMessage{
+				telegram:     telegramMsg,
+				emailSubject: subject,
+				emailHTML:    emailHTML,
+			}, logger)
 		}
 	}
 
