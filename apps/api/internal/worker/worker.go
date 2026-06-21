@@ -488,6 +488,7 @@ func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysL
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
 	conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
 		ServerName: hostname,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return time.Time{}, "", 0, err
