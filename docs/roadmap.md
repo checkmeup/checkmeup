@@ -14,11 +14,10 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-1. [EP-28](stories/ep-28-notification-channels.md) — Notification channels. Foundational multi-channel model ([ADR-023](decisions/023-notification-channels.md)) — every channel epic below now adds a channel type on top of this instead of a single org-level field, so it has to land first.
-2. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Built on EP-28; EP-17 and EP-18 are in turn built on top of this.
-3. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
-4. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
-5. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
+1. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Built on [EP-28](stories/ep-28-notification-channels.md) (shipped v1.6); EP-17 and EP-18 are in turn built on top of this.
+2. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
+3. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
+4. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
 
 ### Later
 

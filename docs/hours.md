@@ -28,3 +28,6 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-18 | Thu | EP-11                        | 6 h   |
 | 2026-06-19 | Fri | Tests implementation         | 4 h   |
 | 2026-06-20 | Sat | Tests implementation         | 5 h   |
+| 2026-06-21 | Sun | EP-28                        | 6 h   |
+| 2026-06-21 | Sun | EP-11 gate removal, tooling  | 1 h   |
+| 2026-06-21 | Sun | Codacy fixes, tests, blog    | 2 h   |

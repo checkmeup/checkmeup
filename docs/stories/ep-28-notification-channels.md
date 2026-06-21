@@ -2,6 +2,8 @@
 
 Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-notification-channels.md)), replacing the single `orgs.telegram_chat_id` / `orgs.alert_email` fields with a `notification_channels` table and per-monitor routing. Every channel epic from here on — [EP-14](ep-14-webhook-alerts.md) (webhook), [EP-15](ep-15-whatsapp-alerts.md) (WhatsApp), [EP-16](ep-16-signal-alerts.md) (Signal), [EP-17](ep-17-slack-alerts.md) (Slack), [EP-18](ep-18-teams-alerts.md) (Teams), [EP-19](ep-19-sms-alerts.md) (SMS), [EP-20](ep-20-viber-alerts.md) (Viber) — adds a `notification_channel_type` on top of this instead of inventing its own org-level field, so this has to ship first.
 
+**Shipped 2026-06-21 (v1.6), 5/5 stories.** Migration 017 added `notification_channels` + `monitor_notification_channels`. The backfill migrated every org's existing Telegram chat / alert email into the new model, attached to every monitor that had alerts on, and the `dispatchAlert` cutover to the channel-based path shipped in the same release as the backfill — per the ADR-023 migration plan, with no window where channel rows existed but the worker still read the old org fields. One AC remains deliberately open: dropping the legacy `orgs.telegram_chat_id` / `alert_email` / `email_alerts_enabled` columns, which per the ADR-023 migration plan only happens in a later, separate migration once the cutover has run clean in production.
+
 ---
 
 ### US-2801: Add and manage notification channels
@@ -12,10 +14,10 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 
 **Acceptance criteria:**
 
-- [ ] Settings page lists all channels for the org: type, name, enabled state
-- [ ] Add/edit/delete a channel, with a type-specific config form (chat ID for Telegram, webhook URL for Slack/Teams, address for email)
-- [ ] "Send test message" verifies a channel before saving, same UX as today's Telegram/email test buttons
-- [ ] No limit on number of channels per type on MVP — a per-plan limit, if any, is a separate pricing decision, not in scope here
+- [x] Settings page lists all channels for the org: type, name, enabled state
+- [x] Add/edit/delete a channel, with a type-specific config form (chat ID for Telegram, webhook URL for Slack/Teams, address for email)
+- [x] "Send test message" verifies a channel before saving, same UX as today's Telegram/email test buttons
+- [x] No limit on number of channels per type on MVP — a per-plan limit, if any, is a separate pricing decision, not in scope here
 
 ---
 
@@ -27,9 +29,9 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 
 **Acceptance criteria:**
 
-- [ ] Per-monitor channel picker (multi-select) in the monitor's settings, alongside the existing `alerts_enabled` mute toggle
-- [ ] A monitor with channels attached but `alerts_enabled = false` sends nothing — mute always wins over channel attachment
-- [ ] A new monitor defaults to all of the org's enabled channels attached — matches today's implicit "every monitor alerts on every org channel" behavior, so existing users see no surprise on day one
+- [x] Per-monitor channel picker (multi-select) in the monitor's settings, alongside the existing `alerts_enabled` mute toggle
+- [x] A monitor with channels attached but `alerts_enabled = false` sends nothing — mute always wins over channel attachment
+- [x] A new monitor defaults to all of the org's enabled channels attached — matches today's implicit "every monitor alerts on every org channel" behavior, so existing users see no surprise on day one
 
 ---
 
@@ -41,9 +43,9 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 
 **Acceptance criteria:**
 
-- [ ] A monitor with zero attached, enabled channels sends to every user's login email in the org instead of nothing
-- [ ] Applies immediately to existing orgs that currently have neither Telegram nor email alerts configured — no grandfathering ([ADR-023](../decisions/023-notification-channels.md))
-- [ ] Degrades the same way `SendAlertEmail` already does when `RESEND_API_KEY` is unset (log warning, no crash) — no new failure mode introduced
+- [x] A monitor with zero attached, enabled channels sends to every user's login email in the org instead of nothing
+- [x] Applies immediately to existing orgs that currently have neither Telegram nor email alerts configured — no grandfathering ([ADR-023](../decisions/023-notification-channels.md))
+- [x] Degrades the same way `SendAlertEmail` already does when `RESEND_API_KEY` is unset (log warning, no crash) — no new failure mode introduced
 
 ---
 
@@ -55,10 +57,10 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 
 **Acceptance criteria:**
 
-- [ ] Backfill migration creates a `telegram` channel from `orgs.telegram_chat_id` and an `email` channel from `orgs.alert_email` (if `email_alerts_enabled`) for every org that has them set
-- [ ] Backfilled channels are attached to every monitor that currently has `alerts_enabled = true` — dispatch behavior is identical to pre-migration, aside from the new fallback (US-2803)
-- [ ] `dispatchAlert` cutover to the channel-based path ships in the same release as the backfill, not a separate one — no window where channel rows exist but the worker still reads the old org fields
-- [ ] Legacy `orgs.telegram_chat_id` / `alert_email` / `email_alerts_enabled` columns are dropped in a **follow-up migration only**, after the cutover has run in production — keeps a rollback path
+- [x] Backfill migration creates a `telegram` channel from `orgs.telegram_chat_id` and an `email` channel from `orgs.alert_email` (if `email_alerts_enabled`) for every org that has them set
+- [x] Backfilled channels are attached to every monitor that currently has `alerts_enabled = true` — dispatch behavior is identical to pre-migration, aside from the new fallback (US-2803)
+- [x] `dispatchAlert` cutover to the channel-based path ships in the same release as the backfill, not a separate one — no window where channel rows exist but the worker still reads the old org fields
+- [ ] Legacy `orgs.telegram_chat_id` / `alert_email` / `email_alerts_enabled` columns are dropped in a **follow-up migration only**, after the cutover has run in production — keeps a rollback path. Deliberately still open: the cutover (this release) needs to run clean in production first; the drop migration is a separate, later PR per the ADR-023 migration plan
 
 ---
 
@@ -70,5 +72,5 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 
 **Acceptance criteria:**
 
-- [ ] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts one notification event per incident regardless of how many channels (or the fallback) it goes out on — same semantics as today, now keyed off the monitor's attached-channel list instead of the two hardcoded org fields
-- [ ] Recovery alert is exempt from the cap on every attached channel, including the fallback
+- [x] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts one notification event per incident regardless of how many channels (or the fallback) it goes out on — same semantics as today, now keyed off the monitor's attached-channel list instead of the two hardcoded org fields
+- [x] Recovery alert is exempt from the cap on every attached channel, including the fallback
