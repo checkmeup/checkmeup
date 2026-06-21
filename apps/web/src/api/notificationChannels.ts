@@ -29,7 +29,7 @@ export const notificationChannelsApi = {
     api.post<NotificationChannel>('/api/v1/notification-channels/', input),
   update: (id: string, input: NotificationChannelInput) =>
     api.patch<NotificationChannel>(`/api/v1/notification-channels/${id}/`, input),
-  delete: (id: string) => api.delete<void>(`/api/v1/notification-channels/${id}/`),
+  delete: (id: string) => api.delete(`/api/v1/notification-channels/${id}/`),
   test: (input: TestNotificationChannelInput) =>
-    api.post<void>('/api/v1/notification-channels/test', input),
+    api.post('/api/v1/notification-channels/test', input),
 }
