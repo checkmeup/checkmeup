@@ -173,7 +173,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
                 style="background-color: var(--color-green-500)"
               ></span>
               <span>
-                <strong style="color: var(--text-strong)">Keyword monitoring</strong> — add an
+                <strong style="color: var(--text-strong)">Keyword monitoring</strong> (every plan,
+                including Hobby) — add an
                 optional keyword check alongside the status code, so a maintenance page served with
                 a 200 or an error embedded in a JSON response still trips an alert. Set it to
                 require the keyword (<code
@@ -410,9 +411,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             </table>
           </div>
           <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
-            Keyword monitoring is available on Solo and above — Hobby covers status-code checks
-            only. See the full feature comparison for everything else that's the same across every
-            plan.
+            Keyword monitoring is available on every plan, including Hobby. See the full feature
+            comparison for everything else that's the same across every plan.
           </p>
           <RouterLink
             to="/pricing"
