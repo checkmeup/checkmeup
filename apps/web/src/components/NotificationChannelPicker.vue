@@ -11,6 +11,14 @@ const channels = computed(() => data.value ?? [])
 const typeLabel: Record<string, string> = { telegram: 'Telegram', email: 'Email' }
 const selected = computed(() => new Set(props.modelValue))
 
+// Disabled channels are excluded from delivery the same way unselected ones
+// are (worker.go's ListMonitorNotificationChannels only joins enabled
+// channels), so "selected but all disabled" hits the same fallback as
+// "nothing selected" — surface that here too, not just the empty case.
+const hasEnabledSelection = computed(() =>
+  channels.value.some((c) => c.enabled && selected.value.has(c.id)),
+)
+
 function toggle(id: string) {
   if (selected.value.has(id)) {
     emit('update:modelValue', props.modelValue.filter((v) => v !== id))
@@ -58,11 +66,16 @@ function toggle(id: string) {
       </li>
     </ul>
     <p
-      v-if="channels.length > 0 && modelValue.length === 0"
+      v-if="channels.length > 0 && !hasEnabledSelection"
       class="px-4 py-2 text-xs border-t"
       style="border-color: var(--border); color: var(--text-muted)"
     >
-      No channels selected — alerts will fall back to your account email.
+      {{
+        modelValue.length === 0
+          ? 'No channels selected'
+          : 'All selected channels are disabled'
+      }}
+      — alerts will fall back to your account email.
     </p>
   </div>
 </template>
