@@ -45,6 +45,7 @@
       "extensions": [
         "anthropic.claude-code",
         "cloudflare.cloudflare-workers-bindings-extension",
+        "codacy-app.codacy",
         "golang.go",
         "juanlb.claude-commit",
         "ms-azuretools.vscode-containers",
