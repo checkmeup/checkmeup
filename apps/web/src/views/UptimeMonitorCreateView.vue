@@ -23,7 +23,6 @@ const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
 const minIntervalMins = ref(5)
-const keywordMonitoringEnabled = ref(false)
 
 const keywordModeOptions: { label: string; value: KeywordMode }[] = [
   { label: 'Contains', value: 'contains' },
@@ -43,7 +42,6 @@ watch(
   (info) => {
     if (!info) return
     minIntervalMins.value = info.minIntervalMins
-    keywordMonitoringEnabled.value = info.keywordMonitoringEnabled
   },
   { immediate: true },
 )
@@ -146,52 +144,45 @@ async function submit() {
           </p>
         </div>
 
-        <UpgradePrompt
-          v-if="!keywordMonitoringEnabled"
-          message="Keyword monitoring is available on paid plans."
-        />
+        <div>
+          <Label for="keyword">Keyword (optional)</Label>
+          <Input
+            id="keyword"
+            v-model="keyword"
+            placeholder="e.g. Welcome back"
+            class="mt-1"
+            maxlength="500"
+          />
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Leave blank to check status code only. Searches the first 512 KB of the response body.
+          </p>
+        </div>
 
-        <template v-else>
+        <div v-if="keyword.trim()" class="space-y-4 pl-4 border-l-2" style="border-color: var(--border)">
           <div>
-            <Label for="keyword">Keyword (optional)</Label>
-            <Input
-              id="keyword"
-              v-model="keyword"
-              placeholder="e.g. Welcome back"
-              class="mt-1"
-              maxlength="500"
+            <Label for="keywordMode">Mode</Label>
+            <select
+              id="keywordMode"
+              v-model="keywordMode"
+              class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+            >
+              <option v-for="opt in keywordModeOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input
+              id="keywordCaseSensitive"
+              v-model="keywordCaseSensitive"
+              type="checkbox"
+              class="rounded"
             />
-            <p class="text-xs mt-1" style="color: var(--text-muted)">
-              Leave blank to check status code only. Searches the first 512 KB of the response body.
-            </p>
+            <Label for="keywordCaseSensitive" class="cursor-pointer">Case-sensitive</Label>
           </div>
-
-          <div v-if="keyword.trim()" class="space-y-4 pl-4 border-l-2" style="border-color: var(--border)">
-            <div>
-              <Label for="keywordMode">Mode</Label>
-              <select
-                id="keywordMode"
-                v-model="keywordMode"
-                class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-              >
-                <option v-for="opt in keywordModeOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <input
-                id="keywordCaseSensitive"
-                v-model="keywordCaseSensitive"
-                type="checkbox"
-                class="rounded"
-              />
-              <Label for="keywordCaseSensitive" class="cursor-pointer">Case-sensitive</Label>
-            </div>
-          </div>
-        </template>
+        </div>
 
         <div>
           <Label for="interval">Check interval</Label>

@@ -40,10 +40,10 @@ func TestGetLimits(t *testing.T) {
 		plan db.Plan
 		want Limits
 	}{
-		{db.PlanHobby, Limits{MonitorTotal: 10, StatusPages: 1, MinIntervalMins: 5, KeywordMonitoring: false}},
-		{db.PlanSolo, Limits{MonitorTotal: 30, StatusPages: 3, MinIntervalMins: 1, KeywordMonitoring: true}},
-		{db.PlanStartup, Limits{MonitorTotal: 100, StatusPages: 10, MinIntervalMins: 1, KeywordMonitoring: true}},
-		{db.PlanEnterprise, Limits{MonitorTotal: 1000, StatusPages: 100, MinIntervalMins: 1, KeywordMonitoring: true}},
+		{db.PlanHobby, Limits{MonitorTotal: 10, StatusPages: 1, MinIntervalMins: 5}},
+		{db.PlanSolo, Limits{MonitorTotal: 30, StatusPages: 3, MinIntervalMins: 1}},
+		{db.PlanStartup, Limits{MonitorTotal: 100, StatusPages: 10, MinIntervalMins: 1}},
+		{db.PlanEnterprise, Limits{MonitorTotal: 1000, StatusPages: 100, MinIntervalMins: 1}},
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.plan), func(t *testing.T) {
@@ -131,25 +131,6 @@ func TestCheckStatusPageLimit(t *testing.T) {
 			t.Fatalf("want no error for an unlimited plan regardless of count, got %v", err)
 		}
 	})
-}
-
-func TestCheckKeywordMonitoringAllowed(t *testing.T) {
-	cases := []struct {
-		plan    db.Plan
-		wantErr error
-	}{
-		{db.PlanHobby, ErrKeywordMonitoring},
-		{db.PlanSolo, nil},
-		{db.PlanStartup, nil},
-		{db.PlanEnterprise, nil},
-	}
-	for _, tc := range cases {
-		t.Run(string(tc.plan), func(t *testing.T) {
-			if err := CheckKeywordMonitoringAllowed(tc.plan); err != tc.wantErr {
-				t.Fatalf("CheckKeywordMonitoringAllowed(%q) = %v, want %v", tc.plan, err, tc.wantErr)
-			}
-		})
-	}
 }
 
 func TestClampInterval(t *testing.T) {

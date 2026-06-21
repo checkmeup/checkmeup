@@ -72,7 +72,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Can I check the response body, not just the status code?',
-        a: "Yes — uptime monitors on Solo and above support an optional keyword check: require text to be present, or fail if it is. Useful for catching a maintenance page served with a 200 or an error embedded in a JSON response. We search the first 512 KB of the body; it's never stored, only the pass/fail reason.",
+        a: "Yes — every uptime monitor, on every plan including Hobby, supports an optional keyword check: require text to be present, or fail if it is. Useful for catching a maintenance page served with a 200 or an error embedded in a JSON response. We search the first 512 KB of the body; it's never stored, only the pass/fail reason.",
       },
       {
         q: 'Can I mute alerts for a noisy monitor?',

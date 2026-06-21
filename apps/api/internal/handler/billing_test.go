@@ -262,11 +262,10 @@ func TestWebhook(t *testing.T) {
 }
 
 type billingInfoResponse struct {
-	Plan                     string `json:"plan"`
-	BillingCycle             string `json:"billingCycle"`
-	MonitorCount             int32  `json:"monitorCount"`
-	KeywordMonitoringEnabled bool   `json:"keywordMonitoringEnabled"`
-	CustomerPortalURL        string `json:"customerPortalUrl"`
+	Plan              string `json:"plan"`
+	BillingCycle      string `json:"billingCycle"`
+	MonitorCount      int32  `json:"monitorCount"`
+	CustomerPortalURL string `json:"customerPortalUrl"`
 }
 
 func TestGetBillingInfo(t *testing.T) {
@@ -319,9 +318,6 @@ func TestGetBillingInfo(t *testing.T) {
 		resp := decodeBody[billingInfoResponse](t, w)
 		if resp.Plan != "solo" {
 			t.Fatalf("want plan solo, got %q", resp.Plan)
-		}
-		if resp.KeywordMonitoringEnabled != true {
-			t.Fatal("want keyword monitoring enabled on a paid plan")
 		}
 		if resp.CustomerPortalURL == "" {
 			t.Fatal("want a customer portal URL once ls_customer_id is set")

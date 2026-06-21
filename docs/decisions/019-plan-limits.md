@@ -6,6 +6,7 @@
 **Revised:** 2026-06-16 — plans renamed Hobbyist/Indie/Studio/Agency → Hobby/Solo/Startup/Enterprise
 **Revised:** 2026-06-16 — Enterprise capped at 1000 monitors / 100 status pages, price raised to $99
 **Revised:** 2026-06-18 — keyword monitoring ([EP-11](../stories/ep-11-keyword-monitoring.md)) gated to paid plans (Solo and above); Hobby excluded
+**Revised:** 2026-06-21 — keyword monitoring gate removed; available on every plan, including Hobby
 
 ---
 
@@ -24,7 +25,8 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL) because
 | Total monitors (cron + uptime + SSL) | 10 | 30 | 100 | 1000 |
 | Status pages | 1 | 3 | 10 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |
-| Keyword monitoring (uptime) | ✗ | ✓ | ✓ | ✓ |
+
+Keyword monitoring (uptime) is available on every plan, including Hobby — not a plan limit.
 
 ### Competitor reference (Jun 2026)
 
@@ -50,8 +52,7 @@ Competitors offer 30-second check intervals at the $10–38/mo tier. Supporting 
 - **UI**: catches `402`, shows an inline upgrade prompt (not a page redirect)
 - **Interval clamping**: if the requested interval is below the plan minimum, the API rejects with `402` and explains the minimum allowed
 - **Downgrade**: monitors and pages already over the new limit are NOT deleted — they stay but the user cannot create new ones until under the limit
-- **Keyword monitoring** is an on/off feature flag rather than a count, so the same downgrade philosophy applies at the field level: a keyword set while on a paid plan is not cleared on downgrade to Hobby, but it can't be changed to new text until re-upgrading — the user can still clear it (an empty keyword is always allowed, since it just disables the check).
 
 ## Implementation
 
-Limits are defined as Go constants in `internal/billing/plans.go`. Each create handler calls `billing.CheckMonitorLimit` / `billing.CheckStatusPageLimit` / `billing.ClampInterval` before inserting. `billing.CheckKeywordMonitoringAllowed` gates `uptime_monitors.keyword` on both create and update — `GET /api/v1/billing` exposes `keywordMonitoringEnabled` so the UI can hide/disable the keyword fields without round-tripping a 402.
+Limits are defined as Go constants in `internal/billing/plans.go`. Each create handler calls `billing.CheckMonitorLimit` / `billing.CheckStatusPageLimit` / `billing.ClampInterval` before inserting. Keyword monitoring (`uptime_monitors.keyword`) was previously gated the same way via `billing.CheckKeywordMonitoringAllowed` and a `keywordMonitoringEnabled` field on `GET /api/v1/billing` — both removed 2026-06-21; the field is now unconditionally available, validated only for length (1–500 chars), same as any other monitor field.

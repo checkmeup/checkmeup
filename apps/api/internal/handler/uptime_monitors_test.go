@@ -146,17 +146,17 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("keyword monitoring is gated to paid plans", func(t *testing.T) {
+	t.Run("keyword monitoring works on the Hobby (free) plan", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 10, Keyword: "Welcome",
 		})
-		if w.Code != http.StatusPaymentRequired {
-			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusCreated {
+			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
 		}
-		body := decodeBody[map[string]string](t, w)
-		if body["code"] != "plan_limit_reached" {
-			t.Fatalf("want code plan_limit_reached, got %q", body["code"])
+		resp := decodeBody[uptimeMonitorResponse](t, w)
+		if resp.Keyword == nil || *resp.Keyword != "Welcome" {
+			t.Fatalf("want keyword set on Hobby, got %v", resp.Keyword)
 		}
 	})
 
@@ -193,7 +193,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("keyword succeeds once the org is on a paid plan", func(t *testing.T) {
+	t.Run("keyword with non-default mode/case-sensitivity on a paid plan's faster interval", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)
 
@@ -372,14 +372,18 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("keyword monitoring is gated to paid plans on update too", func(t *testing.T) {
+	t.Run("keyword monitoring works on the Hobby (free) plan on update too", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createUptimeMonitor(t, monitorH, u.access, "x")
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, mon.ID, updateUptimeMonitorRequest{
-			Name: "x", URL: "https://example.com", Keyword: "Welcome",
+			Name: "x", URL: "https://example.com", IntervalMins: 5, Keyword: "Welcome",
 		})
-		if w.Code != http.StatusPaymentRequired {
-			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		resp := decodeBody[uptimeMonitorResponse](t, w)
+		if resp.Keyword == nil || *resp.Keyword != "Welcome" {
+			t.Fatalf("want keyword set on Hobby, got %v", resp.Keyword)
 		}
 	})
 

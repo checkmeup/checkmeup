@@ -236,13 +236,6 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if req.Keyword != "" {
-		if err := billing.CheckKeywordMonitoringAllowed(plan); err != nil {
-			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_keyword")
-			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-			return
-		}
-	}
 	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -443,13 +436,6 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
-	}
-	if req.Keyword != "" {
-		if err := billing.CheckKeywordMonitoringAllowed(plan); err != nil {
-			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_keyword")
-			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-			return
-		}
 	}
 	// Same plan-aware clamp as CreateUptimeMonitor — a request below the
 	// org's plan minimum is rejected, not silently floored to a fixed value

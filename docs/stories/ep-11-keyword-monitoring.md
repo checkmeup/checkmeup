@@ -2,7 +2,7 @@
 
 Extends the uptime monitor's HTTP check ([EP-03](ep-03-uptime-monitor.md)) with an optional text search on the response body — catches failures a `200` status code alone would miss (a maintenance page served with `200`, an error embedded in a JSON payload, a silently-broken page).
 
-Gated to paid plans (Solo and above) — Hobby is excluded ([ADR-019](../decisions/019-plan-limits.md)).
+**Update 2026-06-21:** originally gated to paid plans (Solo and above), Hobby excluded. That gate was removed — keyword monitoring is now available on every plan, including Hobby ([ADR-019](../decisions/019-plan-limits.md)). US-1101's AC below describing the gate reflects the original MVP behavior, not the current one.
 
 ---
 
@@ -18,7 +18,7 @@ Gated to paid plans (Solo and above) — Hobby is excluded ([ADR-019](../decisio
 - [x] Opt-in — existing and new uptime monitors behave exactly as before if the keyword field is left blank
 - [x] Case-sensitive toggle, default off (case-insensitive)
 - [x] Keyword length validated client- and server-side (1–500 chars)
-- [x] Hobby plan cannot set or change a keyword (`402 plan_limit_reached`, server-enforced on create and update); a keyword already set from a previous paid plan survives a downgrade and can still be cleared, just not changed to new text
+- [x] ~~Hobby plan cannot set or change a keyword...~~ — removed 2026-06-21; available on every plan now
 
 ---
 
