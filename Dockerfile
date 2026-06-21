@@ -35,5 +35,9 @@ ENV MIGRATIONS_DIR=/migrations \
     STATIC_DIR=/static \
     PORT=8080
 
+RUN groupadd --gid 1001 checkmeup \
+    && useradd --uid 1001 --gid checkmeup --no-create-home --shell /usr/sbin/nologin checkmeup
+USER checkmeup
+
 EXPOSE 8080
 CMD ["/api"]
