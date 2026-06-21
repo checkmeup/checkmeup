@@ -52,6 +52,15 @@ type alertMessage struct {
 	emailHTML    string
 }
 
+// monitorRef identifies the monitor an alert is for. Bundled into one value
+// (rather than two separate params) to keep dispatchAlert's parameter count
+// down — every call site already has type+ID as a pair, matching the
+// polymorphic monitor_type/monitor_id pattern used at the DB layer (ADR-023).
+type monitorRef struct {
+	Type string
+	ID   uuid.UUID
+}
+
 // dispatchAlert sends msg to every channel attached to the monitor, logging
 // per-channel failures without aborting the others. If the monitor has no
 // attached, enabled channels, it falls back to emailing every user in the
@@ -59,45 +68,54 @@ type alertMessage struct {
 // to send an alert. Reports whether the alert was delivered at all — per
 // ADR-016 / US-2805, the per-incident alert cap counts one notification
 // event regardless of how many channels (or the fallback) it went out on.
-func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, msg alertMessage, logger *slog.Logger) bool {
+func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, orgID uuid.UUID, mon monitorRef, msg alertMessage, logger *slog.Logger) bool {
 	channels, err := queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
-		MonitorType: monitorType, MonitorID: monitorID,
+		MonitorType: mon.Type, MonitorID: mon.ID,
 	})
 	if err != nil {
-		logger.Error("worker: list monitor notification channels", "monitor_id", monitorID, "err", err)
+		logger.Error("worker: list monitor notification channels", "monitor_id", mon.ID, "err", err)
 		return false
 	}
 
 	if len(channels) == 0 {
-		return dispatchFallbackEmail(ctx, queries, mailer, orgID, msg, logger, monitorID)
+		return dispatchFallbackEmail(ctx, queries, mailer, orgID, msg, logger, mon.ID)
 	}
 
 	sent := false
 	for _, c := range channels {
-		switch c.Type {
-		case db.NotificationChannelTypeTelegram:
-			chatID := channelConfigValue(c.Config, "chatId")
-			if chatID == "" {
-				continue
-			}
-			if err := tg.SendMessage(chatID, msg.telegram); err != nil {
-				logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
-				continue
-			}
-			sent = true
-		case db.NotificationChannelTypeEmail:
-			addr := channelConfigValue(c.Config, "email")
-			if addr == "" {
-				continue
-			}
-			if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
-				logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
-				continue
-			}
+		if sendToChannel(c, msg, tg, mailer, logger, mon.ID) {
 			sent = true
 		}
 	}
 	return sent
+}
+
+// sendToChannel delivers msg via a single channel's provider, logging (not
+// returning) a failure so dispatchAlert can keep trying the rest.
+func sendToChannel(c db.NotificationChannel, msg alertMessage, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, monitorID uuid.UUID) bool {
+	switch c.Type {
+	case db.NotificationChannelTypeTelegram:
+		chatID := channelConfigValue(c.Config, "chatId")
+		if chatID == "" {
+			return false
+		}
+		if err := tg.SendMessage(chatID, msg.telegram); err != nil {
+			logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+			return false
+		}
+		return true
+	case db.NotificationChannelTypeEmail:
+		addr := channelConfigValue(c.Config, "email")
+		if addr == "" {
+			return false
+		}
+		if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
+			logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+			return false
+		}
+		return true
+	}
+	return false
 }
 
 // dispatchFallbackEmail emails every user in the org when a monitor has no
@@ -182,7 +200,7 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 				m.Name, m.Schedule, expectedAt, missedBy,
 			),
 		}
-		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "cron", m.ID, msg, logger) {
+		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "cron", ID: m.ID}, msg, logger) {
 			continue
 		}
 		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -248,7 +266,7 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 					emailSubject: fmt.Sprintf("%s recovered", m.Name),
 					emailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
 				}
-				dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "uptime", m.ID, msg, logger)
+				dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "uptime", ID: m.ID}, msg, logger)
 			}
 		}
 		return
@@ -285,7 +303,7 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
 				m.Name, m.Url, failureReason),
 		}
-		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "uptime", m.ID, msg, logger) {
+		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "uptime", ID: m.ID}, msg, logger) {
 			return
 		}
 		if _, err := queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -444,7 +462,7 @@ func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.C
 			alerted30d = true
 		}
 		if telegramMsg != "" {
-			dispatchAlert(ctx, queries, tg, mailer, m.OrgID, "ssl", m.ID, alertMessage{
+			dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "ssl", ID: m.ID}, alertMessage{
 				telegram:     telegramMsg,
 				emailSubject: subject,
 				emailHTML:    emailHTML,

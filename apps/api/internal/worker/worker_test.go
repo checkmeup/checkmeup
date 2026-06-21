@@ -364,7 +364,7 @@ func TestDispatchAlert(t *testing.T) {
 
 	t.Run("no channel attached and no org user falls back to nothing", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", uuid.New(), msg, logger)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
 		if sent {
 			t.Fatal("want no alert delivered with no channel attached and no org user")
 		}
@@ -373,7 +373,7 @@ func TestDispatchAlert(t *testing.T) {
 	t.Run("no channel attached falls back to emailing every org user (ADR-023)", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		testUser(t, queries, org.ID)
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", uuid.New(), msg, logger)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
 		if !sent {
 			t.Fatal("want the fallback email to org users to count as delivered")
 		}
@@ -385,7 +385,7 @@ func TestDispatchAlert(t *testing.T) {
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeTelegram, map[string]string{"chatId": "123"})
 		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
 
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", monitorID, msg, logger)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: monitorID}, msg, logger)
 		if sent {
 			t.Fatal("want telegram-only delivery to fail with no bot token configured, and no fallback since a channel is attached")
 		}
@@ -399,7 +399,7 @@ func TestDispatchAlert(t *testing.T) {
 		attachNotificationChannel(t, queries, tgChannel.ID, "cron", monitorID)
 		attachNotificationChannel(t, queries, emailChannel.ID, "cron", monitorID)
 
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, "cron", monitorID, msg, logger)
+		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: monitorID}, msg, logger)
 		if !sent {
 			t.Fatal("want the email channel's success to count as delivered, even though the telegram channel failed")
 		}

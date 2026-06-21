@@ -168,19 +168,10 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	// A channel's type never changes after creation — only name/config/enabled.
-	if err := validateChannelConfig(string(existing.Type), req.Config); err != nil {
+	configBytes, enabled, err := resolveUpdatedChannelConfig(existing, req)
+	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
-	}
-	configBytes, err := json.Marshal(req.Config)
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid config", "bad_request")
-		return
-	}
-	enabled := existing.Enabled
-	if req.Enabled != nil {
-		enabled = *req.Enabled
 	}
 
 	channel, err := h.queries.UpdateNotificationChannel(r.Context(), db.UpdateNotificationChannelParams{
@@ -195,6 +186,25 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		return
 	}
 	respond.JSON(w, http.StatusOK, toNotificationChannelResponse(channel))
+}
+
+// resolveUpdatedChannelConfig validates req.Config against the channel's
+// existing type (which never changes after creation) and returns the JSON
+// config bytes plus the enabled value to write, preserving existing.Enabled
+// when req.Enabled is omitted.
+func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificationChannelRequest) ([]byte, bool, error) {
+	if err := validateChannelConfig(string(existing.Type), req.Config); err != nil {
+		return nil, false, err
+	}
+	configBytes, err := json.Marshal(req.Config)
+	if err != nil {
+		return nil, false, errors.New("invalid config")
+	}
+	enabled := existing.Enabled
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+	return configBytes, enabled, nil
 }
 
 // DeleteNotificationChannel DELETE /api/v1/notification-channels/{id}
