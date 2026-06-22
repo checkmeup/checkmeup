@@ -61,11 +61,16 @@ func blockPrivateDial(_, address string, _ syscall.RawConn) error {
 	if ip == nil {
 		return fmt.Errorf("webhook: refusing to dial non-IP address %q", host)
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+	if isRestrictedIP(ip) {
 		return fmt.Errorf("webhook: refusing to dial restricted address %s", ip)
 	}
 	return nil
+}
+
+// isRestrictedIP reports whether ip falls outside the public internet.
+func isRestrictedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
 }
 
 func refuseRedirects(*http.Request, []*http.Request) error {

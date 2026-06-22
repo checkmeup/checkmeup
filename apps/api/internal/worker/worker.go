@@ -406,6 +406,12 @@ func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prev
 		n.Logger.Error("uptime worker: create incident", "monitor_id", m.ID, "err", err)
 		return
 	}
+	alertUptimeIncident(ctx, n, m, inc, failureReason)
+}
+
+// alertUptimeIncident dispatches the down alert for a freshly-recorded
+// incident, honoring the monitor's alerts-enabled flag and per-incident cap.
+func alertUptimeIncident(ctx context.Context, n Notifiers, m db.UptimeMonitor, inc db.UptimeIncident, failureReason string) {
 	if !m.AlertsEnabled {
 		return
 	}
@@ -598,31 +604,18 @@ func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, da
 // threshold (expired, then 7/14/30 days), setting the matching alerted flag
 // so checkOneSSLMonitor only sends one notification per crossing.
 func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alerted30d, alerted14d, alerted7d *bool) *AlertMessage {
-	expiresStr := expiresAt.Format("2006-01-02")
-	var subject, telegramMsg, emailHTML string
-
-	switch {
-	case daysLeft < 0 && !*alerted7d:
-		subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
-		telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
-			m.Name, m.Hostname, expiresStr)
-		emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
-			m.Name, m.Hostname, expiresStr)
-		*alerted7d = true
-	case daysLeft <= 7 && !*alerted7d:
-		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
-		*alerted7d = true
-	case daysLeft <= 14 && !*alerted14d:
-		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
-		*alerted14d = true
-	case daysLeft <= 30 && !*alerted30d:
-		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
-		*alerted30d = true
-	}
-
-	if telegramMsg == "" {
+	if !sslCrossedThreshold(daysLeft, alerted30d, alerted14d, alerted7d) {
 		return nil
 	}
+
+	expiresStr := expiresAt.Format("2006-01-02")
+	var subject, telegramMsg, emailHTML string
+	if daysLeft < 0 {
+		subject, telegramMsg, emailHTML = sslExpiredMessages(m, expiresStr)
+	} else {
+		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
+	}
+
 	return &AlertMessage{
 		Telegram:     telegramMsg,
 		EmailSubject: subject,
@@ -635,6 +628,38 @@ func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alert
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 	}
+}
+
+// sslCrossedThreshold reports whether daysLeft just crossed a new expiry
+// threshold (expired/7/14/30 days) and, if so, sets the matching alerted
+// flag so the crossing only fires once. Expired and the 7-day threshold
+// share alerted7d since expiring is a subset of the 7-day window.
+func sslCrossedThreshold(daysLeft int, alerted30d, alerted14d, alerted7d *bool) bool {
+	switch {
+	case daysLeft <= 7 && !*alerted7d:
+		*alerted7d = true
+		return true
+	case daysLeft <= 14 && !*alerted14d:
+		*alerted14d = true
+		return true
+	case daysLeft <= 30 && !*alerted30d:
+		*alerted30d = true
+		return true
+	default:
+		return false
+	}
+}
+
+// sslExpiredMessages builds the alert text for a certificate that has
+// already expired (daysLeft < 0), distinct from sslExpiringSoonMessages'
+// "expires in N days" phrasing.
+func sslExpiredMessages(m db.SslMonitor, expiresStr string) (subject, telegramMsg, emailHTML string) {
+	subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
+	telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
+		m.Name, m.Hostname, expiresStr)
+	emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
+		m.Name, m.Hostname, expiresStr)
+	return subject, telegramMsg, emailHTML
 }
 
 func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (subject, telegramMsg, emailHTML string) {
