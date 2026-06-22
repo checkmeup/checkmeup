@@ -361,7 +361,10 @@ func TestDispatchAlert(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")  // no token: SendMessage always errors, no network call
 	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR-012)
-	wh := webhook.NewClient()
+	// Webhook subtests below POST to a local httptest server, which
+	// NewClient's SSRF protections (loopback blocked) would refuse to dial —
+	// not exercised here, see webhook_test.go.
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	logger := testLogger()
 	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
 	msg := AlertMessage{Telegram: "down", EmailSubject: "down", EmailHTML: "<p>down</p>"}
@@ -613,7 +616,10 @@ func TestCheckUptimeMonitors(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")
 	mailer := email.NewSender("")
-	wh := webhook.NewClient()
+	// The recovery-webhook subtest below POSTs to a local httptest server,
+	// which NewClient's SSRF protections (loopback blocked) would refuse to
+	// dial — not exercised here, see webhook_test.go.
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	logger := testLogger()
 	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
 

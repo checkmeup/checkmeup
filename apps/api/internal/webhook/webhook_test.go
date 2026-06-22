@@ -8,7 +8,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
+
+// unrestrictedTestClient builds a Client with no SSRF protections, for tests
+// that need to reach a local httptest server and aren't themselves testing
+// blockPrivateDial/refuseRedirects.
+func unrestrictedTestClient() *Client {
+	return NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+}
 
 func TestSign(t *testing.T) {
 	sig := Sign([]byte(`{"a":1}`), "secret")
@@ -51,7 +59,7 @@ func TestSend_PostsSignedJSONBody(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient()
+	c := unrestrictedTestClient()
 	event := Event{EventType: "down", MonitorName: "API", MonitorType: "uptime", Reason: "HTTP 500", Timestamp: "2026-06-22T00:00:00Z"}
 	code, err := c.Send(srv.URL, "shh", event)
 	if err != nil {
@@ -74,7 +82,7 @@ func TestSend_NonSuccessStatusReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient()
+	c := unrestrictedTestClient()
 	code, err := c.Send(srv.URL, "shh", Event{EventType: "down"})
 	if err == nil {
 		t.Fatal("want error for a non-2xx response")
@@ -85,12 +93,72 @@ func TestSend_NonSuccessStatusReturnsError(t *testing.T) {
 }
 
 func TestSend_ConnectionFailureReturnsZeroStatus(t *testing.T) {
-	c := NewClient()
+	c := unrestrictedTestClient()
 	code, err := c.Send("http://127.0.0.1:0", "shh", Event{EventType: "down"})
 	if err == nil {
 		t.Fatal("want error when the request never reaches a server")
 	}
 	if code != 0 {
 		t.Fatalf("code = %d, want 0 for a connection failure", code)
+	}
+}
+
+// ─── SSRF protections (NewClient only — unrestrictedTestClient bypasses them) ─
+
+func TestSend_BlocksRestrictedAddresses(t *testing.T) {
+	cases := []struct {
+		name string
+		url  string
+	}{
+		{"loopback", "https://127.0.0.1:1/hook"},
+		{"loopback IPv6", "https://[::1]:1/hook"},
+		{"private RFC1918", "https://10.0.0.1:1/hook"},
+		{"link-local / cloud metadata", "https://169.254.169.254/hook"},
+		{"unspecified", "https://0.0.0.0:1/hook"},
+	}
+	c := NewClient()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, err := c.Send(tc.url, "shh", Event{EventType: "down"})
+			if err == nil {
+				t.Fatalf("want NewClient to refuse to dial %s", tc.url)
+			}
+			if code != 0 {
+				t.Fatalf("code = %d, want 0 for a blocked address", code)
+			}
+		})
+	}
+}
+
+func TestRefuseRedirects(t *testing.T) {
+	if err := refuseRedirects(nil, nil); err == nil {
+		t.Fatal("want refuseRedirects to always return an error")
+	}
+}
+
+func TestBlockPrivateDial(t *testing.T) {
+	cases := []struct {
+		name    string
+		address string
+		wantErr bool
+	}{
+		{"loopback", "127.0.0.1:443", true},
+		{"private", "192.168.1.1:443", true},
+		{"link-local / cloud metadata", "169.254.169.254:443", true},
+		{"unspecified", "0.0.0.0:443", true},
+		{"multicast", "224.0.0.1:443", true},
+		{"public", "93.184.216.34:443", false},
+		{"non-IP host (already resolved by the dialer upstream)", "example.com:443", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := blockPrivateDial("tcp", tc.address, nil)
+			if tc.wantErr && err == nil {
+				t.Fatalf("want an error for address %q", tc.address)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("want no error for address %q, got %v", tc.address, err)
+			}
+		})
 	}
 }

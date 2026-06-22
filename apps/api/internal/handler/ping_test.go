@@ -42,7 +42,11 @@ func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler,
 	}
 	authH := NewAuthHandler(cfg, pool)
 	monitorH := NewMonitorHandler(cfg, pool, telegram.NewClient(""))
-	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient())
+	// The recovery-webhook subtest in TestReceivePing POSTs to a local
+	// httptest server, which webhook.NewClient's SSRF protections (loopback
+	// blocked) would refuse to dial — not exercised here, see webhook_test.go.
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), wh)
 	return authH, monitorH, pingH, pool
 }
 

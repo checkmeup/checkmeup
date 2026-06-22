@@ -10,8 +10,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"syscall"
 	"time"
 )
 
@@ -24,15 +27,59 @@ type Client struct {
 	httpClient *http.Client
 }
 
+// NewClient builds a Client hardened against SSRF: a webhook URL is
+// arbitrary, user-supplied data (US-1401), so the destination has to be
+// restricted to the public internet, not just "https" — otherwise a
+// customer could point a webhook at internal infrastructure (e.g. a cloud
+// metadata endpoint) and have checkmeup's own server make the request for
+// them.
+//   - blockPrivateDial runs in net.Dialer.Control, which fires after DNS
+//     resolution but before the TCP handshake, on the actual address being
+//     connected to — so a hostname that resolves differently between
+//     validation and connect (DNS rebinding) can't bypass it the way a
+//     pre-flight URL/IP check could.
+//   - refuseRedirects stops a 3xx response from retargeting the request to
+//     a blocked address after the initial URL passed muster.
 func NewClient() *Client {
-	return &Client{httpClient: &http.Client{Timeout: 10 * time.Second}}
+	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: blockPrivateDial}
+	return &Client{httpClient: &http.Client{
+		Timeout:       10 * time.Second,
+		Transport:     &http.Transport{DialContext: dialer.DialContext},
+		CheckRedirect: refuseRedirects,
+	}}
+}
+
+// blockPrivateDial rejects connections to loopback, private, link-local
+// (which includes the 169.254.169.254 cloud-metadata address), unspecified,
+// and multicast addresses.
+func blockPrivateDial(_, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		host = address
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("webhook: refusing to dial non-IP address %q", host)
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+		return fmt.Errorf("webhook: refusing to dial restricted address %s", ip)
+	}
+	return nil
+}
+
+func refuseRedirects(*http.Request, []*http.Request) error {
+	return errors.New("webhook: redirects are not followed")
 }
 
 // NewClientWithHTTPClient builds a Client around a caller-provided
-// *http.Client. Used by tests in other packages that need Send to trust a
-// test TLS server's certificate (e.g. httptest.NewTLSServer's Client()) —
+// *http.Client, bypassing NewClient's SSRF protections (blockPrivateDial,
+// refuseRedirects) entirely. Used by tests in other packages that need Send
+// to reach a local httptest server (and, for TLS servers, to trust its
+// self-signed certificate via e.g. httptest.NewTLSServer's Client()) —
 // NewClient's default transport has no way to do that from outside this
-// package, since httpClient is unexported.
+// package, since httpClient is unexported. Not for production use: any
+// caller outside a _test.go file should use NewClient.
 func NewClientWithHTTPClient(hc *http.Client) *Client {
 	return &Client{httpClient: hc}
 }
