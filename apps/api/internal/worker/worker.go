@@ -22,26 +22,38 @@ import (
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
+// Notifiers bundles the dependencies every alert-dispatch and monitor-check
+// path needs. Passed as one value (rather than five separate params) to keep
+// these functions' parameter counts down — every call site already needs
+// the full set together (Lizard_parameter-count-medium).
+type Notifiers struct {
+	Queries  *db.Queries
+	Telegram *telegram.Client
+	Mailer   *email.Sender
+	Webhook  *webhook.Client
+	Logger   *slog.Logger
+}
+
 // Run starts the background worker loops. Returns when ctx is cancelled.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
 //   - Every 24 h: ping retention cleanup (ADR-015)
-func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
+func Run(ctx context.Context, n Notifiers) {
 	ticker := time.NewTicker(30 * time.Second)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 	defer cleanupTicker.Stop()
-	logger.Info("worker started")
+	n.Logger.Info("worker started")
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("worker stopped")
+			n.Logger.Info("worker stopped")
 			return
 		case <-ticker.C:
-			checkOverdue(ctx, queries, tg, mailer, wh, logger)
-			checkUptimeMonitors(ctx, queries, tg, mailer, wh, logger)
-			checkSSLMonitors(ctx, queries, tg, mailer, wh, logger)
+			checkOverdue(ctx, n)
+			checkUptimeMonitors(ctx, n)
+			checkSSLMonitors(ctx, n)
 		case <-cleanupTicker.C:
-			pruneOldPings(ctx, queries, logger)
+			pruneOldPings(ctx, n.Queries, n.Logger)
 		}
 	}
 }
@@ -76,22 +88,22 @@ type MonitorRef struct {
 // to send an alert. Reports whether the alert was delivered at all — per
 // ADR-016 / US-2805, the per-incident alert cap counts one notification
 // event regardless of how many channels (or the fallback) it went out on.
-func DispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, orgID uuid.UUID, mon MonitorRef, msg AlertMessage, logger *slog.Logger) bool {
-	channels, err := queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
+func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon MonitorRef, msg AlertMessage) bool {
+	channels, err := n.Queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
 		MonitorType: mon.Type, MonitorID: mon.ID,
 	})
 	if err != nil {
-		logger.Error("worker: list monitor notification channels", "monitor_id", mon.ID, "err", err)
+		n.Logger.Error("worker: list monitor notification channels", "monitor_id", mon.ID, "err", err)
 		return false
 	}
 
 	if len(channels) == 0 {
-		return dispatchFallbackEmail(ctx, queries, mailer, orgID, msg, logger, mon.ID)
+		return dispatchFallbackEmail(ctx, n, orgID, msg, mon.ID)
 	}
 
 	sent := false
 	for _, c := range channels {
-		if sendToChannel(ctx, queries, c, msg, tg, mailer, wh, logger, mon.ID) {
+		if sendToChannel(ctx, n, c, msg, mon.ID) {
 			sent = true
 		}
 	}
@@ -100,15 +112,15 @@ func DispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client
 
 // sendToChannel delivers msg via a single channel's provider, logging (not
 // returning) a failure so DispatchAlert can keep trying the rest.
-func sendToChannel(ctx context.Context, queries *db.Queries, c db.NotificationChannel, msg AlertMessage, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, monitorID uuid.UUID) bool {
+func sendToChannel(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
 	switch c.Type {
 	case db.NotificationChannelTypeTelegram:
 		chatID := channelConfigValue(c.Config, "chatId")
 		if chatID == "" {
 			return false
 		}
-		if err := tg.SendMessage(chatID, msg.Telegram); err != nil {
-			logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+		if err := n.Telegram.SendMessage(chatID, msg.Telegram); err != nil {
+			n.Logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
 			return false
 		}
 		return true
@@ -117,13 +129,13 @@ func sendToChannel(ctx context.Context, queries *db.Queries, c db.NotificationCh
 		if addr == "" {
 			return false
 		}
-		if err := mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
-			logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
+		if err := n.Mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
+			n.Logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
 			return false
 		}
 		return true
 	case db.NotificationChannelTypeWebhook:
-		return sendWebhookAlert(ctx, queries, c, msg, wh, logger, monitorID)
+		return sendWebhookAlert(ctx, n, c, msg, monitorID)
 	}
 	return false
 }
@@ -132,7 +144,7 @@ func sendToChannel(ctx context.Context, queries *db.Queries, c db.NotificationCh
 // records the delivery outcome on the channel row (US-1404) regardless of
 // success — "Last delivery: failed, 500, 2 min ago" needs a result even
 // when nothing else attached to the monitor succeeded either.
-func sendWebhookAlert(ctx context.Context, queries *db.Queries, c db.NotificationChannel, msg AlertMessage, wh *webhook.Client, logger *slog.Logger, monitorID uuid.UUID) bool {
+func sendWebhookAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
 	if msg.Webhook == nil {
 		return false
 	}
@@ -142,7 +154,7 @@ func sendWebhookAlert(ctx context.Context, queries *db.Queries, c db.Notificatio
 	}
 	secret := channelConfigValue(c.Config, "secret")
 
-	statusCode, sendErr := wh.Send(url, secret, *msg.Webhook)
+	statusCode, sendErr := n.Webhook.Send(url, secret, *msg.Webhook)
 
 	status, detail := "success", fmt.Sprintf("%d", statusCode)
 	if sendErr != nil {
@@ -151,16 +163,16 @@ func sendWebhookAlert(ctx context.Context, queries *db.Queries, c db.Notificatio
 			detail = "timeout / connection error"
 		}
 	}
-	if err := queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+	if err := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
 		ID:                 c.ID,
 		LastDeliveryStatus: pgtype.Text{String: status, Valid: true},
 		LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
 	}); err != nil {
-		logger.Error("worker: record webhook delivery status", "channel_id", c.ID, "err", err)
+		n.Logger.Error("worker: record webhook delivery status", "channel_id", c.ID, "err", err)
 	}
 
 	if sendErr != nil {
-		logger.Error("worker: send webhook alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
+		n.Logger.Error("worker: send webhook alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
 		return false
 	}
 	return true
@@ -170,16 +182,16 @@ func sendWebhookAlert(ctx context.Context, queries *db.Queries, c db.Notificatio
 // attached channels. Every org has exactly one user today (EP-12 team
 // invites aren't built), but this is written against org_id rather than a
 // single user so it doesn't need touching when that ships.
-func dispatchFallbackEmail(ctx context.Context, queries *db.Queries, mailer *email.Sender, orgID uuid.UUID, msg AlertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
-	emails, err := queries.ListOrgUserEmails(ctx, orgID)
+func dispatchFallbackEmail(ctx context.Context, n Notifiers, orgID uuid.UUID, msg AlertMessage, monitorID uuid.UUID) bool {
+	emails, err := n.Queries.ListOrgUserEmails(ctx, orgID)
 	if err != nil {
-		logger.Error("worker: list org user emails", "org_id", orgID, "err", err)
+		n.Logger.Error("worker: list org user emails", "org_id", orgID, "err", err)
 		return false
 	}
 	sent := false
 	for _, addr := range emails {
-		if err := mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
-			logger.Error("worker: send fallback alert email", "monitor_id", monitorID, "err", err)
+		if err := n.Mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
+			n.Logger.Error("worker: send fallback alert email", "monitor_id", monitorID, "err", err)
 			continue
 		}
 		sent = true
@@ -225,69 +237,75 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 
 // ─── cron monitor checks ─────────────────────────────────────────────────────
 
-func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
-	monitors, err := queries.ListOverdueCronMonitors(ctx)
+func checkOverdue(ctx context.Context, n Notifiers) {
+	monitors, err := n.Queries.ListOverdueCronMonitors(ctx)
 	if err != nil {
-		logger.Error("worker: list overdue monitors", "err", err)
+		n.Logger.Error("worker: list overdue monitors", "err", err)
 		return
 	}
 
 	for _, m := range monitors {
-		if err := queries.UpdateCronMonitorDown(ctx, m.ID); err != nil {
-			logger.Error("worker: mark down", "monitor_id", m.ID, "err", err)
-			continue
-		}
+		processOverdueMonitor(ctx, n, m)
+	}
+}
 
-		inc, err := queries.CreateCronIncident(ctx, m.ID)
-		if err != nil {
-			logger.Error("worker: create incident", "monitor_id", m.ID, "err", err)
-			continue
-		}
+func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
+	if err := n.Queries.UpdateCronMonitorDown(ctx, m.ID); err != nil {
+		n.Logger.Error("worker: mark down", "monitor_id", m.ID, "err", err)
+		return
+	}
 
-		if !m.AlertsEnabled {
-			continue
-		}
+	inc, err := n.Queries.CreateCronIncident(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("worker: create incident", "monitor_id", m.ID, "err", err)
+		return
+	}
 
-		max := m.MaxAlertsPerIncident
-		if max > 0 && inc.AlertCount >= max {
-			continue
-		}
+	if !m.AlertsEnabled {
+		return
+	}
+	if max := m.MaxAlertsPerIncident; max > 0 && inc.AlertCount >= max {
+		return
+	}
 
-		missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
-		expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
-		msg := AlertMessage{
-			Telegram: fmt.Sprintf(
-				"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
-				m.Name, m.Schedule, expectedAt, missedBy,
-			),
-			EmailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
-			EmailHTML: fmt.Sprintf(
-				"<p>🔴 <b>%s</b> missed its ping</p><p>Schedule: <code>%s</code><br>Expected at: %s<br>Missed by: %s</p>",
-				m.Name, m.Schedule, expectedAt, missedBy,
-			),
-			Webhook: &webhook.Event{
-				EventType:   "down",
-				MonitorName: m.Name,
-				MonitorType: "cron",
-				Reason:      fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy),
-				Timestamp:   time.Now().UTC().Format(time.RFC3339),
-			},
-		}
-		if !DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg, logger) {
-			continue
-		}
-		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
-			logger.Error("worker: increment alert count", "incident_id", inc.ID, "err", err)
-		}
+	msg := buildOverdueAlert(m)
+	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {
+		return
+	}
+	if _, err := n.Queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
+		n.Logger.Error("worker: increment alert count", "incident_id", inc.ID, "err", err)
+	}
+}
+
+func buildOverdueAlert(m db.CronMonitor) AlertMessage {
+	missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
+	expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
+	return AlertMessage{
+		Telegram: fmt.Sprintf(
+			"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
+			m.Name, m.Schedule, expectedAt, missedBy,
+		),
+		EmailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
+		EmailHTML: fmt.Sprintf(
+			"<p>🔴 <b>%s</b> missed its ping</p><p>Schedule: <code>%s</code><br>Expected at: %s<br>Missed by: %s</p>",
+			m.Name, m.Schedule, expectedAt, missedBy,
+		),
+		Webhook: &webhook.Event{
+			EventType:   "down",
+			MonitorName: m.Name,
+			MonitorType: "cron",
+			Reason:      fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy),
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		},
 	}
 }
 
 // ─── uptime monitor checks ───────────────────────────────────────────────────
 
-func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
-	monitors, err := queries.ListDueUptimeMonitors(ctx)
+func checkUptimeMonitors(ctx context.Context, n Notifiers) {
+	monitors, err := n.Queries.ListDueUptimeMonitors(ctx)
 	if err != nil {
-		logger.Error("uptime worker: list due monitors", "err", err)
+		n.Logger.Error("uptime worker: list due monitors", "err", err)
 		return
 	}
 
@@ -297,107 +315,125 @@ func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneUptimeMonitor(ctx, queries, tg, mailer, wh, logger, m)
+			checkOneUptimeMonitor(ctx, n, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, m db.UptimeMonitor) {
+func checkOneUptimeMonitor(ctx context.Context, n Notifiers, m db.UptimeMonitor) {
 	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m)
+	if !recordUptimeCheck(ctx, n, m, statusCode, responseTimeMs, isUp, failureReason) {
+		return
+	}
 
+	prevStatus := m.Status
+	if isUp {
+		handleUptimeUp(ctx, n, m, prevStatus)
+		return
+	}
+	handleUptimeDown(ctx, n, m, prevStatus, failureReason)
+}
+
+func recordUptimeCheck(ctx context.Context, n Notifiers, m db.UptimeMonitor, statusCode int, responseTimeMs int64, isUp bool, failureReason string) bool {
 	var codeParam pgtype.Int4
 	if statusCode > 0 {
 		codeParam = pgtype.Int4{Int32: int32(statusCode), Valid: true}
 	}
-
-	if _, err := queries.CreateUptimeCheck(ctx, db.CreateUptimeCheckParams{
+	if _, err := n.Queries.CreateUptimeCheck(ctx, db.CreateUptimeCheckParams{
 		MonitorID:      m.ID,
 		StatusCode:     codeParam,
 		ResponseTimeMs: int32(responseTimeMs),
 		IsUp:           isUp,
 		FailureReason:  pgtype.Text{String: failureReason, Valid: failureReason != ""},
 	}); err != nil {
-		logger.Error("uptime worker: create check", "monitor_id", m.ID, "err", err)
+		n.Logger.Error("uptime worker: create check", "monitor_id", m.ID, "err", err)
+		return false
+	}
+	return true
+}
+
+func handleUptimeUp(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevStatus db.MonitorStatus) {
+	if _, err := n.Queries.RecordUptimeCheckUp(ctx, m.ID); err != nil {
+		n.Logger.Error("uptime worker: record up", "monitor_id", m.ID, "err", err)
 		return
 	}
-
-	prevStatus := m.Status
-
-	if isUp {
-		if _, err := queries.RecordUptimeCheckUp(ctx, m.ID); err != nil {
-			logger.Error("uptime worker: record up", "monitor_id", m.ID, "err", err)
-			return
-		}
-		if prevStatus == db.MonitorStatusDown {
-			inc, err := queries.ResolveLatestUptimeIncident(ctx, m.ID)
-			if err != nil {
-				logger.Error("uptime worker: resolve incident", "monitor_id", m.ID, "err", err)
-			}
-			if m.AlertsEnabled && err == nil {
-				downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-				msg := AlertMessage{
-					Telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
-					EmailSubject: fmt.Sprintf("%s recovered", m.Name),
-					EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
-					Webhook: &webhook.Event{
-						EventType:        "recovery",
-						MonitorName:      m.Name,
-						MonitorType:      "uptime",
-						DowntimeDuration: downtime,
-						Timestamp:        time.Now().UTC().Format(time.RFC3339),
-					},
-				}
-				DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, msg, logger)
-			}
-		}
+	if prevStatus != db.MonitorStatusDown {
 		return
 	}
-
-	// Check failed
-	updated, err := queries.RecordUptimeCheckFailure(ctx, m.ID)
+	inc, err := n.Queries.ResolveLatestUptimeIncident(ctx, m.ID)
 	if err != nil {
-		logger.Error("uptime worker: record failure", "monitor_id", m.ID, "err", err)
+		n.Logger.Error("uptime worker: resolve incident", "monitor_id", m.ID, "err", err)
 		return
 	}
+	if !m.AlertsEnabled {
+		return
+	}
+	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
+	DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeRecoveryAlert(m, downtime))
+}
 
-	if updated.ConsecutiveFailures >= 2 && prevStatus != db.MonitorStatusDown {
-		if err := queries.MarkUptimeMonitorDown(ctx, m.ID); err != nil {
-			logger.Error("uptime worker: mark down", "monitor_id", m.ID, "err", err)
-			return
-		}
-		inc, err := queries.CreateUptimeIncident(ctx, m.ID)
-		if err != nil {
-			logger.Error("uptime worker: create incident", "monitor_id", m.ID, "err", err)
-			return
-		}
-		if !m.AlertsEnabled {
-			return
-		}
-		max := m.MaxAlertsPerIncident
-		if max > 0 && inc.AlertCount >= max {
-			return
-		}
-		msg := AlertMessage{
-			Telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
-				m.Name, m.Url, failureReason),
-			EmailSubject: fmt.Sprintf("DOWN: %s", m.Name),
-			EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
-				m.Name, m.Url, failureReason),
-			Webhook: &webhook.Event{
-				EventType:   "down",
-				MonitorName: m.Name,
-				MonitorType: "uptime",
-				Reason:      failureReason,
-				Timestamp:   time.Now().UTC().Format(time.RFC3339),
-			},
-		}
-		if !DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, msg, logger) {
-			return
-		}
-		if _, err := queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
-			logger.Error("uptime worker: increment alert count", "incident_id", inc.ID, "err", err)
-		}
+func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage {
+	return AlertMessage{
+		Telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
+		EmailSubject: fmt.Sprintf("%s recovered", m.Name),
+		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
+		Webhook: &webhook.Event{
+			EventType:        "recovery",
+			MonitorName:      m.Name,
+			MonitorType:      "uptime",
+			DowntimeDuration: downtime,
+			Timestamp:        time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+}
+
+func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevStatus db.MonitorStatus, failureReason string) {
+	updated, err := n.Queries.RecordUptimeCheckFailure(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("uptime worker: record failure", "monitor_id", m.ID, "err", err)
+		return
+	}
+	if updated.ConsecutiveFailures < 2 || prevStatus == db.MonitorStatusDown {
+		return
+	}
+	if err := n.Queries.MarkUptimeMonitorDown(ctx, m.ID); err != nil {
+		n.Logger.Error("uptime worker: mark down", "monitor_id", m.ID, "err", err)
+		return
+	}
+	inc, err := n.Queries.CreateUptimeIncident(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("uptime worker: create incident", "monitor_id", m.ID, "err", err)
+		return
+	}
+	if !m.AlertsEnabled {
+		return
+	}
+	if max := m.MaxAlertsPerIncident; max > 0 && inc.AlertCount >= max {
+		return
+	}
+	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeDownAlert(m, failureReason)) {
+		return
+	}
+	if _, err := n.Queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
+		n.Logger.Error("uptime worker: increment alert count", "incident_id", inc.ID, "err", err)
+	}
+}
+
+func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage {
+	return AlertMessage{
+		Telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
+			m.Name, m.Url, failureReason),
+		EmailSubject: fmt.Sprintf("DOWN: %s", m.Name),
+		EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
+			m.Name, m.Url, failureReason),
+		Webhook: &webhook.Event{
+			EventType:   "down",
+			MonitorName: m.Name,
+			MonitorType: "uptime",
+			Reason:      failureReason,
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		},
 	}
 }
 
@@ -469,10 +505,10 @@ func httpStatusDesc(code int) string {
 
 // ─── SSL monitor checks ──────────────────────────────────────────────────────
 
-func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
-	monitors, err := queries.ListDueSSLMonitors(ctx)
+func checkSSLMonitors(ctx context.Context, n Notifiers) {
+	monitors, err := n.Queries.ListDueSSLMonitors(ctx)
 	if err != nil {
-		logger.Error("ssl worker: list due monitors", "err", err)
+		n.Logger.Error("ssl worker: list due monitors", "err", err)
 		return
 	}
 
@@ -482,102 +518,132 @@ func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Cli
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneSSLMonitor(ctx, queries, tg, mailer, wh, logger, m)
+			checkOneSSLMonitor(ctx, n, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, m db.SslMonitor) {
+func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	expiresAt, issuer, daysLeft, err := performTLSCheck(m.Hostname)
+	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
-	var newStatus db.SslMonitorStatus
-	var expiresAtParam pgtype.Timestamptz
-	var issuerParam pgtype.Text
-	var errorMsgParam pgtype.Text
-	alerted30d, alerted14d, alerted7d := m.Alerted30d, m.Alerted14d, m.Alerted7d
-
-	if err != nil {
-		newStatus = db.SslMonitorStatusError
-		errorMsgParam = pgtype.Text{String: err.Error(), Valid: true}
-	} else {
-		expiresAtParam = pgtype.Timestamptz{Time: expiresAt, Valid: true}
-		issuerParam = pgtype.Text{String: issuer, Valid: true}
-
-		switch {
-		case daysLeft < 0:
-			newStatus = db.SslMonitorStatusExpired
-		case daysLeft <= 30:
-			newStatus = db.SslMonitorStatusExpiringSoon
-		default:
-			newStatus = db.SslMonitorStatusUp
-			// Reset flags when cert is renewed
-			alerted30d, alerted14d, alerted7d = false, false, false
-		}
+	if result.alert != nil {
+		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.alert)
 	}
 
-	// Send threshold alerts (one per crossing)
-	if m.AlertsEnabled && (newStatus == db.SslMonitorStatusExpiringSoon || newStatus == db.SslMonitorStatusExpired) {
-		var subject, telegramMsg, emailHTML string
-		expiresStr := expiresAt.Format("2006-01-02")
-		switch {
-		case daysLeft < 0 && !alerted7d:
-			subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
-			telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
-				m.Name, m.Hostname, expiresStr)
-			emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
-				m.Name, m.Hostname, expiresStr)
-			alerted7d = true
-		case daysLeft <= 7 && !alerted7d:
-			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			alerted7d = true
-		case daysLeft <= 14 && !alerted14d:
-			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			alerted14d = true
-		case daysLeft <= 30 && !alerted30d:
-			subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-			telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-				m.Name, daysLeft, m.Hostname, expiresStr)
-			alerted30d = true
-		}
-		if telegramMsg != "" {
-			DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, AlertMessage{
-				Telegram:     telegramMsg,
-				EmailSubject: subject,
-				EmailHTML:    emailHTML,
-				Webhook: &webhook.Event{
-					EventType:   "down",
-					MonitorName: m.Name,
-					MonitorType: "ssl",
-					Reason:      subject,
-					Timestamp:   time.Now().UTC().Format(time.RFC3339),
-				},
-			}, logger)
-		}
-	}
-
-	if _, err := queries.UpdateSSLMonitorCheck(ctx, db.UpdateSSLMonitorCheckParams{
+	if _, err := n.Queries.UpdateSSLMonitorCheck(ctx, db.UpdateSSLMonitorCheckParams{
 		ID:         m.ID,
-		Status:     newStatus,
-		ExpiresAt:  expiresAtParam,
-		Issuer:     issuerParam,
-		ErrorMsg:   errorMsgParam,
-		Alerted30d: alerted30d,
-		Alerted14d: alerted14d,
-		Alerted7d:  alerted7d,
+		Status:     result.status,
+		ExpiresAt:  result.expiresAtParam,
+		Issuer:     result.issuerParam,
+		ErrorMsg:   result.errorMsgParam,
+		Alerted30d: result.alerted30d,
+		Alerted14d: result.alerted14d,
+		Alerted7d:  result.alerted7d,
 	}); err != nil {
-		logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
+		n.Logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
 	}
+}
+
+// sslCheckResult is the outcome of one performTLSCheck poll: the fields to
+// persist on the monitor row, plus an alert to send when a threshold was
+// freshly crossed (nil otherwise).
+type sslCheckResult struct {
+	status         db.SslMonitorStatus
+	expiresAtParam pgtype.Timestamptz
+	issuerParam    pgtype.Text
+	errorMsgParam  pgtype.Text
+	alerted30d     bool
+	alerted14d     bool
+	alerted7d      bool
+	alert          *AlertMessage
+}
+
+func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, daysLeft int, checkErr error) sslCheckResult {
+	r := sslCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d}
+
+	if checkErr != nil {
+		r.status = db.SslMonitorStatusError
+		r.errorMsgParam = pgtype.Text{String: checkErr.Error(), Valid: true}
+		return r
+	}
+
+	r.expiresAtParam = pgtype.Timestamptz{Time: expiresAt, Valid: true}
+	r.issuerParam = pgtype.Text{String: issuer, Valid: true}
+
+	switch {
+	case daysLeft < 0:
+		r.status = db.SslMonitorStatusExpired
+	case daysLeft <= 30:
+		r.status = db.SslMonitorStatusExpiringSoon
+	default:
+		r.status = db.SslMonitorStatusUp
+		// Reset flags when cert is renewed
+		r.alerted30d, r.alerted14d, r.alerted7d = false, false, false
+		return r
+	}
+
+	// Send threshold alerts (one per crossing). Flags only advance when an
+	// alert is actually eligible to go out, so a monitor with alerts
+	// disabled while a threshold is crossed still alerts once they're
+	// re-enabled, instead of silently skipping it.
+	if m.AlertsEnabled {
+		r.alert = sslThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
+	}
+	return r
+}
+
+// sslThresholdAlert returns the alert for the first newly-crossed expiry
+// threshold (expired, then 7/14/30 days), setting the matching alerted flag
+// so checkOneSSLMonitor only sends one notification per crossing.
+func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alerted30d, alerted14d, alerted7d *bool) *AlertMessage {
+	expiresStr := expiresAt.Format("2006-01-02")
+	var subject, telegramMsg, emailHTML string
+
+	switch {
+	case daysLeft < 0 && !*alerted7d:
+		subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
+		telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
+			m.Name, m.Hostname, expiresStr)
+		emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
+			m.Name, m.Hostname, expiresStr)
+		*alerted7d = true
+	case daysLeft <= 7 && !*alerted7d:
+		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
+		*alerted7d = true
+	case daysLeft <= 14 && !*alerted14d:
+		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
+		*alerted14d = true
+	case daysLeft <= 30 && !*alerted30d:
+		subject, telegramMsg, emailHTML = sslExpiringSoonMessages(m, daysLeft, expiresStr)
+		*alerted30d = true
+	}
+
+	if telegramMsg == "" {
+		return nil
+	}
+	return &AlertMessage{
+		Telegram:     telegramMsg,
+		EmailSubject: subject,
+		EmailHTML:    emailHTML,
+		Webhook: &webhook.Event{
+			EventType:   "down",
+			MonitorName: m.Name,
+			MonitorType: "ssl",
+			Reason:      subject,
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+}
+
+func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (subject, telegramMsg, emailHTML string) {
+	subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
+	telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
+		m.Name, daysLeft, m.Hostname, expiresStr)
+	emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
+		m.Name, daysLeft, m.Hostname, expiresStr)
+	return subject, telegramMsg, emailHTML
 }
 
 func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysLeft int, err error) {

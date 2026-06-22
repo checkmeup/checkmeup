@@ -18,7 +18,7 @@ function jsonResponse(status: number, body: unknown): Response {
     ok: status >= 200 && status < 300,
     status,
     statusText: 'Status Text',
-    json: async () => body,
+    json: () => Promise.resolve(body),
   } as Response
 }
 
@@ -131,9 +131,7 @@ describe('api client', () => {
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
-      json: async () => {
-        throw new Error('not json')
-      },
+      json: () => Promise.reject(new Error('not json')),
     } as Response)
 
     await expect(api.get('/api/v1/thing')).rejects.toMatchObject({

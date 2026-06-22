@@ -92,7 +92,8 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 					Timestamp:        now.UTC().Format(time.RFC3339),
 				},
 			}
-			worker.DispatchAlert(r.Context(), h.queries, h.tg, h.mailer, h.wh, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg, slog.Default())
+			n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Logger: slog.Default()}
+			worker.DispatchAlert(r.Context(), n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)
 		}
 	}
 

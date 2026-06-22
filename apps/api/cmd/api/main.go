@@ -49,7 +49,7 @@ func main() {
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
-	go worker.Run(workerCtx, db.New(pool), tg, mailer, wh, logger)
+	go worker.Run(workerCtx, worker.Notifiers{Queries: db.New(pool), Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger})
 
 	srv := server.New(cfg, logger, pool, version)
 	if err := srv.Start(); err != nil {
