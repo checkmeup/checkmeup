@@ -23,6 +23,23 @@ RETURNING *;
 -- name: DeleteNotificationChannel :exec
 DELETE FROM notification_channels WHERE id = $1 AND org_id = $2;
 
+-- name: UpdateNotificationChannelDelivery :exec
+-- Records the outcome of the most recent send attempt (US-1404). No org_id
+-- filter — only called from the worker, which already scoped the channel via
+-- ListMonitorNotificationChannels, not from a user-facing handler.
+UPDATE notification_channels
+SET last_delivery_status = $2, last_delivery_detail = $3, last_delivery_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateNotificationChannelConfig :one
+-- Used for regenerating a webhook's signing secret in place, without
+-- touching name/enabled (US-1403) — UpdateNotificationChannel always
+-- requires both, which would force the regenerate endpoint to re-send them.
+UPDATE notification_channels
+SET config = $3, updated_at = NOW()
+WHERE id = $1 AND org_id = $2
+RETURNING *;
+
 -- ─── monitor_notification_channels ───────────────────────────────────────────
 
 -- name: ListMonitorNotificationChannelIDs :many

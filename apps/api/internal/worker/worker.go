@@ -19,12 +19,13 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 // Run starts the background worker loops. Returns when ctx is cancelled.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
 //   - Every 24 h: ping retention cleanup (ADR-015)
-func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
+func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
 	ticker := time.NewTicker(30 * time.Second)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
@@ -36,39 +37,46 @@ func Run(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *
 			logger.Info("worker stopped")
 			return
 		case <-ticker.C:
-			checkOverdue(ctx, queries, tg, mailer, logger)
-			checkUptimeMonitors(ctx, queries, tg, mailer, logger)
-			checkSSLMonitors(ctx, queries, tg, mailer, logger)
+			checkOverdue(ctx, queries, tg, mailer, wh, logger)
+			checkUptimeMonitors(ctx, queries, tg, mailer, wh, logger)
+			checkSSLMonitors(ctx, queries, tg, mailer, wh, logger)
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, queries, logger)
 		}
 	}
 }
 
-// alertMessage carries the per-channel content for a single alert event.
-type alertMessage struct {
-	telegram     string
-	emailSubject string
-	emailHTML    string
+// AlertMessage carries the per-channel content for a single alert event.
+// Exported (along with MonitorRef and DispatchAlert) so handler/ping.go's
+// cron-recovery path can route through the same channel dispatch as the
+// worker's own down/recovery events, instead of duplicating it.
+type AlertMessage struct {
+	Telegram     string
+	EmailSubject string
+	EmailHTML    string
+	// Webhook is nil for call sites that haven't been updated to build a
+	// structured event — sendToChannel skips the webhook channel type in
+	// that case rather than sending an empty payload.
+	Webhook *webhook.Event
 }
 
-// monitorRef identifies the monitor an alert is for. Bundled into one value
-// (rather than two separate params) to keep dispatchAlert's parameter count
+// MonitorRef identifies the monitor an alert is for. Bundled into one value
+// (rather than two separate params) to keep DispatchAlert's parameter count
 // down — every call site already has type+ID as a pair, matching the
 // polymorphic monitor_type/monitor_id pattern used at the DB layer (ADR-023).
-type monitorRef struct {
+type MonitorRef struct {
 	Type string
 	ID   uuid.UUID
 }
 
-// dispatchAlert sends msg to every channel attached to the monitor, logging
+// DispatchAlert sends msg to every channel attached to the monitor, logging
 // per-channel failures without aborting the others. If the monitor has no
 // attached, enabled channels, it falls back to emailing every user in the
 // org instead of staying silent (ADR-023) — a monitor always has somewhere
 // to send an alert. Reports whether the alert was delivered at all — per
 // ADR-016 / US-2805, the per-incident alert cap counts one notification
 // event regardless of how many channels (or the fallback) it went out on.
-func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, orgID uuid.UUID, mon monitorRef, msg alertMessage, logger *slog.Logger) bool {
+func DispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, orgID uuid.UUID, mon MonitorRef, msg AlertMessage, logger *slog.Logger) bool {
 	channels, err := queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
 		MonitorType: mon.Type, MonitorID: mon.ID,
 	})
@@ -83,7 +91,7 @@ func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client
 
 	sent := false
 	for _, c := range channels {
-		if sendToChannel(c, msg, tg, mailer, logger, mon.ID) {
+		if sendToChannel(ctx, queries, c, msg, tg, mailer, wh, logger, mon.ID) {
 			sent = true
 		}
 	}
@@ -91,15 +99,15 @@ func dispatchAlert(ctx context.Context, queries *db.Queries, tg *telegram.Client
 }
 
 // sendToChannel delivers msg via a single channel's provider, logging (not
-// returning) a failure so dispatchAlert can keep trying the rest.
-func sendToChannel(c db.NotificationChannel, msg alertMessage, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, monitorID uuid.UUID) bool {
+// returning) a failure so DispatchAlert can keep trying the rest.
+func sendToChannel(ctx context.Context, queries *db.Queries, c db.NotificationChannel, msg AlertMessage, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, monitorID uuid.UUID) bool {
 	switch c.Type {
 	case db.NotificationChannelTypeTelegram:
 		chatID := channelConfigValue(c.Config, "chatId")
 		if chatID == "" {
 			return false
 		}
-		if err := tg.SendMessage(chatID, msg.telegram); err != nil {
+		if err := tg.SendMessage(chatID, msg.Telegram); err != nil {
 			logger.Error("worker: send telegram alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
 			return false
 		}
@@ -109,20 +117,60 @@ func sendToChannel(c db.NotificationChannel, msg alertMessage, tg *telegram.Clie
 		if addr == "" {
 			return false
 		}
-		if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
+		if err := mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
 			logger.Error("worker: send email alert", "monitor_id", monitorID, "channel_id", c.ID, "err", err)
 			return false
 		}
 		return true
+	case db.NotificationChannelTypeWebhook:
+		return sendWebhookAlert(ctx, queries, c, msg, wh, logger, monitorID)
 	}
 	return false
+}
+
+// sendWebhookAlert POSTs msg.Webhook to the channel's configured URL and
+// records the delivery outcome on the channel row (US-1404) regardless of
+// success — "Last delivery: failed, 500, 2 min ago" needs a result even
+// when nothing else attached to the monitor succeeded either.
+func sendWebhookAlert(ctx context.Context, queries *db.Queries, c db.NotificationChannel, msg AlertMessage, wh *webhook.Client, logger *slog.Logger, monitorID uuid.UUID) bool {
+	if msg.Webhook == nil {
+		return false
+	}
+	url := channelConfigValue(c.Config, "url")
+	if url == "" {
+		return false
+	}
+	secret := channelConfigValue(c.Config, "secret")
+
+	statusCode, sendErr := wh.Send(url, secret, *msg.Webhook)
+
+	status, detail := "success", fmt.Sprintf("%d", statusCode)
+	if sendErr != nil {
+		status = "failed"
+		if statusCode == 0 {
+			detail = "timeout / connection error"
+		}
+	}
+	if err := queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+		ID:                 c.ID,
+		LastDeliveryStatus: pgtype.Text{String: status, Valid: true},
+		LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
+	}); err != nil {
+		logger.Error("worker: record webhook delivery status", "channel_id", c.ID, "err", err)
+	}
+
+	if sendErr != nil {
+		logger.Error("worker: send webhook alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
+		return false
+	}
+	return true
 }
 
 // dispatchFallbackEmail emails every user in the org when a monitor has no
 // attached channels. Every org has exactly one user today (EP-12 team
 // invites aren't built), but this is written against org_id rather than a
 // single user so it doesn't need touching when that ships.
-func dispatchFallbackEmail(ctx context.Context, queries *db.Queries, mailer *email.Sender, orgID uuid.UUID, msg alertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
+func dispatchFallbackEmail(ctx context.Context, queries *db.Queries, mailer *email.Sender, orgID uuid.UUID, msg AlertMessage, logger *slog.Logger, monitorID uuid.UUID) bool {
 	emails, err := queries.ListOrgUserEmails(ctx, orgID)
 	if err != nil {
 		logger.Error("worker: list org user emails", "org_id", orgID, "err", err)
@@ -130,7 +178,7 @@ func dispatchFallbackEmail(ctx context.Context, queries *db.Queries, mailer *ema
 	}
 	sent := false
 	for _, addr := range emails {
-		if err := mailer.SendAlertEmail(addr, msg.emailSubject, msg.emailHTML); err != nil {
+		if err := mailer.SendAlertEmail(addr, msg.EmailSubject, msg.EmailHTML); err != nil {
 			logger.Error("worker: send fallback alert email", "monitor_id", monitorID, "err", err)
 			continue
 		}
@@ -149,6 +197,24 @@ func channelConfigValue(raw []byte, key string) string {
 	return strings.TrimSpace(cfg[key])
 }
 
+// FormatDuration renders d as "1h 2m" / "2m 3s" / "3s" for downtime
+// durations in alert messages. Exported so handler/ping.go's cron-recovery
+// path (which needs the same formatting for its webhook event) doesn't
+// duplicate it.
+func FormatDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	s := int(d.Seconds()) % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	if m > 0 {
+		return fmt.Sprintf("%dm %ds", m, s)
+	}
+	return fmt.Sprintf("%ds", s)
+}
+
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
 	if err := queries.DeleteOldCronPings(ctx); err != nil {
 		logger.Error("worker: prune old pings", "err", err)
@@ -159,7 +225,7 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 
 // ─── cron monitor checks ─────────────────────────────────────────────────────
 
-func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
+func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
 	monitors, err := queries.ListOverdueCronMonitors(ctx)
 	if err != nil {
 		logger.Error("worker: list overdue monitors", "err", err)
@@ -189,18 +255,25 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 
 		missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
 		expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
-		msg := alertMessage{
-			telegram: fmt.Sprintf(
+		msg := AlertMessage{
+			Telegram: fmt.Sprintf(
 				"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
 				m.Name, m.Schedule, expectedAt, missedBy,
 			),
-			emailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
-			emailHTML: fmt.Sprintf(
+			EmailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
+			EmailHTML: fmt.Sprintf(
 				"<p>🔴 <b>%s</b> missed its ping</p><p>Schedule: <code>%s</code><br>Expected at: %s<br>Missed by: %s</p>",
 				m.Name, m.Schedule, expectedAt, missedBy,
 			),
+			Webhook: &webhook.Event{
+				EventType:   "down",
+				MonitorName: m.Name,
+				MonitorType: "cron",
+				Reason:      fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy),
+				Timestamp:   time.Now().UTC().Format(time.RFC3339),
+			},
 		}
-		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "cron", ID: m.ID}, msg, logger) {
+		if !DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg, logger) {
 			continue
 		}
 		if _, err := queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -211,7 +284,7 @@ func checkOverdue(ctx context.Context, queries *db.Queries, tg *telegram.Client,
 
 // ─── uptime monitor checks ───────────────────────────────────────────────────
 
-func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
+func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
 	monitors, err := queries.ListDueUptimeMonitors(ctx)
 	if err != nil {
 		logger.Error("uptime worker: list due monitors", "err", err)
@@ -224,13 +297,13 @@ func checkUptimeMonitors(ctx context.Context, queries *db.Queries, tg *telegram.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneUptimeMonitor(ctx, queries, tg, mailer, logger, m)
+			checkOneUptimeMonitor(ctx, queries, tg, mailer, wh, logger, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, m db.UptimeMonitor) {
+func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, m db.UptimeMonitor) {
 	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m)
 
 	var codeParam pgtype.Int4
@@ -257,16 +330,25 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 			return
 		}
 		if prevStatus == db.MonitorStatusDown {
-			if err := queries.ResolveLatestUptimeIncident(ctx, m.ID); err != nil {
+			inc, err := queries.ResolveLatestUptimeIncident(ctx, m.ID)
+			if err != nil {
 				logger.Error("uptime worker: resolve incident", "monitor_id", m.ID, "err", err)
 			}
-			if m.AlertsEnabled {
-				msg := alertMessage{
-					telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
-					emailSubject: fmt.Sprintf("%s recovered", m.Name),
-					emailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
+			if m.AlertsEnabled && err == nil {
+				downtime := FormatDuration(time.Since(inc.StartedAt.Time))
+				msg := AlertMessage{
+					Telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
+					EmailSubject: fmt.Sprintf("%s recovered", m.Name),
+					EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
+					Webhook: &webhook.Event{
+						EventType:        "recovery",
+						MonitorName:      m.Name,
+						MonitorType:      "uptime",
+						DowntimeDuration: downtime,
+						Timestamp:        time.Now().UTC().Format(time.RFC3339),
+					},
 				}
-				dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "uptime", ID: m.ID}, msg, logger)
+				DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, msg, logger)
 			}
 		}
 		return
@@ -296,14 +378,21 @@ func checkOneUptimeMonitor(ctx context.Context, queries *db.Queries, tg *telegra
 		if max > 0 && inc.AlertCount >= max {
 			return
 		}
-		msg := alertMessage{
-			telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
+		msg := AlertMessage{
+			Telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
 				m.Name, m.Url, failureReason),
-			emailSubject: fmt.Sprintf("DOWN: %s", m.Name),
-			emailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
+			EmailSubject: fmt.Sprintf("DOWN: %s", m.Name),
+			EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
 				m.Name, m.Url, failureReason),
+			Webhook: &webhook.Event{
+				EventType:   "down",
+				MonitorName: m.Name,
+				MonitorType: "uptime",
+				Reason:      failureReason,
+				Timestamp:   time.Now().UTC().Format(time.RFC3339),
+			},
 		}
-		if !dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "uptime", ID: m.ID}, msg, logger) {
+		if !DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, msg, logger) {
 			return
 		}
 		if _, err := queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
@@ -380,7 +469,7 @@ func httpStatusDesc(code int) string {
 
 // ─── SSL monitor checks ──────────────────────────────────────────────────────
 
-func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger) {
+func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger) {
 	monitors, err := queries.ListDueSSLMonitors(ctx)
 	if err != nil {
 		logger.Error("ssl worker: list due monitors", "err", err)
@@ -393,13 +482,13 @@ func checkSSLMonitors(ctx context.Context, queries *db.Queries, tg *telegram.Cli
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			checkOneSSLMonitor(ctx, queries, tg, mailer, logger, m)
+			checkOneSSLMonitor(ctx, queries, tg, mailer, wh, logger, m)
 		}()
 	}
 	wg.Wait()
 }
 
-func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, logger *slog.Logger, m db.SslMonitor) {
+func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, logger *slog.Logger, m db.SslMonitor) {
 	expiresAt, issuer, daysLeft, err := performTLSCheck(m.Hostname)
 
 	var newStatus db.SslMonitorStatus
@@ -462,10 +551,17 @@ func checkOneSSLMonitor(ctx context.Context, queries *db.Queries, tg *telegram.C
 			alerted30d = true
 		}
 		if telegramMsg != "" {
-			dispatchAlert(ctx, queries, tg, mailer, m.OrgID, monitorRef{Type: "ssl", ID: m.ID}, alertMessage{
-				telegram:     telegramMsg,
-				emailSubject: subject,
-				emailHTML:    emailHTML,
+			DispatchAlert(ctx, queries, tg, mailer, wh, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, AlertMessage{
+				Telegram:     telegramMsg,
+				EmailSubject: subject,
+				EmailHTML:    emailHTML,
+				Webhook: &webhook.Event{
+					EventType:   "down",
+					MonitorName: m.Name,
+					MonitorType: "ssl",
+					Reason:      subject,
+					Timestamp:   time.Now().UTC().Format(time.RFC3339),
+				},
 			}, logger)
 		}
 	}

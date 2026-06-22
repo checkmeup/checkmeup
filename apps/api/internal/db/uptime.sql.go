@@ -528,7 +528,7 @@ func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (Uptime
 	return i, err
 }
 
-const resolveLatestUptimeIncident = `-- name: ResolveLatestUptimeIncident :exec
+const resolveLatestUptimeIncident = `-- name: ResolveLatestUptimeIncident :one
 UPDATE uptime_incidents
 SET resolved_at = NOW()
 WHERE id = (
@@ -537,11 +537,20 @@ WHERE id = (
     ORDER BY ui.started_at DESC
     LIMIT 1
 )
+RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
-func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, resolveLatestUptimeIncident, monitorID)
-	return err
+func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uuid.UUID) (UptimeIncident, error) {
+	row := q.db.QueryRow(ctx, resolveLatestUptimeIncident, monitorID)
+	var i UptimeIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
+	)
+	return i, err
 }
 
 const resumeUptimeMonitor = `-- name: ResumeUptimeMonitor :one

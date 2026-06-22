@@ -31,6 +31,7 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -39,6 +40,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -359,12 +361,13 @@ func TestDispatchAlert(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")  // no token: SendMessage always errors, no network call
 	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR-012)
+	wh := webhook.NewClient()
 	logger := testLogger()
-	msg := alertMessage{telegram: "down", emailSubject: "down", emailHTML: "<p>down</p>"}
+	msg := AlertMessage{Telegram: "down", EmailSubject: "down", EmailHTML: "<p>down</p>"}
 
 	t.Run("no channel attached and no org user falls back to nothing", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
 		if sent {
 			t.Fatal("want no alert delivered with no channel attached and no org user")
 		}
@@ -373,7 +376,7 @@ func TestDispatchAlert(t *testing.T) {
 	t.Run("no channel attached falls back to emailing every org user (ADR-023)", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		testUser(t, queries, org.ID)
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: uuid.New()}, msg, logger)
 		if !sent {
 			t.Fatal("want the fallback email to org users to count as delivered")
 		}
@@ -385,7 +388,7 @@ func TestDispatchAlert(t *testing.T) {
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeTelegram, map[string]string{"chatId": "123"})
 		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
 
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: monitorID}, msg, logger)
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg, logger)
 		if sent {
 			t.Fatal("want telegram-only delivery to fail with no bot token configured, and no fallback since a channel is attached")
 		}
@@ -399,11 +402,110 @@ func TestDispatchAlert(t *testing.T) {
 		attachNotificationChannel(t, queries, tgChannel.ID, "cron", monitorID)
 		attachNotificationChannel(t, queries, emailChannel.ID, "cron", monitorID)
 
-		sent := dispatchAlert(context.Background(), queries, tg, mailer, org.ID, monitorRef{Type: "cron", ID: monitorID}, msg, logger)
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg, logger)
 		if !sent {
 			t.Fatal("want the email channel's success to count as delivered, even though the telegram channel failed")
 		}
 	})
+
+	t.Run("webhook channel without a Webhook event on the message does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": "https://example.com/hook", "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		// msg has no Webhook field set — call sites that haven't been
+		// updated to build one shouldn't crash, just skip the channel.
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg, logger)
+		if sent {
+			t.Fatal("want no delivery when the message carries no webhook event")
+		}
+	})
+
+	t.Run("webhook channel delivers and records success on the channel row", func(t *testing.T) {
+		var gotSig string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotSig = r.Header.Get(webhook.SignatureHeader)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL, "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		webhookMsg := AlertMessage{Webhook: &webhook.Event{EventType: "down", MonitorName: "X", MonitorType: "cron"}}
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: monitorID}, webhookMsg, logger)
+		if !sent {
+			t.Fatal("want the webhook delivery to count as sent")
+		}
+		if gotSig == "" {
+			t.Fatal("want the request to carry a signature header")
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryStatus.String != "success" {
+			t.Fatalf("want last_delivery_status success, got %q", updated.LastDeliveryStatus.String)
+		}
+		if updated.LastDeliveryDetail.String != "200" {
+			t.Fatalf("want last_delivery_detail 200, got %q", updated.LastDeliveryDetail.String)
+		}
+		if !updated.LastDeliveryAt.Valid {
+			t.Fatal("want last_delivery_at set")
+		}
+	})
+
+	t.Run("webhook channel records failure on a non-2xx response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL, "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		webhookMsg := AlertMessage{Webhook: &webhook.Event{EventType: "down", MonitorName: "X", MonitorType: "cron"}}
+		sent := DispatchAlert(context.Background(), queries, tg, mailer, wh, org.ID, MonitorRef{Type: "cron", ID: monitorID}, webhookMsg, logger)
+		if sent {
+			t.Fatal("want a 500 response to not count as delivered")
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryStatus.String != "failed" {
+			t.Fatalf("want last_delivery_status failed, got %q", updated.LastDeliveryStatus.String)
+		}
+		if updated.LastDeliveryDetail.String != "500" {
+			t.Fatalf("want last_delivery_detail 500, got %q", updated.LastDeliveryDetail.String)
+		}
+	})
+}
+
+func TestFormatDuration(t *testing.T) {
+	cases := []struct {
+		in   time.Duration
+		want string
+	}{
+		{45 * time.Second, "45s"},
+		{90 * time.Second, "1m 30s"},
+		{61 * time.Minute, "1h 1m"},
+		{0, "0s"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.want, func(t *testing.T) {
+			if got := FormatDuration(tc.in); got != tc.want {
+				t.Fatalf("FormatDuration(%v) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
 }
 
 // ─── checkOverdue (cron) ───────────────────────────────────────────────────
@@ -413,6 +515,7 @@ func TestCheckOverdue(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")
 	mailer := email.NewSender("")
+	wh := webhook.NewClient()
 	logger := testLogger()
 
 	t.Run("marks an overdue monitor down, opens an incident, and delivers an alert", func(t *testing.T) {
@@ -422,7 +525,7 @@ func TestCheckOverdue(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
 
-		checkOverdue(context.Background(), queries, tg, mailer, logger)
+		checkOverdue(context.Background(), queries, tg, mailer, wh, logger)
 
 		if status := getCronStatus(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want status down, got %q", status)
@@ -447,7 +550,7 @@ func TestCheckOverdue(t *testing.T) {
 		mon := testCronMonitor(t, queries, org.ID, "every 1h")
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour', alerts_enabled = false WHERE id = $1", mon.ID)
 
-		checkOverdue(context.Background(), queries, tg, mailer, logger)
+		checkOverdue(context.Background(), queries, tg, mailer, wh, logger)
 
 		if status := getCronStatus(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want status down, got %q", status)
@@ -475,7 +578,7 @@ func TestCheckOverdue(t *testing.T) {
 		}
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'cron', $2)", windowID, mon.ID)
 
-		checkOverdue(context.Background(), queries, tg, mailer, logger)
+		checkOverdue(context.Background(), queries, tg, mailer, wh, logger)
 
 		if status := getCronStatus(t, pool, mon.ID); status != "up" {
 			t.Fatalf("want status to remain up under maintenance, got %q", status)
@@ -494,7 +597,7 @@ func TestCheckOverdue(t *testing.T) {
 		mon := testCronMonitor(t, queries, org.ID, "every 1h")
 		// Freshly created: status 'waiting', not 'up' — never selected by
 		// ListOverdueCronMonitors regardless of next_ping_at.
-		checkOverdue(context.Background(), queries, tg, mailer, logger)
+		checkOverdue(context.Background(), queries, tg, mailer, wh, logger)
 		if status := getCronStatus(t, pool, mon.ID); status != "waiting" {
 			t.Fatalf("want status unchanged (waiting), got %q", status)
 		}
@@ -508,6 +611,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")
 	mailer := email.NewSender("")
+	wh := webhook.NewClient()
 	logger := testLogger()
 
 	t.Run("escalates to down after two consecutive failures, then recovers", func(t *testing.T) {
@@ -528,14 +632,14 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
 
 		// First failure: recorded, but one failure alone doesn't trip "down".
-		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
 		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
 		}
 
 		// Second consecutive failure: trips down, opens an incident, alerts.
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
-		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
 		status, failures := getUptimeRow(t, pool, mon.ID)
 		if status != "down" || failures != 2 {
 			t.Fatalf("after 2nd failure: want down with 2 consecutive failures, got status=%q failures=%d", status, failures)
@@ -557,7 +661,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		// Recovery: status flips back, consecutive_failures resets, incident resolves.
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
-		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
 		status, failures = getUptimeRow(t, pool, mon.ID)
 		if status != "up" || failures != 0 {
 			t.Fatalf("after recovery: want up with 0 consecutive failures, got status=%q failures=%d", status, failures)
@@ -572,6 +676,51 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("delivers a recovery webhook event with a non-zero downtime duration", func(t *testing.T) {
+		var up atomic.Bool
+		up.Store(false)
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if up.Load() {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}))
+		defer target.Close()
+
+		var gotEvents []webhook.Event
+		hookSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var e webhook.Event
+			_ = json.NewDecoder(r.Body).Decode(&e)
+			gotEvents = append(gotEvents, e)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer hookSrv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": hookSrv.URL, "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger) // 2nd failure trips down + webhook
+
+		up.Store(true)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger) // recovery + webhook
+
+		if len(gotEvents) != 2 {
+			t.Fatalf("want 2 webhook events (down, recovery), got %d: %+v", len(gotEvents), gotEvents)
+		}
+		if gotEvents[0].EventType != "down" || gotEvents[0].Reason == "" {
+			t.Fatalf("want a down event with a reason, got %+v", gotEvents[0])
+		}
+		if gotEvents[1].EventType != "recovery" || gotEvents[1].DowntimeDuration == "" {
+			t.Fatalf("want a recovery event with a non-empty downtime duration, got %+v", gotEvents[1])
+		}
+	})
+
 	t.Run("records a check row for every poll", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -580,7 +729,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 
 		org := testOrg(t, queries, pool)
 		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
-		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM uptime_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -608,7 +757,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		}
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'uptime', $2)", windowID, mon.ID)
 
-		checkUptimeMonitors(context.Background(), queries, tg, mailer, logger)
+		checkUptimeMonitors(context.Background(), queries, tg, mailer, wh, logger)
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM uptime_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -627,13 +776,14 @@ func TestCheckSSLMonitors(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")
 	mailer := email.NewSender("")
+	wh := webhook.NewClient()
 	logger := testLogger()
 
 	t.Run("a connection failure is recorded as an error status", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
-		checkSSLMonitors(context.Background(), queries, tg, mailer, logger)
+		checkSSLMonitors(context.Background(), queries, tg, mailer, wh, logger)
 
 		var status, errorMsg string
 		var lastCheckedAt pgtype.Timestamptz
@@ -665,7 +815,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 		}
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'ssl', $2)", windowID, mon.ID)
 
-		checkSSLMonitors(context.Background(), queries, tg, mailer, logger)
+		checkSSLMonitors(context.Background(), queries, tg, mailer, wh, logger)
 
 		var status string
 		if err := pool.QueryRow(context.Background(), "SELECT status FROM ssl_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {

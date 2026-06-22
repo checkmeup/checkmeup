@@ -14,6 +14,7 @@ package handler
 // exercised for the email type.
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,6 +25,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 func testNotificationChannelHandler(t *testing.T) (*AuthHandler, *NotificationChannelHandler, *pgxpool.Pool) {
@@ -37,7 +39,7 @@ func testNotificationChannelHandler(t *testing.T) (*AuthHandler, *NotificationCh
 		AppURL:        "http://localhost:5173",
 	}
 	authH := NewAuthHandler(cfg, pool)
-	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""))
+	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient())
 	return authH, channelsH, pool
 }
 
@@ -165,6 +167,46 @@ func TestCreateNotificationChannel(t *testing.T) {
 			t.Fatalf("unexpected channel: %+v", c)
 		}
 	})
+
+	t.Run("webhook missing url", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, channelsH.CreateNotificationChannel, u.access, notificationChannelRequest{
+			Type: "webhook", Name: "X", Config: map[string]any{},
+		})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("webhook url must be https", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, channelsH.CreateNotificationChannel, u.access, notificationChannelRequest{
+			Type: "webhook", Name: "X", Config: map[string]any{"url": "http://example.com/hook"},
+		})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400 for a non-https URL, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("creates a webhook channel with a server-generated signing secret", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "Ops Webhook")
+		if c.Type != "webhook" || c.Config["url"] != "https://example.com/hook" {
+			t.Fatalf("unexpected channel: %+v", c)
+		}
+		secret, _ := c.Config["secret"].(string)
+		if secret == "" {
+			t.Fatal("want a non-empty signing secret generated automatically (US-1401)")
+		}
+	})
+
+	t.Run("a client-supplied secret is ignored — the server always generates its own", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook", "secret": "client-chosen"}, "Ops Webhook")
+		if c.Config["secret"] == "client-chosen" {
+			t.Fatal("want the server to ignore a client-supplied secret")
+		}
+	})
 }
 
 func TestUpdateNotificationChannel(t *testing.T) {
@@ -221,6 +263,77 @@ func TestUpdateNotificationChannel(t *testing.T) {
 			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
 		}
 	})
+
+	t.Run("updating a webhook's URL keeps the original signing secret, ignoring any client-supplied value", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "Hook")
+		originalSecret := c.Config["secret"]
+
+		w := doChannelRequest(t, http.MethodPatch, channelsH.UpdateNotificationChannel, u.access, c.ID, notificationChannelRequest{
+			Name: "Hook", Config: map[string]any{"url": "https://example.com/new-hook", "secret": "attacker-supplied"},
+		})
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		updated := decodeBody[notificationChannelResponse](t, w)
+		if updated.Config["url"] != "https://example.com/new-hook" {
+			t.Fatalf("want the URL updated, got %v", updated.Config["url"])
+		}
+		if updated.Config["secret"] != originalSecret {
+			t.Fatalf("want the secret preserved (%v), got %v", originalSecret, updated.Config["secret"])
+		}
+	})
+}
+
+func TestRegenerateWebhookSecret(t *testing.T) {
+	authH, channelsH, pool := testNotificationChannelHandler(t)
+
+	t.Run("not found", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doChannelRequest(t, http.MethodPost, channelsH.RegenerateWebhookSecret, u.access, "00000000-0000-0000-0000-000000000000", nil)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("rejects non-webhook channels", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u.access, "telegram", map[string]any{"chatId": "1"}, "X")
+
+		w := doChannelRequest(t, http.MethodPost, channelsH.RegenerateWebhookSecret, u.access, c.ID, nil)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("another org's channel is not found (multi-tenancy)", func(t *testing.T) {
+		u1 := signUpTestUser(t, authH, pool)
+		u2 := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u1.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "X")
+
+		w := doChannelRequest(t, http.MethodPost, channelsH.RegenerateWebhookSecret, u2.access, c.ID, nil)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("rotates the secret without touching the URL", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "X")
+		originalSecret := c.Config["secret"]
+
+		w := doChannelRequest(t, http.MethodPost, channelsH.RegenerateWebhookSecret, u.access, c.ID, nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		updated := decodeBody[notificationChannelResponse](t, w)
+		if updated.Config["url"] != "https://example.com/hook" {
+			t.Fatalf("want the URL unchanged, got %v", updated.Config["url"])
+		}
+		if updated.Config["secret"] == originalSecret {
+			t.Fatal("want a new secret after regenerating")
+		}
+	})
 }
 
 func TestDeleteNotificationChannel(t *testing.T) {
@@ -261,7 +374,7 @@ func TestDeleteNotificationChannel(t *testing.T) {
 // doesn't require auth/org context — it tests a (possibly unsaved) type+config
 // directly, same as the old TestTelegram/TestEmail design.
 func TestTestNotificationChannel(t *testing.T) {
-	_, channelsH, _ := testNotificationChannelHandler(t)
+	_, channelsH, pool := testNotificationChannelHandler(t)
 
 	t.Run("unsupported type", func(t *testing.T) {
 		w := doJSON(t, channelsH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
@@ -300,6 +413,57 @@ func TestTestNotificationChannel(t *testing.T) {
 		})
 		if w.Code != http.StatusNoContent {
 			t.Fatalf("want 204, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("webhook missing url", func(t *testing.T) {
+		w := doJSON(t, channelsH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
+			Type: "webhook", Config: map[string]any{},
+		})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("webhook posts a signed sample payload to a reachable endpoint", func(t *testing.T) {
+		// validateChannelConfig requires https:// (US-1401), so this needs a
+		// TLS test server — and a webhook.Client built around that server's
+		// own *http.Client (which trusts its self-signed cert), since the
+		// shared channelsH's client uses the default transport.
+		var gotSig string
+		var gotEvent map[string]any
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotSig = r.Header.Get(webhook.SignatureHeader)
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		tlsTrustingH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClientWithHTTPClient(srv.Client()))
+		w := doJSON(t, tlsTrustingH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
+			Type: "webhook", Config: map[string]any{"url": srv.URL},
+		})
+		if w.Code != http.StatusNoContent {
+			t.Fatalf("want 204, got %d: %s", w.Code, w.Body.String())
+		}
+		if gotSig == "" {
+			t.Fatal("want a signature header on the test request")
+		}
+		if gotEvent["eventType"] != "test" {
+			t.Fatalf("want eventType \"test\", got %v", gotEvent["eventType"])
+		}
+	})
+
+	t.Run("webhook with an unreachable endpoint surfaces as a 502", func(t *testing.T) {
+		w := doJSON(t, channelsH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
+			Type: "webhook", Config: map[string]any{"url": "https://127.0.0.1:0"},
+		})
+		if w.Code != http.StatusBadGateway {
+			t.Fatalf("want 502, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "webhook_error" {
+			t.Fatalf("want code webhook_error, got %q", body["code"])
 		}
 	})
 }

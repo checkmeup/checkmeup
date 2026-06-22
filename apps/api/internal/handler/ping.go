@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,16 +16,19 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 type PingHandler struct {
 	queries *db.Queries
 	tg      *telegram.Client
 	mailer  *email.Sender
+	wh      *webhook.Client
 }
 
-func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender) *PingHandler {
-	return &PingHandler{queries: db.New(pool), tg: tg, mailer: mailer}
+func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client) *PingHandler {
+	return &PingHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh}
 }
 
 // ReceivePing handles GET /ping/{token}
@@ -67,21 +71,28 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	// Recovery: monitor was down and just checked in again. The incident is
 	// resolved regardless of AlertsEnabled — only the alert send itself is
 	// gated by that setting (matches the uptime-monitor worker's pattern).
+	// Routed through worker.DispatchAlert (not org.TelegramChatID/AlertEmail
+	// directly) so cron recovery alerts respect the monitor's attached
+	// notification_channels — including webhook (EP-14) — same as every
+	// other alert path; this used to be a special case still wired to the
+	// pre-EP-28 org-level fields.
 	if wasDown {
 		inc, err := h.queries.ResolveLatestCronIncident(r.Context(), monitor.ID)
 		if err == nil && monitor.AlertsEnabled {
-			org, err := h.queries.GetOrgByID(r.Context(), monitor.OrgID)
-			if err == nil {
-				downtime := formatDuration(now.Sub(inc.StartedAt.Time).Round(time.Second))
-				if org.TelegramChatID.Valid {
-					msg := fmt.Sprintf("✅ <b>%s</b> recovered\n\nDown for: %s", monitor.Name, downtime)
-					_ = h.tg.SendMessage(org.TelegramChatID.String, msg)
-				}
-				if org.EmailAlertsEnabled && org.AlertEmail.Valid {
-					html := fmt.Sprintf("<p>✅ <b>%s</b> recovered</p><p>Down for: %s</p>", monitor.Name, downtime)
-					_ = h.mailer.SendAlertEmail(org.AlertEmail.String, fmt.Sprintf("%s recovered", monitor.Name), html)
-				}
+			downtime := worker.FormatDuration(now.Sub(inc.StartedAt.Time))
+			msg := worker.AlertMessage{
+				Telegram:     fmt.Sprintf("✅ <b>%s</b> recovered\n\nDown for: %s", monitor.Name, downtime),
+				EmailSubject: fmt.Sprintf("%s recovered", monitor.Name),
+				EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> recovered</p><p>Down for: %s</p>", monitor.Name, downtime),
+				Webhook: &webhook.Event{
+					EventType:        "recovery",
+					MonitorName:      monitor.Name,
+					MonitorType:      "cron",
+					DowntimeDuration: downtime,
+					Timestamp:        now.UTC().Format(time.RFC3339),
+				},
 			}
+			worker.DispatchAlert(r.Context(), h.queries, h.tg, h.mailer, h.wh, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg, slog.Default())
 		}
 	}
 
@@ -167,18 +178,3 @@ func realIP(r *http.Request) string {
 	}
 	return addr
 }
-
-func formatDuration(d time.Duration) string {
-	d = d.Round(time.Second)
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
-	if h > 0 {
-		return fmt.Sprintf("%dh %dm", h, m)
-	}
-	if m > 0 {
-		return fmt.Sprintf("%dm %ds", m, s)
-	}
-	return fmt.Sprintf("%ds", s)
-}
-

@@ -9,13 +9,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createNotificationChannel = `-- name: CreateNotificationChannel :one
 
 INSERT INTO notification_channels (org_id, type, name, config)
 VALUES ($1, $2, $3, $4)
-RETURNING id, org_id, type, name, config, enabled, created_at, updated_at
+RETURNING id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at
 `
 
 type CreateNotificationChannelParams struct {
@@ -43,6 +44,9 @@ func (q *Queries) CreateNotificationChannel(ctx context.Context, arg CreateNotif
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeliveryStatus,
+		&i.LastDeliveryDetail,
+		&i.LastDeliveryAt,
 	)
 	return i, err
 }
@@ -76,7 +80,7 @@ func (q *Queries) DeleteNotificationChannel(ctx context.Context, arg DeleteNotif
 }
 
 const getNotificationChannel = `-- name: GetNotificationChannel :one
-SELECT id, org_id, type, name, config, enabled, created_at, updated_at FROM notification_channels WHERE id = $1 AND org_id = $2
+SELECT id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at FROM notification_channels WHERE id = $1 AND org_id = $2
 `
 
 type GetNotificationChannelParams struct {
@@ -96,6 +100,9 @@ func (q *Queries) GetNotificationChannel(ctx context.Context, arg GetNotificatio
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeliveryStatus,
+		&i.LastDeliveryDetail,
+		&i.LastDeliveryAt,
 	)
 	return i, err
 }
@@ -117,7 +124,7 @@ func (q *Queries) InsertMonitorNotificationChannel(ctx context.Context, arg Inse
 }
 
 const listEnabledNotificationChannels = `-- name: ListEnabledNotificationChannels :many
-SELECT id, org_id, type, name, config, enabled, created_at, updated_at FROM notification_channels WHERE org_id = $1 AND enabled = true ORDER BY created_at
+SELECT id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at FROM notification_channels WHERE org_id = $1 AND enabled = true ORDER BY created_at
 `
 
 func (q *Queries) ListEnabledNotificationChannels(ctx context.Context, orgID uuid.UUID) ([]NotificationChannel, error) {
@@ -138,6 +145,9 @@ func (q *Queries) ListEnabledNotificationChannels(ctx context.Context, orgID uui
 			&i.Enabled,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastDeliveryStatus,
+			&i.LastDeliveryDetail,
+			&i.LastDeliveryAt,
 		); err != nil {
 			return nil, err
 		}
@@ -181,7 +191,7 @@ func (q *Queries) ListMonitorNotificationChannelIDs(ctx context.Context, arg Lis
 }
 
 const listMonitorNotificationChannels = `-- name: ListMonitorNotificationChannels :many
-SELECT nc.id, nc.org_id, nc.type, nc.name, nc.config, nc.enabled, nc.created_at, nc.updated_at FROM notification_channels nc
+SELECT nc.id, nc.org_id, nc.type, nc.name, nc.config, nc.enabled, nc.created_at, nc.updated_at, nc.last_delivery_status, nc.last_delivery_detail, nc.last_delivery_at FROM notification_channels nc
 JOIN monitor_notification_channels mnc ON mnc.channel_id = nc.id
 WHERE mnc.monitor_type = $1 AND mnc.monitor_id = $2 AND nc.enabled = true
 `
@@ -209,6 +219,9 @@ func (q *Queries) ListMonitorNotificationChannels(ctx context.Context, arg ListM
 			&i.Enabled,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastDeliveryStatus,
+			&i.LastDeliveryDetail,
+			&i.LastDeliveryAt,
 		); err != nil {
 			return nil, err
 		}
@@ -221,7 +234,7 @@ func (q *Queries) ListMonitorNotificationChannels(ctx context.Context, arg ListM
 }
 
 const listNotificationChannels = `-- name: ListNotificationChannels :many
-SELECT id, org_id, type, name, config, enabled, created_at, updated_at FROM notification_channels WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at FROM notification_channels WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListNotificationChannels(ctx context.Context, orgID uuid.UUID) ([]NotificationChannel, error) {
@@ -242,6 +255,9 @@ func (q *Queries) ListNotificationChannels(ctx context.Context, orgID uuid.UUID)
 			&i.Enabled,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastDeliveryStatus,
+			&i.LastDeliveryDetail,
+			&i.LastDeliveryAt,
 		); err != nil {
 			return nil, err
 		}
@@ -283,7 +299,7 @@ const updateNotificationChannel = `-- name: UpdateNotificationChannel :one
 UPDATE notification_channels
 SET name = $3, config = $4, enabled = $5, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, type, name, config, enabled, created_at, updated_at
+RETURNING id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at
 `
 
 type UpdateNotificationChannelParams struct {
@@ -312,6 +328,64 @@ func (q *Queries) UpdateNotificationChannel(ctx context.Context, arg UpdateNotif
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastDeliveryStatus,
+		&i.LastDeliveryDetail,
+		&i.LastDeliveryAt,
 	)
 	return i, err
+}
+
+const updateNotificationChannelConfig = `-- name: UpdateNotificationChannelConfig :one
+UPDATE notification_channels
+SET config = $3, updated_at = NOW()
+WHERE id = $1 AND org_id = $2
+RETURNING id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at
+`
+
+type UpdateNotificationChannelConfigParams struct {
+	ID     uuid.UUID `json:"id"`
+	OrgID  uuid.UUID `json:"org_id"`
+	Config []byte    `json:"config"`
+}
+
+// Used for regenerating a webhook's signing secret in place, without
+// touching name/enabled (US-1403) — UpdateNotificationChannel always
+// requires both, which would force the regenerate endpoint to re-send them.
+func (q *Queries) UpdateNotificationChannelConfig(ctx context.Context, arg UpdateNotificationChannelConfigParams) (NotificationChannel, error) {
+	row := q.db.QueryRow(ctx, updateNotificationChannelConfig, arg.ID, arg.OrgID, arg.Config)
+	var i NotificationChannel
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Type,
+		&i.Name,
+		&i.Config,
+		&i.Enabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastDeliveryStatus,
+		&i.LastDeliveryDetail,
+		&i.LastDeliveryAt,
+	)
+	return i, err
+}
+
+const updateNotificationChannelDelivery = `-- name: UpdateNotificationChannelDelivery :exec
+UPDATE notification_channels
+SET last_delivery_status = $2, last_delivery_detail = $3, last_delivery_at = NOW()
+WHERE id = $1
+`
+
+type UpdateNotificationChannelDeliveryParams struct {
+	ID                 uuid.UUID   `json:"id"`
+	LastDeliveryStatus pgtype.Text `json:"last_delivery_status"`
+	LastDeliveryDetail pgtype.Text `json:"last_delivery_detail"`
+}
+
+// Records the outcome of the most recent send attempt (US-1404). No org_id
+// filter — only called from the worker, which already scoped the channel via
+// ListMonitorNotificationChannels, not from a user-facing handler.
+func (q *Queries) UpdateNotificationChannelDelivery(ctx context.Context, arg UpdateNotificationChannelDeliveryParams) error {
+	_, err := q.db.Exec(ctx, updateNotificationChannelDelivery, arg.ID, arg.LastDeliveryStatus, arg.LastDeliveryDetail)
+	return err
 }

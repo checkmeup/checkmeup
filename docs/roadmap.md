@@ -14,10 +14,9 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-1. [EP-14](stories/ep-14-webhook-alerts.md) — Webhook alerts. Built on [EP-28](stories/ep-28-notification-channels.md) (shipped v1.6); EP-17 and EP-18 are in turn built on top of this.
-2. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts
-3. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts
-4. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
+1. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts. Built on [EP-14](stories/ep-14-webhook-alerts.md) (shipped v1.7)
+2. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts. Also built on EP-14
+3. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
 
 ### Later
 

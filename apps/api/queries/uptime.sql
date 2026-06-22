@@ -91,7 +91,7 @@ WHERE monitor_id = $1;
 -- name: CreateUptimeIncident :one
 INSERT INTO uptime_incidents (monitor_id) VALUES ($1) RETURNING *;
 
--- name: ResolveLatestUptimeIncident :exec
+-- name: ResolveLatestUptimeIncident :one
 UPDATE uptime_incidents
 SET resolved_at = NOW()
 WHERE id = (
@@ -99,7 +99,8 @@ WHERE id = (
     WHERE ui.monitor_id = $1 AND ui.resolved_at IS NULL
     ORDER BY ui.started_at DESC
     LIMIT 1
-);
+)
+RETURNING *;
 
 -- name: ListUptimeIncidents :many
 SELECT * FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC;

@@ -4,23 +4,29 @@ package handler
 // cron jobs hit to check in, plus its pure helper functions. Integration
 // tests follow the same conventions as the other *_test.go files in this
 // package (real Postgres, ADR-010); the pure functions (computeNextPing,
-// parseEveryDuration, realIP, formatDuration) are deterministic given their
-// inputs (no internal time.Now() — "now" is always passed in), so they're
-// tested with exact-value table tests, no tolerance windows needed.
+// parseEveryDuration, realIP) are deterministic given their inputs (no
+// internal time.Now() — "now" is always passed in), so they're tested with
+// exact-value table tests, no tolerance windows needed. Downtime formatting
+// (formerly a local formatDuration here) moved to worker.FormatDuration —
+// see worker_test.go — once the cron-recovery path started sharing
+// worker.DispatchAlert instead of sending alerts directly (EP-14).
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler, *pgxpool.Pool) {
@@ -36,7 +42,7 @@ func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler,
 	}
 	authH := NewAuthHandler(cfg, pool)
 	monitorH := NewMonitorHandler(cfg, pool, telegram.NewClient(""))
-	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""))
+	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient())
 	return authH, monitorH, pingH, pool
 }
 
@@ -184,6 +190,55 @@ func TestReceivePing(t *testing.T) {
 		}
 	})
 
+	t.Run("recovery delivers a webhook event via the monitor's attached channel", func(t *testing.T) {
+		var gotEvent webhook.Event
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Recovering job, webhook")
+		seedCronDown(t, pool, mon.ID, time.Now().Add(-30*time.Minute))
+
+		orgID, err := uuid.Parse(u.resp.OrgID)
+		if err != nil {
+			t.Fatalf("parse org id: %v", err)
+		}
+		monID, err := uuid.Parse(mon.ID)
+		if err != nil {
+			t.Fatalf("parse monitor id: %v", err)
+		}
+
+		queries := db.New(pool)
+		channel, err := queries.CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+			OrgID: orgID, Type: db.NotificationChannelTypeWebhook, Name: "Hook",
+			Config: []byte(`{"url":"` + srv.URL + `","secret":"shh"}`),
+		})
+		if err != nil {
+			t.Fatalf("create webhook channel: %v", err)
+		}
+		if err := queries.InsertMonitorNotificationChannel(context.Background(), db.InsertMonitorNotificationChannelParams{
+			ChannelID: channel.ID, MonitorType: "cron", MonitorID: monID,
+		}); err != nil {
+			t.Fatalf("attach webhook channel: %v", err)
+		}
+
+		token := cronPingToken(t, pool, mon.ID)
+		w := doPing(t, pingH, token, nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if gotEvent.EventType != "recovery" {
+			t.Fatalf("want a recovery webhook event, got %+v", gotEvent)
+		}
+		if gotEvent.DowntimeDuration == "" {
+			t.Fatal("want a non-empty downtime duration on the recovery event")
+		}
+	})
+
 	t.Run("recovery resolves the incident even with alerts disabled", func(t *testing.T) {
 		// Incident resolution must not depend on AlertsEnabled — only the
 		// alert send itself is gated by that setting (matches the
@@ -299,25 +354,6 @@ func TestRealIP(t *testing.T) {
 			t.Fatalf("want 198.51.100.7, got %q", got)
 		}
 	})
-}
-
-func TestFormatDuration(t *testing.T) {
-	cases := []struct {
-		in   time.Duration
-		want string
-	}{
-		{45 * time.Second, "45s"},
-		{90 * time.Second, "1m 30s"},
-		{61 * time.Minute, "1h 1m"},
-		{0, "0s"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.want, func(t *testing.T) {
-			if got := formatDuration(tc.in); got != tc.want {
-				t.Fatalf("formatDuration(%v) = %q, want %q", tc.in, got, tc.want)
-			}
-		})
-	}
 }
 
 func cronPingToken(t *testing.T, pool *pgxpool.Pool, monitorID string) string {

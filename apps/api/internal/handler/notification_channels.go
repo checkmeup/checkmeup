@@ -5,54 +5,77 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 type NotificationChannelHandler struct {
 	queries *db.Queries
 	tg      *telegram.Client
 	mailer  *email.Sender
+	wh      *webhook.Client
 }
 
-func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender) *NotificationChannelHandler {
-	return &NotificationChannelHandler{queries: db.New(pool), tg: tg, mailer: mailer}
+func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client) *NotificationChannelHandler {
+	return &NotificationChannelHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh}
 }
 
 type notificationChannelResponse struct {
-	ID        string         `json:"id"`
-	Type      string         `json:"type"`
-	Name      string         `json:"name"`
-	Config    map[string]any `json:"config"`
-	Enabled   bool           `json:"enabled"`
-	CreatedAt string         `json:"createdAt"`
+	ID                 string         `json:"id"`
+	Type               string         `json:"type"`
+	Name               string         `json:"name"`
+	Config             map[string]any `json:"config"`
+	Enabled            bool           `json:"enabled"`
+	CreatedAt          string         `json:"createdAt"`
+	LastDeliveryStatus string         `json:"lastDeliveryStatus,omitempty"`
+	LastDeliveryDetail string         `json:"lastDeliveryDetail,omitempty"`
+	LastDeliveryAt     string         `json:"lastDeliveryAt,omitempty"`
 }
 
+// toNotificationChannelResponse round-trips config verbatim, including a
+// webhook channel's signing secret. ADR-023 flags secrets in config JSONB
+// as something that "should never round-trip unmasked" in general (Slack
+// webhook URLs, future OAuth tokens) — but a checkmeup-issued HMAC signing
+// secret is different from a bearer credential: US-1403 requires it stay
+// "viewable... in Settings" so the user can configure their endpoint to
+// verify X-Checkmeup-Signature. Masking it would break that requirement.
 func toNotificationChannelResponse(c db.NotificationChannel) notificationChannelResponse {
 	var cfg map[string]any
 	_ = json.Unmarshal(c.Config, &cfg)
 	return notificationChannelResponse{
-		ID:        c.ID.String(),
-		Type:      string(c.Type),
-		Name:      c.Name,
-		Config:    cfg,
-		Enabled:   c.Enabled,
-		CreatedAt: c.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ID:                 c.ID.String(),
+		Type:               string(c.Type),
+		Name:               c.Name,
+		Config:             cfg,
+		Enabled:            c.Enabled,
+		CreatedAt:          c.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		LastDeliveryStatus: c.LastDeliveryStatus.String,
+		LastDeliveryDetail: c.LastDeliveryDetail.String,
+		LastDeliveryAt:     formatDeliveryAt(c.LastDeliveryAt),
 	}
 }
 
+func formatDeliveryAt(t pgtype.Timestamptz) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.Format("2006-01-02T15:04:05Z")
+}
+
 // validateChannelConfig checks config has the field(s) required for type.
-// Only telegram/email are supported today — other notification_channel_type
-// values get added (their own migration + their own case here) when their
-// epic actually ships (ADR-023).
+// Other notification_channel_type values get added (their own migration +
+// their own case here) when their epic actually ships (ADR-023).
 func validateChannelConfig(channelType string, config map[string]any) error {
 	switch channelType {
 	case "telegram":
@@ -65,8 +88,25 @@ func validateChannelConfig(channelType string, config map[string]any) error {
 		if strings.TrimSpace(addr) == "" {
 			return errors.New("email is required")
 		}
+	case "webhook":
+		return validateWebhookURL(config)
 	default:
 		return errors.New("unsupported channel type")
+	}
+	return nil
+}
+
+// validateWebhookURL enforces the US-1401 AC that a webhook URL must be
+// https://. Doesn't require config["secret"] — that's generated server-side
+// (see ensureWebhookSecret), never supplied by the client.
+func validateWebhookURL(config map[string]any) error {
+	rawURL, _ := config["url"].(string)
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return errors.New("url is required")
+	}
+	if !strings.HasPrefix(rawURL, "https://") {
+		return errors.New("url must start with https://")
 	}
 	return nil
 }
@@ -121,6 +161,14 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 	if err := validateChannelConfig(req.Type, req.Config); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
+	}
+	if req.Type == "webhook" {
+		secret, err := webhook.GenerateSecret()
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		req.Config["secret"] = secret
 	}
 	configBytes, err := json.Marshal(req.Config)
 	if err != nil {
@@ -193,6 +241,18 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 // config bytes plus the enabled value to write, preserving existing.Enabled
 // when req.Enabled is omitted.
 func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificationChannelRequest) ([]byte, bool, error) {
+	if existing.Type == db.NotificationChannelTypeWebhook {
+		// The signing secret can only change via RegenerateWebhookSecret
+		// (US-1403) — a regular PATCH (editing the URL or name) always
+		// carries the existing secret forward, ignoring anything the client
+		// sent for it.
+		var existingCfg map[string]any
+		_ = json.Unmarshal(existing.Config, &existingCfg)
+		if req.Config == nil {
+			req.Config = map[string]any{}
+		}
+		req.Config["secret"] = existingCfg["secret"]
+	}
 	if err := validateChannelConfig(string(existing.Type), req.Config); err != nil {
 		return nil, false, err
 	}
@@ -205,6 +265,55 @@ func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificati
 		enabled = *req.Enabled
 	}
 	return configBytes, enabled, nil
+}
+
+// RegenerateWebhookSecret POST /api/v1/notification-channels/{id}/regenerate-secret
+// Rotates a webhook channel's HMAC signing secret in place (US-1403).
+// Existing requests already in flight keep validating against the old
+// secret until they're sent — only future sends use the new one, since
+// nothing is retroactively re-signed.
+func (h *NotificationChannelHandler) RegenerateWebhookSecret(w http.ResponseWriter, r *http.Request) {
+	orgID, channelID, ok := notificationChannelIDs(w, r)
+	if !ok {
+		return
+	}
+
+	existing, err := h.queries.GetNotificationChannel(r.Context(), db.GetNotificationChannelParams{ID: channelID, OrgID: orgID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
+			return
+		}
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if existing.Type != db.NotificationChannelTypeWebhook {
+		respond.Error(w, http.StatusBadRequest, "only webhook channels have a signing secret", "bad_request")
+		return
+	}
+
+	var cfg map[string]any
+	_ = json.Unmarshal(existing.Config, &cfg)
+	secret, err := webhook.GenerateSecret()
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	cfg["secret"] = secret
+	configBytes, err := json.Marshal(cfg)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	channel, err := h.queries.UpdateNotificationChannelConfig(r.Context(), db.UpdateNotificationChannelConfigParams{
+		ID: channelID, OrgID: orgID, Config: configBytes,
+	})
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	respond.JSON(w, http.StatusOK, toNotificationChannelResponse(channel))
 }
 
 // DeleteNotificationChannel DELETE /api/v1/notification-channels/{id}
@@ -253,6 +362,26 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		addr, _ := req.Config["email"].(string)
 		if err := h.mailer.SendTestAlertEmail(strings.TrimSpace(addr)); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "email_error")
+			return
+		}
+	case "webhook":
+		url, _ := req.Config["url"].(string)
+		// The real signing secret doesn't exist until the channel is saved
+		// (US-1401) — sign with a throwaway one so the request shape on the
+		// wire matches a real send, even though there's nothing yet for the
+		// receiver to verify against.
+		secret, err := webhook.GenerateSecret()
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		event := webhook.Event{
+			EventType:   "test",
+			MonitorName: "Test monitor",
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		}
+		if _, err := h.wh.Send(strings.TrimSpace(url), secret, event); err != nil {
+			respond.Error(w, http.StatusBadGateway, err.Error(), "webhook_error")
 			return
 		}
 	}

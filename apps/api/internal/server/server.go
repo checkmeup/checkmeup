@@ -22,6 +22,7 @@ import (
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 type Server struct {
@@ -60,11 +61,12 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	tg := telegram.NewClient(s.cfg.TelegramBotToken)
 	mailer := email.NewSender(s.cfg.ResendAPIKey)
+	wh := webhook.NewClient()
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
 	settings := handler.NewSettingsHandler(s.cfg, tg)
-	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer)
-	ping := handler.NewPingHandler(s.db, tg, mailer)
+	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer, wh)
+	ping := handler.NewPingHandler(s.db, tg, mailer, wh)
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
@@ -114,6 +116,7 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Route("/{id}", func(r chi.Router) {
 					r.Patch("/", notifChannels.UpdateNotificationChannel)
 					r.Delete("/", notifChannels.DeleteNotificationChannel)
+					r.Post("/regenerate-secret", notifChannels.RegenerateWebhookSecret)
 				})
 			})
 

@@ -103,6 +103,7 @@ type NotificationChannelType string
 const (
 	NotificationChannelTypeTelegram NotificationChannelType = "telegram"
 	NotificationChannelTypeEmail    NotificationChannelType = "email"
+	NotificationChannelTypeWebhook  NotificationChannelType = "webhook"
 )
 
 func (e *NotificationChannelType) Scan(src interface{}) error {
@@ -295,14 +296,17 @@ type MonitorNotificationChannel struct {
 }
 
 type NotificationChannel struct {
-	ID        uuid.UUID               `json:"id"`
-	OrgID     uuid.UUID               `json:"org_id"`
-	Type      NotificationChannelType `json:"type"`
-	Name      string                  `json:"name"`
-	Config    []byte                  `json:"config"`
-	Enabled   bool                    `json:"enabled"`
-	CreatedAt pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz      `json:"updated_at"`
+	ID                 uuid.UUID               `json:"id"`
+	OrgID              uuid.UUID               `json:"org_id"`
+	Type               NotificationChannelType `json:"type"`
+	Name               string                  `json:"name"`
+	Config             []byte                  `json:"config"`
+	Enabled            bool                    `json:"enabled"`
+	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
+	LastDeliveryStatus pgtype.Text             `json:"last_delivery_status"`
+	LastDeliveryDetail pgtype.Text             `json:"last_delivery_detail"`
+	LastDeliveryAt     pgtype.Timestamptz      `json:"last_delivery_at"`
 }
 
 type Org struct {

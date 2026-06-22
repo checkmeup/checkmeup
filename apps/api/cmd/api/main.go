@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
 	"github.com/checkmeup/checkmeup/internal/config"
@@ -15,6 +15,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/server"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/webhook"
 	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
@@ -43,11 +44,12 @@ func main() {
 
 	tg := telegram.NewClient(cfg.TelegramBotToken)
 	mailer := email.NewSender(cfg.ResendAPIKey)
+	wh := webhook.NewClient()
 	registerTelegramWebhook(cfg, tg, logger)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
-	go worker.Run(workerCtx, db.New(pool), tg, mailer, logger)
+	go worker.Run(workerCtx, db.New(pool), tg, mailer, wh, logger)
 
 	srv := server.New(cfg, logger, pool, version)
 	if err := srv.Start(); err != nil {

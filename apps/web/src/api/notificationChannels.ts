@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export type NotificationChannelType = 'telegram' | 'email'
+export type NotificationChannelType = 'telegram' | 'email' | 'webhook'
 
 export interface NotificationChannel {
   id: string
@@ -9,6 +9,9 @@ export interface NotificationChannel {
   config: Record<string, string>
   enabled: boolean
   createdAt: string
+  lastDeliveryStatus?: 'success' | 'failed'
+  lastDeliveryDetail?: string
+  lastDeliveryAt?: string
 }
 
 export interface NotificationChannelInput {
@@ -32,4 +35,6 @@ export const notificationChannelsApi = {
   delete: (id: string) => api.delete(`/api/v1/notification-channels/${id}/`),
   test: (input: TestNotificationChannelInput) =>
     api.post('/api/v1/notification-channels/test', input),
+  regenerateWebhookSecret: (id: string) =>
+    api.post<NotificationChannel>(`/api/v1/notification-channels/${id}/regenerate-secret`, null),
 }

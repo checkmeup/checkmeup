@@ -13,8 +13,26 @@ import { useNotificationChannels } from '@/composables/useNotificationChannels'
 const { data, isPending: loading, refetch } = useNotificationChannels()
 const channels = computed(() => data.value ?? [])
 
-const typeLabel: Record<NotificationChannelType, string> = { telegram: 'Telegram', email: 'Email' }
-const configKey: Record<NotificationChannelType, string> = { telegram: 'chatId', email: 'email' }
+const typeLabel: Record<NotificationChannelType, string> = {
+  telegram: 'Telegram',
+  email: 'Email',
+  webhook: 'Webhook',
+}
+const configKey: Record<NotificationChannelType, string> = {
+  telegram: 'chatId',
+  email: 'email',
+  webhook: 'url',
+}
+const valueLabel: Record<NotificationChannelType, string> = {
+  telegram: 'Chat ID',
+  email: 'Email address',
+  webhook: 'Webhook URL',
+}
+const valuePlaceholder: Record<NotificationChannelType, string> = {
+  telegram: '-1001234567890',
+  email: 'alerts@yourteam.com',
+  webhook: 'https://example.com/hooks/checkmeup',
+}
 
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
@@ -22,23 +40,50 @@ const type = ref<NotificationChannelType>('telegram')
 const name = ref('')
 const value = ref('')
 const enabled = ref(true)
+// Only populated when editing an existing webhook channel — the secret
+// doesn't exist until the channel is first saved (US-1401).
+const secret = ref('')
 
 const saving = ref(false)
 const testing = ref(false)
 const deletingId = ref('')
+const regeneratingSecret = ref(false)
+const regenerateError = ref('')
 const formError = ref('')
 const testSuccess = ref(false)
 const testError = ref('')
+
+// relativeTime mirrors the small per-view helper used elsewhere (e.g.
+// CronMonitorListView.vue) rather than a new shared util, matching this
+// codebase's existing pattern for this exact bit of formatting.
+function relativeTime(iso: string | undefined) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  const h = Math.floor(m / 60)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m} min ago`
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+function deliverySummary(c: NotificationChannel) {
+  if (c.type !== 'webhook' || !c.lastDeliveryStatus) return ''
+  const parts = [c.lastDeliveryStatus, c.lastDeliveryDetail, relativeTime(c.lastDeliveryAt)].filter(Boolean)
+  return `Last delivery: ${parts.join(', ')}`
+}
 
 function startAdd() {
   editingId.value = null
   type.value = 'telegram'
   name.value = ''
   value.value = ''
+  secret.value = ''
   enabled.value = true
   formError.value = ''
   testSuccess.value = false
   testError.value = ''
+  regenerateError.value = ''
   showForm.value = true
 }
 
@@ -47,11 +92,28 @@ function startEdit(c: NotificationChannel) {
   type.value = c.type
   name.value = c.name
   value.value = c.config[configKey[c.type]] ?? ''
+  secret.value = c.type === 'webhook' ? (c.config.secret ?? '') : ''
   enabled.value = c.enabled
   formError.value = ''
   testSuccess.value = false
   testError.value = ''
+  regenerateError.value = ''
   showForm.value = true
+}
+
+async function regenerateSecret() {
+  if (!editingId.value) return
+  regeneratingSecret.value = true
+  regenerateError.value = ''
+  try {
+    const updated = await notificationChannelsApi.regenerateWebhookSecret(editingId.value)
+    secret.value = updated.config.secret ?? ''
+    await refetch()
+  } catch (e: unknown) {
+    regenerateError.value = e instanceof Error ? e.message : 'Failed to regenerate secret'
+  } finally {
+    regeneratingSecret.value = false
+  }
 }
 
 function cancelForm() {
@@ -84,7 +146,11 @@ async function save() {
     return
   }
   if (!value.value.trim()) {
-    formError.value = type.value === 'telegram' ? 'Chat ID is required' : 'Email is required'
+    formError.value = `${valueLabel[type.value]} is required`
+    return
+  }
+  if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
+    formError.value = 'Webhook URL must start with https://'
     return
   }
 
@@ -138,8 +204,8 @@ async function toggleEnabled(c: NotificationChannel) {
   <div class="rounded-xl border p-6" style="background-color: var(--surface); border-color: var(--border)">
     <h2 class="font-medium mb-1" style="color: var(--text-strong)">Notification channels</h2>
     <p class="text-sm mb-5" style="color: var(--text-muted)">
-      Connect Telegram and email destinations, then choose which channels each monitor alerts on. A
-      monitor with no channels attached falls back to your account email.
+      Connect Telegram, email, and webhook destinations, then choose which channels each monitor
+      alerts on. A monitor with no channels attached falls back to your account email.
     </p>
 
     <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
@@ -162,6 +228,13 @@ async function toggleEnabled(c: NotificationChannel) {
           <p class="text-sm truncate" style="color: var(--text)">{{ c.name }}</p>
           <p class="text-xs truncate" style="color: var(--text-muted)">
             {{ typeLabel[c.type] }} · {{ c.config[configKey[c.type]] }}
+          </p>
+          <p
+            v-if="deliverySummary(c)"
+            class="text-xs truncate"
+            :style="{ color: c.lastDeliveryStatus === 'success' ? 'var(--status-up)' : 'var(--status-down)' }"
+          >
+            {{ deliverySummary(c) }}
           </p>
         </div>
         <Button variant="secondary" size="sm" @click="startEdit(c)">Edit</Button>
@@ -190,6 +263,7 @@ async function toggleEnabled(c: NotificationChannel) {
         >
           <option value="telegram">Telegram</option>
           <option value="email">Email</option>
+          <option value="webhook">Webhook</option>
         </select>
       </div>
 
@@ -215,25 +289,64 @@ async function toggleEnabled(c: NotificationChannel) {
         <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
       </ol>
 
+      <p v-else-if="type === 'webhook'" class="text-sm" style="color: var(--text-dim)">
+        checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
+        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+          >X-Checkmeup-Signature</code
+        >. Must be <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+          >https://</code
+        >.
+      </p>
+
       <div>
         <Label for="channel-name">Name</Label>
         <Input id="channel-name" v-model="name" placeholder="e.g. Ops Telegram" class="mt-1" />
       </div>
 
       <div>
-        <Label for="channel-value">{{ type === 'telegram' ? 'Chat ID' : 'Email address' }}</Label>
+        <Label for="channel-value">{{ valueLabel[type] }}</Label>
         <Input
           id="channel-value"
           v-model="value"
-          :type="type === 'email' ? 'email' : 'text'"
-          :placeholder="type === 'telegram' ? '-1001234567890' : 'alerts@yourteam.com'"
+          :type="type === 'email' ? 'email' : type === 'webhook' ? 'url' : 'text'"
+          :placeholder="valuePlaceholder[type]"
           class="mt-1"
         />
       </div>
 
+      <div v-if="type === 'webhook' && editingId" class="space-y-2">
+        <Label for="channel-secret">Signing secret</Label>
+        <div class="flex items-center gap-3">
+          <Input id="channel-secret" :model-value="secret" disabled class="mt-1 font-mono text-xs" />
+          <Button
+            variant="secondary"
+            size="sm"
+            :disabled="regeneratingSecret"
+            @click="regenerateSecret"
+          >
+            {{ regeneratingSecret ? 'Regenerating…' : 'Regenerate' }}
+          </Button>
+        </div>
+        <p class="text-xs" style="color: var(--text-muted)">
+          Verify a request by computing HMAC-SHA256 of the raw request body using this secret as the
+          key, hex-encoding it, and comparing it to the
+          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+            >X-Checkmeup-Signature</code
+          >
+          header. Regenerating invalidates the signature for future sends only — already-delivered
+          requests aren't affected.
+        </p>
+        <p v-if="regenerateError" class="text-xs" style="color: var(--status-down)">
+          {{ regenerateError }}
+        </p>
+      </div>
+      <p v-else-if="type === 'webhook'" class="text-xs" style="color: var(--text-muted)">
+        A signing secret is generated automatically once you save this channel.
+      </p>
+
       <div class="flex items-center gap-3">
         <Button variant="secondary" :disabled="!value.trim() || testing" @click="test">
-          {{ testing ? 'Sending…' : 'Send test message' }}
+          {{ testing ? 'Sending…' : type === 'webhook' ? 'Send test webhook' : 'Send test message' }}
         </Button>
         <Button :disabled="saving" @click="save">
           {{ saving ? 'Saving…' : editingId ? 'Save changes' : 'Add channel' }}
@@ -241,7 +354,9 @@ async function toggleEnabled(c: NotificationChannel) {
         <Button variant="secondary" type="button" @click="cancelForm">Cancel</Button>
       </div>
 
-      <p v-if="testSuccess" class="text-sm" style="color: var(--status-up)">Test message sent!</p>
+      <p v-if="testSuccess" class="text-sm" style="color: var(--status-up)">
+        {{ type === 'webhook' ? 'Test webhook sent!' : 'Test message sent!' }}
+      </p>
       <p v-if="testError" class="text-sm" style="color: var(--status-down)">{{ testError }}</p>
       <p v-if="formError" class="text-sm" style="color: var(--status-down)">{{ formError }}</p>
     </div>
