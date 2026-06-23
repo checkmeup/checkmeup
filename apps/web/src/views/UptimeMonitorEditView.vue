@@ -88,7 +88,7 @@ watch(
     keyword.value = m.keyword ?? ''
     keywordMode.value = m.keywordMode
     keywordCaseSensitive.value = m.keywordCaseSensitive
-    jsonAssertions.value = m.jsonAssertions ?? []
+    jsonAssertions.value = [...(m.jsonAssertions ?? [])]
     maxResponseTimeMs.value = m.maxResponseTimeMs ?? null
     channelIds.value = m.channelIds ?? []
   },

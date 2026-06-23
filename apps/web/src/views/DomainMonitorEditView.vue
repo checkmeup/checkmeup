@@ -24,7 +24,7 @@ const error = ref('')
 const limitReached = ref(false)
 
 const { data: monitor, isPending: loading, error: loadError } = useDomainMonitor(id)
-const stopMonitorWatch = watch(
+watch(
   monitor,
   (m) => {
     if (!m) return
@@ -32,7 +32,6 @@ const stopMonitorWatch = watch(
     domain.value = m.domain
     alertsEnabled.value = m.alertsEnabled
     channelIds.value = m.channelIds ?? []
-    stopMonitorWatch()
   },
   { immediate: true },
 )

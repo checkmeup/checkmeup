@@ -37,7 +37,7 @@ function toIso(local: string): string {
 }
 
 const { data: win, isPending: loading, error: loadError } = useMaintenanceWindow(id)
-const stopWinWatch = watch(
+watch(
   win,
   (w) => {
     if (!w) return
@@ -54,7 +54,6 @@ const stopWinWatch = watch(
       monitorId: m.monitorId,
       name: m.name,
     }))
-    stopWinWatch()
   },
   { immediate: true },
 )
