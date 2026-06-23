@@ -176,15 +176,15 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
         <ol class="space-y-2 text-sm" style="color: var(--text-dim)">
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">1</span>
-            Add a cron monitor and copy the ping URL
+            Add a monitor — cron, uptime, SSL, or domain expiry
           </li>
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">2</span>
-            Call the ping URL at the end of your cron job
+            Set up an alert channel — Telegram, email, or webhook
           </li>
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">3</span>
-            Connect Telegram to receive alerts when a job misses
+            Create a status page to share uptime with your clients
           </li>
         </ol>
       </div>
