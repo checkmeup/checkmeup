@@ -335,42 +335,12 @@ func (h *StatusPublicHandler) fillSSLRow(ctx context.Context, id uuid.UUID, row 
 	if err != nil {
 		return
 	}
-
-	switch string(mon.Status) {
-	case "up":
-		row.StatusLabel, row.StatusColor = "Valid", statusColorGreen
-	case "expiring_soon":
-		row.StatusLabel, row.StatusColor = "Expiring soon", statusColorAmber
-	case "expired":
-		row.StatusLabel, row.StatusColor = "Expired", statusColorRed
-	case "error":
-		row.StatusLabel, row.StatusColor = "Error", statusColorRed
-	case "paused":
-		row.StatusLabel, row.StatusColor = "Paused", statusColorGray
-	default:
-		row.StatusLabel, row.StatusColor = "Checking…", statusColorGray
-	}
-
+	row.StatusLabel, row.StatusColor = expiryStatusDisplay(string(mon.Status))
 	if mon.ExpiresAt.Valid {
 		row.ExpiresAt = mon.ExpiresAt.Time.Format("2006-01-02")
 		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
 	}
-
-	// SSL bar: all green except current status reflected in last segment
-	barColor := statusColorGreen
-	switch string(mon.Status) {
-	case "expiring_soon":
-		barColor = statusColorAmber
-	case "expired", "error":
-		barColor = statusColorRed
-	case "waiting", "paused":
-		barColor = statusColorLight
-	}
-	bar := make([]publicBar, 90)
-	for i := range bar {
-		bar[i] = publicBar{Color: barColor}
-	}
-	row.Bar = bar
+	row.Bar = solidColorBar(string(mon.Status))
 }
 
 func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -378,42 +348,12 @@ func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, r
 	if err != nil {
 		return
 	}
-
-	switch string(mon.Status) {
-	case "up":
-		row.StatusLabel, row.StatusColor = "Valid", statusColorGreen
-	case "expiring_soon":
-		row.StatusLabel, row.StatusColor = "Expiring soon", statusColorAmber
-	case "expired":
-		row.StatusLabel, row.StatusColor = "Expired", statusColorRed
-	case "error":
-		row.StatusLabel, row.StatusColor = "Error", statusColorRed
-	case "paused":
-		row.StatusLabel, row.StatusColor = "Paused", statusColorGray
-	default:
-		row.StatusLabel, row.StatusColor = "Checking…", statusColorGray
-	}
-
+	row.StatusLabel, row.StatusColor = expiryStatusDisplay(string(mon.Status))
 	if mon.ExpiresAt.Valid {
 		row.ExpiresAt = mon.ExpiresAt.Time.Format("2006-01-02")
 		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
 	}
-
-	// Domain bar: all green except current status reflected in last segment
-	barColor := statusColorGreen
-	switch string(mon.Status) {
-	case "expiring_soon":
-		barColor = statusColorAmber
-	case "expired", "error":
-		barColor = statusColorRed
-	case "waiting", "paused":
-		barColor = statusColorLight
-	}
-	bar := make([]publicBar, 90)
-	for i := range bar {
-		bar[i] = publicBar{Color: barColor}
-	}
-	row.Bar = bar
+	row.Bar = solidColorBar(string(mon.Status))
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -425,6 +365,40 @@ const (
 	statusColorGray  = "#94A3B8"
 	statusColorLight = "#E2E8F0"
 )
+
+func expiryStatusDisplay(s string) (label, color string) {
+	switch s {
+	case "up":
+		return "Valid", statusColorGreen
+	case "expiring_soon":
+		return "Expiring soon", statusColorAmber
+	case "expired":
+		return "Expired", statusColorRed
+	case "error":
+		return "Error", statusColorRed
+	case "paused":
+		return "Paused", statusColorGray
+	default:
+		return "Checking…", statusColorGray
+	}
+}
+
+func solidColorBar(status string) []publicBar {
+	color := statusColorGreen
+	switch status {
+	case "expiring_soon":
+		color = statusColorAmber
+	case "expired", "error":
+		color = statusColorRed
+	case "waiting", "paused":
+		color = statusColorLight
+	}
+	bar := make([]publicBar, 90)
+	for i := range bar {
+		bar[i] = publicBar{Color: color}
+	}
+	return bar
+}
 
 func monitorStatusDisplay(s string) (label, color string) {
 	switch s {

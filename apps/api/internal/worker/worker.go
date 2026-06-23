@@ -541,48 +541,67 @@ func evaluateJsonAssertion(body string, a jsonAssertion) (string, bool) {
 	if err := json.Unmarshal([]byte(body), &root); err != nil {
 		return "response is not valid JSON", false
 	}
+	actual, errMsg, ok := resolveJSONPath(root, a.Path)
+	if !ok {
+		return errMsg, false
+	}
+	return applyComparator(a.Path, a.Comparator, actual, a.Expected)
+}
 
-	path := strings.TrimPrefix(a.Path, "$.")
-	path = strings.TrimPrefix(path, ".")
-	segments := strings.Split(path, ".")
-
+func resolveJSONPath(root map[string]any, path string) (value, errMsg string, ok bool) {
+	p := strings.TrimPrefix(path, "$.")
+	p = strings.TrimPrefix(p, ".")
 	var cur any = root
-	for _, seg := range segments {
-		m, ok := cur.(map[string]any)
-		if !ok {
-			return fmt.Sprintf("JSON path %q not found", a.Path), false
+	for _, seg := range strings.Split(p, ".") {
+		m, isMap := cur.(map[string]any)
+		if !isMap {
+			return "", fmt.Sprintf("JSON path %q not found", path), false
 		}
 		cur, ok = m[seg]
 		if !ok {
-			return fmt.Sprintf("JSON path %q not found", a.Path), false
+			return "", fmt.Sprintf("JSON path %q not found", path), false
 		}
 	}
+	return jsonValueToString(cur), "", true
+}
 
-	actual := jsonValueToString(cur)
+func applyComparator(path, comparator, actual, expected string) (string, bool) {
+	switch comparator {
+	case "greater_than", "less_than":
+		return applyNumericComparator(path, comparator, actual, expected)
+	default:
+		return applyStringComparator(path, comparator, actual, expected)
+	}
+}
 
-	switch a.Comparator {
+func applyStringComparator(path, comparator, actual, expected string) (string, bool) {
+	var passes bool
+	switch comparator {
 	case "equals":
-		if actual != a.Expected {
-			return fmt.Sprintf("JSON assertion failed: %q equals %q (got %q)", a.Path, a.Expected, actual), false
-		}
+		passes = actual == expected
 	case "not_equals":
-		if actual == a.Expected {
-			return fmt.Sprintf("JSON assertion failed: %q not_equals %q (got %q)", a.Path, a.Expected, actual), false
+		passes = actual != expected
+	default: // "contains"
+		passes = strings.Contains(actual, expected)
+	}
+	if !passes {
+		return fmt.Sprintf("JSON assertion failed: %q %s %q (got %q)", path, comparator, expected, actual), false
+	}
+	return "", true
+}
+
+func applyNumericComparator(path, comparator, actual, expected string) (string, bool) {
+	av, ae, parseOk := parseNumericPair(actual, expected)
+	var passes bool
+	if parseOk {
+		if comparator == "greater_than" {
+			passes = av > ae
+		} else {
+			passes = av < ae
 		}
-	case "contains":
-		if !strings.Contains(actual, a.Expected) {
-			return fmt.Sprintf("JSON assertion failed: %q contains %q (got %q)", a.Path, a.Expected, actual), false
-		}
-	case "greater_than":
-		av, ae, ok := parseNumericPair(actual, a.Expected)
-		if !ok || av <= ae {
-			return fmt.Sprintf("JSON assertion failed: %q greater_than %q (got %q)", a.Path, a.Expected, actual), false
-		}
-	case "less_than":
-		av, ae, ok := parseNumericPair(actual, a.Expected)
-		if !ok || av >= ae {
-			return fmt.Sprintf("JSON assertion failed: %q less_than %q (got %q)", a.Path, a.Expected, actual), false
-		}
+	}
+	if !passes {
+		return fmt.Sprintf("JSON assertion failed: %q %s %q (got %q)", path, comparator, expected, actual), false
 	}
 	return "", true
 }

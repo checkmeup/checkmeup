@@ -22,7 +22,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'The status page editor gets a Badges section listing every badge available for that page — the page-level one at the top, one row per attached monitor below. Each row shows a live preview and two copy buttons: one for the Markdown embed (`![status](...)`), one for HTML (`<img>` wrapped in an `<a>` linking back to the public page). Domain monitors, added in v1.8, appear here alongside the other three types.',
+      text: 'The status page editor gets a Badges section listing every badge available for that page — the page-level one at the top, one row per attached monitor below. Each row shows a live preview and two copy buttons: one for the Markdown embed (`![status](...)`), one for HTML (an img element inside an anchor linking back to the public page). Domain monitors, added in v1.8, appear here alongside the other three types.',
     },
     {
       type: 'h3',
