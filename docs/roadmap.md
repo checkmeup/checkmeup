@@ -17,7 +17,6 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 1. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts. Built on [EP-14](stories/ep-14-webhook-alerts.md) (shipped v1.7)
 2. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts. Also built on EP-14
 3. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
-4. [EP-31](stories/ep-31-assertion-checks.md) — Assertion-based API checks. No blockers; extends EP-11's keyword-search foundation. From the competitor gap analysis in [`docs/bucket-list.md`](bucket-list.md)
 
 ### Later
 

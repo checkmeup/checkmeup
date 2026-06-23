@@ -54,7 +54,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Public status badges and assertion-based API checks are next up. Releases land on this blog as they ship; the GitHub repo has the full commit history and architecture decision records if you want the why behind any of this.',
+      text: 'Assertion-based API checks shipped same day as this post — see v1.9. Releases land on this blog as they ship; the GitHub repo has the full commit history and architecture decision records if you want the why behind any of this.',
     },
     {
       type: 'signature',

@@ -12,10 +12,10 @@ Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)
 
 **Acceptance criteria:**
 
-- [ ] New assertion type alongside the existing keyword check (EP-11): JSON path (e.g. `$.status` or `data.healthy`), comparator (`equals` / `not_equals` / `contains` / `greater_than` / `less_than`), expected value
-- [ ] Multiple JSON assertions on one monitor are ANDed — all must pass
-- [ ] Response body that isn't valid JSON, when a JSON assertion is configured, fails the check with a distinct reason ("response is not valid JSON") rather than silently passing
-- [ ] Reuses EP-11's existing 512 KB body cap — JSON assertions only see content within that cap
+- [x] New assertion type alongside the existing keyword check (EP-11): JSON path (e.g. `$.status` or `data.healthy`), comparator (`equals` / `not_equals` / `contains` / `greater_than` / `less_than`), expected value
+- [x] Multiple JSON assertions on one monitor are ANDed — all must pass
+- [x] Response body that isn't valid JSON, when a JSON assertion is configured, fails the check with a distinct reason ("response is not valid JSON") rather than silently passing
+- [x] Reuses EP-11's existing 512 KB body cap — JSON assertions only see content within that cap
 
 ---
 
@@ -27,9 +27,9 @@ Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)
 
 **Acceptance criteria:**
 
-- [ ] Optional field on the uptime monitor: max response time (ms)
-- [ ] Exceeding it fails the check with reason "response time exceeded" — distinct from a connection-level timeout, which already fails today
-- [ ] Independent of keyword/JSON assertions — any single failing condition fails the whole check
+- [x] Optional field on the uptime monitor: max response time (ms)
+- [x] Exceeding it fails the check with reason "response time exceeded" — distinct from a connection-level timeout, which already fails today
+- [x] Independent of keyword/JSON assertions — any single failing condition fails the whole check
 
 ---
 
@@ -41,9 +41,9 @@ Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)
 
 **Acceptance criteria:**
 
-- [ ] One HTTP check run evaluates, in order: status code, keyword (EP-11), JSON assertions (US-3101), response-time threshold (US-3102) — the first failing condition is the recorded failure reason
-- [ ] Same 2-consecutive-failures / alert / recovery state machine as existing checks ([US-0303](ep-03-uptime-monitor.md)) — no new alerting model
-- [ ] Opt-in — a monitor with no assertions configured behaves exactly as it does today
+- [x] One HTTP check run evaluates, in order: status code, keyword (EP-11), JSON assertions (US-3101), response-time threshold (US-3102) — the first failing condition is the recorded failure reason
+- [x] Same 2-consecutive-failures / alert / recovery state machine as existing checks ([US-0303](ep-03-uptime-monitor.md)) — no new alerting model
+- [x] Opt-in — a monitor with no assertions configured behaves exactly as it does today
 
 ---
 
@@ -55,9 +55,9 @@ Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)
 
 **Acceptance criteria:**
 
-- [ ] Monitor list/detail shows configured assertions (JSON path + comparator + expected value, response-time threshold) alongside the existing keyword display
-- [ ] Check log failure reason distinguishes status-code vs keyword vs JSON-assertion vs response-time failures
-- [ ] Raw response body is still never stored or displayed, consistent with EP-11 US-1104
+- [x] Monitor list/detail shows configured assertions (JSON path + comparator + expected value, response-time threshold) alongside the existing keyword display
+- [x] Check log failure reason distinguishes status-code vs keyword vs JSON-assertion vs response-time failures
+- [x] Raw response body is still never stored or displayed, consistent with EP-11 US-1104
 
 ---
 

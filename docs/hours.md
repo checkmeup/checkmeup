@@ -35,3 +35,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-22 | Mon | Codacy fixes, blog           | 2 h   |
 | 2026-06-23 | Tue | EP-29 docs & website copy    | 1 h   |
 | 2026-06-23 | Tue | Blog                         | 1 h   |
+| 2026-06-23 | Tue | EP-31                        | 4 h   |
