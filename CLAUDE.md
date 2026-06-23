@@ -25,7 +25,7 @@ make migrate-create name=foo  # create a new goose migration file
 
 **Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · LemonSqueezy (billing) · go-chi/httprate (rate limiting) · air (hot reload)  
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
-**Infra:** Hetzner CX23 · Kamal · Traefik  
+**Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
 
 > `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).

@@ -32,7 +32,8 @@ CREATE TABLE notification_channels (
     updated_at  TIMESTAMPTZ                NOT NULL DEFAULT NOW()
 );
 
--- monitor_type is 'cron', 'uptime', or 'ssl'; no FK constraint, same pattern as
+-- monitor_type is 'cron', 'uptime', 'ssl', or 'domain' (the last added by EP-29,
+-- after this ADR); no FK constraint, same pattern as
 -- maintenance_window_monitors / status_page_monitors
 CREATE TABLE monitor_notification_channels (
     id            UUID NOT NULL DEFAULT gen_random_uuid(),

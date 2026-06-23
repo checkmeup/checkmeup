@@ -19,7 +19,7 @@
 | [EP-11](ep-11-keyword-monitoring.md)  | Keyword monitoring              | 5/5           |
 | [EP-12](ep-12-team-management.md)     | Team management                 | 0/5           |
 | [EP-13](ep-13-email-alerts.md)        | Email alerts                    | 5/5           |
-| [EP-14](ep-14-webhook-alerts.md)      | Webhook alerts                  | 0/5           |
+| [EP-14](ep-14-webhook-alerts.md)      | Webhook alerts                  | 5/5           |
 | [EP-15](ep-15-whatsapp-alerts.md)     | WhatsApp alerts                 | 0/5           |
 | [EP-16](ep-16-signal-alerts.md)       | Signal alerts                   | 0/5           |
 | [EP-17](ep-17-slack-alerts.md)        | Slack alerts                    | 0/5           |
@@ -33,9 +33,10 @@
 | [EP-25](ep-25-two-factor-auth.md)     | Two-factor authentication       | 0/5           |
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |
 | [EP-27](ep-27-annual-billing.md)      | Annual billing                  | 3/3           |
-| [EP-28](ep-28-notification-channels.md) | Notification channels         | 0/5           |
+| [EP-28](ep-28-notification-channels.md) | Notification channels         | 4/5***        |
 | [EP-29](ep-29-domain-expiry-monitoring.md) | Domain expiry monitoring   | 3/5**         |
+| [EP-30](ep-30-status-badges.md)       | Public status badges            | 4/4           |
 
-`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note.
+`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note. \*\*\* EP-28: US-2804's legacy-column-drop AC is deliberately deferred to a later migration, after the cutover has proven stable in production — see the epic file.
 
 See [roadmap.md](../roadmap.md) for the Now / Next / Later priority order ([ADR-022](../decisions/022-post-mvp-docs-organization.md)).

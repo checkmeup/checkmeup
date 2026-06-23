@@ -2,6 +2,8 @@
 
 A small embeddable status image, generated per status page ([EP-06](ep-06-status-page.md)) and per monitor on that page, for dropping into a README, footer, or docs site. Cheap to build (server-rendered SVG, no new infra) and doubles as free marketing — the badge links back to the public status page (see `docs/bucket-list.md`).
 
+**Shipped 2026-06-23**, full epic (4/4). Badges are hand-rendered SVG (no external badge service), keyed to the same operational/degraded/outage wording as the page banner. `ADR-013` extended to rate-limit the two new public routes by IP at 300/min.
+
 ---
 
 ### US-3001: Generate an overall status badge for a status page
@@ -12,10 +14,10 @@ A small embeddable status image, generated per status page ([EP-06](ep-06-status
 
 **Acceptance criteria:**
 
-- [ ] Public, unauthenticated endpoint, e.g. `GET /status/:slug/badge.svg`
-- [ ] SVG generated server-side (Go, no external badge-rendering service — keeps to the no-new-infra principle)
-- [ ] Badge text reflects current page status, same wording as the page banner: "operational" / "degraded" / "outage"
-- [ ] 404 if the slug doesn't exist or the page was deleted, matching EP-06 US-0605
+- [x] Public, unauthenticated endpoint, e.g. `GET /status/:slug/badge.svg`
+- [x] SVG generated server-side (Go, no external badge-rendering service — keeps to the no-new-infra principle)
+- [x] Badge text reflects current page status, same wording as the page banner: "operational" / "degraded" / "outage"
+- [x] 404 if the slug doesn't exist or the page was deleted, matching EP-06 US-0605
 
 ---
 
@@ -27,9 +29,9 @@ A small embeddable status image, generated per status page ([EP-06](ep-06-status
 
 **Acceptance criteria:**
 
-- [ ] Endpoint per monitor on a page, e.g. `GET /status/:slug/badge/:monitor_id.svg`
-- [ ] 404 if the monitor isn't attached to that status page (no leaking monitor status outside its page's visibility)
-- [ ] Same visual style and status wording as the page-level badge (US-3001)
+- [x] Endpoint per monitor on a page, e.g. `GET /status/:slug/badge/:monitor_id.svg`
+- [x] 404 if the monitor isn't attached to that status page (no leaking monitor status outside its page's visibility)
+- [x] Same visual style and status wording as the page-level badge (US-3001)
 
 ---
 
@@ -41,9 +43,9 @@ A small embeddable status image, generated per status page ([EP-06](ep-06-status
 
 **Acceptance criteria:**
 
-- [ ] Status page editor (EP-06) gets a "Badges" section listing the page-level badge and one row per attached monitor
-- [ ] Live preview of each badge rendered in the UI
-- [ ] One-click copy for both Markdown (`![status](...)`) and HTML (`<img>` wrapped in `<a>` linking to the public page) snippet forms
+- [x] Status page editor (EP-06) gets a "Badges" section listing the page-level badge and one row per attached monitor
+- [x] Live preview of each badge rendered in the UI
+- [x] One-click copy for both Markdown (`![status](...)`) and HTML (`<img>` wrapped in `<a>` linking to the public page) snippet forms
 
 ---
 
@@ -55,5 +57,5 @@ A small embeddable status image, generated per status page ([EP-06](ep-06-status
 
 **Acceptance criteria:**
 
-- [ ] Badge responses set `Cache-Control: max-age=60` (or similar short TTL) — reflects a status change within a minute without unbounded re-generation
-- [ ] Badge endpoints are public and subject to the same rate limiting as other public status-page routes ([ADR-013](../decisions/013-rate-limiting.md)), not exempted
+- [x] Badge responses set `Cache-Control: max-age=60` (or similar short TTL) — reflects a status change within a minute without unbounded re-generation
+- [x] Badge endpoints are public and subject to the same rate limiting as other public status-page routes ([ADR-013](../decisions/013-rate-limiting.md)), not exempted

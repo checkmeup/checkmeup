@@ -299,7 +299,7 @@ describe('StatusPageDetailView', () => {
       await copyButtons[0]!.trigger('click')
 
       expect(writeText).toHaveBeenCalledExactlyOnceWith(
-        '[![checkmeup status](https://checkmeup.net/status/status/badge.svg)](https://checkmeup.net/status/status)',
+        '![checkmeup status](https://checkmeup.net/status/status/badge.svg)',
       )
       expect(copyButtons[0]!.text()).toBe('Copied!')
       vi.unstubAllGlobals()

@@ -24,7 +24,7 @@ Options considered:
 
 Use **`go-chi/httprate`** applied per-route in `buildRouter()`. Limits are enforced at the application layer. Each route gets the narrowest key that makes sense (IP for auth endpoints, ping token for the ping endpoint).
 
-Limits chosen:
+Limits chosen (table kept current as routes are added after this ADR's original write-up — `POST /webhook/telegram`, `POST /webhook/lemonsqueezy`, `POST /suggestions`, and `POST /notification-channels/{id}/test` predate this entry but were missing from the table until 2026-06-23):
 
 | Endpoint | Limit | Window | Key |
 |---|---|---|---|
@@ -34,6 +34,11 @@ Limits chosen:
 | `GET /ping/{token}` | 60 | 1 minute | token |
 | `GET /status/:slug/badge.svg` | 300 | 1 minute | IP |
 | `GET /status/:slug/badge/:monitor_id.svg` | 300 | 1 minute | IP |
+| `POST /webhook/telegram` | 60 | 1 minute | IP |
+| `POST /webhook/lemonsqueezy` | 60 | 1 minute | IP |
+| `POST /suggestions` | 5 | 1 hour | IP |
+| `POST /suggestions` | 20 | 1 hour | org |
+| `POST /notification-channels/{id}/test` | 5 | 1 minute | IP |
 
 The ping limit (60/min) is deliberately generous — a real cron job might hit the endpoint once per minute at most, but we want to leave headroom for retries and misconfigured jobs before blocking. The real protection is against floods, not occasional bursts.
 

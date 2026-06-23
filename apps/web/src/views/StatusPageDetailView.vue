@@ -157,7 +157,7 @@ function toBadge(label: string, badgeUrl: string, publicUrl: string, key: string
     key,
     label,
     badgeUrl,
-    markdown: `[![${label}](${badgeUrl})](${publicUrl})`,
+    markdown: `![${label}](${badgeUrl})`,
     html: `<a href="${publicUrl}"><img src="${badgeUrl}" alt="${label}"></a>`,
   }
 }
