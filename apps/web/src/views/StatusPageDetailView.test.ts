@@ -100,21 +100,27 @@ afterEach(() => {
 describe('StatusPageDetailView', () => {
   it('shows a loading state while the page or monitors are pending', () => {
     pagePending.value = true
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     expect(wrapper.text()).toContain('Loading…')
   })
 
   it('shows an error message when the page fails to load', () => {
     pageError.value = { message: 'Status page not found' }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     expect(wrapper.text()).toContain('Status page not found')
   })
 
   it('renders the page details, available monitors, and selected monitors', () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     expect(wrapper.text()).toContain('checkmeup status')
     expect(wrapper.text()).toContain('/status/status')
@@ -127,7 +133,9 @@ describe('StatusPageDetailView', () => {
 
   it('adds a monitor to the selected list when clicked in the available list', async () => {
     pageData.value = { ...detail, monitors: [] }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     const item = wrapper.findAll('li').find((li) => li.text().includes('Weekly cleanup'))
     await item!.trigger('click')
@@ -139,7 +147,9 @@ describe('StatusPageDetailView', () => {
 
   it('removes a monitor from the selected list when its remove button is clicked', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     expect(wrapper.text()).toContain('On this page (1)')
     const removeButton = findButtonByText(wrapper, '✕')
@@ -169,7 +179,9 @@ describe('StatusPageDetailView', () => {
         },
       ],
     }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     const inputsBefore = wrapper.findAll('input').map((i) => (i.element as HTMLInputElement).value)
     expect(inputsBefore).toEqual(['Nightly backup', 'API uptime'])
@@ -184,7 +196,9 @@ describe('StatusPageDetailView', () => {
   it('saves the monitor list and refetches on success', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
     setMonitorsMock.mockResolvedValueOnce([])
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     const saveButton = wrapper.findAll('button').find((b) => b.text().includes('Save changes'))
     await saveButton!.trigger('click')
@@ -201,7 +215,9 @@ describe('StatusPageDetailView', () => {
   it('shows an error and does not refetch when saving the monitor list fails', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
     setMonitorsMock.mockRejectedValueOnce(new Error('Failed to save monitors'))
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     const saveButton = wrapper.findAll('button').find((b) => b.text().includes('Save changes'))
     await saveButton!.trigger('click')
@@ -213,7 +229,9 @@ describe('StatusPageDetailView', () => {
 
   it('cancels the delete confirmation', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
     expect(findButtonByText(wrapper, 'Confirm delete')).toBeTruthy()
@@ -226,7 +244,9 @@ describe('StatusPageDetailView', () => {
   it('deletes the page and navigates back to the list on confirm', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
     deleteMock.mockResolvedValueOnce(undefined)
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
     await findButtonByText(wrapper, 'Confirm delete')!.trigger('click')
@@ -239,7 +259,9 @@ describe('StatusPageDetailView', () => {
   it('shows an error and resets confirmation state when delete fails', async () => {
     pageData.value = { ...detail, monitors: [...detail.monitors] }
     deleteMock.mockRejectedValueOnce(new Error('Delete failed'))
-    const wrapper = mount(StatusPageDetailView)
+    const wrapper = mount(StatusPageDetailView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
     await findButtonByText(wrapper, 'Confirm delete')!.trigger('click')
