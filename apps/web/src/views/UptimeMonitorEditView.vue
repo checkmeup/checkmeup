@@ -73,10 +73,12 @@ const { data: detail, isPending: monitorLoading, error: loadError } = useUptimeM
 const { data: billingInfo, isPending: billingLoading } = useBilling()
 const loading = computed(() => monitorLoading.value || billingLoading.value)
 
+let formPopulated = false
 watch(
   detail,
   (d) => {
-    if (!d) return
+    if (!d || formPopulated) return
+    formPopulated = true
     const m = d.monitor
     name.value = m.name
     url.value = m.url

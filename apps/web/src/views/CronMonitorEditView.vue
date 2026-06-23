@@ -43,7 +43,7 @@ const alertLimitOptions = [
 ]
 
 const { data: detail, isPending: loading, error: loadError } = useCronMonitor(id)
-watch(
+const stopDetailWatch = watch(
   detail,
   (d) => {
     if (!d) return
@@ -54,6 +54,7 @@ watch(
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
     channelIds.value = m.channelIds ?? []
+    stopDetailWatch()
   },
   { immediate: true },
 )

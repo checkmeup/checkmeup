@@ -20,7 +20,7 @@ const submitting = ref(false)
 const error = ref('')
 
 const { data: page, isPending: loading, error: loadError } = useStatusPage(id)
-watch(
+const stopPageWatch = watch(
   page,
   (p) => {
     if (!p) return
@@ -28,6 +28,7 @@ watch(
     description.value = p.description
     logoUrl.value = p.logoUrl
     slug.value = p.slug
+    stopPageWatch()
   },
   { immediate: true },
 )
