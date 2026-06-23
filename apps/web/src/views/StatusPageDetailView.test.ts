@@ -271,4 +271,55 @@ describe('StatusPageDetailView', () => {
     expect(pushMock).not.toHaveBeenCalled()
     expect(findButtonByText(wrapper, 'Delete')).toBeTruthy()
   })
+
+  describe('Badges (EP-30)', () => {
+    it('renders a page-level badge and one per attached monitor', () => {
+      pageData.value = { ...detail, monitors: [...detail.monitors] }
+      const wrapper = mount(StatusPageDetailView, {
+        global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+      })
+
+      const images = wrapper.findAll('img')
+      expect(images).toHaveLength(2)
+      expect(images[0]!.attributes('src')).toBe('https://checkmeup.net/status/status/badge.svg')
+      expect(images[1]!.attributes('src')).toBe('https://checkmeup.net/status/status/badge/c1.svg')
+      expect(wrapper.text()).toContain('Overall status')
+      expect(wrapper.text()).toContain('Nightly backup')
+    })
+
+    it('copies the Markdown snippet for a badge', async () => {
+      pageData.value = { ...detail, monitors: [...detail.monitors] }
+      const writeText = vi.fn()
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+      const wrapper = mount(StatusPageDetailView, {
+        global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+      })
+
+      const copyButtons = wrapper.findAll('button').filter((b) => b.text() === 'Copy Markdown')
+      await copyButtons[0]!.trigger('click')
+
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(
+        '[![checkmeup status](https://checkmeup.net/status/status/badge.svg)](https://checkmeup.net/status/status)',
+      )
+      expect(copyButtons[0]!.text()).toBe('Copied!')
+      vi.unstubAllGlobals()
+    })
+
+    it('copies the HTML snippet for a monitor badge', async () => {
+      pageData.value = { ...detail, monitors: [...detail.monitors] }
+      const writeText = vi.fn()
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+      const wrapper = mount(StatusPageDetailView, {
+        global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+      })
+
+      const copyButtons = wrapper.findAll('button').filter((b) => b.text() === 'Copy HTML')
+      await copyButtons[1]!.trigger('click')
+
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(
+        '<a href="https://checkmeup.net/status/status"><img src="https://checkmeup.net/status/status/badge/c1.svg" alt="Nightly backup"></a>',
+      )
+      vi.unstubAllGlobals()
+    })
+  })
 })

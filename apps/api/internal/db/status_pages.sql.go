@@ -230,6 +230,29 @@ func (q *Queries) GetStatusPageBySlug(ctx context.Context, slug string) (StatusP
 	return i, err
 }
 
+const getStatusPageMonitor = `-- name: GetStatusPageMonitor :one
+SELECT id, page_id, monitor_type, monitor_id, display_name, display_order FROM status_page_monitors WHERE page_id = $1 AND monitor_id = $2
+`
+
+type GetStatusPageMonitorParams struct {
+	PageID    uuid.UUID `json:"page_id"`
+	MonitorID uuid.UUID `json:"monitor_id"`
+}
+
+func (q *Queries) GetStatusPageMonitor(ctx context.Context, arg GetStatusPageMonitorParams) (StatusPageMonitor, error) {
+	row := q.db.QueryRow(ctx, getStatusPageMonitor, arg.PageID, arg.MonitorID)
+	var i StatusPageMonitor
+	err := row.Scan(
+		&i.ID,
+		&i.PageID,
+		&i.MonitorType,
+		&i.MonitorID,
+		&i.DisplayName,
+		&i.DisplayOrder,
+	)
+	return i, err
+}
+
 const getUptimeDailyStatus90d = `-- name: GetUptimeDailyStatus90d :many
 
 SELECT

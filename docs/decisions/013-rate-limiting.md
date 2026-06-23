@@ -32,8 +32,12 @@ Limits chosen:
 | `POST /sign-in` | 10 | 10 minutes | IP |
 | `POST /forgot-password` | 3 | 10 minutes | IP |
 | `GET /ping/{token}` | 60 | 1 minute | token |
+| `GET /status/:slug/badge.svg` | 300 | 1 minute | IP |
+| `GET /status/:slug/badge/:monitor_id.svg` | 300 | 1 minute | IP |
 
 The ping limit (60/min) is deliberately generous — a real cron job might hit the endpoint once per minute at most, but we want to leave headroom for retries and misconfigured jobs before blocking. The real protection is against floods, not occasional bursts.
+
+Badges (EP-30, [story](../stories/ep-30-status-badges.md)) are keyed by IP rather than slug: unlike the ping token, a badge URL isn't a secret, so keying by slug would let one popular badge's many embedders collectively exhaust the limit for everyone viewing that same page. 300/min is generous because badges are meant to be embedded in READMEs and external sites; `Cache-Control: max-age=60` on the response (US-3004) is the actual defense against repeated hits, the rate limit is just a backstop.
 
 ## Consequences
 

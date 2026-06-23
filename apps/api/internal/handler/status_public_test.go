@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -272,6 +273,198 @@ func TestBuild90DayBar(t *testing.T) {
 		}
 		if bar[89].Label != today.Format("Jan 2") {
 			t.Fatalf("want today's label %q, got %q", today.Format("Jan 2"), bar[89].Label)
+		}
+	})
+}
+
+// ─── badges (EP-30) ──────────────────────────────────────────────────────────
+
+func doPageBadge(publicH *StatusPublicHandler, slug string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/status/"+slug+"/badge.svg", nil)
+	req = withURLParam(req, "slug", slug)
+	w := httptest.NewRecorder()
+	publicH.ServePageBadge(w, req)
+	return w
+}
+
+func doMonitorBadge(publicH *StatusPublicHandler, slug, monitorID string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/status/"+slug+"/badge/"+monitorID+".svg", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("slug", slug)
+	rctx.URLParams.Add("monitor_id", monitorID)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+	publicH.ServeMonitorBadge(w, req)
+	return w
+}
+
+func TestStatusPublicServePageBadge(t *testing.T) {
+	authH, monitorH, statusH, _, publicH, pool := testStatusPublicHandler(t)
+
+	t.Run("unknown slug returns 404", func(t *testing.T) {
+		w := doPageBadge(publicH, "no-such-slug-"+uuid.NewString())
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("all-green page renders an operational badge", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		cron := createCronMonitor(t, monitorH, u.access, "Cron job")
+		mustExec(t, pool, "UPDATE cron_monitors SET status = 'up' WHERE id = $1", cron.ID)
+
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Badge Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "cron", MonitorID: cron.ID, DisplayName: "Backups", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		w := doPageBadge(publicH, slug)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		if ct := w.Header().Get("Content-Type"); ct != "image/svg+xml; charset=utf-8" {
+			t.Fatalf("want SVG content type, got %q", ct)
+		}
+		if cc := w.Header().Get("Cache-Control"); cc != "max-age=60" {
+			t.Fatalf("want short cache TTL (US-3004), got %q", cc)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, "operational") {
+			t.Fatalf("want badge text 'operational', got %s", body)
+		}
+		if !strings.Contains(body, statusColorGreen) {
+			t.Fatalf("want the green fill color, got %s", body)
+		}
+	})
+
+	t.Run("a down monitor renders an outage badge", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		uptimeMon := createUptimeMonitor(t, monitorH, u.access, "API")
+		mustExec(t, pool, "UPDATE uptime_monitors SET status = 'down' WHERE id = $1", uptimeMon.ID)
+
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Down Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "uptime", MonitorID: uptimeMon.ID, DisplayName: "API", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		w := doPageBadge(publicH, slug)
+		body := w.Body.String()
+		if !strings.Contains(body, "outage") {
+			t.Fatalf("want badge text 'outage', got %s", body)
+		}
+	})
+}
+
+func TestStatusPublicServeMonitorBadge(t *testing.T) {
+	authH, monitorH, statusH, _, publicH, pool := testStatusPublicHandler(t)
+
+	t.Run("unknown slug returns 404", func(t *testing.T) {
+		w := doMonitorBadge(publicH, "no-such-slug-"+uuid.NewString(), uuid.NewString())
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid monitor id returns 404", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Bad Id Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		_ = page
+		w := doMonitorBadge(publicH, slug, "not-a-uuid")
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("monitor not attached to the page returns 404 (no leaking status outside the page)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		cron := createCronMonitor(t, monitorH, u.access, "Off-page cron")
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Sparse Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		_ = page
+
+		w := doMonitorBadge(publicH, slug, cron.ID)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("attached monitor renders its own status badge", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		sslMon := createSSLMonitor(t, monitorH, u.access, "Cert")
+		mustExec(t, pool, "UPDATE ssl_monitors SET status = 'expiring_soon' WHERE id = $1", sslMon.ID)
+
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Cert Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "ssl", MonitorID: sslMon.ID, DisplayName: "Certificate", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		w := doMonitorBadge(publicH, slug, sslMon.ID)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, "degraded") {
+			t.Fatalf("want badge text 'degraded' for an expiring-soon cert, got %s", body)
+		}
+		if !strings.Contains(body, "Certificate") {
+			t.Fatalf("want the monitor's display name as the badge label, got %s", body)
+		}
+	})
+}
+
+func TestBadgeStatusWord(t *testing.T) {
+	cases := []struct {
+		color string
+		want  string
+	}{
+		{statusColorGreen, "operational"},
+		{statusColorAmber, "degraded"},
+		{statusColorRed, "outage"},
+		{statusColorGray, "unknown"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.want, func(t *testing.T) {
+			if got := badgeStatusWord(tc.color); got != tc.want {
+				t.Fatalf("badgeStatusWord(%q) = %q, want %q", tc.color, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRenderBadgeSVG(t *testing.T) {
+	svg := renderBadgeSVG("status", "operational", statusColorGreen)
+	if !strings.Contains(svg, "<svg") || !strings.Contains(svg, "</svg>") {
+		t.Fatalf("want a well-formed SVG document, got %s", svg)
+	}
+	if !strings.Contains(svg, "status") || !strings.Contains(svg, "operational") {
+		t.Fatalf("want label and value text present, got %s", svg)
+	}
+	if !strings.Contains(svg, statusColorGreen) {
+		t.Fatalf("want the fill color present, got %s", svg)
+	}
+
+	t.Run("escapes text that could break the SVG markup", func(t *testing.T) {
+		svg := renderBadgeSVG(`<script>&"'`, "operational", statusColorGreen)
+		if strings.Contains(svg, "<script>") {
+			t.Fatalf("want the label HTML-escaped, got %s", svg)
 		}
 	})
 }

@@ -141,6 +141,55 @@ async function deletePage() {
 }
 
 const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain' }
+
+// ─── badges (EP-30) ──────────────────────────────────────────────────────────
+
+interface Badge {
+  key: string
+  label: string
+  badgeUrl: string
+  markdown: string
+  html: string
+}
+
+function toBadge(label: string, badgeUrl: string, publicUrl: string, key: string): Badge {
+  return {
+    key,
+    label,
+    badgeUrl,
+    markdown: `[![${label}](${badgeUrl})](${publicUrl})`,
+    html: `<a href="${publicUrl}"><img src="${badgeUrl}" alt="${label}"></a>`,
+  }
+}
+
+const pageBadge = computed<Badge | null>(() => {
+  if (!detail.value) return null
+  return toBadge(detail.value.title, `${detail.value.publicUrl}/badge.svg`, detail.value.publicUrl, 'page')
+})
+
+const monitorBadges = computed<Badge[]>(() => {
+  if (!detail.value) return []
+  return detail.value.monitors.map((m) =>
+    toBadge(
+      m.displayName,
+      `${detail.value!.publicUrl}/badge/${m.monitorId}.svg`,
+      detail.value!.publicUrl,
+      `monitor:${m.monitorId}`,
+    ),
+  )
+})
+
+const copiedKey = ref<string | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+
+function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) {
+  navigator.clipboard.writeText(snippet)
+  copiedKey.value = `${key}:${format}`
+  clearTimeout(copiedTimer)
+  copiedTimer = setTimeout(() => {
+    copiedKey.value = null
+  }, 1500)
+}
 </script>
 
 <template>
@@ -307,6 +356,37 @@ const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl:
               </Button>
             </div>
           </div>
+        </div>
+
+        <!-- Badges (EP-30) -->
+        <div
+          class="rounded-xl border mt-6"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
+            Badges
+          </div>
+          <ul v-if="pageBadge">
+            <li
+              v-for="badge in [pageBadge, ...monitorBadges]"
+              :key="badge.key"
+              class="px-4 py-3 border-b last:border-0"
+              style="border-color: var(--border)"
+            >
+              <div class="flex items-center gap-3">
+                <img :src="badge.badgeUrl" :alt="badge.label" class="flex-shrink-0" />
+                <span class="text-sm flex-1 truncate" style="color: var(--text)">
+                  {{ badge.key === 'page' ? 'Overall status' : badge.label }}
+                </span>
+                <Button variant="secondary" size="sm" @click="copySnippet(badge.key, 'markdown', badge.markdown)">
+                  {{ copiedKey === `${badge.key}:markdown` ? 'Copied!' : 'Copy Markdown' }}
+                </Button>
+                <Button variant="secondary" size="sm" @click="copySnippet(badge.key, 'html', badge.html)">
+                  {{ copiedKey === `${badge.key}:html` ? 'Copied!' : 'Copy HTML' }}
+                </Button>
+              </div>
+            </li>
+          </ul>
         </div>
       </template>
     </div>

@@ -31,6 +31,9 @@ SELECT NOT EXISTS (SELECT 1 FROM status_pages WHERE slug = $1) AS available;
 -- name: ListStatusPageMonitors :many
 SELECT * FROM status_page_monitors WHERE page_id = $1 ORDER BY display_order ASC;
 
+-- name: GetStatusPageMonitor :one
+SELECT * FROM status_page_monitors WHERE page_id = $1 AND monitor_id = $2;
+
 -- name: DeleteStatusPageMonitors :exec
 DELETE FROM status_page_monitors WHERE page_id = $1;
 
