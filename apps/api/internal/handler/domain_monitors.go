@@ -134,19 +134,7 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "domain_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+	if !h.checkDomainMonitorLimit(w, r, orgID) {
 		return
 	}
 
@@ -164,6 +152,28 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 	resp := domainMonitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "domain", monitor.ID)
 	respond.JSON(w, http.StatusCreated, resp)
+}
+
+// checkDomainMonitorLimit enforces the org's plan limit before creating a
+// domain monitor, writing the appropriate error response itself so the
+// caller can just check the returned bool.
+func (h *MonitorHandler) checkDomainMonitorLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "domain_monitor")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return false
+	}
+	return true
 }
 
 // GetDomainMonitor GET /api/v1/monitors/domain/{id}

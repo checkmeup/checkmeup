@@ -63,53 +63,77 @@ type rdapResponse struct {
 // malformed body, or a response with no "expiration" event — a monitor
 // can't report days-until-expiry without one.
 func (c *Client) Lookup(domain string) (Result, error) {
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+domain, nil)
+	resp, err := c.fetch(domain)
 	if err != nil {
 		return Result{}, err
 	}
-	req.Header.Set("Accept", "application/rdap+json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return Result{}, fmt.Errorf("rdap request failed: %w", err)
-	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return Result{}, errors.New("domain not found in registry (rdap 404)")
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Result{}, fmt.Errorf("rdap endpoint returned HTTP %d", resp.StatusCode)
-	}
 
 	var parsed rdapResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return Result{}, fmt.Errorf("rdap response decode failed: %w", err)
 	}
 
+	expiresAt, err := expirationEvent(parsed.Events)
+	if err != nil {
+		return Result{}, err
+	}
+
+	return Result{Registrar: findRegistrar(parsed.Entities), ExpiresAt: expiresAt}, nil
+}
+
+// fetch performs the RDAP HTTP request and validates the response status,
+// leaving the body open for the caller to decode and close.
+func (c *Client) fetch(domain string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+domain, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/rdap+json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("rdap request failed: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		_ = resp.Body.Close()
+		return nil, errors.New("domain not found in registry (rdap 404)")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("rdap endpoint returned HTTP %d", resp.StatusCode)
+	}
+	return resp, nil
+}
+
+// expirationEvent finds the "expiration" event among an RDAP response's
+// events and parses its date.
+func expirationEvent(events []rdapEvent) (time.Time, error) {
 	var expiresAt time.Time
-	for _, ev := range parsed.Events {
+	for _, ev := range events {
 		if ev.Action != "expiration" {
 			continue
 		}
-		t, err := time.Parse(time.RFC3339, ev.Date)
-		if err == nil {
+		if t, err := time.Parse(time.RFC3339, ev.Date); err == nil {
 			expiresAt = t
 		}
 	}
 	if expiresAt.IsZero() {
-		return Result{}, errors.New("rdap response has no expiration event")
+		return time.Time{}, errors.New("rdap response has no expiration event")
 	}
+	return expiresAt, nil
+}
 
-	var registrar string
-	for _, e := range parsed.Entities {
+// findRegistrar returns the formatted name of the first entity with a
+// "registrar" role, or "" if none is present.
+func findRegistrar(entities []rdapEntity) string {
+	for _, e := range entities {
 		if hasRole(e.Roles, "registrar") {
-			registrar = registrarName(e)
-			break
+			return registrarName(e)
 		}
 	}
-
-	return Result{Registrar: registrar, ExpiresAt: expiresAt}, nil
+	return ""
 }
 
 func hasRole(roles []string, want string) bool {
@@ -126,26 +150,46 @@ func hasRole(roles []string, want string) bool {
 // Falls back to the entity's handle if the vCard is missing or unparsable,
 // since registrar vCards are optional in RDAP responses.
 func registrarName(e rdapEntity) string {
-	var vcard []json.RawMessage
-	if err := json.Unmarshal(e.VcardArray, &vcard); err != nil || len(vcard) < 2 {
-		return e.Handle
-	}
-	var props [][]json.RawMessage
-	if err := json.Unmarshal(vcard[1], &props); err != nil {
+	props, err := vcardProperties(e.VcardArray)
+	if err != nil {
 		return e.Handle
 	}
 	for _, p := range props {
-		if len(p) < 4 {
-			continue
-		}
-		var propName string
-		if err := json.Unmarshal(p[0], &propName); err != nil || propName != "fn" {
-			continue
-		}
-		var value string
-		if err := json.Unmarshal(p[3], &value); err == nil && value != "" {
+		if value, ok := fnPropertyValue(p); ok {
 			return value
 		}
 	}
 	return e.Handle
+}
+
+// vcardProperties unwraps a jCard vcardArray — ["vcard", [[...], ...]] —
+// into its list of properties.
+func vcardProperties(raw json.RawMessage) ([][]json.RawMessage, error) {
+	var vcard []json.RawMessage
+	if err := json.Unmarshal(raw, &vcard); err != nil || len(vcard) < 2 {
+		return nil, errors.New("vcard missing properties array")
+	}
+	var props [][]json.RawMessage
+	if err := json.Unmarshal(vcard[1], &props); err != nil {
+		return nil, err
+	}
+	return props, nil
+}
+
+// fnPropertyValue reads a jCard property of the form ["fn", {}, "text",
+// "Name"] and returns its value, reporting ok=false for any other property
+// or a blank value.
+func fnPropertyValue(p []json.RawMessage) (string, bool) {
+	if len(p) < 4 {
+		return "", false
+	}
+	var propName string
+	if err := json.Unmarshal(p[0], &propName); err != nil || propName != "fn" {
+		return "", false
+	}
+	var value string
+	if err := json.Unmarshal(p[3], &value); err != nil || value == "" {
+		return "", false
+	}
+	return value, true
 }

@@ -204,7 +204,7 @@ export const monitorsApi = {
     api.patch<DomainMonitor>(`/api/v1/monitors/domain/${id}/`, input),
   pauseDomain: (id: string) => api.post<DomainMonitor>(`/api/v1/monitors/domain/${id}/pause`, {}),
   resumeDomain: (id: string) => api.post<DomainMonitor>(`/api/v1/monitors/domain/${id}/resume`, {}),
-  deleteDomain: (id: string) => api.delete<void>(`/api/v1/monitors/domain/${id}/`),
+  deleteDomain: (id: string) => api.delete(`/api/v1/monitors/domain/${id}/`),
 
   listUptime: () => api.get<UptimeMonitor[]>('/api/v1/monitors/uptime/'),
   getUptime: (id: string) => api.get<UptimeMonitorDetail>(`/api/v1/monitors/uptime/${id}/`),
