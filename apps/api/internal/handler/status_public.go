@@ -39,8 +39,8 @@ type publicMonitorRow struct {
 	StatusLabel        string
 	StatusColor        string
 	Bar                []publicBar
-	ExpiresAt          string // SSL only
-	DaysLeft           int    // SSL only
+	ExpiresAt          string // SSL/domain only
+	DaysLeft           int    // SSL/domain only
 	MaintenanceMessage string
 }
 
@@ -127,6 +127,8 @@ func (h *StatusPublicHandler) buildRow(ctx context.Context, m db.StatusPageMonit
 		h.fillCronRow(ctx, m.MonitorID, &row)
 	case "ssl":
 		h.fillSSLRow(ctx, m.MonitorID, &row)
+	case "domain":
+		h.fillDomainRow(ctx, m.MonitorID, &row)
 	}
 	return row
 }
@@ -199,6 +201,49 @@ func (h *StatusPublicHandler) fillSSLRow(ctx context.Context, id uuid.UUID, row 
 	}
 
 	// SSL bar: all green except current status reflected in last segment
+	barColor := statusColorGreen
+	switch string(mon.Status) {
+	case "expiring_soon":
+		barColor = statusColorAmber
+	case "expired", "error":
+		barColor = statusColorRed
+	case "waiting", "paused":
+		barColor = statusColorLight
+	}
+	bar := make([]publicBar, 90)
+	for i := range bar {
+		bar[i] = publicBar{Color: barColor}
+	}
+	row.Bar = bar
+}
+
+func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
+	mon, err := h.queries.GetDomainMonitorPublic(ctx, id)
+	if err != nil {
+		return
+	}
+
+	switch string(mon.Status) {
+	case "up":
+		row.StatusLabel, row.StatusColor = "Valid", statusColorGreen
+	case "expiring_soon":
+		row.StatusLabel, row.StatusColor = "Expiring soon", statusColorAmber
+	case "expired":
+		row.StatusLabel, row.StatusColor = "Expired", statusColorRed
+	case "error":
+		row.StatusLabel, row.StatusColor = "Error", statusColorRed
+	case "paused":
+		row.StatusLabel, row.StatusColor = "Paused", statusColorGray
+	default:
+		row.StatusLabel, row.StatusColor = "Checking…", statusColorGray
+	}
+
+	if mon.ExpiresAt.Valid {
+		row.ExpiresAt = mon.ExpiresAt.Time.Format("2006-01-02")
+		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
+	}
+
+	// Domain bar: all green except current status reflected in last segment
 	barColor := statusColorGreen
 	switch string(mon.Status) {
 	case "expiring_soon":
@@ -331,6 +376,9 @@ h1{font-size:1.5rem;font-weight:700;color:#0f172a}
       </div>
       {{if and (eq .Type "ssl") .ExpiresAt}}
       <div class="ssl-info">Certificate expires {{.ExpiresAt}} ({{.DaysLeft}} days)</div>
+      {{end}}
+      {{if and (eq .Type "domain") .ExpiresAt}}
+      <div class="ssl-info">Domain expires {{.ExpiresAt}} ({{.DaysLeft}} days)</div>
       {{end}}
       {{if .MaintenanceMessage}}
       <div class="ssl-info">{{.MaintenanceMessage}}</div>

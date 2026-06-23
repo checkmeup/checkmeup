@@ -100,13 +100,16 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		cron := createCronMonitor(t, monitorH, u.access, "Cron job")
 		uptimeMon := createUptimeMonitor(t, monitorH, u.access, "API")
 		sslMon := createSSLMonitor(t, monitorH, u.access, "Cert")
+		domainMon := createDomainMonitor(t, monitorH, u.access, "Domain")
 
 		// Cron: up. Uptime: down (drives the overall status to "Major outage").
-		// SSL: expiring soon, with a real expiry date.
+		// SSL and domain: expiring soon, with a real expiry date each.
 		mustExec(t, pool, "UPDATE cron_monitors SET status = 'up' WHERE id = $1", cron.ID)
 		mustExec(t, pool, "UPDATE uptime_monitors SET status = 'down' WHERE id = $1", uptimeMon.ID)
 		expiresAt := time.Now().Add(10 * 24 * time.Hour)
 		mustExec(t, pool, "UPDATE ssl_monitors SET status = 'expiring_soon', expires_at = $2 WHERE id = $1", sslMon.ID, expiresAt)
+		domainExpiresAt := time.Now().Add(20 * 24 * time.Hour)
+		mustExec(t, pool, "UPDATE domain_monitors SET status = 'expiring_soon', expires_at = $2 WHERE id = $1", domainMon.ID, domainExpiresAt)
 
 		slug := uniqueSlug(t)
 		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Multi Co"})
@@ -116,6 +119,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 				{MonitorType: "cron", MonitorID: cron.ID, DisplayName: "Backups", DisplayOrder: 0},
 				{MonitorType: "uptime", MonitorID: uptimeMon.ID, DisplayName: "API", DisplayOrder: 1},
 				{MonitorType: "ssl", MonitorID: sslMon.ID, DisplayName: "Certificate", DisplayOrder: 2},
+				{MonitorType: "domain", MonitorID: domainMon.ID, DisplayName: "Domain expiry", DisplayOrder: 3},
 			},
 		})
 		if setW.Code != http.StatusOK {
@@ -128,7 +132,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 		body := w.Body.String()
 
-		for _, want := range []string{"Backups", "API", "Certificate"} {
+		for _, want := range []string{"Backups", "API", "Certificate", "Domain expiry"} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("want display name %q in body", want)
 			}
@@ -140,13 +144,16 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 			t.Fatal("want uptime's Down label")
 		}
 		if !strings.Contains(body, "Expiring soon") {
-			t.Fatal("want ssl's Expiring soon label")
+			t.Fatal("want ssl's and domain's Expiring soon label")
 		}
 		if !strings.Contains(body, "Major outage") {
 			t.Fatal("want overall status Major outage (a red row is present)")
 		}
 		if !strings.Contains(body, expiresAt.Format("2006-01-02")) {
 			t.Fatal("want the SSL certificate expiry date rendered")
+		}
+		if !strings.Contains(body, "Domain expires "+domainExpiresAt.Format("2006-01-02")) {
+			t.Fatal("want the domain expiry date rendered")
 		}
 	})
 

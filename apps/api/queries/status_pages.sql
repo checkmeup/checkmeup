@@ -68,3 +68,6 @@ SELECT * FROM uptime_monitors WHERE id = $1;
 
 -- name: GetSSLMonitorPublic :one
 SELECT * FROM ssl_monitors WHERE id = $1;
+
+-- name: GetDomainMonitorPublic :one
+SELECT * FROM domain_monitors WHERE id = $1;

@@ -129,6 +129,34 @@ func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (CronM
 	return i, err
 }
 
+const getDomainMonitorPublic = `-- name: GetDomainMonitorPublic :one
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM domain_monitors WHERE id = $1
+`
+
+func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (DomainMonitor, error) {
+	row := q.db.QueryRow(ctx, getDomainMonitorPublic, id)
+	var i DomainMonitor
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Name,
+		&i.Domain,
+		&i.Status,
+		&i.AlertsEnabled,
+		&i.ExpiresAt,
+		&i.Registrar,
+		&i.ErrorMsg,
+		&i.Alerted30d,
+		&i.Alerted14d,
+		&i.Alerted7d,
+		&i.LastCheckedAt,
+		&i.NextCheckAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSSLMonitorPublic = `-- name: GetSSLMonitorPublic :one
 SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM ssl_monitors WHERE id = $1
 `
