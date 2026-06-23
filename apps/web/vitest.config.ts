@@ -8,6 +8,7 @@ export default defineConfig({
     alias: { '@': resolve(__dirname, './src') },
   },
   test: {
+    environment: 'happy-dom',
     passWithNoTests: true,
     coverage: {
       provider: 'v8',
