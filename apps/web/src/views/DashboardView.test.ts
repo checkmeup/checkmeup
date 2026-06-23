@@ -148,6 +148,6 @@ describe('DashboardView', () => {
     const wrapper = mount(DashboardView)
 
     expect(wrapper.text()).toContain('Getting started')
-    expect(wrapper.text()).toContain('Add a cron monitor and copy the ping URL')
+    expect(wrapper.text()).toContain('Add a monitor — cron, uptime, SSL, or domain expiry')
   })
 })

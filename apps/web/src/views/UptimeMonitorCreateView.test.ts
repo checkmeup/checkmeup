@@ -135,6 +135,8 @@ describe('UptimeMonitorCreateView', () => {
       keyword: '',
       keywordMode: 'contains',
       keywordCaseSensitive: false,
+      jsonAssertions: [],
+      maxResponseTimeMs: null,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'uptime-monitor-detail',

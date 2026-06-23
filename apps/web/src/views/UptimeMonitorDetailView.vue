@@ -150,6 +150,17 @@ const chart = computed(() => {
               "{{ detail.monitor.keyword }}"
               <span v-if="detail.monitor.keywordCaseSensitive">(case-sensitive)</span>
             </p>
+            <p
+              v-for="(a, i) in detail.monitor.jsonAssertions"
+              :key="i"
+              class="text-xs"
+              style="color: var(--text-muted)"
+            >
+              🔎 <code>{{ a.path }}</code> {{ a.comparator.replace('_', ' ') }} <code>{{ a.expected }}</code>
+            </p>
+            <p v-if="detail.monitor.maxResponseTimeMs" class="text-xs" style="color: var(--text-muted)">
+              ⏱ Max response time: {{ detail.monitor.maxResponseTimeMs }} ms
+            </p>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             <Button

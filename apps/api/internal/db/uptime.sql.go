@@ -76,9 +76,9 @@ func (q *Queries) CreateUptimeIncident(ctx context.Context, monitorID uuid.UUID)
 }
 
 const createUptimeMonitor = `-- name: CreateUptimeMonitor :one
-INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, keyword, keyword_mode, keyword_case_sensitive)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 type CreateUptimeMonitorParams struct {
@@ -90,6 +90,8 @@ type CreateUptimeMonitorParams struct {
 	Keyword              pgtype.Text `json:"keyword"`
 	KeywordMode          KeywordMode `json:"keyword_mode"`
 	KeywordCaseSensitive bool        `json:"keyword_case_sensitive"`
+	JsonAssertions       []byte      `json:"json_assertions"`
+	MaxResponseTimeMs    pgtype.Int4 `json:"max_response_time_ms"`
 }
 
 func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonitorParams) (UptimeMonitor, error) {
@@ -102,6 +104,8 @@ func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonit
 		arg.Keyword,
 		arg.KeywordMode,
 		arg.KeywordCaseSensitive,
+		arg.JsonAssertions,
+		arg.MaxResponseTimeMs,
 	)
 	var i UptimeMonitor
 	err := row.Scan(
@@ -121,6 +125,8 @@ func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonit
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -140,7 +146,7 @@ func (q *Queries) DeleteUptimeMonitor(ctx context.Context, arg DeleteUptimeMonit
 }
 
 const getUptimeMonitor = `-- name: GetUptimeMonitor :one
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive FROM uptime_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms FROM uptime_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetUptimeMonitorParams struct {
@@ -168,6 +174,8 @@ func (q *Queries) GetUptimeMonitor(ctx context.Context, arg GetUptimeMonitorPara
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -225,7 +233,7 @@ func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid
 }
 
 const listDueUptimeMonitors = `-- name: ListDueUptimeMonitors :many
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive FROM uptime_monitors
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms FROM uptime_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -261,6 +269,8 @@ func (q *Queries) ListDueUptimeMonitors(ctx context.Context) ([]UptimeMonitor, e
 			&i.Keyword,
 			&i.KeywordMode,
 			&i.KeywordCaseSensitive,
+			&i.JsonAssertions,
+			&i.MaxResponseTimeMs,
 		); err != nil {
 			return nil, err
 		}
@@ -375,7 +385,7 @@ func (q *Queries) ListUptimeIncidents(ctx context.Context, monitorID uuid.UUID) 
 }
 
 const listUptimeMonitors = `-- name: ListUptimeMonitors :many
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]UptimeMonitor, error) {
@@ -404,6 +414,8 @@ func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]Up
 			&i.Keyword,
 			&i.KeywordMode,
 			&i.KeywordCaseSensitive,
+			&i.JsonAssertions,
+			&i.MaxResponseTimeMs,
 		); err != nil {
 			return nil, err
 		}
@@ -427,7 +439,7 @@ func (q *Queries) MarkUptimeMonitorDown(ctx context.Context, id uuid.UUID) error
 const pauseUptimeMonitor = `-- name: PauseUptimeMonitor :one
 UPDATE uptime_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 type PauseUptimeMonitorParams struct {
@@ -455,6 +467,8 @@ func (q *Queries) PauseUptimeMonitor(ctx context.Context, arg PauseUptimeMonitor
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -466,7 +480,7 @@ SET consecutive_failures = consecutive_failures + 1,
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 func (q *Queries) RecordUptimeCheckFailure(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -489,6 +503,8 @@ func (q *Queries) RecordUptimeCheckFailure(ctx context.Context, id uuid.UUID) (U
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -501,7 +517,7 @@ SET status = 'up',
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -524,6 +540,8 @@ func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (Uptime
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -556,7 +574,7 @@ func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uui
 const resumeUptimeMonitor = `-- name: ResumeUptimeMonitor :one
 UPDATE uptime_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 type ResumeUptimeMonitorParams struct {
@@ -584,6 +602,8 @@ func (q *Queries) ResumeUptimeMonitor(ctx context.Context, arg ResumeUptimeMonit
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }
@@ -591,9 +611,10 @@ func (q *Queries) ResumeUptimeMonitor(ctx context.Context, arg ResumeUptimeMonit
 const updateUptimeMonitor = `-- name: UpdateUptimeMonitor :one
 UPDATE uptime_monitors
 SET name = $3, url = $4, interval_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
-    keyword = $8, keyword_mode = $9, keyword_case_sensitive = $10, updated_at = NOW()
+    keyword = $8, keyword_mode = $9, keyword_case_sensitive = $10,
+    json_assertions = $11, max_response_time_ms = $12, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms
 `
 
 type UpdateUptimeMonitorParams struct {
@@ -607,6 +628,8 @@ type UpdateUptimeMonitorParams struct {
 	Keyword              pgtype.Text `json:"keyword"`
 	KeywordMode          KeywordMode `json:"keyword_mode"`
 	KeywordCaseSensitive bool        `json:"keyword_case_sensitive"`
+	JsonAssertions       []byte      `json:"json_assertions"`
+	MaxResponseTimeMs    pgtype.Int4 `json:"max_response_time_ms"`
 }
 
 func (q *Queries) UpdateUptimeMonitor(ctx context.Context, arg UpdateUptimeMonitorParams) (UptimeMonitor, error) {
@@ -621,6 +644,8 @@ func (q *Queries) UpdateUptimeMonitor(ctx context.Context, arg UpdateUptimeMonit
 		arg.Keyword,
 		arg.KeywordMode,
 		arg.KeywordCaseSensitive,
+		arg.JsonAssertions,
+		arg.MaxResponseTimeMs,
 	)
 	var i UptimeMonitor
 	err := row.Scan(
@@ -640,6 +665,8 @@ func (q *Queries) UpdateUptimeMonitor(ctx context.Context, arg UpdateUptimeMonit
 		&i.Keyword,
 		&i.KeywordMode,
 		&i.KeywordCaseSensitive,
+		&i.JsonAssertions,
+		&i.MaxResponseTimeMs,
 	)
 	return i, err
 }

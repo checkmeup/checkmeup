@@ -56,6 +56,8 @@ const monitor = {
   keyword: null,
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
+  jsonAssertions: [],
+  maxResponseTimeMs: null,
 }
 
 const detail = {

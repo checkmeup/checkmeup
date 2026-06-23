@@ -51,6 +51,18 @@ export interface UpdateCronMonitorInput {
 }
 
 export type KeywordMode = 'contains' | 'not_contains'
+export type AssertionComparator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'greater_than'
+  | 'less_than'
+
+export interface JsonAssertion {
+  path: string
+  comparator: AssertionComparator
+  expected: string
+}
 
 export interface UptimeMonitor {
   id: string
@@ -66,6 +78,8 @@ export interface UptimeMonitor {
   keyword: string | null
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
+  jsonAssertions: JsonAssertion[]
+  maxResponseTimeMs: number | null
   channelIds?: string[]
 }
 
@@ -106,6 +120,8 @@ export interface CreateUptimeMonitorInput {
   keyword: string
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
+  jsonAssertions: JsonAssertion[]
+  maxResponseTimeMs: number | null
 }
 
 export interface UpdateUptimeMonitorInput {
@@ -117,6 +133,8 @@ export interface UpdateUptimeMonitorInput {
   keyword: string
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
+  jsonAssertions: JsonAssertion[]
+  maxResponseTimeMs: number | null
   channelIds: string[]
 }
 

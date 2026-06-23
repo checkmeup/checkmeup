@@ -138,7 +138,7 @@ func testUptimeMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, url s
 	t.Helper()
 	m, err := queries.CreateUptimeMonitor(context.Background(), db.CreateUptimeMonitorParams{
 		OrgID: orgID, Name: "Uptime monitor", Url: url, IntervalMins: 10, MaxAlertsPerIncident: 3,
-		KeywordMode: db.KeywordModeContains,
+		KeywordMode: db.KeywordModeContains, JsonAssertions: []byte("[]"),
 	})
 	if err != nil {
 		t.Fatalf("create test uptime monitor: %v", err)

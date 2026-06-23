@@ -480,6 +480,8 @@ type UptimeMonitor struct {
 	Keyword              pgtype.Text        `json:"keyword"`
 	KeywordMode          KeywordMode        `json:"keyword_mode"`
 	KeywordCaseSensitive bool               `json:"keyword_case_sensitive"`
+	JsonAssertions       []byte             `json:"json_assertions"`
+	MaxResponseTimeMs    pgtype.Int4        `json:"max_response_time_ms"`
 }
 
 type User struct {

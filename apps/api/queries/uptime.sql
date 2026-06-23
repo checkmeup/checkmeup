@@ -1,6 +1,6 @@
 -- name: CreateUptimeMonitor :one
-INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, keyword, keyword_mode, keyword_case_sensitive)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetUptimeMonitor :one
@@ -12,7 +12,8 @@ SELECT * FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 -- name: UpdateUptimeMonitor :one
 UPDATE uptime_monitors
 SET name = $3, url = $4, interval_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
-    keyword = $8, keyword_mode = $9, keyword_case_sensitive = $10, updated_at = NOW()
+    keyword = $8, keyword_mode = $9, keyword_case_sensitive = $10,
+    json_assertions = $11, max_response_time_ms = $12, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 

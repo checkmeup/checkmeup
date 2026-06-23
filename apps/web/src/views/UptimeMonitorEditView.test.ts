@@ -63,6 +63,8 @@ const monitor = {
   keyword: null,
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
+  jsonAssertions: [],
+  maxResponseTimeMs: null,
   channelIds: [] as string[],
 }
 
@@ -203,6 +205,8 @@ describe('UptimeMonitorEditView', () => {
       keyword: '',
       keywordMode: 'contains',
       keywordCaseSensitive: false,
+      jsonAssertions: [],
+      maxResponseTimeMs: null,
       channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({

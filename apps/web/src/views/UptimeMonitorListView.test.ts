@@ -43,6 +43,8 @@ const monitors = [
     keyword: null,
     keywordMode: 'contains' as const,
     keywordCaseSensitive: false,
+    jsonAssertions: [],
+    maxResponseTimeMs: null,
   },
   {
     id: 'u2',
@@ -58,6 +60,8 @@ const monitors = [
     keyword: 'Welcome back',
     keywordMode: 'not_contains' as const,
     keywordCaseSensitive: false,
+    jsonAssertions: [],
+    maxResponseTimeMs: null,
   },
 ]
 

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -447,13 +448,12 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 }
 
 // maxKeywordCheckBytes caps how much of the response body is read for a
-// keyword search, regardless of Content-Length (US-1102).
+// keyword search or JSON assertion, regardless of Content-Length (US-1102).
 const maxKeywordCheckBytes = 512 * 1024
 
-// performHTTPCheck runs the monitor's HTTP check and, if a keyword is
-// configured, searches the (capped) response body for it as part of the
-// same request. failureReason is empty on success, or describes which
-// check failed (HTTP status vs. keyword mismatch) for alerting/display.
+// performHTTPCheck runs the monitor's HTTP check and evaluates all configured
+// assertions in order: status code → keyword → JSON assertions → response-time
+// threshold. The first failing condition is the recorded failure reason.
 func performHTTPCheck(m db.UptimeMonitor) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	start := time.Now()
@@ -465,22 +465,38 @@ func performHTTPCheck(m db.UptimeMonitor) (statusCode int, responseTimeMs int64,
 	defer func() { _ = resp.Body.Close() }()
 
 	keyword := strings.TrimSpace(m.Keyword.String)
-	if keyword == "" {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		if resp.StatusCode != http.StatusOK {
-			return resp.StatusCode, elapsed, false, httpStatusDesc(resp.StatusCode)
-		}
-		return resp.StatusCode, elapsed, true, ""
+	var assertions []jsonAssertion
+	if len(m.JsonAssertions) > 0 {
+		_ = json.Unmarshal(m.JsonAssertions, &assertions)
 	}
 
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKeywordCheckBytes))
+	needsBody := keyword != "" || len(assertions) > 0
+	var body string
+	if needsBody {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, maxKeywordCheckBytes))
+		body = string(raw)
+	} else {
+		_, _ = io.Copy(io.Discard, resp.Body)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return resp.StatusCode, elapsed, false, httpStatusDesc(resp.StatusCode)
 	}
-	if !keywordCheckPasses(string(body), keyword, m.KeywordMode, m.KeywordCaseSensitive) {
+
+	if keyword != "" && !keywordCheckPasses(body, keyword, m.KeywordMode, m.KeywordCaseSensitive) {
 		return resp.StatusCode, elapsed, false, keywordFailureReason(m.KeywordMode)
 	}
+
+	for _, a := range assertions {
+		if reason, ok := evaluateJsonAssertion(body, a); !ok {
+			return resp.StatusCode, elapsed, false, reason
+		}
+	}
+
+	if m.MaxResponseTimeMs.Valid && elapsed > int64(m.MaxResponseTimeMs.Int32) {
+		return resp.StatusCode, elapsed, false, "response time exceeded"
+	}
+
 	return resp.StatusCode, elapsed, true, ""
 }
 
@@ -510,6 +526,93 @@ func httpStatusDesc(code int) string {
 		return "timeout / connection error"
 	}
 	return fmt.Sprintf("HTTP %d", code)
+}
+
+type jsonAssertion struct {
+	Path       string `json:"path"`
+	Comparator string `json:"comparator"`
+	Expected   string `json:"expected"`
+}
+
+// evaluateJsonAssertion resolves path in the JSON body and compares to
+// expected. Returns ("", true) on pass or (failureReason, false) on fail.
+func evaluateJsonAssertion(body string, a jsonAssertion) (string, bool) {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(body), &root); err != nil {
+		return "response is not valid JSON", false
+	}
+
+	path := strings.TrimPrefix(a.Path, "$.")
+	path = strings.TrimPrefix(path, ".")
+	segments := strings.Split(path, ".")
+
+	var cur any = root
+	for _, seg := range segments {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return fmt.Sprintf("JSON path %q not found", a.Path), false
+		}
+		cur, ok = m[seg]
+		if !ok {
+			return fmt.Sprintf("JSON path %q not found", a.Path), false
+		}
+	}
+
+	actual := jsonValueToString(cur)
+
+	switch a.Comparator {
+	case "equals":
+		if actual != a.Expected {
+			return fmt.Sprintf("JSON assertion failed: %q equals %q (got %q)", a.Path, a.Expected, actual), false
+		}
+	case "not_equals":
+		if actual == a.Expected {
+			return fmt.Sprintf("JSON assertion failed: %q not_equals %q (got %q)", a.Path, a.Expected, actual), false
+		}
+	case "contains":
+		if !strings.Contains(actual, a.Expected) {
+			return fmt.Sprintf("JSON assertion failed: %q contains %q (got %q)", a.Path, a.Expected, actual), false
+		}
+	case "greater_than":
+		av, ae, ok := parseNumericPair(actual, a.Expected)
+		if !ok || av <= ae {
+			return fmt.Sprintf("JSON assertion failed: %q greater_than %q (got %q)", a.Path, a.Expected, actual), false
+		}
+	case "less_than":
+		av, ae, ok := parseNumericPair(actual, a.Expected)
+		if !ok || av >= ae {
+			return fmt.Sprintf("JSON assertion failed: %q less_than %q (got %q)", a.Path, a.Expected, actual), false
+		}
+	}
+	return "", true
+}
+
+func jsonValueToString(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case bool:
+		if t {
+			return "true"
+		}
+		return "false"
+	case float64:
+		if t == float64(int64(t)) {
+			return fmt.Sprintf("%d", int64(t))
+		}
+		return fmt.Sprintf("%g", t)
+	case nil:
+		return "null"
+	default:
+		b, _ := json.Marshal(v)
+		return string(b)
+	}
+}
+
+func parseNumericPair(actual, expected string) (float64, float64, bool) {
+	av, err1 := strconv.ParseFloat(actual, 64)
+	ae, err2 := strconv.ParseFloat(expected, 64)
+	return av, ae, err1 == nil && err2 == nil
 }
 
 // ─── SSL monitor checks ──────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -20,23 +21,49 @@ import (
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
 
+// JsonAssertion is one structured assertion evaluated against the response body.
+type JsonAssertion struct {
+	Path       string `json:"path"`
+	Comparator string `json:"comparator"`
+	Expected   string `json:"expected"`
+}
+
+var validComparators = map[string]bool{
+	"equals": true, "not_equals": true, "contains": true,
+	"greater_than": true, "less_than": true,
+}
+
+func validateJsonAssertions(assertions []JsonAssertion) error {
+	for i, a := range assertions {
+		if strings.TrimSpace(a.Path) == "" {
+			return fmt.Errorf("assertion %d: path is required", i+1)
+		}
+		if !validComparators[a.Comparator] {
+			return fmt.Errorf("assertion %d: invalid comparator %q", i+1, a.Comparator)
+		}
+	}
+	return nil
+}
+
 // ─── response types ──────────────────────────────────────────────────────────
 
 type uptimeMonitorResponse struct {
-	ID                   string   `json:"id"`
-	Name                 string   `json:"name"`
-	URL                  string   `json:"url"`
-	IntervalMins         int32    `json:"intervalMins"`
-	Status               string   `json:"status"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	LastCheckedAt        *string  `json:"lastCheckedAt"`
-	CreatedAt            string   `json:"createdAt"`
-	Uptime24h            *float64 `json:"uptime24h"`
-	Keyword              *string  `json:"keyword"`
-	KeywordMode          string   `json:"keywordMode"`
-	KeywordCaseSensitive bool     `json:"keywordCaseSensitive"`
-	ChannelIDs           []string `json:"channelIds,omitempty"`
+	ID                   string          `json:"id"`
+	Name                 string          `json:"name"`
+	URL                  string          `json:"url"`
+	IntervalMins         int32           `json:"intervalMins"`
+	Status               string          `json:"status"`
+	AlertsEnabled        bool            `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	LastCheckedAt        *string         `json:"lastCheckedAt"`
+	CreatedAt            string          `json:"createdAt"`
+	Uptime24h            *float64        `json:"uptime24h"`
+	Keyword              *string         `json:"keyword"`
+	KeywordMode          string          `json:"keywordMode"`
+	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
+	JsonAssertions       []JsonAssertion `json:"jsonAssertions"`
+	MaxResponseTimeMs    *int32          `json:"maxResponseTimeMs"`
+	ChannelIDs           []string        `json:"channelIds,omitempty"`
 }
 
 type uptimeCheckResponse struct {
@@ -82,6 +109,7 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 		KeywordMode:          string(m.KeywordMode),
 		KeywordCaseSensitive: m.KeywordCaseSensitive,
+		JsonAssertions:       []JsonAssertion{},
 	}
 	if m.LastCheckedAt.Valid {
 		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
@@ -89,6 +117,12 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 	}
 	if m.Keyword.Valid {
 		r.Keyword = &m.Keyword.String
+	}
+	if len(m.JsonAssertions) > 0 {
+		_ = json.Unmarshal(m.JsonAssertions, &r.JsonAssertions)
+	}
+	if m.MaxResponseTimeMs.Valid {
+		r.MaxResponseTimeMs = &m.MaxResponseTimeMs.Int32
 	}
 	return r
 }
@@ -194,13 +228,15 @@ func (h *MonitorHandler) ListUptimeMonitors(w http.ResponseWriter, r *http.Reque
 }
 
 type createUptimeMonitorRequest struct {
-	Name                 string `json:"name"`
-	URL                  string `json:"url"`
-	IntervalMins         int32  `json:"intervalMins"`
-	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
-	Keyword              string `json:"keyword"`
-	KeywordMode          string `json:"keywordMode"`
-	KeywordCaseSensitive bool   `json:"keywordCaseSensitive"`
+	Name                 string          `json:"name"`
+	URL                  string          `json:"url"`
+	IntervalMins         int32           `json:"intervalMins"`
+	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	Keyword              string          `json:"keyword"`
+	KeywordMode          string          `json:"keywordMode"`
+	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
+	JsonAssertions       []JsonAssertion `json:"jsonAssertions"`
+	MaxResponseTimeMs    *int32          `json:"maxResponseTimeMs"`
 }
 
 // CreateUptimeMonitor POST /api/v1/monitors/uptime
@@ -231,6 +267,17 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+	if req.JsonAssertions == nil {
+		req.JsonAssertions = []JsonAssertion{}
+	}
+	if err := validateJsonAssertions(req.JsonAssertions); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	if req.MaxResponseTimeMs != nil && *req.MaxResponseTimeMs <= 0 {
+		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
+		return
+	}
 	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -258,6 +305,11 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		req.MaxAlertsPerIncident = 3
 	}
 
+	assertionsJSON, _ := json.Marshal(req.JsonAssertions)
+	var maxRTParam pgtype.Int4
+	if req.MaxResponseTimeMs != nil {
+		maxRTParam = pgtype.Int4{Int32: *req.MaxResponseTimeMs, Valid: true}
+	}
 	monitor, err := h.queries.CreateUptimeMonitor(r.Context(), db.CreateUptimeMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -267,6 +319,8 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
 		KeywordMode:          parseKeywordMode(req.KeywordMode),
 		KeywordCaseSensitive: req.KeywordCaseSensitive,
+		JsonAssertions:       assertionsJSON,
+		MaxResponseTimeMs:    maxRTParam,
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -393,15 +447,17 @@ func uptimeIncidentsToResponse(incidents []db.UptimeIncident) []uptimeIncidentRe
 }
 
 type updateUptimeMonitorRequest struct {
-	Name                 string   `json:"name"`
-	URL                  string   `json:"url"`
-	IntervalMins         int32    `json:"intervalMins"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	Keyword              string   `json:"keyword"`
-	KeywordMode          string   `json:"keywordMode"`
-	KeywordCaseSensitive bool     `json:"keywordCaseSensitive"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string          `json:"name"`
+	URL                  string          `json:"url"`
+	IntervalMins         int32           `json:"intervalMins"`
+	AlertsEnabled        bool            `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	Keyword              string          `json:"keyword"`
+	KeywordMode          string          `json:"keywordMode"`
+	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
+	JsonAssertions       []JsonAssertion `json:"jsonAssertions"`
+	MaxResponseTimeMs    *int32          `json:"maxResponseTimeMs"`
+	ChannelIDs           []string        `json:"channelIds"`
 }
 
 // UpdateUptimeMonitor PATCH /api/v1/monitors/uptime/{id}
@@ -431,6 +487,17 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+	if req.JsonAssertions == nil {
+		req.JsonAssertions = []JsonAssertion{}
+	}
+	if err := validateJsonAssertions(req.JsonAssertions); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	if req.MaxResponseTimeMs != nil && *req.MaxResponseTimeMs <= 0 {
+		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
+		return
+	}
 
 	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
 	if err != nil {
@@ -453,6 +520,11 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		req.MaxAlertsPerIncident = 3
 	}
 
+	updAssertionsJSON, _ := json.Marshal(req.JsonAssertions)
+	var updMaxRTParam pgtype.Int4
+	if req.MaxResponseTimeMs != nil {
+		updMaxRTParam = pgtype.Int4{Int32: *req.MaxResponseTimeMs, Valid: true}
+	}
 	monitor, err := h.queries.UpdateUptimeMonitor(r.Context(), db.UpdateUptimeMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -464,6 +536,8 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
 		KeywordMode:          parseKeywordMode(req.KeywordMode),
 		KeywordCaseSensitive: req.KeywordCaseSensitive,
+		JsonAssertions:       updAssertionsJSON,
+		MaxResponseTimeMs:    updMaxRTParam,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

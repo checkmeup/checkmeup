@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
-import { monitorsApi, type KeywordMode } from '@/api/monitors'
+import { monitorsApi, type KeywordMode, type JsonAssertion, type AssertionComparator } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { useBilling } from '@/composables/useBilling'
@@ -19,6 +19,8 @@ const maxAlertsPerIncident = ref(3)
 const keyword = ref('')
 const keywordMode = ref<KeywordMode>('contains')
 const keywordCaseSensitive = ref(false)
+const jsonAssertions = ref<JsonAssertion[]>([])
+const maxResponseTimeMs = ref<number | null>(null)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -28,6 +30,22 @@ const keywordModeOptions: { label: string; value: KeywordMode }[] = [
   { label: 'Contains', value: 'contains' },
   { label: 'Does not contain', value: 'not_contains' },
 ]
+
+const comparatorOptions: { label: string; value: AssertionComparator }[] = [
+  { label: 'equals', value: 'equals' },
+  { label: 'not equals', value: 'not_equals' },
+  { label: 'contains', value: 'contains' },
+  { label: '>', value: 'greater_than' },
+  { label: '<', value: 'less_than' },
+]
+
+function addAssertion() {
+  jsonAssertions.value.push({ path: '', comparator: 'equals', expected: '' })
+}
+
+function removeAssertion(i: number) {
+  jsonAssertions.value.splice(i, 1)
+}
 
 const intervalOptions = computed(() => [
   ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
@@ -86,6 +104,8 @@ async function submit() {
       keyword: keyword.value.trim(),
       keywordMode: keywordMode.value,
       keywordCaseSensitive: keywordCaseSensitive.value,
+      jsonAssertions: jsonAssertions.value,
+      maxResponseTimeMs: maxResponseTimeMs.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -182,6 +202,62 @@ async function submit() {
             />
             <Label for="keywordCaseSensitive" class="cursor-pointer">Case-sensitive</Label>
           </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <Label>JSON assertions (optional)</Label>
+            <button
+              type="button"
+              class="text-xs px-2 py-1 rounded"
+              style="color: var(--text-dim); background-color: var(--surface-raised)"
+              @click="addAssertion"
+            >
+              + Add
+            </button>
+          </div>
+          <div v-if="jsonAssertions.length === 0" class="text-xs" style="color: var(--text-muted)">
+            Assert on JSON response fields, e.g. <code>data.status</code> equals <code>ok</code>.
+          </div>
+          <div v-for="(a, i) in jsonAssertions" :key="i" class="flex items-center gap-2 mt-2">
+            <Input v-model="a.path" placeholder="$.status" class="flex-1 min-w-0" />
+            <select
+              v-model="a.comparator"
+              class="rounded-md border px-2 py-2 text-sm"
+              style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+            >
+              <option v-for="opt in comparatorOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+            <Input v-model="a.expected" placeholder="ok" class="flex-1 min-w-0" />
+            <button
+              type="button"
+              class="text-xs px-1.5 py-1 rounded flex-shrink-0"
+              style="color: var(--text-muted); background-color: var(--surface-raised)"
+              @click="removeAssertion(i)"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <Label for="maxResponseTimeMs">Max response time (optional)</Label>
+          <div class="flex items-center gap-2 mt-1">
+            <Input
+              id="maxResponseTimeMs"
+              v-model.number="maxResponseTimeMs"
+              type="number"
+              min="1"
+              placeholder="e.g. 2000"
+              class="w-40"
+            />
+            <span class="text-sm" style="color: var(--text-muted)">ms</span>
+          </div>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Fail the check if response takes longer than this, regardless of status code.
+          </p>
         </div>
 
         <div>
