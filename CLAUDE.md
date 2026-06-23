@@ -1,6 +1,6 @@
 # checkmeup.net — developer monitoring platform
 
-Cron, uptime, and SSL monitors with execution logs, Telegram alerts, and white-label status pages for agencies.
+Cron, uptime, SSL, and domain expiry monitors with execution logs, Telegram alerts, and white-label status pages for agencies.
 
 **MVP order:** Cron monitor → Uptime monitor → SSL expiry monitor → Status page  
 **Pricing:** Hobby $0 / Solo $9 / Startup $29 / Enterprise $99

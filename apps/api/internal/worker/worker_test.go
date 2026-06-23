@@ -39,6 +39,7 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
+	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -152,6 +153,17 @@ func testSSLMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, hostname
 	})
 	if err != nil {
 		t.Fatalf("create test ssl monitor: %v", err)
+	}
+	return m
+}
+
+func testDomainMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, domain string) db.DomainMonitor {
+	t.Helper()
+	m, err := queries.CreateDomainMonitor(context.Background(), db.CreateDomainMonitorParams{
+		OrgID: orgID, Name: "Domain monitor", Domain: domain,
+	})
+	if err != nil {
+		t.Fatalf("create test domain monitor: %v", err)
 	}
 	return m
 }
@@ -833,6 +845,144 @@ func TestCheckSSLMonitors(t *testing.T) {
 		}
 		if status != "waiting" {
 			t.Fatalf("want status unchanged (waiting) under maintenance, got %q", status)
+		}
+	})
+}
+
+// ─── checkDomainMonitors / checkOneDomainMonitor ──────────────────────────
+//
+// Unlike performTLSCheck, the RDAP lookup goes through an injectable
+// *rdap.Client (rdap.NewClientWithHTTPClient), so both the success and
+// error paths are testable against a local httptest server — no live
+// network dependency.
+
+func TestCheckDomainMonitors(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	tg := telegram.NewClient("")
+	mailer := email.NewSender("")
+	wh := webhook.NewClient()
+	logger := testLogger()
+
+	t.Run("a lookup failure is recorded as an error status", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "this-domain-does-not-exist.invalid")
+
+		checkDomainMonitors(context.Background(), n)
+
+		var status, errorMsg string
+		var lastCheckedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, error_msg, last_checked_at FROM domain_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &errorMsg, &lastCheckedAt); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "error" {
+			t.Fatalf("want status error, got %q", status)
+		}
+		if errorMsg == "" {
+			t.Fatal("want a non-empty error message")
+		}
+		if !lastCheckedAt.Valid {
+			t.Fatal("want last_checked_at set")
+		}
+	})
+
+	t.Run("a successful lookup records registrar and expiry", func(t *testing.T) {
+		expiresAt := time.Now().Add(90 * 24 * time.Hour).UTC().Truncate(time.Second)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = fmt.Fprintf(w, `{
+				"events": [{"eventAction": "expiration", "eventDate": %q}],
+				"entities": [{"roles": ["registrar"], "handle": "REG-1", "vcardArray": ["vcard", [["fn", {}, "text", "Test Registrar"]]]}]
+			}`, expiresAt.Format(time.RFC3339))
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+
+		checkDomainMonitors(context.Background(), n)
+
+		var status, registrar string
+		var gotExpiresAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, registrar, expires_at FROM domain_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &registrar, &gotExpiresAt); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "up" {
+			t.Fatalf("want status up, got %q", status)
+		}
+		if registrar != "Test Registrar" {
+			t.Fatalf("want registrar Test Registrar, got %q", registrar)
+		}
+		if !gotExpiresAt.Valid || !gotExpiresAt.Time.Equal(expiresAt) {
+			t.Fatalf("want expiresAt %v, got %v", expiresAt, gotExpiresAt.Time)
+		}
+	})
+
+	t.Run("a monitor under an active maintenance window is excluded", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "this-domain-does-not-exist.invalid")
+		var windowID uuid.UUID
+		if err := pool.QueryRow(context.Background(),
+			"INSERT INTO maintenance_windows (org_id, title, message, starts_at) VALUES ($1, 'Scheduled', '', NOW() - INTERVAL '1 minute') RETURNING id",
+			org.ID,
+		).Scan(&windowID); err != nil {
+			t.Fatalf("seed maintenance window: %v", err)
+		}
+		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'domain', $2)", windowID, mon.ID)
+
+		checkDomainMonitors(context.Background(), n)
+
+		var status string
+		if err := pool.QueryRow(context.Background(), "SELECT status FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "waiting" {
+			t.Fatalf("want status unchanged (waiting) under maintenance, got %q", status)
+		}
+	})
+
+	t.Run("crossing the 30-day threshold sends one alert via the fallback email", func(t *testing.T) {
+		expiresAt := time.Now().Add(20 * 24 * time.Hour).UTC().Truncate(time.Second)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = fmt.Fprintf(w, `{"events": [{"eventAction": "expiration", "eventDate": %q}]}`, expiresAt.Format(time.RFC3339))
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		testUser(t, queries, org.ID) // fallback email recipient (ADR-023)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+
+		checkDomainMonitors(context.Background(), n)
+
+		var status string
+		var alerted30d, alerted14d, alerted7d bool
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, alerted_30d, alerted_14d, alerted_7d FROM domain_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &alerted30d, &alerted14d, &alerted7d); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "expiring_soon" {
+			t.Fatalf("want status expiring_soon, got %q", status)
+		}
+		if !alerted30d || alerted14d || alerted7d {
+			t.Fatalf("want only alerted_30d set, got 30d=%v 14d=%v 7d=%v", alerted30d, alerted14d, alerted7d)
 		}
 	})
 }

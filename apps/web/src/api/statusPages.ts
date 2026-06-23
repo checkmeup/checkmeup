@@ -12,7 +12,7 @@ export interface StatusPage {
 
 export interface StatusPageMonitorItem {
   id: string
-  monitorType: 'cron' | 'uptime' | 'ssl'
+  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'
   monitorId: string
   displayName: string
   displayOrder: number
@@ -37,7 +37,7 @@ export interface UpdateStatusPageInput {
 
 export interface SetMonitorsInput {
   monitors: {
-    monitorType: 'cron' | 'uptime' | 'ssl'
+    monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'
     monitorId: string
     displayName: string
     displayOrder: number

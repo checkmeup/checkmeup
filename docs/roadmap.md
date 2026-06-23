@@ -17,9 +17,8 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 1. [EP-17](stories/ep-17-slack-alerts.md) — Slack alerts. Built on [EP-14](stories/ep-14-webhook-alerts.md) (shipped v1.7)
 2. [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts. Also built on EP-14
 3. [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts
-4. [EP-29](stories/ep-29-domain-expiry-monitoring.md) — Domain expiry monitoring. No blockers; near-identical shape to the already-shipped SSL monitor (EP-04). From the competitor gap analysis in [`docs/bucket-list.md`](bucket-list.md)
-5. [EP-30](stories/ep-30-status-badges.md) — Public status badges. No blockers; cheap, and doubles as a marketing/growth lever. Also from `bucket-list.md`
-6. [EP-31](stories/ep-31-assertion-checks.md) — Assertion-based API checks. No blockers; extends EP-11's keyword-search foundation. Also from `bucket-list.md`
+4. [EP-30](stories/ep-30-status-badges.md) — Public status badges. No blockers; cheap, and doubles as a marketing/growth lever. From the competitor gap analysis in [`docs/bucket-list.md`](bucket-list.md)
+5. [EP-31](stories/ep-31-assertion-checks.md) — Assertion-based API checks. No blockers; extends EP-11's keyword-search foundation. Also from `bucket-list.md`
 
 ### Later
 

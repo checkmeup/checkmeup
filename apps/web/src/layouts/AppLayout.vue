@@ -146,6 +146,27 @@ async function signOut() {
           SSL
         </RouterLink>
 
+        <RouterLink
+          to="/monitors/domain"
+          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+          style="color: var(--text-dim)"
+          active-class="font-medium"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          Domain
+        </RouterLink>
+
         <div
           class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider"
           style="color: var(--text-muted)"

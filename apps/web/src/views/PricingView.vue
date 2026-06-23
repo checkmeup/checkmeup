@@ -85,6 +85,7 @@ const featureRows: TableRow[] = [
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Keyword monitoring', values: ['—', '✓', '✓', '✓'] },
   { label: 'SSL expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Domain expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Telegram alerts', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
@@ -252,7 +253,7 @@ const featureRows: TableRow[] = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Cron, uptime &amp; SSL monitors
+              Cron, uptime, SSL &amp; domain monitors
             </li>
             <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
               <svg

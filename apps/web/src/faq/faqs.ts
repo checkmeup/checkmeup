@@ -20,11 +20,11 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What can I monitor?',
-        a: "Three things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), and TLS certificates that shouldn't be allowed to quietly expire (SSL monitors).",
+        a: "Four things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), TLS certificates that shouldn't be allowed to quietly expire (SSL monitors), and domain registrations that shouldn't be allowed to lapse (domain monitors).",
       },
       {
         q: 'Do I need to install anything?',
-        a: 'No. Cron monitors work by calling a ping URL at the end of your job (a single curl line). Uptime and SSL monitors just need a URL or hostname — nothing runs on your servers.',
+        a: 'No. Cron monitors work by calling a ping URL at the end of your job (a single curl line). Uptime, SSL, and domain monitors just need a URL, hostname, or domain — nothing runs on your servers.',
       },
     ],
   },
@@ -38,7 +38,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What counts as a "monitor"?',
-        a: 'Each cron job, uptime URL, or SSL certificate you track counts as one monitor. The limit applies to the total across all types.',
+        a: 'Each cron job, uptime URL, SSL certificate, or domain you track counts as one monitor. The limit applies to the total across all types.',
       },
       {
         q: 'Can I change plans later?',
@@ -68,7 +68,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: "What's the minimum check interval?",
-        a: "5 minutes for uptime monitors on Hobby, 1 minute on paid plans. SSL certificates are checked once a day. Cron monitors alert based on your job's own schedule plus a grace period you choose.",
+        a: "5 minutes for uptime monitors on Hobby, 1 minute on paid plans. SSL certificates and domains are both checked once a day. Cron monitors alert based on your job's own schedule plus a grace period you choose.",
       },
       {
         q: 'Can I check the response body, not just the status code?',

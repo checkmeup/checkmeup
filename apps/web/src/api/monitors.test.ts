@@ -223,6 +223,97 @@ describe('monitorsApi ssl', () => {
   })
 })
 
+const domainMonitor = {
+  id: 'd1',
+  name: 'Primary domain',
+  domain: 'checkmeup.net',
+  status: 'up' as const,
+  alertsEnabled: true,
+  expiresAt: '2027-03-01T00:00:00Z',
+  registrar: 'Example Registrar, LLC',
+  errorMsg: null,
+  daysUntilExpiry: 250,
+  lastCheckedAt: '2026-06-22T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+}
+
+const createDomainInput = { name: 'Primary domain', domain: 'checkmeup.net' }
+
+const updateDomainInput = {
+  name: 'Primary domain',
+  domain: 'checkmeup.net',
+  alertsEnabled: true,
+  channelIds: ['ch1'],
+}
+
+describe('monitorsApi domain', () => {
+  it('listDomain fetches the domain monitor list', async () => {
+    getMock.mockResolvedValueOnce([domainMonitor])
+
+    const result = await monitorsApi.listDomain()
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/')
+    expect(result).toEqual([domainMonitor])
+  })
+
+  it('getDomain fetches a single domain monitor by id', async () => {
+    getMock.mockResolvedValueOnce(domainMonitor)
+
+    const result = await monitorsApi.getDomain('d1')
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/d1/')
+    expect(result).toEqual(domainMonitor)
+  })
+
+  it('createDomain posts the input to create a domain monitor', async () => {
+    postMock.mockResolvedValueOnce(domainMonitor)
+
+    const result = await monitorsApi.createDomain(createDomainInput)
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/', createDomainInput)
+    expect(result).toEqual(domainMonitor)
+  })
+
+  it('updateDomain patches the input to update a domain monitor by id', async () => {
+    patchMock.mockResolvedValueOnce(domainMonitor)
+
+    const result = await monitorsApi.updateDomain('d1', updateDomainInput)
+
+    expect(patchMock).toHaveBeenCalledExactlyOnceWith(
+      '/api/v1/monitors/domain/d1/',
+      updateDomainInput,
+    )
+    expect(result).toEqual(domainMonitor)
+  })
+
+  it('pauseDomain posts to the pause endpoint with no body', async () => {
+    const paused = { ...domainMonitor, status: 'paused' as const }
+    postMock.mockResolvedValueOnce(paused)
+
+    const result = await monitorsApi.pauseDomain('d1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/d1/pause', {})
+    expect(result).toEqual(paused)
+  })
+
+  it('resumeDomain posts to the resume endpoint with no body', async () => {
+    postMock.mockResolvedValueOnce(domainMonitor)
+
+    const result = await monitorsApi.resumeDomain('d1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/d1/resume', {})
+    expect(result).toEqual(domainMonitor)
+  })
+
+  it('deleteDomain deletes a domain monitor by id', async () => {
+    deleteMock.mockResolvedValueOnce(undefined)
+
+    await monitorsApi.deleteDomain('d1')
+
+    expect(deleteMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/domain/d1/')
+  })
+})
+
 const uptimeMonitor = {
   id: 'u1',
   name: 'Marketing site',

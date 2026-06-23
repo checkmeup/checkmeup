@@ -140,6 +140,12 @@ func resolveMonitorName(ctx context.Context, queries *db.Queries, orgID uuid.UUI
 			return uuid.UUID{}, "", fmt.Errorf("ssl monitor not found: %s", monitorIDStr)
 		}
 		return id, m.Name, nil
+	case "domain":
+		m, err := queries.GetDomainMonitor(ctx, db.GetDomainMonitorParams{ID: id, OrgID: orgID})
+		if err != nil {
+			return uuid.UUID{}, "", fmt.Errorf("domain monitor not found: %s", monitorIDStr)
+		}
+		return id, m.Name, nil
 	default:
 		return uuid.UUID{}, "", fmt.Errorf("invalid monitor type: %s", monitorType)
 	}

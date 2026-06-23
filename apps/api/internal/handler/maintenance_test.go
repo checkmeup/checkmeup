@@ -79,6 +79,17 @@ func createSSLMonitor(t *testing.T, h *MonitorHandler, access *http.Cookie, name
 	return decodeBody[monitorRef](t, w)
 }
 
+func createDomainMonitor(t *testing.T, h *MonitorHandler, access *http.Cookie, name string) monitorRef {
+	t.Helper()
+	w := doAuthed(t, http.MethodPost, h.CreateDomainMonitor, access, map[string]any{
+		"name": name, "domain": "example.com",
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create domain monitor: want 201, got %d: %s", w.Code, w.Body.String())
+	}
+	return decodeBody[monitorRef](t, w)
+}
+
 func withURLParam(r *http.Request, key, value string) *http.Request {
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add(key, value)

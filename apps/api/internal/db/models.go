@@ -12,6 +12,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type DomainMonitorStatus string
+
+const (
+	DomainMonitorStatusWaiting      DomainMonitorStatus = "waiting"
+	DomainMonitorStatusUp           DomainMonitorStatus = "up"
+	DomainMonitorStatusExpiringSoon DomainMonitorStatus = "expiring_soon"
+	DomainMonitorStatusExpired      DomainMonitorStatus = "expired"
+	DomainMonitorStatusError        DomainMonitorStatus = "error"
+	DomainMonitorStatusPaused       DomainMonitorStatus = "paused"
+)
+
+func (e *DomainMonitorStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DomainMonitorStatus(s)
+	case string:
+		*e = DomainMonitorStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DomainMonitorStatus: %T", src)
+	}
+	return nil
+}
+
+type NullDomainMonitorStatus struct {
+	DomainMonitorStatus DomainMonitorStatus `json:"domain_monitor_status"`
+	Valid               bool                `json:"valid"` // Valid is true if DomainMonitorStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDomainMonitorStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.DomainMonitorStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DomainMonitorStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDomainMonitorStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DomainMonitorStatus), nil
+}
+
 type KeywordMode string
 
 const (
@@ -260,6 +306,25 @@ type CronPing struct {
 	MonitorID  uuid.UUID          `json:"monitor_id"`
 	ReceivedAt pgtype.Timestamptz `json:"received_at"`
 	SourceIp   string             `json:"source_ip"`
+}
+
+type DomainMonitor struct {
+	ID            uuid.UUID           `json:"id"`
+	OrgID         uuid.UUID           `json:"org_id"`
+	Name          string              `json:"name"`
+	Domain        string              `json:"domain"`
+	Status        DomainMonitorStatus `json:"status"`
+	AlertsEnabled bool                `json:"alerts_enabled"`
+	ExpiresAt     pgtype.Timestamptz  `json:"expires_at"`
+	Registrar     pgtype.Text         `json:"registrar"`
+	ErrorMsg      pgtype.Text         `json:"error_msg"`
+	Alerted30d    bool                `json:"alerted_30d"`
+	Alerted14d    bool                `json:"alerted_14d"`
+	Alerted7d     bool                `json:"alerted_7d"`
+	LastCheckedAt pgtype.Timestamptz  `json:"last_checked_at"`
+	NextCheckAt   pgtype.Timestamptz  `json:"next_check_at"`
+	CreatedAt     pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz  `json:"updated_at"`
 }
 
 type FeatureSuggestion struct {

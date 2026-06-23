@@ -147,6 +147,33 @@ export interface UpdateSSLMonitorInput {
   channelIds: string[]
 }
 
+export interface DomainMonitor {
+  id: string
+  name: string
+  domain: string
+  status: 'waiting' | 'up' | 'expiring_soon' | 'expired' | 'error' | 'paused'
+  alertsEnabled: boolean
+  expiresAt: string | null
+  registrar: string | null
+  errorMsg: string | null
+  daysUntilExpiry: number | null
+  lastCheckedAt: string | null
+  createdAt: string
+  channelIds?: string[]
+}
+
+export interface CreateDomainMonitorInput {
+  name: string
+  domain: string
+}
+
+export interface UpdateDomainMonitorInput {
+  name: string
+  domain: string // passed through but not shown in UI (domain changes require delete + recreate)
+  alertsEnabled: boolean
+  channelIds: string[]
+}
+
 export const monitorsApi = {
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
@@ -168,6 +195,16 @@ export const monitorsApi = {
   pauseSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/pause`, {}),
   resumeSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/resume`, {}),
   deleteSSL: (id: string) => api.delete<void>(`/api/v1/monitors/ssl/${id}/`),
+
+  listDomain: () => api.get<DomainMonitor[]>('/api/v1/monitors/domain/'),
+  getDomain: (id: string) => api.get<DomainMonitor>(`/api/v1/monitors/domain/${id}/`),
+  createDomain: (input: CreateDomainMonitorInput) =>
+    api.post<DomainMonitor>('/api/v1/monitors/domain/', input),
+  updateDomain: (id: string, input: UpdateDomainMonitorInput) =>
+    api.patch<DomainMonitor>(`/api/v1/monitors/domain/${id}/`, input),
+  pauseDomain: (id: string) => api.post<DomainMonitor>(`/api/v1/monitors/domain/${id}/pause`, {}),
+  resumeDomain: (id: string) => api.post<DomainMonitor>(`/api/v1/monitors/domain/${id}/resume`, {}),
+  deleteDomain: (id: string) => api.delete<void>(`/api/v1/monitors/domain/${id}/`),
 
   listUptime: () => api.get<UptimeMonitor[]>('/api/v1/monitors/uptime/'),
   getUptime: (id: string) => api.get<UptimeMonitorDetail>(`/api/v1/monitors/uptime/${id}/`),

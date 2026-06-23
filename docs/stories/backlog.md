@@ -34,7 +34,8 @@
 | [EP-26](ep-26-public-api-keys.md)     | Public API and API keys         | 0/5           |
 | [EP-27](ep-27-annual-billing.md)      | Annual billing                  | 3/3           |
 | [EP-28](ep-28-notification-channels.md) | Notification channels         | 0/5           |
+| [EP-29](ep-29-domain-expiry-monitoring.md) | Domain expiry monitoring   | 3/5**         |
 
-`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why.
+`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note.
 
 See [roadmap.md](../roadmap.md) for the Now / Next / Later priority order ([ADR-022](../decisions/022-post-mvp-docs-organization.md)).

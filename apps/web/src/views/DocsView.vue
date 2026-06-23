@@ -7,6 +7,7 @@ const sections = [
   { id: 'cron', label: 'Cron job monitoring' },
   { id: 'uptime', label: 'Uptime monitoring' },
   { id: 'ssl', label: 'SSL expiry monitoring' },
+  { id: 'domain', label: 'Domain expiry monitoring' },
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'email', label: 'Email alerts' },
   { id: 'status-pages', label: 'Status pages' },
@@ -62,10 +63,11 @@ const sections = [
             first monitor.
           </p>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            checkmeup watches three kinds of things: scheduled jobs that should run on a cadence
-            (cron monitors), URLs that should always respond (uptime monitors), and TLS certificates
-            that shouldn't be allowed to quietly expire (SSL monitors). Connect Telegram, add an
-            alert email, or both — every monitor type alerts through whichever channels you enable.
+            checkmeup watches four kinds of things: scheduled jobs that should run on a cadence
+            (cron monitors), URLs that should always respond (uptime monitors), TLS certificates
+            that shouldn't be allowed to quietly expire (SSL monitors), and domain registrations
+            that shouldn't be allowed to lapse (domain monitors). Connect Telegram, add an alert
+            email, or both — every monitor type alerts through whichever channels you enable.
           </p>
         </section>
 
@@ -213,6 +215,25 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           </p>
         </section>
 
+        <!-- Domain -->
+        <section id="domain" class="scroll-mt-24">
+          <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">
+            Domain expiry monitoring
+          </h2>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            Separate from your SSL certificate — this tracks the domain
+            <em>registration</em> itself, which is rarer to lapse but far more catastrophic when it
+            does (your site disappears entirely, and the domain can get squatted before you notice).
+            Give us an apex domain, same format as an SSL monitor's hostname, and we check its
+            registration once a day and alert you at 30, 14, and 7 days before it expires, plus
+            immediately if it's already expired.
+          </p>
+          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+            The dashboard shows the current registrar and exact expiry date for every monitored
+            domain.
+          </p>
+        </section>
+
         <!-- Telegram -->
         <section id="telegram" class="scroll-mt-24">
           <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Telegram alerts</h2>
@@ -309,7 +330,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
             Schedule a maintenance window from the
             <strong style="color: var(--text-strong)">Maintenance</strong> page and pick any
-            combination of cron, uptime, and SSL monitors to cover. While a window is active, those
+            combination of cron, uptime, SSL, and domain monitors to cover. While a window is active, those
             monitors aren't checked at all — no alerts, no incidents, and your uptime stats stay
             untouched.
           </p>

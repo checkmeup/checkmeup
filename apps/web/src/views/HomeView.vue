@@ -61,8 +61,8 @@ const plans = [
       </h1>
 
       <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-10" style="color: var(--text-dim)">
-        Cron job monitoring, uptime checks, and SSL expiry alerts — all in one place. Get notified
-        on Telegram the moment something breaks.
+        Cron job monitoring, uptime checks, SSL and domain expiry alerts — all in one place. Get
+        notified on Telegram the moment something breaks.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -144,11 +144,11 @@ const plans = [
           Everything you need to stay on top
         </h2>
         <p class="text-base" style="color: var(--text-dim)">
-          Three monitor types, one dashboard, zero blind spots.
+          Four monitor types, one dashboard, zero blind spots.
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Cron -->
         <div
           class="rounded-xl border p-6"
@@ -355,6 +355,82 @@ const plans = [
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Issuer &amp; expiry details
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Daily checks
+            </li>
+          </ul>
+        </div>
+
+        <!-- Domain -->
+        <div
+          class="rounded-xl border p-6"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <div
+            class="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+            style="background-color: var(--surface-raised)"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="color: var(--color-green-500)"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">
+            Domain expiry monitoring
+          </h3>
+          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+            Track your domain's registration separately from its SSL certificate — rarer to lapse,
+            but far more catastrophic when it does.
+          </p>
+          <ul class="mt-4 space-y-2">
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Multi-threshold alerts
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Registrar &amp; expiry details
             </li>
             <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
               <svg

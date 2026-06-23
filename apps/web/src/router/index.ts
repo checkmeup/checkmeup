@@ -159,6 +159,30 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/monitors/domain',
+      name: 'domain-monitors',
+      component: () => import('@/views/DomainMonitorListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/domain/new',
+      name: 'domain-monitor-create',
+      component: () => import('@/views/DomainMonitorCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/domain/:id',
+      name: 'domain-monitor-detail',
+      component: () => import('@/views/DomainMonitorDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/domain/:id/edit',
+      name: 'domain-monitor-edit',
+      component: () => import('@/views/DomainMonitorEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/status-pages',
       name: 'status-pages',
       component: () => import('@/views/StatusPageListView.vue'),

@@ -5,7 +5,8 @@ SELECT plan FROM orgs WHERE id = $1;
 SELECT
     (SELECT COUNT(*) FROM cron_monitors WHERE cron_monitors.org_id = $1)::int +
     (SELECT COUNT(*) FROM uptime_monitors WHERE uptime_monitors.org_id = $1)::int +
-    (SELECT COUNT(*) FROM ssl_monitors WHERE ssl_monitors.org_id = $1)::int AS total;
+    (SELECT COUNT(*) FROM ssl_monitors WHERE ssl_monitors.org_id = $1)::int +
+    (SELECT COUNT(*) FROM domain_monitors WHERE domain_monitors.org_id = $1)::int AS total;
 
 -- name: CountOrgStatusPages :one
 SELECT COUNT(*)::int AS total FROM status_pages WHERE org_id = $1;
@@ -21,7 +22,8 @@ SELECT
     (
         (SELECT COUNT(*) FROM cron_monitors WHERE org_id = o.id)::int +
         (SELECT COUNT(*) FROM uptime_monitors WHERE org_id = o.id)::int +
-        (SELECT COUNT(*) FROM ssl_monitors WHERE org_id = o.id)::int
+        (SELECT COUNT(*) FROM ssl_monitors WHERE org_id = o.id)::int +
+        (SELECT COUNT(*) FROM domain_monitors WHERE org_id = o.id)::int
     ) AS monitor_count,
     (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count
 FROM orgs o

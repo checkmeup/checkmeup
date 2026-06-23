@@ -174,6 +174,18 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
+			r.Route("/monitors/domain", func(r chi.Router) {
+				r.Get("/", monitors.ListDomainMonitors)
+				r.Post("/", monitors.CreateDomainMonitor)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", monitors.GetDomainMonitor)
+					r.Patch("/", monitors.UpdateDomainMonitor)
+					r.Delete("/", monitors.DeleteDomainMonitor)
+					r.Post("/pause", monitors.PauseDomainMonitor)
+					r.Post("/resume", monitors.ResumeDomainMonitor)
+				})
+			})
+
 			r.Route("/maintenance-windows", func(r chi.Router) {
 				r.Get("/", maintenance.ListMaintenanceWindows)
 				r.Post("/", maintenance.CreateMaintenanceWindow)
