@@ -33,6 +33,11 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-21 | Sun | Codacy fixes, tests, blog    | 2 h   |
 | 2026-06-22 | Mon | EP-14                        | 5 h   |
 | 2026-06-22 | Mon | Codacy fixes, blog           | 2 h   |
-| 2026-06-23 | Tue | EP-29 docs & website copy    | 1 h   |
-| 2026-06-23 | Tue | Blog                         | 1 h   |
+| 2026-06-23 | Tue | EP-29                        | 5 h   |
+| 2026-06-23 | Tue | EP-30                        | 4 h   |
 | 2026-06-23 | Tue | EP-31                        | 4 h   |
+| 2026-06-23 | Tue | Tests, refactoring           | 3 h   |
+| 2026-06-23 | Tue | Blog, docs                   | 2 h   |
+| 2026-06-24 | Wed | EP-28 (channel selection)    | 1 h   |
+| 2026-06-24 | Wed | EP-17                        | 4 h   |
+| 2026-06-24 | Wed | Docs                         | 1 h   |

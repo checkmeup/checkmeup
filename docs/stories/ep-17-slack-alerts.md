@@ -2,7 +2,7 @@
 
 A sixth alert channel, built as a thin Slack-specific formatter on top of the generic webhook delivery already built in [EP-14](ep-14-webhook-alerts.md) — Slack Incoming Webhooks are a plain HTTPS POST endpoint, official, free, and need no OAuth app or approval process (unlike [WhatsApp](ep-15-whatsapp-alerts.md)). The only real difference from EP-14 is the payload shape: Slack expects `text`/Block Kit, not checkmeup's generic event JSON.
 
-Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — "off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
+**Shipped 2026-06-24**, on top of the multi-channel model from [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)).
 
 ---
 
@@ -14,10 +14,10 @@ Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md
 
 **Acceptance criteria:**
 
-- [ ] Setup instructions: create a Slack Incoming Webhook in the target workspace/channel, paste the URL into Settings
-- [ ] URL validated against the `hooks.slack.com/...` pattern
-- [ ] "Send test message" button verifies the connection before saving
-- [ ] Multiple Slack webhooks can be added per org, each its own `notification_channels` row (EP-28) — no longer limited to one
+- [x] Setup instructions: create a Slack Incoming Webhook in the target workspace/channel, paste the URL into Settings
+- [x] URL validated against the `hooks.slack.com/...` pattern
+- [x] "Send test message" button verifies the connection before saving
+- [x] Multiple Slack webhooks can be added per org, each its own `notification_channels` row (EP-28)
 
 ---
 
@@ -29,9 +29,9 @@ Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md
 
 **Acceptance criteria:**
 
-- [ ] Message formatted for Slack (Block Kit or `text` fallback) with monitor name, type, reason, timestamp — readable directly in Slack, not raw JSON
-- [ ] Sent within one check cycle of the transition to "down", reusing the existing webhook delivery mechanics ([US-1402](ep-14-webhook-alerts.md): timeout, fire-and-forget)
-- [ ] Not sent if alerts are disabled for that monitor or Slack alerts are off at the org level
+- [x] Message formatted for Slack (Block Kit or `text` fallback) with monitor name, type, reason, timestamp — readable directly in Slack, not raw JSON
+- [x] Sent within one check cycle of the transition to "down", reusing the existing webhook delivery mechanics ([US-1402](ep-14-webhook-alerts.md): timeout, fire-and-forget)
+- [x] Not sent if the channel is disabled or not attached to that monitor (EP-28)
 
 ---
 
@@ -43,9 +43,9 @@ Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md
 
 **Acceptance criteria:**
 
-- [ ] Message includes monitor name and downtime duration, formatted for Slack
-- [ ] Always sent on genuine recovery regardless of the per-incident alert cap ([ADR-016](../decisions/016-alert-debounce.md))
-- [ ] Not sent if alerts are disabled for that monitor or Slack alerts are off at the org level
+- [x] Message includes monitor name and downtime duration, formatted for Slack
+- [x] Always sent on genuine recovery regardless of the per-incident alert cap ([ADR-016](../decisions/016-alert-debounce.md))
+- [x] Not sent if the channel is disabled or not attached to that monitor (EP-28)
 
 ---
 
@@ -57,9 +57,9 @@ Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md
 
 **Acceptance criteria:**
 
-- [ ] Non-2xx response (e.g. a removed webhook returning `404`) logged and visible in Settings — same pattern as the generic webhook channel ([US-1404](ep-14-webhook-alerts.md))
-- [ ] No automatic retries on MVP, consistent with the generic webhook channel
-- [ ] A failing Slack webhook never blocks or delays the worker's check loop
+- [x] Non-2xx response (e.g. a removed webhook returning `404`) logged and visible in Settings — same pattern as the generic webhook channel ([US-1404](ep-14-webhook-alerts.md))
+- [x] No automatic retries on MVP, consistent with the generic webhook channel
+- [x] A failing Slack webhook never blocks or delays the worker's check loop
 
 ---
 
@@ -71,5 +71,5 @@ Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md
 
 **Acceptance criteria:**
 
-- [ ] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts a triggered alert once per incident-event across all enabled channels together, consistent with [US-1305](ep-13-email-alerts.md), [US-1405](ep-14-webhook-alerts.md), [US-1505](ep-15-whatsapp-alerts.md), and [US-1605](ep-16-signal-alerts.md)
-- [ ] Recovery event is exempt from the cap on every enabled channel, including Slack
+- [x] `max_alerts_per_incident` ([ADR-016](../decisions/016-alert-debounce.md)) counts a triggered alert once per incident-event across all enabled channels together, consistent with [US-1305](ep-13-email-alerts.md), [US-1405](ep-14-webhook-alerts.md), [US-1505](ep-15-whatsapp-alerts.md), and [US-1605](ep-16-signal-alerts.md)
+- [x] Recovery event is exempt from the cap on every enabled channel, including Slack
