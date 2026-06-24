@@ -28,7 +28,12 @@ const plans = [
     price: 99,
     description: 'For growing agencies',
     highlight: false,
-    features: ['1000 monitors', '1-min checks', 'Telegram, Slack & email alerts', '100 status pages'],
+    features: [
+      '1000 monitors',
+      '1-min checks',
+      'Telegram, Slack & email alerts',
+      '100 status pages',
+    ],
   },
 ]
 </script>
@@ -82,58 +87,16 @@ const plans = [
         </RouterLink>
       </div>
 
-      <!-- Terminal mockup -->
+      <!-- Hero screenshot -->
       <div
-        class="max-w-2xl mx-auto rounded-xl border text-left overflow-hidden"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="max-w-4xl mx-auto rounded-xl border overflow-hidden"
+        style="border-color: var(--border)"
       >
-        <div
-          class="flex items-center gap-1.5 px-4 py-3 border-b"
-          style="border-color: var(--border)"
-        >
-          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-down); opacity: 0.6"></span>
-          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-degraded); opacity: 0.6"></span>
-          <span class="w-3 h-3 rounded-full" style="background-color: var(--status-up); opacity: 0.6"></span>
-          <span class="ml-3 text-xs" style="color: var(--text-muted)">bash</span>
-        </div>
-        <div
-          class="px-5 py-5 font-mono text-xs sm:text-sm space-y-1.5"
-          style="color: var(--text-dim)"
-        >
-          <div style="color: var(--text-muted)"># 1. Add a cron monitor, copy the ping URL</div>
-          <div>
-            <span style="color: var(--color-green-300)">$</span>
-            <span class="ml-2"
-              >curl https://checkmeup.net/ping/<span style="color: var(--color-green-500)"
-                >abc-123</span
-              ></span
-            >
-          </div>
-          <div style="color: var(--color-green-500)">OK</div>
-          <div class="pt-1" style="color: var(--text-muted)">
-            # 2. Miss a ping — get alerted instantly
-          </div>
-          <div class="pt-1 flex items-center gap-2">
-            <span
-              class="inline-block w-2 h-2 rounded-full flex-shrink-0"
-              style="background-color: var(--status-up)"
-            ></span>
-            <span
-              >backup-db · <span style="color: var(--status-up)">healthy</span> · last ping 4 min
-              ago</span
-            >
-          </div>
-          <div class="flex items-center gap-2">
-            <span
-              class="inline-block w-2 h-2 rounded-full flex-shrink-0"
-              style="background-color: var(--status-down)"
-            ></span>
-            <span
-              >send-invoices · <span style="color: var(--status-down)">missed</span> · 3 hours
-              late</span
-            >
-          </div>
-        </div>
+        <img
+          src="/img/uptime-monitor.png"
+          alt="Uptime monitor dashboard"
+          class="w-full h-auto block"
+        />
       </div>
     </section>
 
@@ -393,7 +356,9 @@ const plans = [
             >
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              />
             </svg>
           </div>
           <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">
@@ -494,46 +459,25 @@ const plans = [
           </RouterLink>
         </div>
 
-        <!-- Status page mockup -->
+        <!-- Status page screenshot -->
         <div
           class="w-full lg:w-80 rounded-xl border overflow-hidden flex-shrink-0"
-          style="background-color: var(--bg); border-color: var(--border)"
+          style="border-color: var(--border)"
         >
-          <div
-            class="px-5 py-4 border-b flex items-center gap-2"
-            style="border-color: var(--border)"
-          >
-            <span
-              class="w-2 h-2 rounded-full"
-              style="background-color: var(--color-green-500)"
-            ></span>
-            <span class="text-xs font-semibold" style="color: var(--text-strong)"
-              >status.acme.com</span
-            >
-          </div>
-          <div class="px-5 py-5 space-y-3">
-            <div
-              class="text-xs font-medium px-2 py-1 rounded"
-              style="background-color: var(--surface); color: var(--color-green-500)"
-            >
-              All systems operational
-            </div>
-            <div class="space-y-2 pt-1">
-              <div class="flex items-center justify-between text-xs" style="color: var(--text-dim)">
-                <span>API</span>
-                <span style="color: var(--status-up)">Operational</span>
-              </div>
-              <div class="flex items-center justify-between text-xs" style="color: var(--text-dim)">
-                <span>Dashboard</span>
-                <span style="color: var(--status-up)">Operational</span>
-              </div>
-              <div class="flex items-center justify-between text-xs" style="color: var(--text-dim)">
-                <span>Webhooks</span>
-                <span style="color: var(--status-degraded)">Degraded</span>
-              </div>
-            </div>
-          </div>
+          <img src="/img/status-page.png" alt="Status page example" class="w-full h-auto block" />
         </div>
+      </div>
+      <p class="text-base pt-10 mx-auto text-center" style="color: var(--text-dim)">
+        Embed a live status badge anywhere — links straight to your status page
+      </p>      
+      <div
+        class="max-w-4xl mx-auto p-10 w-60""
+      >
+        <a href="https://checkmeup.net/status/checkmeup-net"
+          ><img
+            src="https://checkmeup.net/status/checkmeup-net/badge.svg"
+            alt="When you run a successful product, your monitors run quietly"
+        /></a>
       </div>
     </section>
 
@@ -609,7 +553,11 @@ const plans = [
       <div
         class="rounded-2xl text-center px-8 py-14 border"
         style="
-          background: linear-gradient(135deg, var(--cta-gradient-start) 0%, var(--cta-gradient-end) 100%);
+          background: linear-gradient(
+            135deg,
+            var(--cta-gradient-start) 0%,
+            var(--cta-gradient-end) 100%
+          );
           border-color: var(--cta-border);
         "
       >
