@@ -37,6 +37,39 @@ const plans = [
   },
 ]
 
+const customers = [
+  {
+    name: 'Alex M.',
+    role: 'DevOps Engineer',
+    avatar: 'img/customer1.png',
+  },
+  {
+    name: 'Priya S.',
+    role: 'Full-Stack Dev',
+    avatar: 'img/customer2.png',
+  },
+  {
+    name: 'James K.',
+    role: 'Agency CTO',
+    avatar: 'img/customer3.png',
+  },
+  {
+    name: 'Layla H.',
+    role: 'Startup Founder',
+    avatar: 'img/customer4.png',
+  },
+  {
+    name: 'Dan W.',
+    role: 'Backend Engineer',
+    avatar: 'img/customer5.png',
+  },
+  {
+    name: 'Zoe C.',
+    role: 'Platform Engineer',
+    avatar: 'img/customer6.png',
+  },
+]
+
 const testimonials = [
   {
     name: 'Sarah K.',
@@ -162,6 +195,63 @@ const testimonials = [
           alt="Uptime monitor dashboard"
           class="w-full h-auto block"
         />
+      </div>
+    </section>
+
+    <!-- Our Customers -->
+    <section class="border-y" style="border-color: var(--border)">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+        <p
+          class="text-center text-xs font-semibold uppercase tracking-widest mb-8"
+          style="color: var(--text-muted)"
+        >
+          Trusted by developers worldwide
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+          <!-- Overlapping avatars -->
+          <div class="flex -space-x-3">
+            <img
+              v-for="c in customers"
+              :key="c.name"
+              :src="c.avatar"
+              :alt="c.name"
+              :title="`${c.name} · ${c.role}`"
+              class="w-10 h-10 rounded-full object-cover"
+              style="box-shadow: 0 0 0 2px var(--bg)"
+            />
+          </div>
+
+          <!-- Count + label -->
+          <div class="text-center sm:text-left">
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">200+</span>
+            <span class="text-sm ml-1.5" style="color: var(--text-dim)"
+              >developers monitoring with checkmeup</span
+            >
+          </div>
+        </div>
+
+        <!-- Customer type pills -->
+        <div class="flex flex-wrap justify-center gap-2 mt-8">
+          <span
+            v-for="tag in [
+              'Solo developers',
+              'Web agencies',
+              'DevOps teams',
+              'SaaS startups',
+              'Freelancers',
+            ]"
+            :key="tag"
+            class="text-xs px-3 py-1 rounded-full border"
+            style="
+              background-color: var(--surface);
+              border-color: var(--border);
+              color: var(--text-dim);
+            "
+          >
+            {{ tag }}
+          </span>
+        </div>
       </div>
     </section>
 
