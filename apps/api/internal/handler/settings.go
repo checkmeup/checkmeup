@@ -39,3 +39,4 @@ func (h *SettingsHandler) HandleTelegramWebhook(w http.ResponseWriter, r *http.R
 	h.tg.HandleUpdate(update)
 	w.WriteHeader(http.StatusOK)
 }
+

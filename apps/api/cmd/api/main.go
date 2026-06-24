@@ -99,3 +99,4 @@ func registerTelegramWebhook(cfg *config.Config, tg *telegram.Client, logger *sl
 	}
 	logger.Info("telegram webhook registered", "url", webhookURL)
 }
+

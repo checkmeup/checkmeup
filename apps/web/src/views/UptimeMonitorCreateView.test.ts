@@ -34,6 +34,13 @@ vi.mock('@/composables/useBilling', () => ({
   useBilling: () => ({ data: billingData, isPending: billingPending }),
 }))
 
+const channelsData = ref<{ id: string; name: string; type: string; enabled: boolean }[]>([])
+const channelsPending = ref(false)
+
+vi.mock('@/composables/useNotificationChannels', () => ({
+  useNotificationChannels: () => ({ data: channelsData, isPending: channelsPending }),
+}))
+
 function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((b) => b.text() === text)
 }
@@ -137,6 +144,7 @@ describe('UptimeMonitorCreateView', () => {
       keywordCaseSensitive: false,
       jsonAssertions: [],
       maxResponseTimeMs: null,
+      channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'uptime-monitor-detail',

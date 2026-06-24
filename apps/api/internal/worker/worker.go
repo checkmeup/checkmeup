@@ -78,6 +78,7 @@ type AlertMessage struct {
 	Webhook *webhook.Event
 	// Slack is nil for the same reason as Webhook above.
 	Slack *slack.Message
+
 }
 
 // MonitorRef identifies the monitor an alert is for. Bundled into one value

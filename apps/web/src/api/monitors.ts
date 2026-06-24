@@ -39,6 +39,7 @@ export interface CreateCronMonitorInput {
   schedule: string
   gracePeriodMins: number
   maxAlertsPerIncident: number
+  channelIds?: string[]
 }
 
 export interface UpdateCronMonitorInput {
@@ -122,6 +123,7 @@ export interface CreateUptimeMonitorInput {
   keywordCaseSensitive: boolean
   jsonAssertions: JsonAssertion[]
   maxResponseTimeMs: number | null
+  channelIds?: string[]
 }
 
 export interface UpdateUptimeMonitorInput {
@@ -156,6 +158,7 @@ export interface SSLMonitor {
 export interface CreateSSLMonitorInput {
   name: string
   hostname: string
+  channelIds?: string[]
 }
 
 export interface UpdateSSLMonitorInput {
@@ -183,6 +186,7 @@ export interface DomainMonitor {
 export interface CreateDomainMonitorInput {
   name: string
   domain: string
+  channelIds?: string[]
 }
 
 export interface UpdateDomainMonitorInput {

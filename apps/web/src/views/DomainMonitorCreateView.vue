@@ -8,11 +8,13 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 
 const router = useRouter()
 
 const name = ref('')
 const domain = ref('')
+const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -34,6 +36,7 @@ async function submit() {
     const monitor = await monitorsApi.createDomain({
       name: name.value.trim(),
       domain: domain.value.trim(),
+      channelIds: channelIds.value,
     })
     router.push({ name: 'domain-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -91,6 +94,8 @@ async function submit() {
             Apex domain only — no https:// or path. Registration expiry checked daily.
           </p>
         </div>
+
+        <NotificationChannelPicker v-model="channelIds" />
 
         <UpgradePrompt v-if="limitReached" :message="error" />
         <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

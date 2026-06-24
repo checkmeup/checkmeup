@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import CronMonitorCreateView from './CronMonitorCreateView.vue'
 
 const pushMock = vi.fn()
@@ -36,6 +37,13 @@ const { ApiErrorMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/client', () => ({
   ApiError: ApiErrorMock,
+}))
+
+const channelsData = ref<{ id: string; name: string; type: string; enabled: boolean }[]>([])
+const channelsPending = ref(false)
+
+vi.mock('@/composables/useNotificationChannels', () => ({
+  useNotificationChannels: () => ({ data: channelsData, isPending: channelsPending }),
 }))
 
 function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
@@ -112,6 +120,7 @@ describe('CronMonitorCreateView', () => {
       schedule: 'every 1h',
       gracePeriodMins: 5,
       maxAlertsPerIncident: 3,
+      channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'cron-monitor-detail',

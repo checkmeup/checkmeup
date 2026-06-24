@@ -118,8 +118,9 @@ func (h *MonitorHandler) ListSSLMonitors(w http.ResponseWriter, r *http.Request)
 }
 
 type createSSLMonitorRequest struct {
-	Name     string `json:"name"`
-	Hostname string `json:"hostname"`
+	Name       string   `json:"name"`
+	Hostname   string   `json:"hostname"`
+	ChannelIDs []string `json:"channelIds"`
 }
 
 // CreateSSLMonitor POST /api/v1/monitors/ssl
@@ -172,7 +173,14 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	h.attachDefaultNotificationChannels(r.Context(), orgID, "ssl", monitor.ID)
+	if len(req.ChannelIDs) > 0 {
+		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+	} else {
+		h.attachDefaultNotificationChannels(r.Context(), orgID, "ssl", monitor.ID)
+	}
 
 	resp := sslMonitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "ssl", monitor.ID)

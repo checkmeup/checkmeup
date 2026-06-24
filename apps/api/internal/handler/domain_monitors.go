@@ -102,8 +102,9 @@ func (h *MonitorHandler) ListDomainMonitors(w http.ResponseWriter, r *http.Reque
 }
 
 type createDomainMonitorRequest struct {
-	Name   string `json:"name"`
-	Domain string `json:"domain"`
+	Name       string   `json:"name"`
+	Domain     string   `json:"domain"`
+	ChannelIDs []string `json:"channelIds"`
 }
 
 // CreateDomainMonitor POST /api/v1/monitors/domain
@@ -147,7 +148,14 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	h.attachDefaultNotificationChannels(r.Context(), orgID, "domain", monitor.ID)
+	if len(req.ChannelIDs) > 0 {
+		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "domain", monitor.ID, req.ChannelIDs); err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+	} else {
+		h.attachDefaultNotificationChannels(r.Context(), orgID, "domain", monitor.ID)
+	}
 
 	resp := domainMonitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "domain", monitor.ID)

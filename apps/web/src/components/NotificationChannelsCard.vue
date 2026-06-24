@@ -73,7 +73,9 @@ function relativeTime(iso: string | undefined) {
 
 function deliverySummary(c: NotificationChannel) {
   if ((c.type !== 'webhook' && c.type !== 'slack') || !c.lastDeliveryStatus) return ''
-  const parts = [c.lastDeliveryStatus, c.lastDeliveryDetail, relativeTime(c.lastDeliveryAt)].filter(Boolean)
+  const parts = [c.lastDeliveryStatus, c.lastDeliveryDetail, relativeTime(c.lastDeliveryAt)].filter(
+    Boolean,
+  )
   return `Last delivery: ${parts.join(', ')}`
 }
 
@@ -161,7 +163,6 @@ async function save() {
     formError.value = 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
     return
   }
-
   saving.value = true
   try {
     if (editingId.value) {
@@ -209,11 +210,14 @@ async function toggleEnabled(c: NotificationChannel) {
 </script>
 
 <template>
-  <div class="rounded-xl border p-6" style="background-color: var(--surface); border-color: var(--border)">
+  <div
+    class="rounded-xl border p-6"
+    style="background-color: var(--surface); border-color: var(--border)"
+  >
     <h2 class="font-medium mb-1" style="color: var(--text-strong)">Notification channels</h2>
     <p class="text-sm mb-5" style="color: var(--text-muted)">
-      Connect Telegram, email, and webhook destinations, then choose which channels each monitor
-      alerts on. A monitor with no channels attached falls back to your account email.
+      Connect Telegram, email, Slack, and webhook destinations, then choose which channels each
+      monitor alerts on. A monitor with no channels attached falls back to your account email.
     </p>
 
     <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
@@ -240,7 +244,9 @@ async function toggleEnabled(c: NotificationChannel) {
           <p
             v-if="deliverySummary(c)"
             class="text-xs truncate"
-            :style="{ color: c.lastDeliveryStatus === 'success' ? 'var(--status-up)' : 'var(--status-down)' }"
+            :style="{
+              color: c.lastDeliveryStatus === 'success' ? 'var(--status-up)' : 'var(--status-down)',
+            }"
           >
             {{ deliverySummary(c) }}
           </p>
@@ -292,7 +298,9 @@ async function toggleEnabled(c: NotificationChannel) {
             >@checkmeupnet_bot</a
           >
           in Telegram and send
-          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">/start</code>
+          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+            >/start</code
+          >
           — the bot will reply with your Chat ID
         </li>
         <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
@@ -302,7 +310,8 @@ async function toggleEnabled(c: NotificationChannel) {
         checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
         <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
           >X-Checkmeup-Signature</code
-        >. Must be <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+        >. Must be
+        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
           >https://</code
         >.
       </p>
@@ -312,8 +321,16 @@ async function toggleEnabled(c: NotificationChannel) {
         class="text-sm space-y-2 list-decimal list-inside"
         style="color: var(--text-dim)"
       >
-        <li>In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create a new webhook for your target channel</li>
-        <li>Copy the <strong>Webhook URL</strong> (starts with <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">https://hooks.slack.com/services/</code>) and paste it below</li>
+        <li>
+          In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create a new webhook for
+          your target channel
+        </li>
+        <li>
+          Copy the <strong>Webhook URL</strong> (starts with
+          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+            >https://hooks.slack.com/services/</code
+          >) and paste it below
+        </li>
         <li>Click <strong>Send test message</strong> to verify the connection before saving</li>
       </ol>
 
@@ -336,7 +353,12 @@ async function toggleEnabled(c: NotificationChannel) {
       <div v-if="type === 'webhook' && editingId" class="space-y-2">
         <Label for="channel-secret">Signing secret</Label>
         <div class="flex items-center gap-3">
-          <Input id="channel-secret" :model-value="secret" disabled class="mt-1 font-mono text-xs" />
+          <Input
+            id="channel-secret"
+            :model-value="secret"
+            disabled
+            class="mt-1 font-mono text-xs"
+          />
           <Button
             variant="secondary"
             size="sm"
@@ -365,7 +387,9 @@ async function toggleEnabled(c: NotificationChannel) {
 
       <div class="flex items-center gap-3">
         <Button variant="secondary" :disabled="!value.trim() || testing" @click="test">
-          {{ testing ? 'Sending…' : type === 'webhook' ? 'Send test webhook' : 'Send test message' }}
+          {{
+            testing ? 'Sending…' : type === 'webhook' ? 'Send test webhook' : 'Send test message'
+          }}
         </Button>
         <Button :disabled="saving" @click="save">
           {{ saving ? 'Saving…' : editingId ? 'Save changes' : 'Add channel' }}

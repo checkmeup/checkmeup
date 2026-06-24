@@ -237,6 +237,7 @@ type createUptimeMonitorRequest struct {
 	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
 	JsonAssertions       []JsonAssertion `json:"jsonAssertions"`
 	MaxResponseTimeMs    *int32          `json:"maxResponseTimeMs"`
+	ChannelIDs           []string        `json:"channelIds"`
 }
 
 // CreateUptimeMonitor POST /api/v1/monitors/uptime
@@ -326,7 +327,14 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	h.attachDefaultNotificationChannels(r.Context(), orgID, "uptime", monitor.ID)
+	if len(req.ChannelIDs) > 0 {
+		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "uptime", monitor.ID, req.ChannelIDs); err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+	} else {
+		h.attachDefaultNotificationChannels(r.Context(), orgID, "uptime", monitor.ID)
+	}
 
 	resp := h.uptimeMonitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitor.ID)

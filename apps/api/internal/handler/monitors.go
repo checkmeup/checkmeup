@@ -181,10 +181,11 @@ func (h *MonitorHandler) ListCronMonitors(w http.ResponseWriter, r *http.Request
 }
 
 type createCronMonitorRequest struct {
-	Name                 string `json:"name"`
-	Schedule             string `json:"schedule"`
-	GracePeriodMins      int32  `json:"gracePeriodMins"`
-	MaxAlertsPerIncident int32  `json:"maxAlertsPerIncident"`
+	Name                 string   `json:"name"`
+	Schedule             string   `json:"schedule"`
+	GracePeriodMins      int32    `json:"gracePeriodMins"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	ChannelIDs           []string `json:"channelIds"`
 }
 
 // CreateCronMonitor POST /api/v1/monitors/cron
@@ -254,7 +255,14 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	h.attachDefaultNotificationChannels(r.Context(), orgID, "cron", monitor.ID)
+	if len(req.ChannelIDs) > 0 {
+		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+	} else {
+		h.attachDefaultNotificationChannels(r.Context(), orgID, "cron", monitor.ID)
+	}
 
 	resp := h.monitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "cron", monitor.ID)

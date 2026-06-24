@@ -8,11 +8,13 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 
 const router = useRouter()
 
 const name = ref('')
 const hostname = ref('')
+const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -34,6 +36,7 @@ async function submit() {
     const monitor = await monitorsApi.createSSL({
       name: name.value.trim(),
       hostname: hostname.value.trim(),
+      channelIds: channelIds.value,
     })
     router.push({ name: 'ssl-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -91,6 +94,8 @@ async function submit() {
             Domain name only — no https:// or path. Checked daily on port 443.
           </p>
         </div>
+
+        <NotificationChannelPicker v-model="channelIds" />
 
         <UpgradePrompt v-if="limitReached" :message="error" />
         <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

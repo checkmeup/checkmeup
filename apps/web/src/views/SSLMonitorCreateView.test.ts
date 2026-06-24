@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import SSLMonitorCreateView from './SSLMonitorCreateView.vue'
 
 const pushMock = vi.fn()
@@ -20,6 +21,13 @@ const { createSSLMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/monitors', () => ({
   monitorsApi: { createSSL: createSSLMock },
+}))
+
+const channelsData = ref<{ id: string; name: string; type: string; enabled: boolean }[]>([])
+const channelsPending = ref(false)
+
+vi.mock('@/composables/useNotificationChannels', () => ({
+  useNotificationChannels: () => ({ data: channelsData, isPending: channelsPending }),
 }))
 
 function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
@@ -71,6 +79,7 @@ describe('SSLMonitorCreateView', () => {
     expect(createSSLMock).toHaveBeenCalledExactlyOnceWith({
       name: 'Production API',
       hostname: 'example.com',
+      channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'ssl-monitor-detail',

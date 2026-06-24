@@ -40,7 +40,7 @@ func testNotificationChannelHandler(t *testing.T) (*AuthHandler, *NotificationCh
 		AppURL:        "http://localhost:5173",
 	}
 	authH := NewAuthHandler(cfg, pool)
-	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(), slack.NewClient())
+	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(), slack.NewClient(), )
 	return authH, channelsH, pool
 }
 
@@ -123,10 +123,10 @@ func TestCreateNotificationChannel(t *testing.T) {
 	t.Run("unsupported type", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, channelsH.CreateNotificationChannel, u.access, notificationChannelRequest{
-			Type: "slack", Name: "X", Config: map[string]any{"webhookUrl": "https://example.com"},
+			Type: "discord", Name: "X", Config: map[string]any{"url": "https://example.com"},
 		})
 		if w.Code != http.StatusBadRequest {
-			t.Fatalf("want 400 (slack not supported until its own epic ships), got %d: %s", w.Code, w.Body.String())
+			t.Fatalf("want 400 for an unrecognised channel type, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 
@@ -208,6 +208,7 @@ func TestCreateNotificationChannel(t *testing.T) {
 			t.Fatal("want the server to ignore a client-supplied secret")
 		}
 	})
+
 }
 
 func TestUpdateNotificationChannel(t *testing.T) {
@@ -379,10 +380,10 @@ func TestTestNotificationChannel(t *testing.T) {
 
 	t.Run("unsupported type", func(t *testing.T) {
 		w := doJSON(t, channelsH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
-			Type: "slack", Config: map[string]any{},
+			Type: "discord", Config: map[string]any{},
 		})
 		if w.Code != http.StatusBadRequest {
-			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+			t.Fatalf("want 400 for an unrecognised channel type, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 
@@ -440,7 +441,7 @@ func TestTestNotificationChannel(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		tlsTrustingH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClientWithHTTPClient(srv.Client()), slack.NewClient())
+		tlsTrustingH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClientWithHTTPClient(srv.Client()), slack.NewClient(), )
 		w := doJSON(t, tlsTrustingH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
 			Type: "webhook", Config: map[string]any{"url": srv.URL},
 		})
@@ -467,4 +468,5 @@ func TestTestNotificationChannel(t *testing.T) {
 			t.Fatalf("want code webhook_error, got %q", body["code"])
 		}
 	})
+
 }
