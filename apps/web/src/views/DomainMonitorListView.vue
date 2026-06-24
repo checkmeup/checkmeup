@@ -93,7 +93,7 @@ function relativeTime(iso: string | null) {
           <div
             v-for="m in monitors"
             :key="m.id"
-            class="rounded-xl border p-4 cursor-pointer"
+            class="rounded-xl border p-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
             style="background-color: var(--surface); border-color: var(--border)"
             @click="router.push({ name: 'domain-monitor-detail', params: { id: m.id } })"
           >
@@ -130,8 +130,8 @@ function relativeTime(iso: string | null) {
               <tr
                 v-for="m in monitors"
                 :key="m.id"
-                class="cursor-pointer transition-colors"
-                style="background-color: var(--surface); border-bottom: 1px solid var(--border)"
+                class="cursor-pointer transition-colors bg-[var(--surface)] hover:bg-[var(--surface-raised)]"
+                style="border-bottom: 1px solid var(--border)"
                 @click="router.push({ name: 'domain-monitor-detail', params: { id: m.id } })"
               >
                 <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ m.name }}</td>

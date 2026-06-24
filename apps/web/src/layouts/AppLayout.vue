@@ -60,9 +60,7 @@ async function signOut() {
       <nav class="flex-1 px-2 py-4 space-y-1">
         <RouterLink
           to="/dashboard"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -89,9 +87,7 @@ async function signOut() {
 
         <RouterLink
           to="/monitors/cron"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -109,9 +105,7 @@ async function signOut() {
 
         <RouterLink
           to="/monitors/uptime"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -128,9 +122,7 @@ async function signOut() {
 
         <RouterLink
           to="/monitors/ssl"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -148,9 +140,7 @@ async function signOut() {
 
         <RouterLink
           to="/monitors/domain"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -176,9 +166,7 @@ async function signOut() {
 
         <RouterLink
           to="/status-pages"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -199,9 +187,7 @@ async function signOut() {
 
         <RouterLink
           to="/maintenance"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -226,9 +212,7 @@ async function signOut() {
 
         <RouterLink
           to="/billing"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -246,9 +230,7 @@ async function signOut() {
 
         <RouterLink
           to="/settings"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-          style="color: var(--text-dim)"
-          active-class="font-medium"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
         >
           <svg
             width="16"
@@ -284,6 +266,7 @@ async function signOut() {
         <ThemeToggle />
       </div>
     </aside>
+
 
     <!-- Main column -->
     <div class="flex flex-col flex-1 min-w-0">
@@ -324,3 +307,21 @@ async function signOut() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.nav-link {
+  color: var(--text-dim);
+}
+
+.nav-link:hover {
+  background-color: var(--surface-raised);
+  color: var(--text);
+}
+
+.nav-link.router-link-active {
+  background-color: var(--surface-raised);
+  color: var(--text-strong);
+  font-weight: 500;
+  box-shadow: inset 2px 0 0 var(--color-green-500);
+}
+</style>

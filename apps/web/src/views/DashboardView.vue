@@ -44,7 +44,7 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <!-- Cron monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
           style="background-color: var(--surface); border-color: var(--border)"
           @click="router.push({ name: 'cron-monitors' })"
         >
@@ -69,7 +69,7 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 
         <!-- Uptime monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
           style="background-color: var(--surface); border-color: var(--border)"
           @click="router.push({ name: 'uptime-monitors' })"
         >
@@ -94,7 +94,7 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 
         <!-- SSL monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
           style="background-color: var(--surface); border-color: var(--border)"
           @click="router.push({ name: 'ssl-monitors' })"
         >
@@ -119,7 +119,7 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 
         <!-- Domain monitors -->
         <div
-          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
           style="background-color: var(--surface); border-color: var(--border)"
           @click="router.push({ name: 'domain-monitors' })"
         >
@@ -144,7 +144,7 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 
         <!-- Status pages -->
         <div
-          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors"
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
           style="background-color: var(--surface); border-color: var(--border)"
           @click="router.push({ name: 'status-pages' })"
         >
