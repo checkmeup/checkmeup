@@ -70,6 +70,11 @@ func TestMessage() Message {
 	}
 }
 
+func isRestrictedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
+}
+
 // blockPrivateDial rejects connections to loopback, private, link-local
 // (which includes 169.254.169.254 cloud-metadata), unspecified, and multicast
 // addresses. Mirrors the same guard in the webhook package — Slack webhook
@@ -84,8 +89,7 @@ func blockPrivateDial(_, address string, _ syscall.RawConn) error {
 	if ip == nil {
 		return fmt.Errorf("slack: refusing to dial non-IP address %q", host)
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+	if isRestrictedIP(ip) {
 		return fmt.Errorf("slack: refusing to dial restricted address %s", ip)
 	}
 	return nil
