@@ -7,28 +7,28 @@ const plans = [
     price: 0,
     description: 'For personal projects',
     highlight: false,
-    features: ['10 monitors', '5-min checks', 'Telegram alerts', '1 status page'],
+    features: ['10 monitors', '5-min checks', 'Telegram, Slack & email alerts', '1 status page'],
   },
   {
     name: 'Solo',
     price: 9,
     description: 'For solo builders',
     highlight: false,
-    features: ['30 monitors', '1-min checks', 'Telegram alerts', '3 status pages'],
+    features: ['30 monitors', '1-min checks', 'Telegram, Slack & email alerts', '3 status pages'],
   },
   {
     name: 'Startup',
     price: 29,
     description: 'For small agencies',
     highlight: true,
-    features: ['100 monitors', '1-min checks', 'Telegram alerts', '10 status pages'],
+    features: ['100 monitors', '1-min checks', 'Telegram, Slack & email alerts', '10 status pages'],
   },
   {
     name: 'Enterprise',
     price: 99,
     description: 'For growing agencies',
     highlight: false,
-    features: ['1000 monitors', '1-min checks', 'Telegram alerts', '100 status pages'],
+    features: ['1000 monitors', '1-min checks', 'Telegram, Slack & email alerts', '100 status pages'],
   },
 ]
 </script>
@@ -62,7 +62,7 @@ const plans = [
 
       <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-10" style="color: var(--text-dim)">
         Cron job monitoring, uptime checks, SSL and domain expiry alerts — all in one place. Get
-        notified on Telegram the moment something breaks.
+        alerted on Telegram, Slack, or email the moment something breaks.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -111,7 +111,7 @@ const plans = [
           </div>
           <div style="color: var(--color-green-500)">OK</div>
           <div class="pt-1" style="color: var(--text-muted)">
-            # 2. Miss a ping — get alerted on Telegram instantly
+            # 2. Miss a ping — get alerted instantly
           </div>
           <div class="pt-1 flex items-center gap-2">
             <span

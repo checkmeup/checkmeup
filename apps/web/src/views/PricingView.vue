@@ -83,11 +83,11 @@ const featureRows: TableRow[] = [
   { label: 'Status pages', values: ['1', '3', '10', '100'] },
   { label: 'Cron job monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },
-  { label: 'Keyword monitoring', values: ['—', '✓', '✓', '✓'] },
+  { label: 'Keyword monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'SSL expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Domain expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
-  { label: 'Telegram alerts', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Alerts (Telegram, email, Slack)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
   { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
 ]
@@ -268,7 +268,7 @@ const featureRows: TableRow[] = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Telegram alerts
+              Telegram, email &amp; Slack alerts
             </li>
           </ul>
 

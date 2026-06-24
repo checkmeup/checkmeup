@@ -35,6 +35,7 @@ describe('DocsView', () => {
       '#domain',
       '#telegram',
       '#email',
+      '#slack',
       '#status-pages',
       '#maintenance',
       '#appearance',
@@ -53,6 +54,7 @@ describe('DocsView', () => {
     expect(wrapper.text()).toContain('Domain expiry monitoring')
     expect(wrapper.text()).toContain('Telegram alerts')
     expect(wrapper.text()).toContain('Email alerts')
+    expect(wrapper.text()).toContain('Slack alerts')
     expect(wrapper.text()).toContain('Status pages')
     expect(wrapper.text()).toContain('Maintenance windows')
     expect(wrapper.text()).toContain('Appearance')
