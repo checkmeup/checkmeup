@@ -17,21 +17,25 @@ const typeLabel: Record<NotificationChannelType, string> = {
   telegram: 'Telegram',
   email: 'Email',
   webhook: 'Webhook',
+  slack: 'Slack',
 }
 const configKey: Record<NotificationChannelType, string> = {
   telegram: 'chatId',
   email: 'email',
   webhook: 'url',
+  slack: 'url',
 }
 const valueLabel: Record<NotificationChannelType, string> = {
   telegram: 'Chat ID',
   email: 'Email address',
   webhook: 'Webhook URL',
+  slack: 'Incoming Webhook URL',
 }
 const valuePlaceholder: Record<NotificationChannelType, string> = {
   telegram: '-1001234567890',
   email: 'alerts@yourteam.com',
   webhook: 'https://example.com/hooks/checkmeup',
+  slack: 'https://hooks.slack.com/services/...',
 }
 
 const showForm = ref(false)
@@ -68,7 +72,7 @@ function relativeTime(iso: string | undefined) {
 }
 
 function deliverySummary(c: NotificationChannel) {
-  if (c.type !== 'webhook' || !c.lastDeliveryStatus) return ''
+  if ((c.type !== 'webhook' && c.type !== 'slack') || !c.lastDeliveryStatus) return ''
   const parts = [c.lastDeliveryStatus, c.lastDeliveryDetail, relativeTime(c.lastDeliveryAt)].filter(Boolean)
   return `Last delivery: ${parts.join(', ')}`
 }
@@ -151,6 +155,10 @@ async function save() {
   }
   if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
     formError.value = 'Webhook URL must start with https://'
+    return
+  }
+  if (type.value === 'slack' && !value.value.trim().startsWith('https://hooks.slack.com/')) {
+    formError.value = 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
     return
   }
 
@@ -264,6 +272,7 @@ async function toggleEnabled(c: NotificationChannel) {
           <option value="telegram">Telegram</option>
           <option value="email">Email</option>
           <option value="webhook">Webhook</option>
+          <option value="slack">Slack</option>
         </select>
       </div>
 
@@ -297,6 +306,16 @@ async function toggleEnabled(c: NotificationChannel) {
           >https://</code
         >.
       </p>
+
+      <ol
+        v-else-if="type === 'slack'"
+        class="text-sm space-y-2 list-decimal list-inside"
+        style="color: var(--text-dim)"
+      >
+        <li>In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create a new webhook for your target channel</li>
+        <li>Copy the <strong>Webhook URL</strong> (starts with <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">https://hooks.slack.com/services/</code>) and paste it below</li>
+        <li>Click <strong>Send test message</strong> to verify the connection before saving</li>
+      </ol>
 
       <div>
         <Label for="channel-name">Name</Label>

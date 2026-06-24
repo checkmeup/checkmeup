@@ -25,6 +25,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
+	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -46,7 +47,7 @@ func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler,
 	// httptest server, which webhook.NewClient's SSRF protections (loopback
 	// blocked) would refuse to dial — not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
-	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), wh)
+	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), wh, slack.NewClient())
 	return authH, monitorH, pingH, pool
 }
 

@@ -150,6 +150,7 @@ const (
 	NotificationChannelTypeTelegram NotificationChannelType = "telegram"
 	NotificationChannelTypeEmail    NotificationChannelType = "email"
 	NotificationChannelTypeWebhook  NotificationChannelType = "webhook"
+	NotificationChannelTypeSlack    NotificationChannelType = "slack"
 )
 
 func (e *NotificationChannelType) Scan(src interface{}) error {

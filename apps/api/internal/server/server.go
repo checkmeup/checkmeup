@@ -21,6 +21,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
+	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -62,11 +63,12 @@ func (s *Server) buildRouter() *chi.Mux {
 	tg := telegram.NewClient(s.cfg.TelegramBotToken)
 	mailer := email.NewSender(s.cfg.ResendAPIKey)
 	wh := webhook.NewClient()
+	sl := slack.NewClient()
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
 	settings := handler.NewSettingsHandler(s.cfg, tg)
-	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer, wh)
-	ping := handler.NewPingHandler(s.db, tg, mailer, wh)
+	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer, wh, sl)
+	ping := handler.NewPingHandler(s.db, tg, mailer, wh, sl)
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)

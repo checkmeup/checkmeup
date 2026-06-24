@@ -16,6 +16,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/respond"
+	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -25,10 +26,11 @@ type NotificationChannelHandler struct {
 	tg      *telegram.Client
 	mailer  *email.Sender
 	wh      *webhook.Client
+	sl      *slack.Client
 }
 
-func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client) *NotificationChannelHandler {
-	return &NotificationChannelHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh}
+func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client) *NotificationChannelHandler {
+	return &NotificationChannelHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh, sl: sl}
 }
 
 type notificationChannelResponse struct {
@@ -90,6 +92,8 @@ func validateChannelConfig(channelType string, config map[string]any) error {
 		}
 	case "webhook":
 		return validateWebhookURL(config)
+	case "slack":
+		return validateSlackURL(config)
 	default:
 		return errors.New("unsupported channel type")
 	}
@@ -107,6 +111,21 @@ func validateWebhookURL(config map[string]any) error {
 	}
 	if !strings.HasPrefix(rawURL, "https://") {
 		return errors.New("url must start with https://")
+	}
+	return nil
+}
+
+// validateSlackURL enforces US-1701: the URL must match the Slack Incoming
+// Webhook pattern (https://hooks.slack.com/...). The URL itself is the
+// credential — no separate secret like the generic webhook channel (US-1401).
+func validateSlackURL(config map[string]any) error {
+	rawURL, _ := config["url"].(string)
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return errors.New("url is required")
+	}
+	if !strings.HasPrefix(rawURL, "https://hooks.slack.com/") {
+		return errors.New("url must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)")
 	}
 	return nil
 }
@@ -382,6 +401,12 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		}
 		if _, err := h.wh.Send(strings.TrimSpace(url), secret, event); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "webhook_error")
+			return
+		}
+	case "slack":
+		url, _ := req.Config["url"].(string)
+		if _, err := h.sl.Send(strings.TrimSpace(url), slack.TestMessage()); err != nil {
+			respond.Error(w, http.StatusBadGateway, err.Error(), "slack_error")
 			return
 		}
 	}

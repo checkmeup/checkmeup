@@ -20,6 +20,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/rdap"
+	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -33,6 +34,7 @@ type Notifiers struct {
 	Telegram *telegram.Client
 	Mailer   *email.Sender
 	Webhook  *webhook.Client
+	Slack    *slack.Client
 	RDAP     *rdap.Client
 	Logger   *slog.Logger
 }
@@ -74,6 +76,8 @@ type AlertMessage struct {
 	// structured event — sendToChannel skips the webhook channel type in
 	// that case rather than sending an empty payload.
 	Webhook *webhook.Event
+	// Slack is nil for the same reason as Webhook above.
+	Slack *slack.Message
 }
 
 // MonitorRef identifies the monitor an alert is for. Bundled into one value
@@ -140,6 +144,8 @@ func sendToChannel(ctx context.Context, n Notifiers, c db.NotificationChannel, m
 		return true
 	case db.NotificationChannelTypeWebhook:
 		return sendWebhookAlert(ctx, n, c, msg, monitorID)
+	case db.NotificationChannelTypeSlack:
+		return sendSlackAlert(ctx, n, c, msg, monitorID)
 	}
 	return false
 }
@@ -182,6 +188,42 @@ func sendWebhookAlert(ctx context.Context, n Notifiers, c db.NotificationChannel
 	return true
 }
 
+// sendSlackAlert POSTs msg.Slack to the channel's configured Incoming Webhook
+// URL and records the delivery outcome on the channel row (US-1704), mirroring
+// sendWebhookAlert's fire-and-forget, no-retry pattern.
+func sendSlackAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
+	if msg.Slack == nil {
+		return false
+	}
+	url := channelConfigValue(c.Config, "url")
+	if url == "" {
+		return false
+	}
+
+	statusCode, sendErr := n.Slack.Send(url, *msg.Slack)
+
+	status, detail := "success", fmt.Sprintf("%d", statusCode)
+	if sendErr != nil {
+		status = "failed"
+		if statusCode == 0 {
+			detail = "timeout / connection error"
+		}
+	}
+	if err := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+		ID:                 c.ID,
+		LastDeliveryStatus: pgtype.Text{String: status, Valid: true},
+		LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
+	}); err != nil {
+		n.Logger.Error("worker: record slack delivery status", "channel_id", c.ID, "err", err)
+	}
+
+	if sendErr != nil {
+		n.Logger.Error("worker: send slack alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
+		return false
+	}
+	return true
+}
+
 // dispatchFallbackEmail emails every user in the org when a monitor has no
 // attached channels. Every org has exactly one user today (EP-12 team
 // invites aren't built), but this is written against org_id rather than a
@@ -202,6 +244,10 @@ func dispatchFallbackEmail(ctx context.Context, n Notifiers, orgID uuid.UUID, ms
 	}
 	return sent
 }
+
+// slackMsg returns a pointer to msg so it can be stored in AlertMessage.Slack
+// without requiring the caller to take the address of a slack.Message literal.
+func slackMsg(msg slack.Message) *slack.Message { return &msg }
 
 // channelConfigValue reads a single string field out of a channel's config
 // JSONB blob — e.g. "chatId" for telegram, "email" for email.
@@ -284,6 +330,7 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 	missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
 	expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
+	reason := fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy)
 	return AlertMessage{
 		Telegram: fmt.Sprintf(
 			"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
@@ -298,9 +345,10 @@ func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 			EventType:   "down",
 			MonitorName: m.Name,
 			MonitorType: "cron",
-			Reason:      fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy),
+			Reason:      reason,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
+		Slack: slackMsg(slack.DownMessage(m.Name, "cron", reason)),
 	}
 }
 
@@ -389,6 +437,7 @@ func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage 
 			DowntimeDuration: downtime,
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
+		Slack: slackMsg(slack.RecoveryMessage(m.Name, "uptime", downtime)),
 	}
 }
 
@@ -444,6 +493,7 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 			Reason:      failureReason,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
+		Slack: slackMsg(slack.DownMessage(m.Name, "uptime", failureReason)),
 	}
 }
 
@@ -752,6 +802,7 @@ func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alert
 			Reason:      subject,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
+		Slack: slackMsg(slack.DownMessage(m.Name, "ssl", subject)),
 	}
 }
 
@@ -946,6 +997,7 @@ func domainThresholdAlert(m db.DomainMonitor, daysLeft int, expiresAt time.Time,
 			Reason:      subject,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
+		Slack: slackMsg(slack.DownMessage(m.Name, "domain", subject)),
 	}
 }
 
