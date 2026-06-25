@@ -25,6 +25,9 @@ import (
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
+// Maximum concurrent outbound checks per tick across uptime, SSL, and domain loops.
+const checkConcurrency = 50
+
 // Notifiers bundles the dependencies every alert-dispatch and monitor-check
 // path needs. Passed as one value (rather than six separate params) to keep
 // these functions' parameter counts down — every call site already needs
@@ -379,11 +382,14 @@ func checkUptimeMonitors(ctx context.Context, n Notifiers) {
 	}
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, checkConcurrency)
 	for _, m := range monitors {
 		m := m
 		wg.Add(1)
+		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
+			defer func() { <-sem }()
 			checkOneUptimeMonitor(ctx, n, m)
 		}()
 	}
@@ -711,11 +717,14 @@ func checkSSLMonitors(ctx context.Context, n Notifiers) {
 	}
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, checkConcurrency)
 	for _, m := range monitors {
 		m := m
 		wg.Add(1)
+		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
+			defer func() { <-sem }()
 			checkOneSSLMonitor(ctx, n, m)
 		}()
 	}
@@ -912,11 +921,14 @@ func checkDomainMonitors(ctx context.Context, n Notifiers) {
 	}
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, checkConcurrency)
 	for _, m := range monitors {
 		m := m
 		wg.Add(1)
+		sem <- struct{}{}
 		go func() {
 			defer wg.Done()
+			defer func() { <-sem }()
 			checkOneDomainMonitor(ctx, n, m)
 		}()
 	}
