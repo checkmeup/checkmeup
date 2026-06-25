@@ -76,7 +76,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
-	r.Get("/status/{slug}", statusPublic.ServeHTTP)
+	r.With(httprate.LimitByIP(300, time.Minute)).Get("/status/{slug}", statusPublic.ServeHTTP)
 
 	// Badges (EP-30): embeddable SVGs, rate-limited per ADR-013 (not exempted
 	// just because they're images — README/CDN embeds can hit these often,
