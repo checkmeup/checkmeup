@@ -58,6 +58,14 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
+      text: 'Reliability & data retention',
+    },
+    {
+      type: 'p',
+      text: 'A few infrastructure improvements shipped alongside the feature work. Uptime check records are now pruned after 90 days — history older than that is removed automatically in the background, keeping storage lean as the platform grows. The background worker now caps outbound checks at 50 concurrent goroutines per tick across uptime, SSL, and domain loops, so a spike in monitor count cannot exhaust connections. Incident list queries are bounded to 200 rows, and the public status page is rate-limited to 300 requests per minute per IP — both changes harden the API against accidental or deliberate load.',
+    },
+    {
+      type: 'h2',
       text: 'Follow along',
     },
     {
