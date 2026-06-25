@@ -9,6 +9,7 @@ import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
 import { useStatusPages } from '@/composables/useStatusPages'
+import { useNotificationChannels } from '@/composables/useNotificationChannels'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -21,12 +22,14 @@ const { data: uptimeData } = useUptimeMonitors()
 const { data: sslData } = useSSLMonitors()
 const { data: domainData } = useDomainMonitors()
 const { data: statusPageData } = useStatusPages()
+const { data: channelData } = useNotificationChannels()
 
 const cronCount = computed(() => cronData.value?.length ?? null)
 const uptimeCount = computed(() => uptimeData.value?.length ?? null)
 const sslCount = computed(() => sslData.value?.length ?? null)
 const domainCount = computed(() => domainData.value?.length ?? null)
 const statusPageCount = computed(() => statusPageData.value?.length ?? null)
+const channelCount = computed(() => channelData.value?.length ?? null)
 </script>
 
 <template>
@@ -164,6 +167,31 @@ const statusPageCount = computed(() => statusPageData.value?.length ?? null)
             @click.stop="router.push({ name: 'status-page-create' })"
           >
             Create status page
+          </Button>
+        </div>
+
+        <!-- Notification channels -->
+        <div
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
+          style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'settings' })"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">Notification channels</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ channelCount ?? '—' }}
+            </span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Telegram, email, Slack, and webhook alert destinations.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'settings' })"
+          >
+            Manage channels
           </Button>
         </div>
       </div>
