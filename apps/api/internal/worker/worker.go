@@ -301,6 +301,17 @@ func checkOverdue(ctx context.Context, n Notifiers) {
 }
 
 func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
+	updated, err := n.Queries.IncrementCronConsecutiveFailures(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("worker: increment consecutive failures", "monitor_id", m.ID, "err", err)
+		return
+	}
+	// Filter: suppress alert until more than N consecutive failures observed.
+	// The monitor stays 'up' while filtering so the worker re-detects it every cycle.
+	if updated.ConsecutiveFailures <= m.AlertAfterNFailures {
+		return
+	}
+
 	if err := n.Queries.UpdateCronMonitorDown(ctx, m.ID); err != nil {
 		n.Logger.Error("worker: mark down", "monitor_id", m.ID, "err", err)
 		return
@@ -448,7 +459,7 @@ func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prev
 		n.Logger.Error("uptime worker: record failure", "monitor_id", m.ID, "err", err)
 		return
 	}
-	if updated.ConsecutiveFailures < 2 || prevStatus == db.MonitorStatusDown {
+	if updated.ConsecutiveFailures <= m.AlertAfterNFailures || prevStatus == db.MonitorStatusDown {
 		return
 	}
 	if err := n.Queries.MarkUptimeMonitorDown(ctx, m.ID); err != nil {
@@ -715,14 +726,16 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	}
 
 	if _, err := n.Queries.UpdateSSLMonitorCheck(ctx, db.UpdateSSLMonitorCheckParams{
-		ID:         m.ID,
-		Status:     result.status,
-		ExpiresAt:  result.expiresAtParam,
-		Issuer:     result.issuerParam,
-		ErrorMsg:   result.errorMsgParam,
-		Alerted30d: result.alerted30d,
-		Alerted14d: result.alerted14d,
-		Alerted7d:  result.alerted7d,
+		ID:                  m.ID,
+		Status:              result.status,
+		ExpiresAt:           result.expiresAtParam,
+		Issuer:              result.issuerParam,
+		ErrorMsg:            result.errorMsgParam,
+		Alerted30d:          result.alerted30d,
+		Alerted14d:          result.alerted14d,
+		Alerted7d:           result.alerted7d,
+		ConsecutiveFailures: result.consecutiveFailures,
+		AlertCount:          result.alertCount,
 	}); err != nil {
 		n.Logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
 	}
@@ -732,22 +745,25 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 // persist on the monitor row, plus an alert to send when a threshold was
 // freshly crossed (nil otherwise).
 type sslCheckResult struct {
-	status         db.SslMonitorStatus
-	expiresAtParam pgtype.Timestamptz
-	issuerParam    pgtype.Text
-	errorMsgParam  pgtype.Text
-	alerted30d     bool
-	alerted14d     bool
-	alerted7d      bool
-	alert          *AlertMessage
+	status              db.SslMonitorStatus
+	expiresAtParam      pgtype.Timestamptz
+	issuerParam         pgtype.Text
+	errorMsgParam       pgtype.Text
+	alerted30d          bool
+	alerted14d          bool
+	alerted7d           bool
+	consecutiveFailures int32
+	alertCount          int32
+	alert               *AlertMessage
 }
 
 func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, daysLeft int, checkErr error) sslCheckResult {
-	r := sslCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d}
+	r := sslCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d, alertCount: m.AlertCount}
 
 	if checkErr != nil {
 		r.status = db.SslMonitorStatusError
 		r.errorMsgParam = pgtype.Text{String: checkErr.Error(), Valid: true}
+		r.consecutiveFailures = m.ConsecutiveFailures + 1
 		return r
 	}
 
@@ -761,17 +777,22 @@ func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, da
 		r.status = db.SslMonitorStatusExpiringSoon
 	default:
 		r.status = db.SslMonitorStatusUp
-		// Reset flags when cert is renewed
+		// Reset flags, failure counter, and alert count when cert is renewed.
 		r.alerted30d, r.alerted14d, r.alerted7d = false, false, false
+		r.consecutiveFailures = 0
+		r.alertCount = 0
 		return r
 	}
 
-	// Send threshold alerts (one per crossing). Flags only advance when an
-	// alert is actually eligible to go out, so a monitor with alerts
-	// disabled while a threshold is crossed still alerts once they're
-	// re-enabled, instead of silently skipping it.
-	if m.AlertsEnabled {
+	r.consecutiveFailures = m.ConsecutiveFailures + 1
+
+	maxAlerts := m.MaxAlertsPerIncident
+	withinLimit := maxAlerts == 0 || m.AlertCount < maxAlerts
+	if m.AlertsEnabled && withinLimit && r.consecutiveFailures > m.AlertAfterNFailures {
 		r.alert = sslThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
+		if r.alert != nil {
+			r.alertCount = m.AlertCount + 1
+		}
 	}
 	return r
 }
@@ -910,14 +931,16 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 	}
 
 	if _, err := n.Queries.UpdateDomainMonitorCheck(ctx, db.UpdateDomainMonitorCheckParams{
-		ID:         m.ID,
-		Status:     result.status,
-		ExpiresAt:  result.expiresAtParam,
-		Registrar:  result.registrarParam,
-		ErrorMsg:   result.errorMsgParam,
-		Alerted30d: result.alerted30d,
-		Alerted14d: result.alerted14d,
-		Alerted7d:  result.alerted7d,
+		ID:                  m.ID,
+		Status:              result.status,
+		ExpiresAt:           result.expiresAtParam,
+		Registrar:           result.registrarParam,
+		ErrorMsg:            result.errorMsgParam,
+		Alerted30d:          result.alerted30d,
+		Alerted14d:          result.alerted14d,
+		Alerted7d:           result.alerted7d,
+		ConsecutiveFailures: result.consecutiveFailures,
+		AlertCount:          result.alertCount,
 	}); err != nil {
 		n.Logger.Error("domain worker: update check", "monitor_id", m.ID, "err", err)
 	}
@@ -927,22 +950,25 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 // on the monitor row, plus an alert to send when a threshold was freshly
 // crossed (nil otherwise).
 type domainCheckResult struct {
-	status         db.DomainMonitorStatus
-	expiresAtParam pgtype.Timestamptz
-	registrarParam pgtype.Text
-	errorMsgParam  pgtype.Text
-	alerted30d     bool
-	alerted14d     bool
-	alerted7d      bool
-	alert          *AlertMessage
+	status              db.DomainMonitorStatus
+	expiresAtParam      pgtype.Timestamptz
+	registrarParam      pgtype.Text
+	errorMsgParam       pgtype.Text
+	alerted30d          bool
+	alerted14d          bool
+	alerted7d           bool
+	consecutiveFailures int32
+	alertCount          int32
+	alert               *AlertMessage
 }
 
 func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar string, daysLeft int, checkErr error) domainCheckResult {
-	r := domainCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d}
+	r := domainCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d, alertCount: m.AlertCount}
 
 	if checkErr != nil {
 		r.status = db.DomainMonitorStatusError
 		r.errorMsgParam = pgtype.Text{String: checkErr.Error(), Valid: true}
+		r.consecutiveFailures = m.ConsecutiveFailures + 1
 		return r
 	}
 
@@ -956,17 +982,22 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 		r.status = db.DomainMonitorStatusExpiringSoon
 	default:
 		r.status = db.DomainMonitorStatusUp
-		// Reset flags when the domain is renewed (expiry pushed back out).
+		// Reset flags, failure counter, and alert count when domain is renewed.
 		r.alerted30d, r.alerted14d, r.alerted7d = false, false, false
+		r.consecutiveFailures = 0
+		r.alertCount = 0
 		return r
 	}
 
-	// Send threshold alerts (one per crossing). Flags only advance when an
-	// alert is actually eligible to go out, so a monitor with alerts
-	// disabled while a threshold is crossed still alerts once they're
-	// re-enabled, instead of silently skipping it.
-	if m.AlertsEnabled {
+	r.consecutiveFailures = m.ConsecutiveFailures + 1
+
+	maxAlerts := m.MaxAlertsPerIncident
+	withinLimit := maxAlerts == 0 || m.AlertCount < maxAlerts
+	if m.AlertsEnabled && withinLimit && r.consecutiveFailures > m.AlertAfterNFailures {
 		r.alert = domainThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
+		if r.alert != nil {
+			r.alertCount = m.AlertCount + 1
+		}
 	}
 	return r
 }

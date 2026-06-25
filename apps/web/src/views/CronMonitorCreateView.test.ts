@@ -120,6 +120,7 @@ describe('CronMonitorCreateView', () => {
       schedule: 'every 1h',
       gracePeriodMins: 5,
       maxAlertsPerIncident: 3,
+      alertAfterNFailures: 0,
       channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({

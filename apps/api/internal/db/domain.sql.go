@@ -15,7 +15,7 @@ import (
 const createDomainMonitor = `-- name: CreateDomainMonitor :one
 INSERT INTO domain_monitors (org_id, name, domain)
 VALUES ($1, $2, $3)
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
 `
 
 type CreateDomainMonitorParams struct {
@@ -44,6 +44,10 @@ func (q *Queries) CreateDomainMonitor(ctx context.Context, arg CreateDomainMonit
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
@@ -63,7 +67,7 @@ func (q *Queries) DeleteDomainMonitor(ctx context.Context, arg DeleteDomainMonit
 }
 
 const getDomainMonitor = `-- name: GetDomainMonitor :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM domain_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetDomainMonitorParams struct {
@@ -91,12 +95,16 @@ func (q *Queries) GetDomainMonitor(ctx context.Context, arg GetDomainMonitorPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const listDomainMonitors = `-- name: ListDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]DomainMonitor, error) {
@@ -125,6 +133,10 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AlertAfterNFailures,
+			&i.ConsecutiveFailures,
+			&i.MaxAlertsPerIncident,
+			&i.AlertCount,
 		); err != nil {
 			return nil, err
 		}
@@ -137,7 +149,7 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 }
 
 const listDueDomainMonitors = `-- name: ListDueDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM domain_monitors
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -173,6 +185,10 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AlertAfterNFailures,
+			&i.ConsecutiveFailures,
+			&i.MaxAlertsPerIncident,
+			&i.AlertCount,
 		); err != nil {
 			return nil, err
 		}
@@ -187,7 +203,7 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 const pauseDomainMonitor = `-- name: PauseDomainMonitor :one
 UPDATE domain_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
 `
 
 type PauseDomainMonitorParams struct {
@@ -215,6 +231,10 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
@@ -222,7 +242,7 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 const resumeDomainMonitor = `-- name: ResumeDomainMonitor :one
 UPDATE domain_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
 `
 
 type ResumeDomainMonitorParams struct {
@@ -250,23 +270,29 @@ func (q *Queries) ResumeDomainMonitor(ctx context.Context, arg ResumeDomainMonit
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const updateDomainMonitor = `-- name: UpdateDomainMonitor :one
 UPDATE domain_monitors
-SET name = $3, domain = $4, alerts_enabled = $5, updated_at = NOW()
+SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
 `
 
 type UpdateDomainMonitorParams struct {
-	ID            uuid.UUID `json:"id"`
-	OrgID         uuid.UUID `json:"org_id"`
-	Name          string    `json:"name"`
-	Domain        string    `json:"domain"`
-	AlertsEnabled bool      `json:"alerts_enabled"`
+	ID                   uuid.UUID `json:"id"`
+	OrgID                uuid.UUID `json:"org_id"`
+	Name                 string    `json:"name"`
+	Domain               string    `json:"domain"`
+	AlertsEnabled        bool      `json:"alerts_enabled"`
+	AlertAfterNFailures  int32     `json:"alert_after_n_failures"`
+	MaxAlertsPerIncident int32     `json:"max_alerts_per_incident"`
 }
 
 func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonitorParams) (DomainMonitor, error) {
@@ -276,6 +302,8 @@ func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonit
 		arg.Name,
 		arg.Domain,
 		arg.AlertsEnabled,
+		arg.AlertAfterNFailures,
+		arg.MaxAlertsPerIncident,
 	)
 	var i DomainMonitor
 	err := row.Scan(
@@ -295,35 +323,43 @@ func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonit
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const updateDomainMonitorCheck = `-- name: UpdateDomainMonitorCheck :one
 UPDATE domain_monitors
-SET status          = $2,
-    expires_at      = $3,
-    registrar       = $4,
-    error_msg       = $5,
-    alerted_30d     = $6,
-    alerted_14d     = $7,
-    alerted_7d      = $8,
-    last_checked_at = NOW(),
-    next_check_at   = NOW() + INTERVAL '24 hours',
-    updated_at      = NOW()
+SET status               = $2,
+    expires_at           = $3,
+    registrar            = $4,
+    error_msg            = $5,
+    alerted_30d          = $6,
+    alerted_14d          = $7,
+    alerted_7d           = $8,
+    consecutive_failures = $9,
+    alert_count          = $10,
+    last_checked_at      = NOW(),
+    next_check_at        = NOW() + INTERVAL '24 hours',
+    updated_at           = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
 `
 
 type UpdateDomainMonitorCheckParams struct {
-	ID         uuid.UUID           `json:"id"`
-	Status     DomainMonitorStatus `json:"status"`
-	ExpiresAt  pgtype.Timestamptz  `json:"expires_at"`
-	Registrar  pgtype.Text         `json:"registrar"`
-	ErrorMsg   pgtype.Text         `json:"error_msg"`
-	Alerted30d bool                `json:"alerted_30d"`
-	Alerted14d bool                `json:"alerted_14d"`
-	Alerted7d  bool                `json:"alerted_7d"`
+	ID                  uuid.UUID           `json:"id"`
+	Status              DomainMonitorStatus `json:"status"`
+	ExpiresAt           pgtype.Timestamptz  `json:"expires_at"`
+	Registrar           pgtype.Text         `json:"registrar"`
+	ErrorMsg            pgtype.Text         `json:"error_msg"`
+	Alerted30d          bool                `json:"alerted_30d"`
+	Alerted14d          bool                `json:"alerted_14d"`
+	Alerted7d           bool                `json:"alerted_7d"`
+	ConsecutiveFailures int32               `json:"consecutive_failures"`
+	AlertCount          int32               `json:"alert_count"`
 }
 
 func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomainMonitorCheckParams) (DomainMonitor, error) {
@@ -336,6 +372,8 @@ func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomain
 		arg.Alerted30d,
 		arg.Alerted14d,
 		arg.Alerted7d,
+		arg.ConsecutiveFailures,
+		arg.AlertCount,
 	)
 	var i DomainMonitor
 	err := row.Scan(
@@ -355,6 +393,10 @@ func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomain
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }

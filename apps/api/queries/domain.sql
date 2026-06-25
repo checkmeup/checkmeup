@@ -11,7 +11,7 @@ SELECT * FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateDomainMonitor :one
 UPDATE domain_monitors
-SET name = $3, domain = $4, alerts_enabled = $5, updated_at = NOW()
+SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
@@ -40,15 +40,17 @@ WHERE next_check_at <= NOW() AND status != 'paused'
 
 -- name: UpdateDomainMonitorCheck :one
 UPDATE domain_monitors
-SET status          = $2,
-    expires_at      = $3,
-    registrar       = $4,
-    error_msg       = $5,
-    alerted_30d     = $6,
-    alerted_14d     = $7,
-    alerted_7d      = $8,
-    last_checked_at = NOW(),
-    next_check_at   = NOW() + INTERVAL '24 hours',
-    updated_at      = NOW()
+SET status               = $2,
+    expires_at           = $3,
+    registrar            = $4,
+    error_msg            = $5,
+    alerted_30d          = $6,
+    alerted_14d          = $7,
+    alerted_7d           = $8,
+    consecutive_failures = $9,
+    alert_count          = $10,
+    last_checked_at      = NOW(),
+    next_check_at        = NOW() + INTERVAL '24 hours',
+    updated_at           = NOW()
 WHERE id = $1
 RETURNING *;

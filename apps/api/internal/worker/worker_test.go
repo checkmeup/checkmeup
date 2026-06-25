@@ -648,11 +648,19 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		defer srv.Close()
 
 		org := testOrg(t, queries, pool)
-		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
+		// Use AlertAfterNFailures=1 to test "skip first failure, alert on second" behavior.
+		mon, err := queries.CreateUptimeMonitor(context.Background(), db.CreateUptimeMonitorParams{
+			OrgID: org.ID, Name: "Uptime monitor", Url: srv.URL, IntervalMins: 10,
+			MaxAlertsPerIncident: 3, AlertAfterNFailures: 1,
+			KeywordMode: db.KeywordModeContains, JsonAssertions: []byte("[]"),
+		})
+		if err != nil {
+			t.Fatalf("create uptime monitor: %v", err)
+		}
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
 		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
 
-		// First failure: recorded, but one failure alone doesn't trip "down".
+		// First failure: recorded, but alert_after_n_failures=1 suppresses the alert.
 		checkUptimeMonitors(context.Background(), n)
 		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)

@@ -107,10 +107,26 @@ SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts
 FROM cron_monitors WHERE id = $1
 `
 
+type GetCronMonitorPublicRow struct {
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Schedule             string             `json:"schedule"`
+	GracePeriodMins      int32              `json:"grace_period_mins"`
+	PingToken            string             `json:"ping_token"`
+	Status               MonitorStatus      `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	LastPingAt           pgtype.Timestamptz `json:"last_ping_at"`
+	NextPingAt           pgtype.Timestamptz `json:"next_ping_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+}
+
 // Public look-ups (no org_id check — page ownership already verified by slug)
-func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (CronMonitor, error) {
+func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (GetCronMonitorPublicRow, error) {
 	row := q.db.QueryRow(ctx, getCronMonitorPublic, id)
-	var i CronMonitor
+	var i GetCronMonitorPublicRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrgID,
@@ -130,7 +146,7 @@ func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (CronM
 }
 
 const getDomainMonitorPublic = `-- name: GetDomainMonitorPublic :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM domain_monitors WHERE id = $1
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE id = $1
 `
 
 func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (DomainMonitor, error) {
@@ -153,12 +169,16 @@ func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (Dom
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
 
 const getSSLMonitorPublic = `-- name: GetSSLMonitorPublic :one
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at FROM ssl_monitors WHERE id = $1
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors WHERE id = $1
 `
 
 func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMonitor, error) {
@@ -181,6 +201,10 @@ func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMon
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxAlertsPerIncident,
+		&i.AlertCount,
 	)
 	return i, err
 }
@@ -291,7 +315,7 @@ func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UU
 }
 
 const getUptimeMonitorPublic = `-- name: GetUptimeMonitorPublic :one
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms FROM uptime_monitors WHERE id = $1
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures FROM uptime_monitors WHERE id = $1
 `
 
 func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -316,6 +340,7 @@ func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (Upt
 		&i.KeywordCaseSensitive,
 		&i.JsonAssertions,
 		&i.MaxResponseTimeMs,
+		&i.AlertAfterNFailures,
 	)
 	return i, err
 }

@@ -45,6 +45,7 @@ type cronMonitorResponse struct {
 	Status               string   `json:"status"`
 	AlertsEnabled        bool     `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
 	LastPingAt           *string  `json:"lastPingAt"`
 	NextPingAt           *string  `json:"nextPingAt"`
 	CreatedAt            string   `json:"createdAt"`
@@ -74,6 +75,7 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		Status:               string(m.Status),
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
+		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
 	if m.LastPingAt.Valid {
@@ -185,6 +187,7 @@ type createCronMonitorRequest struct {
 	Schedule             string   `json:"schedule"`
 	GracePeriodMins      int32    `json:"gracePeriodMins"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
 	ChannelIDs           []string `json:"channelIds"`
 }
 
@@ -250,6 +253,7 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		GracePeriodMins:      req.GracePeriodMins,
 		PingToken:            token,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -391,6 +395,7 @@ type updateCronMonitorRequest struct {
 	GracePeriodMins      int32    `json:"gracePeriodMins"`
 	AlertsEnabled        bool     `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
 	ChannelIDs           []string `json:"channelIds"`
 }
 
@@ -433,6 +438,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		GracePeriodMins:      req.GracePeriodMins,
 		AlertsEnabled:        req.AlertsEnabled,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

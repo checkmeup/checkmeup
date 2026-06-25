@@ -300,6 +300,8 @@ type CronMonitor struct {
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	ConsecutiveFailures  int32              `json:"consecutive_failures"`
 }
 
 type CronPing struct {
@@ -310,22 +312,26 @@ type CronPing struct {
 }
 
 type DomainMonitor struct {
-	ID            uuid.UUID           `json:"id"`
-	OrgID         uuid.UUID           `json:"org_id"`
-	Name          string              `json:"name"`
-	Domain        string              `json:"domain"`
-	Status        DomainMonitorStatus `json:"status"`
-	AlertsEnabled bool                `json:"alerts_enabled"`
-	ExpiresAt     pgtype.Timestamptz  `json:"expires_at"`
-	Registrar     pgtype.Text         `json:"registrar"`
-	ErrorMsg      pgtype.Text         `json:"error_msg"`
-	Alerted30d    bool                `json:"alerted_30d"`
-	Alerted14d    bool                `json:"alerted_14d"`
-	Alerted7d     bool                `json:"alerted_7d"`
-	LastCheckedAt pgtype.Timestamptz  `json:"last_checked_at"`
-	NextCheckAt   pgtype.Timestamptz  `json:"next_check_at"`
-	CreatedAt     pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz  `json:"updated_at"`
+	ID                   uuid.UUID           `json:"id"`
+	OrgID                uuid.UUID           `json:"org_id"`
+	Name                 string              `json:"name"`
+	Domain               string              `json:"domain"`
+	Status               DomainMonitorStatus `json:"status"`
+	AlertsEnabled        bool                `json:"alerts_enabled"`
+	ExpiresAt            pgtype.Timestamptz  `json:"expires_at"`
+	Registrar            pgtype.Text         `json:"registrar"`
+	ErrorMsg             pgtype.Text         `json:"error_msg"`
+	Alerted30d           bool                `json:"alerted_30d"`
+	Alerted14d           bool                `json:"alerted_14d"`
+	Alerted7d            bool                `json:"alerted_7d"`
+	LastCheckedAt        pgtype.Timestamptz  `json:"last_checked_at"`
+	NextCheckAt          pgtype.Timestamptz  `json:"next_check_at"`
+	CreatedAt            pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz  `json:"updated_at"`
+	AlertAfterNFailures  int32               `json:"alert_after_n_failures"`
+	ConsecutiveFailures  int32               `json:"consecutive_failures"`
+	MaxAlertsPerIncident int32               `json:"max_alerts_per_incident"`
+	AlertCount           int32               `json:"alert_count"`
 }
 
 type FeatureSuggestion struct {
@@ -408,22 +414,26 @@ type RefreshToken struct {
 }
 
 type SslMonitor struct {
-	ID            uuid.UUID          `json:"id"`
-	OrgID         uuid.UUID          `json:"org_id"`
-	Name          string             `json:"name"`
-	Hostname      string             `json:"hostname"`
-	Status        SslMonitorStatus   `json:"status"`
-	AlertsEnabled bool               `json:"alerts_enabled"`
-	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
-	Issuer        pgtype.Text        `json:"issuer"`
-	ErrorMsg      pgtype.Text        `json:"error_msg"`
-	Alerted30d    bool               `json:"alerted_30d"`
-	Alerted14d    bool               `json:"alerted_14d"`
-	Alerted7d     bool               `json:"alerted_7d"`
-	LastCheckedAt pgtype.Timestamptz `json:"last_checked_at"`
-	NextCheckAt   pgtype.Timestamptz `json:"next_check_at"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Hostname             string             `json:"hostname"`
+	Status               SslMonitorStatus   `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	ExpiresAt            pgtype.Timestamptz `json:"expires_at"`
+	Issuer               pgtype.Text        `json:"issuer"`
+	ErrorMsg             pgtype.Text        `json:"error_msg"`
+	Alerted30d           bool               `json:"alerted_30d"`
+	Alerted14d           bool               `json:"alerted_14d"`
+	Alerted7d            bool               `json:"alerted_7d"`
+	LastCheckedAt        pgtype.Timestamptz `json:"last_checked_at"`
+	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	ConsecutiveFailures  int32              `json:"consecutive_failures"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	AlertCount           int32              `json:"alert_count"`
 }
 
 type StatusPage struct {
@@ -483,6 +493,7 @@ type UptimeMonitor struct {
 	KeywordCaseSensitive bool               `json:"keyword_case_sensitive"`
 	JsonAssertions       []byte             `json:"json_assertions"`
 	MaxResponseTimeMs    pgtype.Int4        `json:"max_response_time_ms"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
 }
 
 type User struct {

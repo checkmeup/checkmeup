@@ -20,6 +20,7 @@ const schedule = ref('')
 const gracePeriodMins = ref(5)
 const alertsEnabled = ref(true)
 const maxAlertsPerIncident = ref(3)
+const alertAfterNFailures = ref(0)
 const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
@@ -34,12 +35,19 @@ const graceOptions = [
 ]
 
 const alertLimitOptions = [
-  { label: 'Always alert', value: 0 },
   { label: '1 time', value: 1 },
   { label: '2 times', value: 2 },
   { label: '3 times (default)', value: 3 },
   { label: '5 times', value: 5 },
   { label: '10 times', value: 10 },
+]
+
+const alertFilterOptions = [
+  { label: 'Alert immediately (default)', value: 0 },
+  { label: 'Skip first 1 failure', value: 1 },
+  { label: 'Skip first 2 failures', value: 2 },
+  { label: 'Skip first 3 failures', value: 3 },
+  { label: 'Skip first 5 failures', value: 5 },
 ]
 
 const { data: detail, isPending: loading, error: loadError } = useCronMonitor(id)
@@ -53,6 +61,7 @@ watch(
     gracePeriodMins.value = m.gracePeriodMins
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
+    alertAfterNFailures.value = m.alertAfterNFailures
     channelIds.value = m.channelIds ?? []
   },
   { immediate: true },
@@ -81,6 +90,7 @@ async function submit() {
       gracePeriodMins: gracePeriodMins.value,
       alertsEnabled: alertsEnabled.value,
       maxAlertsPerIncident: maxAlertsPerIncident.value,
+      alertAfterNFailures: alertAfterNFailures.value,
       channelIds: channelIds.value,
     })
     router.push({ name: 'cron-monitor-detail', params: { id } })
@@ -180,6 +190,23 @@ async function submit() {
           </select>
           <p class="text-xs mt-1" style="color: var(--text-muted)">
             Stop alerting after this many notifications per incident.
+          </p>
+        </div>
+
+        <div>
+          <Label for="alertFilter">Alert filter</Label>
+          <select
+            id="alertFilter"
+            v-model="alertAfterNFailures"
+            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+          >
+            <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Suppress alerts until N consecutive failures are detected. Resets on success.
           </p>
         </div>
 

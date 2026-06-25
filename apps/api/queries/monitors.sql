@@ -1,6 +1,6 @@
 -- name: CreateCronMonitor :one
-INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident, alert_after_n_failures)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetCronMonitor :one
@@ -14,7 +14,8 @@ SELECT * FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateCronMonitor :one
 UPDATE cron_monitors
-SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7, updated_at = NOW()
+SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
+    alert_after_n_failures = $8, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
@@ -33,7 +34,7 @@ DELETE FROM cron_monitors WHERE id = $1 AND org_id = $2;
 
 -- name: UpdateCronMonitorPing :one
 UPDATE cron_monitors
-SET status = 'up', last_ping_at = $3, next_ping_at = $4, updated_at = NOW()
+SET status = 'up', last_ping_at = $3, next_ping_at = $4, consecutive_failures = 0, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
@@ -41,6 +42,12 @@ RETURNING *;
 UPDATE cron_monitors
 SET status = 'down', updated_at = NOW()
 WHERE id = $1;
+
+-- name: IncrementCronConsecutiveFailures :one
+UPDATE cron_monitors
+SET consecutive_failures = consecutive_failures + 1, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 -- name: ListOverdueCronMonitors :many
 SELECT * FROM cron_monitors

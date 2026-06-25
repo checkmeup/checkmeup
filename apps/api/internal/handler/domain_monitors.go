@@ -20,30 +20,34 @@ import (
 // ─── response types ──────────────────────────────────────────────────────────
 
 type domainMonitorResponse struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	Domain          string   `json:"domain"`
-	Status          string   `json:"status"`
-	AlertsEnabled   bool     `json:"alertsEnabled"`
-	ExpiresAt       *string  `json:"expiresAt"`
-	Registrar       *string  `json:"registrar"`
-	ErrorMsg        *string  `json:"errorMsg"`
-	DaysUntilExpiry *int     `json:"daysUntilExpiry"`
-	LastCheckedAt   *string  `json:"lastCheckedAt"`
-	CreatedAt       string   `json:"createdAt"`
-	ChannelIDs      []string `json:"channelIds,omitempty"`
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	Domain               string   `json:"domain"`
+	Status               string   `json:"status"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	ExpiresAt            *string  `json:"expiresAt"`
+	Registrar            *string  `json:"registrar"`
+	ErrorMsg             *string  `json:"errorMsg"`
+	DaysUntilExpiry      *int     `json:"daysUntilExpiry"`
+	LastCheckedAt        *string  `json:"lastCheckedAt"`
+	CreatedAt            string   `json:"createdAt"`
+	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 func domainMonitorToResponse(m db.DomainMonitor) domainMonitorResponse {
 	r := domainMonitorResponse{
-		ID:            m.ID.String(),
-		Name:          m.Name,
-		Domain:        m.Domain,
-		Status:        string(m.Status),
-		AlertsEnabled: m.AlertsEnabled,
-		CreatedAt:     m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ID:                   m.ID.String(),
+		Name:                 m.Name,
+		Domain:               m.Domain,
+		Status:               string(m.Status),
+		AlertsEnabled:        m.AlertsEnabled,
+		AlertAfterNFailures:  m.AlertAfterNFailures,
+		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
+		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
 	if m.ExpiresAt.Valid {
 		t := m.ExpiresAt.Time.Format("2006-01-02T15:04:05Z")
@@ -209,10 +213,12 @@ func (h *MonitorHandler) GetDomainMonitor(w http.ResponseWriter, r *http.Request
 }
 
 type updateDomainMonitorRequest struct {
-	Name          string   `json:"name"`
-	Domain        string   `json:"domain"`
-	AlertsEnabled bool     `json:"alertsEnabled"`
-	ChannelIDs    []string `json:"channelIds"`
+	Name                 string   `json:"name"`
+	Domain               string   `json:"domain"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	ChannelIDs           []string `json:"channelIds"`
 }
 
 // UpdateDomainMonitor PATCH /api/v1/monitors/domain/{id}
@@ -240,11 +246,13 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 	}
 
 	monitor, err := h.queries.UpdateDomainMonitor(r.Context(), db.UpdateDomainMonitorParams{
-		ID:            monitorID,
-		OrgID:         orgID,
-		Name:          req.Name,
-		Domain:        domain,
-		AlertsEnabled: req.AlertsEnabled,
+		ID:                   monitorID,
+		OrgID:                orgID,
+		Name:                 req.Name,
+		Domain:               domain,
+		AlertsEnabled:        req.AlertsEnabled,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
+		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

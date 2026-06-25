@@ -20,30 +20,34 @@ import (
 // ─── response types ──────────────────────────────────────────────────────────
 
 type sslMonitorResponse struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	Hostname        string   `json:"hostname"`
-	Status          string   `json:"status"`
-	AlertsEnabled   bool     `json:"alertsEnabled"`
-	ExpiresAt       *string  `json:"expiresAt"`
-	Issuer          *string  `json:"issuer"`
-	ErrorMsg        *string  `json:"errorMsg"`
-	DaysUntilExpiry *int     `json:"daysUntilExpiry"`
-	LastCheckedAt   *string  `json:"lastCheckedAt"`
-	CreatedAt       string   `json:"createdAt"`
-	ChannelIDs      []string `json:"channelIds,omitempty"`
+	ID                    string   `json:"id"`
+	Name                  string   `json:"name"`
+	Hostname              string   `json:"hostname"`
+	Status                string   `json:"status"`
+	AlertsEnabled         bool     `json:"alertsEnabled"`
+	AlertAfterNFailures   int32    `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident  int32    `json:"maxAlertsPerIncident"`
+	ExpiresAt             *string  `json:"expiresAt"`
+	Issuer                *string  `json:"issuer"`
+	ErrorMsg              *string  `json:"errorMsg"`
+	DaysUntilExpiry       *int     `json:"daysUntilExpiry"`
+	LastCheckedAt         *string  `json:"lastCheckedAt"`
+	CreatedAt             string   `json:"createdAt"`
+	ChannelIDs            []string `json:"channelIds,omitempty"`
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 func sslMonitorToResponse(m db.SslMonitor) sslMonitorResponse {
 	r := sslMonitorResponse{
-		ID:            m.ID.String(),
-		Name:          m.Name,
-		Hostname:      m.Hostname,
-		Status:        string(m.Status),
-		AlertsEnabled: m.AlertsEnabled,
-		CreatedAt:     m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ID:                   m.ID.String(),
+		Name:                 m.Name,
+		Hostname:             m.Hostname,
+		Status:               string(m.Status),
+		AlertsEnabled:        m.AlertsEnabled,
+		AlertAfterNFailures:  m.AlertAfterNFailures,
+		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
+		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
 	if m.ExpiresAt.Valid {
 		t := m.ExpiresAt.Time.Format("2006-01-02T15:04:05Z")
@@ -212,10 +216,12 @@ func (h *MonitorHandler) GetSSLMonitor(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSSLMonitorRequest struct {
-	Name          string   `json:"name"`
-	Hostname      string   `json:"hostname"`
-	AlertsEnabled bool     `json:"alertsEnabled"`
-	ChannelIDs    []string `json:"channelIds"`
+	Name                 string   `json:"name"`
+	Hostname             string   `json:"hostname"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	ChannelIDs           []string `json:"channelIds"`
 }
 
 // UpdateSSLMonitor PATCH /api/v1/monitors/ssl/{id}
@@ -243,11 +249,13 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 	}
 
 	monitor, err := h.queries.UpdateSSLMonitor(r.Context(), db.UpdateSSLMonitorParams{
-		ID:            monitorID,
-		OrgID:         orgID,
-		Name:          req.Name,
-		Hostname:      hostname,
-		AlertsEnabled: req.AlertsEnabled,
+		ID:                   monitorID,
+		OrgID:                orgID,
+		Name:                 req.Name,
+		Hostname:             hostname,
+		AlertsEnabled:        req.AlertsEnabled,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
+		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -139,6 +139,7 @@ describe('UptimeMonitorCreateView', () => {
       url: 'https://example.com/health',
       intervalMins: 10,
       maxAlertsPerIncident: 3,
+      alertAfterNFailures: 0,
       keyword: '',
       keywordMode: 'contains',
       keywordCaseSensitive: false,

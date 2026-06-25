@@ -55,6 +55,7 @@ type uptimeMonitorResponse struct {
 	Status               string          `json:"status"`
 	AlertsEnabled        bool            `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32           `json:"alertAfterNFailures"`
 	LastCheckedAt        *string         `json:"lastCheckedAt"`
 	CreatedAt            string          `json:"createdAt"`
 	Uptime24h            *float64        `json:"uptime24h"`
@@ -106,6 +107,7 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 		Status:               string(m.Status),
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
+		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 		KeywordMode:          string(m.KeywordMode),
 		KeywordCaseSensitive: m.KeywordCaseSensitive,
@@ -232,6 +234,7 @@ type createUptimeMonitorRequest struct {
 	URL                  string          `json:"url"`
 	IntervalMins         int32           `json:"intervalMins"`
 	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32           `json:"alertAfterNFailures"`
 	Keyword              string          `json:"keyword"`
 	KeywordMode          string          `json:"keywordMode"`
 	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
@@ -317,6 +320,7 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		Url:                  strings.TrimSpace(req.URL),
 		IntervalMins:         req.IntervalMins,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
 		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
 		KeywordMode:          parseKeywordMode(req.KeywordMode),
 		KeywordCaseSensitive: req.KeywordCaseSensitive,
@@ -460,6 +464,7 @@ type updateUptimeMonitorRequest struct {
 	IntervalMins         int32           `json:"intervalMins"`
 	AlertsEnabled        bool            `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32           `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32           `json:"alertAfterNFailures"`
 	Keyword              string          `json:"keyword"`
 	KeywordMode          string          `json:"keywordMode"`
 	KeywordCaseSensitive bool            `json:"keywordCaseSensitive"`
@@ -541,6 +546,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		IntervalMins:         req.IntervalMins,
 		AlertsEnabled:        req.AlertsEnabled,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
 		Keyword:              pgtype.Text{String: req.Keyword, Valid: req.Keyword != ""},
 		KeywordMode:          parseKeywordMode(req.KeywordMode),
 		KeywordCaseSensitive: req.KeywordCaseSensitive,

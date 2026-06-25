@@ -10,6 +10,7 @@ export interface CronMonitor {
   status: 'waiting' | 'up' | 'down' | 'paused'
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   lastPingAt: string | null
   nextPingAt: string | null
   createdAt: string
@@ -39,6 +40,7 @@ export interface CreateCronMonitorInput {
   schedule: string
   gracePeriodMins: number
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   channelIds?: string[]
 }
 
@@ -48,6 +50,7 @@ export interface UpdateCronMonitorInput {
   gracePeriodMins: number
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   channelIds: string[]
 }
 
@@ -73,6 +76,7 @@ export interface UptimeMonitor {
   status: 'waiting' | 'up' | 'down' | 'paused'
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   lastCheckedAt: string | null
   createdAt: string
   uptime24h: number | null
@@ -118,6 +122,7 @@ export interface CreateUptimeMonitorInput {
   url: string
   intervalMins: number
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   keyword: string
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
@@ -132,6 +137,7 @@ export interface UpdateUptimeMonitorInput {
   intervalMins: number
   alertsEnabled: boolean
   maxAlertsPerIncident: number
+  alertAfterNFailures: number
   keyword: string
   keywordMode: KeywordMode
   keywordCaseSensitive: boolean
@@ -146,6 +152,8 @@ export interface SSLMonitor {
   hostname: string
   status: 'waiting' | 'up' | 'expiring_soon' | 'expired' | 'error' | 'paused'
   alertsEnabled: boolean
+  alertAfterNFailures: number
+  maxAlertsPerIncident: number
   expiresAt: string | null
   issuer: string | null
   errorMsg: string | null
@@ -165,6 +173,8 @@ export interface UpdateSSLMonitorInput {
   name: string
   hostname: string // passed through but not shown in UI (domain changes require delete + recreate)
   alertsEnabled: boolean
+  alertAfterNFailures: number
+  maxAlertsPerIncident: number
   channelIds: string[]
 }
 
@@ -174,6 +184,8 @@ export interface DomainMonitor {
   domain: string
   status: 'waiting' | 'up' | 'expiring_soon' | 'expired' | 'error' | 'paused'
   alertsEnabled: boolean
+  alertAfterNFailures: number
+  maxAlertsPerIncident: number
   expiresAt: string | null
   registrar: string | null
   errorMsg: string | null
@@ -193,6 +205,8 @@ export interface UpdateDomainMonitorInput {
   name: string
   domain: string // passed through but not shown in UI (domain changes require delete + recreate)
   alertsEnabled: boolean
+  alertAfterNFailures: number
+  maxAlertsPerIncident: number
   channelIds: string[]
 }
 
