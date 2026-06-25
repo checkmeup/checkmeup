@@ -74,16 +74,18 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 	limits := billing.GetLimits(info.Plan)
 
 	type response struct {
-		Plan               string  `json:"plan"`
-		BillingCycle       string  `json:"billingCycle"`
-		SubscriptionStatus string  `json:"subscriptionStatus"`
-		PlanRenewsAt       *string `json:"planRenewsAt"`
-		MonitorCount       int32   `json:"monitorCount"`
-		MonitorLimit       int     `json:"monitorLimit"`
-		StatusPageCount    int32   `json:"statusPageCount"`
-		StatusPageLimit    int     `json:"statusPageLimit"`
-		MinIntervalMins    int     `json:"minIntervalMins"`
-		CustomerPortalURL  string  `json:"customerPortalUrl"`
+		Plan                        string  `json:"plan"`
+		BillingCycle                string  `json:"billingCycle"`
+		SubscriptionStatus          string  `json:"subscriptionStatus"`
+		PlanRenewsAt                *string `json:"planRenewsAt"`
+		MonitorCount                int32   `json:"monitorCount"`
+		MonitorLimit                int     `json:"monitorLimit"`
+		StatusPageCount             int32   `json:"statusPageCount"`
+		StatusPageLimit             int     `json:"statusPageLimit"`
+		NotificationChannelCount    int32   `json:"notificationChannelCount"`
+		NotificationChannelLimit    int     `json:"notificationChannelLimit"`
+		MinIntervalMins             int     `json:"minIntervalMins"`
+		CustomerPortalURL           string  `json:"customerPortalUrl"`
 	}
 
 	var renewsAt *string
@@ -98,16 +100,18 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respond.JSON(w, http.StatusOK, response{
-		Plan:               string(info.Plan),
-		BillingCycle:       info.BillingCycle,
-		SubscriptionStatus: info.SubscriptionStatus,
-		PlanRenewsAt:       renewsAt,
-		MonitorCount:       info.MonitorCount,
-		MonitorLimit:       limits.MonitorTotal,
-		StatusPageCount:    info.StatusPageCount,
-		StatusPageLimit:    limits.StatusPages,
-		MinIntervalMins:    limits.MinIntervalMins,
-		CustomerPortalURL:  portalURL,
+		Plan:                        string(info.Plan),
+		BillingCycle:                info.BillingCycle,
+		SubscriptionStatus:          info.SubscriptionStatus,
+		PlanRenewsAt:                renewsAt,
+		MonitorCount:                info.MonitorCount,
+		MonitorLimit:                limits.MonitorTotal,
+		StatusPageCount:             info.StatusPageCount,
+		StatusPageLimit:             limits.StatusPages,
+		NotificationChannelCount:    info.NotificationChannelCount,
+		NotificationChannelLimit:    limits.NotificationChannels,
+		MinIntervalMins:             limits.MinIntervalMins,
+		CustomerPortalURL:           portalURL,
 	})
 }
 

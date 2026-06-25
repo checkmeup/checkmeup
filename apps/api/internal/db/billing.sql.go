@@ -27,6 +27,17 @@ func (q *Queries) CountOrgMonitors(ctx context.Context, orgID uuid.UUID) (int32,
 	return total, err
 }
 
+const countOrgNotificationChannels = `-- name: CountOrgNotificationChannels :one
+SELECT COUNT(*)::int AS total FROM notification_channels WHERE org_id = $1
+`
+
+func (q *Queries) CountOrgNotificationChannels(ctx context.Context, orgID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countOrgNotificationChannels, orgID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
 const countOrgStatusPages = `-- name: CountOrgStatusPages :one
 SELECT COUNT(*)::int AS total FROM status_pages WHERE org_id = $1
 `
@@ -52,20 +63,22 @@ SELECT
         (SELECT COUNT(*) FROM ssl_monitors WHERE org_id = o.id)::int +
         (SELECT COUNT(*) FROM domain_monitors WHERE org_id = o.id)::int
     ) AS monitor_count,
-    (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count
+    (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count,
+    (SELECT COUNT(*) FROM notification_channels WHERE org_id = o.id)::int AS notification_channel_count
 FROM orgs o
 WHERE o.id = $1
 `
 
 type GetOrgBillingInfoRow struct {
-	Plan               Plan               `json:"plan"`
-	BillingCycle       string             `json:"billing_cycle"`
-	LsCustomerID       pgtype.Text        `json:"ls_customer_id"`
-	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
-	SubscriptionStatus string             `json:"subscription_status"`
-	PlanRenewsAt       pgtype.Timestamptz `json:"plan_renews_at"`
-	MonitorCount       int32              `json:"monitor_count"`
-	StatusPageCount    int32              `json:"status_page_count"`
+	Plan                     Plan               `json:"plan"`
+	BillingCycle             string             `json:"billing_cycle"`
+	LsCustomerID             pgtype.Text        `json:"ls_customer_id"`
+	LsSubscriptionID         pgtype.Text        `json:"ls_subscription_id"`
+	SubscriptionStatus       string             `json:"subscription_status"`
+	PlanRenewsAt             pgtype.Timestamptz `json:"plan_renews_at"`
+	MonitorCount             int32              `json:"monitor_count"`
+	StatusPageCount          int32              `json:"status_page_count"`
+	NotificationChannelCount int32              `json:"notification_channel_count"`
 }
 
 func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBillingInfoRow, error) {
@@ -80,6 +93,7 @@ func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBi
 		&i.PlanRenewsAt,
 		&i.MonitorCount,
 		&i.StatusPageCount,
+		&i.NotificationChannelCount,
 	)
 	return i, err
 }

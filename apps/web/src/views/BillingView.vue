@@ -70,6 +70,12 @@ const statusPagePct = computed(() => {
   return Math.min(100, Math.round((info.value.statusPageCount / info.value.statusPageLimit) * 100))
 })
 
+const notificationChannelPct = computed(() => {
+  if (!info.value) return 0
+  if (info.value.notificationChannelLimit === -1) return 0
+  return Math.min(100, Math.round((info.value.notificationChannelCount / info.value.notificationChannelLimit) * 100))
+})
+
 function limitLabel(used: number, limit: number) {
   return limit === -1 ? `${used} / unlimited` : `${used} / ${limit}`
 }
@@ -145,6 +151,22 @@ function limitLabel(used: number, limit: number) {
                   :style="{
                     width: info.statusPageLimit === -1 ? '0%' : `${statusPagePct}%`,
                     backgroundColor: statusPagePct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                  }"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
+                <span>Notification channels</span>
+                <span>{{ limitLabel(info.notificationChannelCount, info.notificationChannelLimit) }}</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--surface-raised)">
+                <div
+                  class="h-full rounded-full transition-all"
+                  :style="{
+                    width: info.notificationChannelLimit === -1 ? '0%' : `${notificationChannelPct}%`,
+                    backgroundColor: notificationChannelPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
                   }"
                 />
               </div>

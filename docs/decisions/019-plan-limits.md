@@ -8,6 +8,7 @@
 **Revised:** 2026-06-18 — keyword monitoring ([EP-11](../stories/ep-11-keyword-monitoring.md)) gated to paid plans (Solo and above); Hobby excluded
 **Revised:** 2026-06-21 — keyword monitoring gate removed; available on every plan, including Hobby
 **Revised:** 2026-06-23 — domain expiry monitoring ([EP-29](../stories/ep-29-domain-expiry-monitoring.md)) added to the aggregate monitor count
+**Revised:** 2026-06-25 — notification channel limits added (Hobby 5 / Solo 20 / Startup 50 / Enterprise 100)
 
 ---
 
@@ -25,6 +26,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL + domain
 |---|---|---|---|---|
 | Total monitors (cron + uptime + SSL + domain) | 10 | 30 | 100 | 1000 |
 | Status pages | 1 | 3 | 10 | 100 |
+| Notification channels | 5 | 20 | 50 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |
 
 Keyword monitoring (uptime) is available on every plan, including Hobby — not a plan limit.
@@ -56,4 +58,4 @@ Competitors offer 30-second check intervals at the $10–38/mo tier. Supporting 
 
 ## Implementation
 
-Limits are defined as Go constants in `internal/billing/plans.go`. Each create handler calls `billing.CheckMonitorLimit` / `billing.CheckStatusPageLimit` / `billing.ClampInterval` before inserting. Keyword monitoring (`uptime_monitors.keyword`) was previously gated the same way via `billing.CheckKeywordMonitoringAllowed` and a `keywordMonitoringEnabled` field on `GET /api/v1/billing` — both removed 2026-06-21; the field is now unconditionally available, validated only for length (1–500 chars), same as any other monitor field.
+Limits are defined as Go constants in `internal/billing/plans.go`. Each create handler calls `billing.CheckMonitorLimit` / `billing.CheckStatusPageLimit` / `billing.CheckNotificationChannelLimit` / `billing.ClampInterval` before inserting. `GET /api/v1/billing` returns `notificationChannelCount` and `notificationChannelLimit` alongside the existing monitor and status page counts so the billing dashboard can display usage. Keyword monitoring (`uptime_monitors.keyword`) was previously gated the same way via `billing.CheckKeywordMonitoringAllowed` and a `keywordMonitoringEnabled` field on `GET /api/v1/billing` — both removed 2026-06-21; the field is now unconditionally available, validated only for length (1–500 chars), same as any other monitor field.

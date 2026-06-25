@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/respond"
@@ -177,6 +178,22 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
 		return
 	}
+
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	total, err := h.queries.CountOrgNotificationChannels(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := billing.CheckNotificationChannelLimit(plan, int(total)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+
 	if err := validateChannelConfig(req.Type, req.Config); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return

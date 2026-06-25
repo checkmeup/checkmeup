@@ -17,7 +17,7 @@ Foundational multi-channel alert infrastructure ([ADR-023](../decisions/023-noti
 - [x] Settings page lists all channels for the org: type, name, enabled state
 - [x] Add/edit/delete a channel, with a type-specific config form (chat ID for Telegram, webhook URL for Slack/Teams, address for email)
 - [x] "Send test message" verifies a channel before saving, same UX as today's Telegram/email test buttons
-- [x] No limit on number of channels per type on MVP — a per-plan limit, if any, is a separate pricing decision, not in scope here
+- [x] No limit on number of channels per type on MVP — per-plan limits shipped 2026-06-25: Hobby 5 / Solo 20 / Startup 50 / Enterprise 100 (see [ADR-019](../decisions/019-plan-limits.md))
 
 ---
 

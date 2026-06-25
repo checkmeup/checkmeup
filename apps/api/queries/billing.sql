@@ -11,6 +11,9 @@ SELECT
 -- name: CountOrgStatusPages :one
 SELECT COUNT(*)::int AS total FROM status_pages WHERE org_id = $1;
 
+-- name: CountOrgNotificationChannels :one
+SELECT COUNT(*)::int AS total FROM notification_channels WHERE org_id = $1;
+
 -- name: GetOrgBillingInfo :one
 SELECT
     o.plan,
@@ -25,7 +28,8 @@ SELECT
         (SELECT COUNT(*) FROM ssl_monitors WHERE org_id = o.id)::int +
         (SELECT COUNT(*) FROM domain_monitors WHERE org_id = o.id)::int
     ) AS monitor_count,
-    (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count
+    (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count,
+    (SELECT COUNT(*) FROM notification_channels WHERE org_id = o.id)::int AS notification_channel_count
 FROM orgs o
 WHERE o.id = $1;
 

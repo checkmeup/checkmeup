@@ -11,6 +11,8 @@ export interface BillingInfo {
   monitorLimit: number
   statusPageCount: number
   statusPageLimit: number
+  notificationChannelCount: number
+  notificationChannelLimit: number
   minIntervalMins: number
   customerPortalUrl: string
 }

@@ -19,6 +19,7 @@ interface Plan {
   monitors: string
   statusPages: string
   checkInterval: string
+  notificationChannels: string
 }
 
 const plans: Plan[] = [
@@ -32,6 +33,7 @@ const plans: Plan[] = [
     monitors: '10',
     statusPages: '1',
     checkInterval: '5 min',
+    notificationChannels: '5',
   },
   {
     name: 'Solo',
@@ -43,6 +45,7 @@ const plans: Plan[] = [
     monitors: '30',
     statusPages: '3',
     checkInterval: '1 min',
+    notificationChannels: '20',
   },
   {
     name: 'Startup',
@@ -54,6 +57,7 @@ const plans: Plan[] = [
     monitors: '100',
     statusPages: '10',
     checkInterval: '1 min',
+    notificationChannels: '50',
   },
   {
     name: 'Enterprise',
@@ -65,6 +69,7 @@ const plans: Plan[] = [
     monitors: '1000',
     statusPages: '100',
     checkInterval: '1 min',
+    notificationChannels: '100',
   },
 ]
 
@@ -81,6 +86,7 @@ const featureRows: TableRow[] = [
   { label: 'Monitors (all types combined)', values: ['10', '30', '100', '1000'] },
   { label: 'Uptime check interval', values: ['5 min', '1 min', '1 min', '1 min'] },
   { label: 'Status pages', values: ['1', '3', '10', '100'] },
+  { label: 'Notification channels', values: ['5', '20', '50', '100'] },
   { label: 'Cron job monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Keyword monitoring', values: ['✓', '✓', '✓', '✓'] },
@@ -238,6 +244,24 @@ const featureRows: TableRow[] = [
               <span
                 ><strong style="color: var(--text-strong)">{{ plan.statusPages }}</strong> status
                 {{ plan.statusPages === '1' ? 'page' : 'pages' }}</span
+              >
+            </li>
+            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+              <svg
+                class="flex-shrink-0 mt-0.5"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span
+                ><strong style="color: var(--text-strong)">{{ plan.notificationChannels }}</strong>
+                notification channels</span
               >
             </li>
             <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
