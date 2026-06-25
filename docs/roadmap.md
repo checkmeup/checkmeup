@@ -10,7 +10,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-(empty)
+- [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts — **3.5 h**. Built on [EP-14](stories/ep-14-webhook-alerts.md) (shipped v1.7)
 
 ### Next
 
@@ -21,7 +21,6 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 Ordered by how easy the blocker is to clear — internal decisions first, external dependencies (providers, approval processes) last.
 
 - [EP-31](stories/ep-31-assertion-checks.md) US-3105 — Multi-step (chained) API checks — **5 h**. US-3101–3104 shipped in v1.9; this is the request-chaining follow-on — story flags it as a good candidate for its own epic during grooming
-- [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts — **3.5 h**. Built on [EP-14](stories/ep-14-webhook-alerts.md) (shipped v1.7)
 - [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts — **4 h**.
 
 - Activate billing — all code is done (inline upgrade prompt on 402, Billing page checkout buttons with monthly/annual toggle, explicit checkout redirect URL). What's left is account setup in the LemonSqueezy dashboard, which only the account holder can do — see [`docs/billing-setup.md`](billing-setup.md) for the exact checklist. Trigger: first 402 hit in production, or a user asks about a paid plan.

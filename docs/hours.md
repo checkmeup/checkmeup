@@ -41,3 +41,6 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-24 | Wed | EP-28 (channel selection)    | 1 h   |
 | 2026-06-24 | Wed | EP-17                        | 4 h   |
 | 2026-06-24 | Wed | Docs                         | 1 h   |
+| 2026-06-24 | Wed | Landing page improvements    | 2 h   |
+| 2026-06-25 | Thu | v1.11 (alert filter, channel limits, dashboard) | 5 h   |
+| 2026-06-25 | Thu | Blog, docs                   | 1 h   |
