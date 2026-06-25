@@ -26,6 +26,7 @@ const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
 const domainData = ref<unknown[] | null>(null)
 const statusPageData = ref<unknown[] | null>(null)
+const channelData = ref<unknown[] | null>(null)
 
 vi.mock('@/composables/useCronMonitors', () => ({
   useCronMonitors: () => ({ data: cronData }),
@@ -42,6 +43,9 @@ vi.mock('@/composables/useDomainMonitors', () => ({
 vi.mock('@/composables/useStatusPages', () => ({
   useStatusPages: () => ({ data: statusPageData }),
 }))
+vi.mock('@/composables/useNotificationChannels', () => ({
+  useNotificationChannels: () => ({ data: channelData }),
+}))
 
 function findCard(wrapper: ReturnType<typeof mount>, label: string) {
   return wrapper.findAll('.rounded-xl.border').find((c) => c.text().includes(label))
@@ -54,6 +58,7 @@ beforeEach(() => {
   sslData.value = null
   domainData.value = null
   statusPageData.value = null
+  channelData.value = null
 })
 
 afterEach(() => {
