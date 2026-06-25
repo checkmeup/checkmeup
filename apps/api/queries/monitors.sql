@@ -87,7 +87,7 @@ WHERE id = (
 RETURNING *;
 
 -- name: ListCronIncidents :many
-SELECT * FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC;
+SELECT * FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200;
 
 -- name: IncrementCronIncidentAlertCount :one
 UPDATE cron_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING *;

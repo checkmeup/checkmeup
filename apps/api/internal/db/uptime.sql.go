@@ -360,7 +360,7 @@ func (q *Queries) ListUptimeChecks24h(ctx context.Context, monitorID uuid.UUID) 
 }
 
 const listUptimeIncidents = `-- name: ListUptimeIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC
+SELECT id, monitor_id, started_at, resolved_at, alert_count FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListUptimeIncidents(ctx context.Context, monitorID uuid.UUID) ([]UptimeIncident, error) {

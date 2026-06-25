@@ -104,7 +104,7 @@ WHERE id = (
 RETURNING *;
 
 -- name: ListUptimeIncidents :many
-SELECT * FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC;
+SELECT * FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200;
 
 -- name: IncrementUptimeIncidentAlertCount :one
 UPDATE uptime_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING *;

@@ -242,7 +242,7 @@ func (q *Queries) IncrementCronIncidentAlertCount(ctx context.Context, id uuid.U
 }
 
 const listCronIncidents = `-- name: ListCronIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC
+SELECT id, monitor_id, started_at, resolved_at, alert_count FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([]CronIncident, error) {
