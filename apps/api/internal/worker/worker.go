@@ -284,6 +284,11 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 	} else {
 		logger.Info("worker: pruned cron_pings older than 30 days")
 	}
+	if err := queries.DeleteOldUptimeChecks(ctx); err != nil {
+		logger.Error("worker: prune old uptime checks", "err", err)
+	} else {
+		logger.Info("worker: pruned uptime_checks older than 90 days")
+	}
 }
 
 // ─── cron monitor checks ─────────────────────────────────────────────────────

@@ -134,6 +134,15 @@ func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonit
 	return i, err
 }
 
+const deleteOldUptimeChecks = `-- name: DeleteOldUptimeChecks :exec
+DELETE FROM uptime_checks WHERE checked_at < NOW() - INTERVAL '90 days'
+`
+
+func (q *Queries) DeleteOldUptimeChecks(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteOldUptimeChecks)
+	return err
+}
+
 const deleteUptimeMonitor = `-- name: DeleteUptimeMonitor :exec
 DELETE FROM uptime_monitors WHERE id = $1 AND org_id = $2
 `

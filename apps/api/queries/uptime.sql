@@ -108,3 +108,6 @@ SELECT * FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LI
 
 -- name: IncrementUptimeIncidentAlertCount :one
 UPDATE uptime_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING *;
+
+-- name: DeleteOldUptimeChecks :exec
+DELETE FROM uptime_checks WHERE checked_at < NOW() - INTERVAL '90 days';
