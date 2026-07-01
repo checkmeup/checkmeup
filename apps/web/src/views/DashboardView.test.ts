@@ -25,6 +25,7 @@ const cronData = ref<unknown[] | null>(null)
 const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
 const domainData = ref<unknown[] | null>(null)
+const portData = ref<unknown[] | null>(null)
 const statusPageData = ref<unknown[] | null>(null)
 const channelData = ref<unknown[] | null>(null)
 
@@ -39,6 +40,9 @@ vi.mock('@/composables/useSSLMonitors', () => ({
 }))
 vi.mock('@/composables/useDomainMonitors', () => ({
   useDomainMonitors: () => ({ data: domainData }),
+}))
+vi.mock('@/composables/usePortMonitors', () => ({
+  usePortMonitors: () => ({ data: portData }),
 }))
 vi.mock('@/composables/useStatusPages', () => ({
   useStatusPages: () => ({ data: statusPageData }),
@@ -57,6 +61,7 @@ beforeEach(() => {
   uptimeData.value = null
   sslData.value = null
   domainData.value = null
+  portData.value = null
   statusPageData.value = null
   channelData.value = null
 })
@@ -92,6 +97,7 @@ describe('DashboardView', () => {
     uptimeData.value = [{ id: 'u1' }]
     sslData.value = []
     domainData.value = [{ id: 'd1' }, { id: 'd2' }, { id: 'd3' }]
+    portData.value = [{ id: 'p1' }, { id: 'p2' }]
     statusPageData.value = [{ id: 'sp1' }]
     const wrapper = mount(DashboardView)
 
@@ -99,6 +105,7 @@ describe('DashboardView', () => {
     expect(findCard(wrapper, 'Uptime monitors')!.text()).toContain('1')
     expect(findCard(wrapper, 'SSL monitors')!.text()).toContain('0')
     expect(findCard(wrapper, 'Domain monitors')!.text()).toContain('3')
+    expect(findCard(wrapper, 'Port monitors')!.text()).toContain('2')
     expect(findCard(wrapper, 'Status pages')!.text()).toContain('1')
   })
 
@@ -153,6 +160,6 @@ describe('DashboardView', () => {
     const wrapper = mount(DashboardView)
 
     expect(wrapper.text()).toContain('Getting started')
-    expect(wrapper.text()).toContain('Add a monitor — cron, uptime, SSL, or domain expiry')
+    expect(wrapper.text()).toContain('Add a monitor — cron, uptime, SSL, domain expiry, or port')
   })
 })

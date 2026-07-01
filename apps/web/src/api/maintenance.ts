@@ -1,7 +1,7 @@
 import { api } from './client'
 
 export interface MaintenanceMonitorRef {
-  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'
+  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
   monitorId: string
   name: string
 }
@@ -23,7 +23,7 @@ export interface SaveMaintenanceWindowInput {
   message: string
   startsAt: string
   endsAt: string | null
-  monitors: { monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'; monitorId: string }[]
+  monitors: { monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string }[]
 }
 
 export const maintenanceApi = {

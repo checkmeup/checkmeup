@@ -210,6 +210,76 @@ export interface UpdateDomainMonitorInput {
   channelIds: string[]
 }
 
+export type ExpectedState = 'open' | 'closed'
+
+export interface PortMonitor {
+  id: string
+  name: string
+  host: string
+  port: number
+  expectedState: ExpectedState
+  intervalMins: number
+  status: 'waiting' | 'up' | 'down' | 'paused'
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  lastCheckedAt: string | null
+  createdAt: string
+  uptime24h: number | null
+  channelIds?: string[]
+}
+
+export interface PortCheck {
+  id: string
+  checkedAt: string
+  responseTimeMs: number
+  isUp: boolean
+  failureReason: string | null
+}
+
+export interface PortIncident {
+  id: string
+  startedAt: string
+  resolvedAt: string | null
+}
+
+export interface PortStats {
+  uptime24h: number | null
+  uptime7d: number | null
+  uptime30d: number | null
+}
+
+export interface PortMonitorDetail {
+  monitor: PortMonitor
+  chartData: PortCheck[]
+  checks: PortCheck[]
+  incidents: PortIncident[]
+  stats: PortStats
+}
+
+export interface CreatePortMonitorInput {
+  name: string
+  host: string
+  port: number
+  expectedState: ExpectedState
+  intervalMins: number
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  channelIds?: string[]
+}
+
+export interface UpdatePortMonitorInput {
+  name: string
+  host: string
+  port: number
+  expectedState: ExpectedState
+  intervalMins: number
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  channelIds: string[]
+}
+
 export const monitorsApi = {
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
@@ -251,4 +321,14 @@ export const monitorsApi = {
   pauseUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/pause`, {}),
   resumeUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/resume`, {}),
   deleteUptime: (id: string) => api.delete<void>(`/api/v1/monitors/uptime/${id}/`),
+
+  listPort: () => api.get<PortMonitor[]>('/api/v1/monitors/port/'),
+  getPort: (id: string) => api.get<PortMonitorDetail>(`/api/v1/monitors/port/${id}/`),
+  createPort: (input: CreatePortMonitorInput) =>
+    api.post<PortMonitor>('/api/v1/monitors/port/', input),
+  updatePort: (id: string, input: UpdatePortMonitorInput) =>
+    api.patch<PortMonitor>(`/api/v1/monitors/port/${id}/`, input),
+  pausePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/pause`, {}),
+  resumePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/resume`, {}),
+  deletePort: (id: string) => api.delete<void>(`/api/v1/monitors/port/${id}/`),
 }

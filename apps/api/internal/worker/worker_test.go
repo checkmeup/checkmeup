@@ -26,9 +26,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1031,4 +1033,88 @@ func mustExecWorker(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
 		t.Fatalf("exec %q: %v", sql, err)
 	}
+}
+
+func TestPerformTCPCheck(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+	host, portStr, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatalf("split host/port: %v", err)
+	}
+	var openPort int32
+	if _, err := fmt.Sscanf(portStr, "%d", &openPort); err != nil {
+		t.Fatalf("parse port: %v", err)
+	}
+
+	// A closed port on the same host — nothing listens here.
+	closedLn, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	_, closedPortStr, _ := net.SplitHostPort(closedLn.Addr().String())
+	var closedPort int32
+	if _, err := fmt.Sscanf(closedPortStr, "%d", &closedPort); err != nil {
+		t.Fatalf("parse port: %v", err)
+	}
+	_ = closedLn.Close() // freed immediately — nothing accepts connections here now
+
+	t.Run("expected open + reachable port is up", func(t *testing.T) {
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateOpen})
+		if !isUp || reason != "" {
+			t.Fatalf("want (up, \"\"), got (%v, %q)", isUp, reason)
+		}
+	})
+
+	t.Run("expected open + unreachable port is down", func(t *testing.T) {
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateOpen})
+		if isUp || reason != "connection refused / timeout" {
+			t.Fatalf("want (down, connection refused / timeout), got (%v, %q)", isUp, reason)
+		}
+	})
+
+	t.Run("expected closed + reachable port is down (unexpectedly open)", func(t *testing.T) {
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateClosed})
+		if isUp || reason != "port is unexpectedly open" {
+			t.Fatalf("want (down, port is unexpectedly open), got (%v, %q)", isUp, reason)
+		}
+	})
+
+	t.Run("expected closed + unreachable port is up (matches expectation)", func(t *testing.T) {
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateClosed})
+		if !isUp || reason != "" {
+			t.Fatalf("want (up, \"\"), got (%v, %q)", isUp, reason)
+		}
+	})
+}
+
+func TestBuildPortDownAlert(t *testing.T) {
+	t.Run("open state reads as a down service", func(t *testing.T) {
+		alert := buildPortDownAlert(db.PortMonitor{Name: "DB", Host: "db.internal", Port: 5432, ExpectedState: db.PortExpectedStateOpen}, "connection refused / timeout")
+		if !strings.Contains(alert.Telegram, "is down") {
+			t.Fatalf("want 'is down' in open-state alert, got %q", alert.Telegram)
+		}
+	})
+
+	t.Run("closed state reads as unexpectedly open, not down", func(t *testing.T) {
+		alert := buildPortDownAlert(db.PortMonitor{Name: "DB", Host: "db.internal", Port: 5432, ExpectedState: db.PortExpectedStateClosed}, "port is unexpectedly open")
+		if !strings.Contains(alert.Telegram, "unexpectedly open") {
+			t.Fatalf("want 'unexpectedly open' in closed-state alert, got %q", alert.Telegram)
+		}
+		if strings.Contains(alert.Telegram, "is down") {
+			t.Fatalf("want closed-state alert to avoid 'is down' phrasing, got %q", alert.Telegram)
+		}
+	})
 }

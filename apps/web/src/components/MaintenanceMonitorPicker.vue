@@ -4,9 +4,10 @@ import { useCronMonitors } from '@/composables/useCronMonitors'
 import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
+import { usePortMonitors } from '@/composables/usePortMonitors'
 
 interface SelectedMonitor {
-  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'
+  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
   monitorId: string
   name: string
 }
@@ -18,28 +19,31 @@ const { data: cronData, isPending: cronLoading } = useCronMonitors()
 const { data: uptimeData, isPending: uptimeLoading } = useUptimeMonitors()
 const { data: sslData, isPending: sslLoading } = useSSLMonitors()
 const { data: domainData, isPending: domainLoading } = useDomainMonitors()
+const { data: portData, isPending: portLoading } = usePortMonitors()
 const cronMonitors = computed(() => cronData.value ?? [])
 const uptimeMonitors = computed(() => uptimeData.value ?? [])
 const sslMonitors = computed(() => sslData.value ?? [])
 const domainMonitors = computed(() => domainData.value ?? [])
+const portMonitors = computed(() => portData.value ?? [])
 const loading = computed(
-  () => cronLoading.value || uptimeLoading.value || sslLoading.value || domainLoading.value,
+  () => cronLoading.value || uptimeLoading.value || sslLoading.value || domainLoading.value || portLoading.value,
 )
 
-const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain' }
+const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain', port: 'Port' }
 
 const allMonitors = computed(() => {
-  const result: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain'; id: string; name: string }[] = []
+  const result: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; id: string; name: string }[] = []
   cronMonitors.value.forEach((m) => result.push({ key: `cron:${m.id}`, type: 'cron', id: m.id, name: m.name }))
   uptimeMonitors.value.forEach((m) => result.push({ key: `uptime:${m.id}`, type: 'uptime', id: m.id, name: m.name }))
   sslMonitors.value.forEach((m) => result.push({ key: `ssl:${m.id}`, type: 'ssl', id: m.id, name: m.name }))
   domainMonitors.value.forEach((m) => result.push({ key: `domain:${m.id}`, type: 'domain', id: m.id, name: m.name }))
+  portMonitors.value.forEach((m) => result.push({ key: `port:${m.id}`, type: 'port', id: m.id, name: m.name }))
   return result
 })
 
 const selectedKeys = computed(() => new Set(props.modelValue.map((m) => `${m.monitorType}:${m.monitorId}`)))
 
-function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain'; id: string; name: string }) {
+function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; id: string; name: string }) {
   if (selectedKeys.value.has(m.key)) {
     emit(
       'update:modelValue',
@@ -61,7 +65,7 @@ function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain'; id
     </div>
     <div v-if="loading" class="px-4 py-3 text-xs" style="color: var(--text-muted)">Loading…</div>
     <div v-else-if="allMonitors.length === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">
-      No monitors yet — create a cron, uptime, SSL, or domain monitor first.
+      No monitors yet — create a cron, uptime, SSL, domain, or port monitor first.
     </div>
     <ul v-else class="max-h-72 overflow-y-auto">
       <li

@@ -8,6 +8,7 @@ import { useCronMonitors } from '@/composables/useCronMonitors'
 import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
+import { usePortMonitors } from '@/composables/usePortMonitors'
 import { useStatusPages } from '@/composables/useStatusPages'
 import { useNotificationChannels } from '@/composables/useNotificationChannels'
 
@@ -21,6 +22,7 @@ const { data: cronData } = useCronMonitors()
 const { data: uptimeData } = useUptimeMonitors()
 const { data: sslData } = useSSLMonitors()
 const { data: domainData } = useDomainMonitors()
+const { data: portData } = usePortMonitors()
 const { data: statusPageData } = useStatusPages()
 const { data: channelData } = useNotificationChannels()
 
@@ -28,6 +30,7 @@ const cronCount = computed(() => cronData.value?.length ?? null)
 const uptimeCount = computed(() => uptimeData.value?.length ?? null)
 const sslCount = computed(() => sslData.value?.length ?? null)
 const domainCount = computed(() => domainData.value?.length ?? null)
+const portCount = computed(() => portData.value?.length ?? null)
 const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 const channelCount = computed(() => channelData.value?.length ?? null)
 </script>
@@ -145,6 +148,31 @@ const channelCount = computed(() => channelData.value?.length ?? null)
           </Button>
         </div>
 
+        <!-- Port monitors -->
+        <div
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
+          style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'port-monitors' })"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">Port monitors</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ portCount ?? '—' }}
+            </span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">
+            Watch non-HTTP services with a raw TCP connect check.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'port-monitor-create' })"
+          >
+            Add port monitor
+          </Button>
+        </div>
+
         <!-- Status pages -->
         <div
           class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
@@ -204,7 +232,7 @@ const channelCount = computed(() => channelData.value?.length ?? null)
         <ol class="space-y-2 text-sm" style="color: var(--text-dim)">
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">1</span>
-            Add a monitor — cron, uptime, SSL, or domain expiry
+            Add a monitor — cron, uptime, SSL, domain expiry, or port
           </li>
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">2</span>

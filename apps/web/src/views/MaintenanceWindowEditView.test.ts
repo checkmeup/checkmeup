@@ -36,6 +36,7 @@ const cronData = ref<{ id: string; name: string }[]>([])
 const uptimeData = ref<{ id: string; name: string }[]>([])
 const sslData = ref<{ id: string; name: string }[]>([])
 const domainData = ref<{ id: string; name: string }[]>([])
+const portData = ref<{ id: string; name: string }[]>([])
 const monitorsPending = ref(false)
 
 vi.mock('@/composables/useCronMonitors', () => ({
@@ -49,6 +50,9 @@ vi.mock('@/composables/useSSLMonitors', () => ({
 }))
 vi.mock('@/composables/useDomainMonitors', () => ({
   useDomainMonitors: () => ({ data: domainData, isPending: monitorsPending }),
+}))
+vi.mock('@/composables/usePortMonitors', () => ({
+  usePortMonitors: () => ({ data: portData, isPending: monitorsPending }),
 }))
 
 const win = {
@@ -79,6 +83,7 @@ beforeEach(() => {
   uptimeData.value = []
   sslData.value = []
   domainData.value = []
+  portData.value = []
 })
 
 afterEach(() => {

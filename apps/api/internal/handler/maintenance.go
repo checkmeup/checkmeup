@@ -146,6 +146,12 @@ func resolveMonitorName(ctx context.Context, queries *db.Queries, orgID uuid.UUI
 			return uuid.UUID{}, "", fmt.Errorf("domain monitor not found: %s", monitorIDStr)
 		}
 		return id, m.Name, nil
+	case "port":
+		m, err := queries.GetPortMonitor(ctx, db.GetPortMonitorParams{ID: id, OrgID: orgID})
+		if err != nil {
+			return uuid.UUID{}, "", fmt.Errorf("port monitor not found: %s", monitorIDStr)
+		}
+		return id, m.Name, nil
 	default:
 		return uuid.UUID{}, "", fmt.Errorf("invalid monitor type: %s", monitorType)
 	}

@@ -9,6 +9,7 @@
 **Revised:** 2026-06-21 — keyword monitoring gate removed; available on every plan, including Hobby
 **Revised:** 2026-06-23 — domain expiry monitoring ([EP-29](../stories/ep-29-domain-expiry-monitoring.md)) added to the aggregate monitor count
 **Revised:** 2026-06-25 — notification channel limits added (Hobby 5 / Solo 20 / Startup 50 / Enterprise 100)
+**Revised:** 2026-07-01 — port monitoring ([EP-33](../stories/ep-33-port-monitoring.md)) added to the aggregate monitor count
 
 ---
 
@@ -16,7 +17,7 @@
 
 Four pricing tiers: Hobby ($0) / Solo ($9) / Startup ($29) / Enterprise ($99). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
 
-Monitors are counted in aggregate across all types (cron + uptime + SSL + domain) because users care about "how many things am I watching", not the internal type split.
+Monitors are counted in aggregate across all types (cron + uptime + SSL + domain + port) because users care about "how many things am I watching", not the internal type split.
 
 ---
 
@@ -24,7 +25,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL + domain
 
 | | Hobby | Solo | Startup | Enterprise |
 |---|---|---|---|---|
-| Total monitors (cron + uptime + SSL + domain) | 10 | 30 | 100 | 1000 |
+| Total monitors (cron + uptime + SSL + domain + port) | 10 | 30 | 100 | 1000 |
 | Status pages | 1 | 3 | 10 | 100 |
 | Notification channels | 5 | 20 | 50 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |

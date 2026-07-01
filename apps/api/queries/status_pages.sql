@@ -53,6 +53,15 @@ WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
 ORDER BY 1 ASC;
 
+-- name: GetPortDailyStatus90d :many
+SELECT
+    date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+FROM port_checks
+WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
+GROUP BY 1
+ORDER BY 1 ASC;
+
 -- name: GetCronIncidentDays90d :many
 SELECT DISTINCT date_trunc('day', started_at AT TIME ZONE 'UTC')::date AS day
 FROM cron_incidents
@@ -74,3 +83,6 @@ SELECT * FROM ssl_monitors WHERE id = $1;
 
 -- name: GetDomainMonitorPublic :one
 SELECT * FROM domain_monitors WHERE id = $1;
+
+-- name: GetPortMonitorPublic :one
+SELECT * FROM port_monitors WHERE id = $1;

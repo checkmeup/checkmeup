@@ -232,6 +232,48 @@ func (ns NullPlan) Value() (driver.Value, error) {
 	return string(ns.Plan), nil
 }
 
+type PortExpectedState string
+
+const (
+	PortExpectedStateOpen   PortExpectedState = "open"
+	PortExpectedStateClosed PortExpectedState = "closed"
+)
+
+func (e *PortExpectedState) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PortExpectedState(s)
+	case string:
+		*e = PortExpectedState(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PortExpectedState: %T", src)
+	}
+	return nil
+}
+
+type NullPortExpectedState struct {
+	PortExpectedState PortExpectedState `json:"port_expected_state"`
+	Valid             bool              `json:"valid"` // Valid is true if PortExpectedState is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPortExpectedState) Scan(value interface{}) error {
+	if value == nil {
+		ns.PortExpectedState, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PortExpectedState.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPortExpectedState) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PortExpectedState), nil
+}
+
 type SslMonitorStatus string
 
 const (
@@ -403,6 +445,42 @@ type PasswordResetToken struct {
 	TokenHash string             `json:"token_hash"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PortCheck struct {
+	ID             uuid.UUID          `json:"id"`
+	MonitorID      uuid.UUID          `json:"monitor_id"`
+	CheckedAt      pgtype.Timestamptz `json:"checked_at"`
+	ResponseTimeMs int32              `json:"response_time_ms"`
+	IsUp           bool               `json:"is_up"`
+	FailureReason  pgtype.Text        `json:"failure_reason"`
+}
+
+type PortIncident struct {
+	ID         uuid.UUID          `json:"id"`
+	MonitorID  uuid.UUID          `json:"monitor_id"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount int32              `json:"alert_count"`
+}
+
+type PortMonitor struct {
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Host                 string             `json:"host"`
+	Port                 int32              `json:"port"`
+	ExpectedState        PortExpectedState  `json:"expected_state"`
+	IntervalMins         int32              `json:"interval_mins"`
+	Status               MonitorStatus      `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	ConsecutiveFailures  int32              `json:"consecutive_failures"`
+	LastCheckedAt        pgtype.Timestamptz `json:"last_checked_at"`
+	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RefreshToken struct {

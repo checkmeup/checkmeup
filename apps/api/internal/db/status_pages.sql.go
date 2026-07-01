@@ -177,6 +177,69 @@ func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (Dom
 	return i, err
 }
 
+const getPortDailyStatus90d = `-- name: GetPortDailyStatus90d :many
+SELECT
+    date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+FROM port_checks
+WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
+GROUP BY 1
+ORDER BY 1 ASC
+`
+
+type GetPortDailyStatus90dRow struct {
+	Day       pgtype.Date `json:"day"`
+	DownCount int64       `json:"down_count"`
+}
+
+func (q *Queries) GetPortDailyStatus90d(ctx context.Context, monitorID uuid.UUID) ([]GetPortDailyStatus90dRow, error) {
+	rows, err := q.db.Query(ctx, getPortDailyStatus90d, monitorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetPortDailyStatus90dRow{}
+	for rows.Next() {
+		var i GetPortDailyStatus90dRow
+		if err := rows.Scan(&i.Day, &i.DownCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPortMonitorPublic = `-- name: GetPortMonitorPublic :one
+SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM port_monitors WHERE id = $1
+`
+
+func (q *Queries) GetPortMonitorPublic(ctx context.Context, id uuid.UUID) (PortMonitor, error) {
+	row := q.db.QueryRow(ctx, getPortMonitorPublic, id)
+	var i PortMonitor
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Name,
+		&i.Host,
+		&i.Port,
+		&i.ExpectedState,
+		&i.IntervalMins,
+		&i.Status,
+		&i.AlertsEnabled,
+		&i.MaxAlertsPerIncident,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.LastCheckedAt,
+		&i.NextCheckAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSSLMonitorPublic = `-- name: GetSSLMonitorPublic :one
 SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors WHERE id = $1
 `

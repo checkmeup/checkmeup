@@ -183,6 +183,30 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/monitors/port',
+      name: 'port-monitors',
+      component: () => import('@/views/PortMonitorListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/port/new',
+      name: 'port-monitor-create',
+      component: () => import('@/views/PortMonitorCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/port/:id',
+      name: 'port-monitor-detail',
+      component: () => import('@/views/PortMonitorDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/monitors/port/:id/edit',
+      name: 'port-monitor-edit',
+      component: () => import('@/views/PortMonitorEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/status-pages',
       name: 'status-pages',
       component: () => import('@/views/StatusPageListView.vue'),

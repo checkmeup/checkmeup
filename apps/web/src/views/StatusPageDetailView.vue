@@ -9,6 +9,7 @@ import { useCronMonitors } from '@/composables/useCronMonitors'
 import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
+import { usePortMonitors } from '@/composables/usePortMonitors'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,9 +20,16 @@ const { data: cronData, isPending: cronLoading } = useCronMonitors()
 const { data: uptimeData, isPending: uptimeLoading } = useUptimeMonitors()
 const { data: sslData, isPending: sslLoading } = useSSLMonitors()
 const { data: domainData, isPending: domainLoading } = useDomainMonitors()
+const { data: portData, isPending: portLoading } = usePortMonitors()
 
 const loading = computed(
-  () => pageLoading.value || cronLoading.value || uptimeLoading.value || sslLoading.value || domainLoading.value,
+  () =>
+    pageLoading.value ||
+    cronLoading.value ||
+    uptimeLoading.value ||
+    sslLoading.value ||
+    domainLoading.value ||
+    portLoading.value,
 )
 const error = computed(() => pageError.value?.message ?? '')
 const actionError = ref('')
@@ -33,10 +41,11 @@ const cronMonitors = computed(() => cronData.value ?? [])
 const uptimeMonitors = computed(() => uptimeData.value ?? [])
 const sslMonitors = computed(() => sslData.value ?? [])
 const domainMonitors = computed(() => domainData.value ?? [])
+const portMonitors = computed(() => portData.value ?? [])
 
 // Local editable list of selected monitors (copy from detail)
 interface MonitorEntry {
-  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'
+  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
   monitorId: string
   displayName: string
   displayOrder: number
@@ -61,7 +70,7 @@ watch(
 
 // All available monitors across all types
 const allMonitors = computed(() => {
-  const result: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain'; id: string; name: string }[] = []
+  const result: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; id: string; name: string }[] = []
   cronMonitors.value.forEach((m) =>
     result.push({ key: `cron:${m.id}`, type: 'cron', id: m.id, name: m.name }),
   )
@@ -74,12 +83,15 @@ const allMonitors = computed(() => {
   domainMonitors.value.forEach((m) =>
     result.push({ key: `domain:${m.id}`, type: 'domain', id: m.id, name: m.name }),
   )
+  portMonitors.value.forEach((m) =>
+    result.push({ key: `port:${m.id}`, type: 'port', id: m.id, name: m.name }),
+  )
   return result
 })
 
 const selectedKeys = computed(() => new Set(monitorEntries.value.map((e) => e.key)))
 
-function toggleMonitor(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain'; id: string; name: string }) {
+function toggleMonitor(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; id: string; name: string }) {
   if (selectedKeys.value.has(m.key)) {
     monitorEntries.value = monitorEntries.value.filter((e) => e.key !== m.key)
   } else {
@@ -140,7 +152,7 @@ async function deletePage() {
   }
 }
 
-const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain' }
+const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain', port: 'Port' }
 
 // ─── badges (EP-30) ──────────────────────────────────────────────────────────
 

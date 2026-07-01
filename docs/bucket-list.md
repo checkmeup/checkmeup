@@ -14,12 +14,11 @@ Multi-channel alerts (Telegram, email, webhook shipped; Slack/Teams/WhatsApp/Sig
 
 ## New monitor types
 
-- **TCP/port monitoring** — raw TCP connect checks (SMTP, POP3, FTP, custom ports), not just HTTP. UptimeRobot. Useful for users monitoring non-web services (mail servers, databases exposed on a port).
 - **DNS record monitoring** — alert when a DNS record changes or resolves unexpectedly (e.g. an A record pointing somewhere it shouldn't). UptimeRobot.
 - **ICMP ping monitoring** — simplest possible "is it reachable at all" check, below HTTP/TCP. UptimeRobot.
 - **30-second check interval** — already identified as a competitive gap in [ADR-019](decisions/019-plan-limits.md) ("30-second interval — deferred"), not new to this audit. Flagging here for visibility since it's exactly the kind of thing this doc is meant to surface, but it's already tracked, not orphaned.
 
-> Domain expiry monitoring, assertion-based API checks, and multi-region checking were pulled from this section into [EP-29](stories/ep-29-domain-expiry-monitoring.md), [EP-31](stories/ep-31-assertion-checks.md), and [EP-32](stories/ep-32-multi-region-checking.md) respectively on 2026-06-23 — see [`roadmap.md`](roadmap.md).
+> Domain expiry monitoring, assertion-based API checks, and multi-region checking were pulled from this section into [EP-29](stories/ep-29-domain-expiry-monitoring.md), [EP-31](stories/ep-31-assertion-checks.md), and [EP-32](stories/ep-32-multi-region-checking.md) respectively on 2026-06-23 — see [`roadmap.md`](roadmap.md). TCP/port monitoring pulled in as [EP-33](stories/ep-33-port-monitoring.md) on 2026-07-01.
 
 ## Alerting / ops integrations
 

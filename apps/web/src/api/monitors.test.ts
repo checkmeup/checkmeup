@@ -426,3 +426,106 @@ describe('monitorsApi uptime', () => {
     expect(deleteMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/uptime/u1/')
   })
 })
+
+const portMonitor = {
+  id: 'p1',
+  name: 'SMTP',
+  host: 'mail.checkmeup.net',
+  port: 25,
+  expectedState: 'open' as const,
+  intervalMins: 5,
+  status: 'up' as const,
+  alertsEnabled: true,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+  lastCheckedAt: '2026-06-22T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  uptime24h: 99.9,
+}
+
+const createPortInput = {
+  name: 'SMTP',
+  host: 'mail.checkmeup.net',
+  port: 25,
+  expectedState: 'open' as const,
+  intervalMins: 5,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+}
+
+const updatePortInput = {
+  name: 'SMTP',
+  host: 'mail.checkmeup.net',
+  port: 25,
+  expectedState: 'open' as const,
+  intervalMins: 5,
+  alertsEnabled: true,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+  channelIds: ['ch1'],
+}
+
+describe('monitorsApi port', () => {
+  it('listPort fetches the port monitor list', async () => {
+    getMock.mockResolvedValueOnce([portMonitor])
+
+    const result = await monitorsApi.listPort()
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/')
+    expect(result).toEqual([portMonitor])
+  })
+
+  it('getPort fetches a single port monitor detail by id', async () => {
+    getMock.mockResolvedValueOnce(portMonitor)
+
+    const result = await monitorsApi.getPort('p1')
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/')
+    expect(result).toEqual(portMonitor)
+  })
+
+  it('createPort posts the input to create a port monitor', async () => {
+    postMock.mockResolvedValueOnce(portMonitor)
+
+    const result = await monitorsApi.createPort(createPortInput)
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/', createPortInput)
+    expect(result).toEqual(portMonitor)
+  })
+
+  it('updatePort patches the input to update a port monitor by id', async () => {
+    patchMock.mockResolvedValueOnce(portMonitor)
+
+    const result = await monitorsApi.updatePort('p1', updatePortInput)
+
+    expect(patchMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/', updatePortInput)
+    expect(result).toEqual(portMonitor)
+  })
+
+  it('pausePort posts to the pause endpoint with no body', async () => {
+    const paused = { ...portMonitor, status: 'paused' as const }
+    postMock.mockResolvedValueOnce(paused)
+
+    const result = await monitorsApi.pausePort('p1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/pause', {})
+    expect(result).toEqual(paused)
+  })
+
+  it('resumePort posts to the resume endpoint with no body', async () => {
+    postMock.mockResolvedValueOnce(portMonitor)
+
+    const result = await monitorsApi.resumePort('p1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/resume', {})
+    expect(result).toEqual(portMonitor)
+  })
+
+  it('deletePort deletes a port monitor by id', async () => {
+    deleteMock.mockResolvedValueOnce(undefined)
+
+    await monitorsApi.deletePort('p1')
+
+    expect(deleteMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/')
+  })
+})

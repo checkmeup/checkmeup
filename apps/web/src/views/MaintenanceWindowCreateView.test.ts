@@ -26,6 +26,7 @@ const cronData = ref<{ id: string; name: string }[]>([])
 const uptimeData = ref<{ id: string; name: string }[]>([])
 const sslData = ref<{ id: string; name: string }[]>([])
 const domainData = ref<{ id: string; name: string }[]>([])
+const portData = ref<{ id: string; name: string }[]>([])
 const monitorsPending = ref(false)
 
 vi.mock('@/composables/useCronMonitors', () => ({
@@ -40,6 +41,9 @@ vi.mock('@/composables/useSSLMonitors', () => ({
 vi.mock('@/composables/useDomainMonitors', () => ({
   useDomainMonitors: () => ({ data: domainData, isPending: monitorsPending }),
 }))
+vi.mock('@/composables/usePortMonitors', () => ({
+  usePortMonitors: () => ({ data: portData, isPending: monitorsPending }),
+}))
 
 function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((b) => b.text() === text)
@@ -51,6 +55,7 @@ beforeEach(() => {
   uptimeData.value = [{ id: 'u1', name: 'API uptime' }]
   sslData.value = []
   domainData.value = []
+  portData.value = []
 })
 
 afterEach(() => {

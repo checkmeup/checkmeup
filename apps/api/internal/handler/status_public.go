@@ -285,6 +285,8 @@ func (h *StatusPublicHandler) buildRow(ctx context.Context, m db.StatusPageMonit
 		h.fillSSLRow(ctx, m.MonitorID, &row)
 	case "domain":
 		h.fillDomainRow(ctx, m.MonitorID, &row)
+	case "port":
+		h.fillPortRow(ctx, m.MonitorID, &row)
 	}
 	return row
 }
@@ -354,6 +356,26 @@ func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, r
 		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
 	}
 	row.Bar = solidColorBar(string(mon.Status))
+}
+
+func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
+	mon, err := h.queries.GetPortMonitorPublic(ctx, id)
+	if err == nil {
+		row.StatusLabel, row.StatusColor = monitorStatusDisplay(string(mon.Status))
+	}
+
+	dailyRows, err := h.queries.GetPortDailyStatus90d(ctx, id)
+	downDays := map[string]bool{}
+	hasData := false
+	if err == nil && len(dailyRows) > 0 {
+		hasData = true
+		for _, d := range dailyRows {
+			if d.DownCount > 0 {
+				downDays[d.Day.Time.Format("2006-01-02")] = true
+			}
+		}
+	}
+	row.Bar = build90DayBar(downDays, hasData)
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
