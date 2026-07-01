@@ -33,6 +33,7 @@ describe('DocsView', () => {
       '#uptime',
       '#ssl',
       '#domain',
+      '#port',
       '#telegram',
       '#email',
       '#slack',
@@ -52,6 +53,7 @@ describe('DocsView', () => {
     expect(wrapper.text()).toContain('Uptime monitoring')
     expect(wrapper.text()).toContain('SSL expiry monitoring')
     expect(wrapper.text()).toContain('Domain expiry monitoring')
+    expect(wrapper.text()).toContain('Port (TCP) monitoring')
     expect(wrapper.text()).toContain('Telegram alerts')
     expect(wrapper.text()).toContain('Email alerts')
     expect(wrapper.text()).toContain('Slack alerts')

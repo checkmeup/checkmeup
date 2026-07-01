@@ -4,7 +4,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/6354d576310e41ab86a9fdd8572366b6)](https://app.codacy.com/gh/checkmeup/checkmeup/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
-Cron, uptime, SSL, and domain expiry monitors with Telegram alerts and white-label status pages.
+Cron, uptime, SSL, domain expiry, and port (TCP) monitors with Telegram alerts and white-label status pages.
 
 ## Stack
 

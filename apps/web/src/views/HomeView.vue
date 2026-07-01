@@ -159,8 +159,8 @@ const testimonials = [
       </h1>
 
       <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-10" style="color: var(--text-dim)">
-        Cron job monitoring, uptime checks, SSL and domain expiry alerts — all in one place. Get
-        alerted on Telegram, Slack, or email the moment something breaks.
+        Cron job monitoring, uptime checks, SSL and domain expiry alerts, and raw TCP port checks —
+        all in one place. Get alerted on Telegram, Slack, or email the moment something breaks.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -262,7 +262,7 @@ const testimonials = [
           Everything you need to stay on top
         </h2>
         <p class="text-base" style="color: var(--text-dim)">
-          Four monitor types, one dashboard, zero blind spots.
+          Five monitor types, one dashboard, zero blind spots.
         </p>
       </div>
 
@@ -585,6 +585,87 @@ const testimonials = [
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Daily checks
+            </li>
+          </ul>
+        </div>
+
+        <!-- Port -->
+        <div
+          class="rounded-xl border p-6 transition-colors hover:border-[var(--color-green-700)]"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <div
+            class="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+            style="
+              background: linear-gradient(
+                135deg,
+                var(--color-green-700) 0%,
+                var(--color-green-500) 100%
+              );
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+            >
+              <rect x="2" y="9" width="6" height="6" rx="1" />
+              <rect x="16" y="9" width="6" height="6" rx="1" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">
+            Port (TCP) monitoring
+          </h3>
+          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+            Raw TCP connect checks for mail servers, databases, and any other non-HTTP service —
+            plus a security mode that alerts if a port that should be closed becomes reachable.
+          </p>
+          <ul class="mt-4 space-y-2">
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Any host and port
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Open or closed expected state
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Connect-time history
             </li>
           </ul>
         </div>

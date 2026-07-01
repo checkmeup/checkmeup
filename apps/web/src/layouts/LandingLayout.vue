@@ -130,7 +130,7 @@ const mobileMenuOpen = ref(false)
         <div>
           <img :src="logoGrey" alt="checkmeup" class="h-6 mb-2" />
           <p class="text-xs" style="color: var(--text-muted)">
-            Cron, uptime, and SSL monitoring for developers.
+            Cron, uptime, SSL, domain, and port monitoring for developers.
           </p>
         </div>
         <nav class="flex flex-wrap gap-x-6 gap-y-2 text-xs" style="color: var(--text-muted)">

@@ -15,7 +15,7 @@ const message = ref('')
 const startsAt = ref('')
 const noEnd = ref(false)
 const endsAt = ref('')
-const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl' | 'domain'; monitorId: string; name: string }[]>([])
+const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string; name: string }[]>([])
 const submitting = ref(false)
 const error = ref('')
 
