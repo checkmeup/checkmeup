@@ -25,7 +25,7 @@ Change Date: 2030-07-01
 Change License: Apache License, Version 2.0
 
 For information about alternative licensing arrangements for the Licensed
-Work, contact andrew@molyuk.com.
+Work, contact andrew@checkmeup.net.
 
 ---
 

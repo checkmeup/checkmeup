@@ -21,11 +21,13 @@ const subprocessors = [
 
       <div class="space-y-10 text-sm leading-relaxed" style="color: var(--text-dim)">
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. Scope</h2>
+          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. Scope and controller</h2>
           <p>
             This policy covers checkmeup.net and the public status pages it serves at
             <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">checkmeup.net/status/*</code>
-            (together, "the Service"). It explains what we collect, why, and who we share it with.
+            (together, "the Service"). It explains what we collect, why, and who we share it with. The data
+            controller is Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel, operating checkmeup
+            ("we", "us").
           </p>
         </section>
 
@@ -120,7 +122,16 @@ const subprocessors = [
         </section>
 
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">10. Changes to this policy</h2>
+          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">10. Children's privacy</h2>
+          <p>
+            The Service is not directed at children and isn't intended for anyone under the age stated in
+            our <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)">Terms</RouterLink>' eligibility requirement. We don't knowingly collect data from
+            children. If you believe a child has provided us data, email us and we'll delete it.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">11. Changes to this policy</h2>
           <p>
             We may update this policy as the Service evolves. Material changes require re-acceptance on
             your next sign-in — you'll see a blocking notice before continuing to use the Service.
@@ -128,7 +139,7 @@ const subprocessors = [
         </section>
 
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">11. Contact</h2>
+          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">12. Contact</h2>
           <p>
             Questions about this policy or your data:
             <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--color-green-500)"

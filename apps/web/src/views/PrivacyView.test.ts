@@ -26,7 +26,21 @@ describe('PrivacyView', () => {
     expect(wrapper.text()).toContain('1. Scope')
     expect(wrapper.text()).toContain('5. Subprocessors')
     expect(wrapper.text()).toContain('9. Your rights')
-    expect(wrapper.text()).toContain('11. Contact')
+    expect(wrapper.text()).toContain('12. Contact')
+  })
+
+  it('names the data controller', () => {
+    const wrapper = mount(PrivacyView, mountOptions)
+
+    expect(wrapper.text()).toContain('Andrew Molyuk')
+    expect(wrapper.text()).toContain('data controller')
+  })
+
+  it("includes a children's privacy section", () => {
+    const wrapper = mount(PrivacyView, mountOptions)
+
+    expect(wrapper.text()).toContain("10. Children's privacy")
+    expect(wrapper.text()).toContain('not directed at children')
   })
 
   it('lists all subprocessors in the table', () => {

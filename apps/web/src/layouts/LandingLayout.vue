@@ -147,6 +147,7 @@ const mobileMenuOpen = ref(false)
             <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
               <RouterLink to="/terms" class="hover:text-[var(--text-strong)] transition-colors">Terms</RouterLink>
               <RouterLink to="/privacy" class="hover:text-[var(--text-strong)] transition-colors">Privacy</RouterLink>
+              <RouterLink to="/refund" class="hover:text-[var(--text-strong)] transition-colors">Refund Policy</RouterLink>
             </nav>
           </div>
         </div>
