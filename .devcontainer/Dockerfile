@@ -7,7 +7,6 @@ ARG GOLANGCI_LINT_VERSION=v2.12.2
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        git=1:2.47.3-0+deb13u1 \
-       gnupg=2.4.7-21+deb13u1 \
        openssh-client=1:10.0p1-7+deb13u4 \
        curl=8.14.1-2+deb13u3 \
        make=4.4.1-2 \
