@@ -181,6 +181,11 @@ const values = [
         <a href="https://github.com/checkmeup/checkmeup/tree/main/docs/decisions" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">ADR log</a>
         in the public repo — including the choices that weren't obvious.
       </p>
+      <p class="text-xs mt-3" style="color: var(--text-muted)">
+        The code itself is source-available under the
+        <a href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">Business Source License</a>
+        — free to read, self-host, and modify; the one restriction is reselling checkmeup itself as a competing hosted monitoring service. It converts to Apache 2.0 in 2030.
+      </p>
     </section>
 
     <!-- Divider -->

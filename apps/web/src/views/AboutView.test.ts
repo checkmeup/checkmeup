@@ -36,6 +36,16 @@ describe('AboutView', () => {
     expect(wrapper.text()).toContain('PostgreSQL')
   })
 
+  it('renders the license note', () => {
+    const wrapper = mount(AboutView)
+
+    expect(wrapper.text()).toContain('Business Source License')
+    const licenseLink = wrapper.find(
+      'a[href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md"]',
+    )
+    expect(licenseLink.exists()).toBe(true)
+  })
+
   it('renders the values section', () => {
     const wrapper = mount(AboutView)
 
