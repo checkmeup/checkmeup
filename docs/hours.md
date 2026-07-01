@@ -46,3 +46,7 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-06-25 | Thu | Blog, docs                                      | 1 h   |
 | 2026-07-01 | Wed | EP-33 (port monitoring)                         | 5 h   |
 | 2026-07-01 | Wed | Blog, docs                                      | 1 h   |
+| 2026-07-01 | Wed | Homepage redesign (mockups, footer)             | 2 h   |
+| 2026-07-01 | Wed | License change to BUSL                          | 1 h   |
+| 2026-07-01 | Wed | Codacy fixes                                    | 2 h   |
+| 2026-07-01 | Wed | Blog, docs                                      | 1 h   |
