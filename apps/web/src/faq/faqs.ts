@@ -38,7 +38,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What counts as a "monitor"?',
-        a: 'Each cron job, uptime URL, SSL certificate, or domain you track counts as one monitor. The limit applies to the total across all types.',
+        a: 'Each cron job, uptime URL, SSL certificate, domain, or port you track counts as one monitor. The limit applies to the total across all types.',
       },
       {
         q: 'Can I change plans later?',
