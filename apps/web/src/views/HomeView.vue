@@ -266,7 +266,7 @@ const testimonials = [
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Cron -->
         <div
           class="rounded-xl border p-6 transition-colors hover:border-[var(--color-green-700)]"
@@ -666,6 +666,87 @@ const testimonials = [
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Connect-time history
+            </li>
+          </ul>
+        </div>
+
+        <!-- Status pages -->
+        <div
+          class="rounded-xl border p-6 transition-colors hover:border-[var(--color-green-700)]"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
+          <div
+            class="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+            style="
+              background: linear-gradient(
+                135deg,
+                var(--color-green-700) 0%,
+                var(--color-green-500) 100%
+              );
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="14" rx="2" />
+              <line x1="3" y1="8" x2="21" y2="8" />
+              <circle cx="17" cy="15" r="2" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">
+            Public status pages
+          </h3>
+          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+            White-label status pages your users or clients can bookmark — uptime, incidents, and
+            maintenance windows, no login required to view.
+          </p>
+          <ul class="mt-4 space-y-2">
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              White-label branding
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              No DNS setup required
+            </li>
+            <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Embeddable status badges
             </li>
           </ul>
         </div>
