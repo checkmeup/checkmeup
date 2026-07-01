@@ -42,4 +42,4 @@ make build  # production build
 
 ## License
 
-MIT © 2026 Andrew Molyuk
+[Business Source License 1.1](LICENSE.md) © 2026 Andrew Molyuk — free for self-hosted/internal use; converts to Apache License 2.0 on 2030-07-01. See [LICENSE.md](LICENSE.md) for the Additional Use Grant (the one restriction: no reselling checkmeup itself as a competing hosted monitoring service).
