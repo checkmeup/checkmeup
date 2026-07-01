@@ -136,6 +136,101 @@ func parseExpectedState(raw string) db.PortExpectedState {
 	return db.PortExpectedStateOpen
 }
 
+// validatePortNameHostPort trims name and validates host/port — the three
+// fields shared by create and update requests — returning the normalized
+// name and host.
+func validatePortNameHostPort(name, rawHost string, port int32) (trimmedName, host string, err error) {
+	trimmedName = strings.TrimSpace(name)
+	if trimmedName == "" {
+		return "", "", errors.New("name is required")
+	}
+	host, err = parseHostname(rawHost)
+	if err != nil {
+		return "", "", err
+	}
+	if err := validatePort(port); err != nil {
+		return "", "", err
+	}
+	return trimmedName, host, nil
+}
+
+// normalizePortMaxAlerts applies the same "negative means default" rule
+// used by every other monitor type's create/update handler.
+func normalizePortMaxAlerts(v int32) int32 {
+	if v < 0 {
+		return 3
+	}
+	return v
+}
+
+// getPlanAndCheckPortLimit fetches the org's plan and verifies it hasn't hit
+// its aggregate monitor limit — used only by create, since update doesn't
+// add a new monitor.
+func (h *MonitorHandler) getPlanAndCheckPortLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) (db.Plan, bool) {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return "", false
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return "", false
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return "", false
+	}
+	return plan, true
+}
+
+// clampPortInterval enforces the plan's minimum check interval, writing a
+// 402 response when the requested interval is too low.
+func (h *MonitorHandler) clampPortInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, plan db.Plan, requestedMins int32) (int32, bool) {
+	clamped, err := billing.ClampInterval(plan, int(requestedMins))
+	if err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor_interval")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return 0, false
+	}
+	return int32(clamped), true
+}
+
+// getPlanAndClampPortInterval fetches the org's plan and clamps the
+// requested interval in one step — used by update, which (unlike create)
+// doesn't also need the plan for a monitor-limit check.
+func (h *MonitorHandler) getPlanAndClampPortInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, requestedMins int32) (int32, bool) {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return 0, false
+	}
+	return h.clampPortInterval(w, r, orgID, plan, requestedMins)
+}
+
+// respondPortMonitorWriteError maps a failed lookup-and-write query error to
+// the right HTTP status — 404 when the monitor doesn't exist (or belongs to
+// another org), 500 otherwise.
+func (h *MonitorHandler) respondPortMonitorWriteError(w http.ResponseWriter, err error) {
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
+		return
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+}
+
+// attachPortMonitorChannels attaches the requested channels to a newly
+// created monitor, or falls back to every enabled org channel when none
+// were explicitly selected (US-2802).
+func (h *MonitorHandler) attachPortMonitorChannels(r *http.Request, orgID, monitorID uuid.UUID, channelIDs []string) error {
+	if len(channelIDs) > 0 {
+		return h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, channelIDs)
+	}
+	h.attachDefaultNotificationChannels(r.Context(), orgID, "port", monitorID)
+	return nil
+}
+
 // ─── handlers ────────────────────────────────────────────────────────────────
 
 // ListPortMonitors GET /api/v1/monitors/port
@@ -187,48 +282,23 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
-
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
-		return
-	}
-	host, err := parseHostname(req.Host)
+	name, host, err := validatePortNameHostPort(req.Name, req.Host, req.Port)
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-	if err := validatePort(req.Port); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
+	req.Name = name
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	plan, ok := h.getPlanAndCheckPortLimit(w, r, orgID)
+	if !ok {
 		return
 	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	clampedInterval, ok := h.clampPortInterval(w, r, orgID, plan, req.IntervalMins)
+	if !ok {
 		return
 	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	req.IntervalMins = int32(clampedInterval)
-
-	if req.MaxAlertsPerIncident < 0 {
-		req.MaxAlertsPerIncident = 3
-	}
+	req.IntervalMins = clampedInterval
+	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
 	monitor, err := h.queries.CreatePortMonitor(r.Context(), db.CreatePortMonitorParams{
 		OrgID:                orgID,
@@ -244,13 +314,9 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if len(req.ChannelIDs) > 0 {
-		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitor.ID, req.ChannelIDs); err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-	} else {
-		h.attachDefaultNotificationChannels(r.Context(), orgID, "port", monitor.ID)
+	if err := h.attachPortMonitorChannels(r, orgID, monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
 	}
 
 	resp := h.portMonitorToResponse(monitor)
@@ -381,38 +447,19 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
-
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
-		return
-	}
-	host, err := parseHostname(req.Host)
+	name, host, err := validatePortNameHostPort(req.Name, req.Host, req.Port)
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-	if err := validatePort(req.Port); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
+	req.Name = name
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	clampedInterval, ok := h.getPlanAndClampPortInterval(w, r, orgID, req.IntervalMins)
+	if !ok {
 		return
 	}
-	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	req.IntervalMins = int32(clampedInterval)
-
-	if req.MaxAlertsPerIncident < 0 {
-		req.MaxAlertsPerIncident = 3
-	}
+	req.IntervalMins = clampedInterval
+	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
 	monitor, err := h.queries.UpdatePortMonitor(r.Context(), db.UpdatePortMonitorParams{
 		ID:                   monitorID,
@@ -427,11 +474,7 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		h.respondPortMonitorWriteError(w, err)
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, req.ChannelIDs); err != nil {

@@ -93,19 +93,21 @@ watch(loadError, (e) => {
   if (e) error.value = e.message
 })
 
+// validatePortForm returns the first validation error, or null if the form
+// is ready to submit — kept separate from submit() to keep its complexity down.
+function validatePortForm(): string | null {
+  if (!name.value.trim()) return 'Name is required'
+  if (!host.value.trim()) return 'Host is required'
+  if (!port.value || port.value < 1 || port.value > 65535) return 'Port must be between 1 and 65535'
+  return null
+}
+
 async function submit() {
   error.value = ''
   limitReached.value = false
-  if (!name.value.trim()) {
-    error.value = 'Name is required'
-    return
-  }
-  if (!host.value.trim()) {
-    error.value = 'Host is required'
-    return
-  }
-  if (!port.value || port.value < 1 || port.value > 65535) {
-    error.value = 'Port must be between 1 and 65535'
+  const validationError = validatePortForm()
+  if (validationError) {
+    error.value = validationError
     return
   }
 

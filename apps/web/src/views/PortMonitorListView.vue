@@ -26,23 +26,23 @@ function statusLabel(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// magnitude renders the m/h difference as a duration ("5m", "3h", "2d"),
+// independent of direction (past/future) — kept separate from relativeTime
+// so its complexity doesn't compound with the direction handling.
+function magnitude(m: number, h: number): string {
+  if (m < 60) return `${m}m`
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
 function relativeTime(iso: string | null) {
   if (!iso) return '—'
   const diff = Date.now() - new Date(iso).getTime()
   const abs = Math.abs(diff)
   const m = Math.floor(abs / 60000)
   const h = Math.floor(m / 60)
-  if (diff >= 0) {
-    if (m < 1) return 'just now'
-    if (m < 60) return `${m}m ago`
-    if (h < 24) return `${h}h ago`
-    return `${Math.floor(h / 24)}d ago`
-  } else {
-    if (m < 1) return 'in <1m'
-    if (m < 60) return `in ${m}m`
-    if (h < 24) return `in ${h}h`
-    return `in ${Math.floor(h / 24)}d`
-  }
+  if (diff >= 0) return m < 1 ? 'just now' : `${magnitude(m, h)} ago`
+  return m < 1 ? 'in <1m' : `in ${magnitude(m, h)}`
 }
 
 function fmtPct(v: number | null): string {

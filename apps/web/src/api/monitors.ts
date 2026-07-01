@@ -330,5 +330,5 @@ export const monitorsApi = {
     api.patch<PortMonitor>(`/api/v1/monitors/port/${id}/`, input),
   pausePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/pause`, {}),
   resumePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/resume`, {}),
-  deletePort: (id: string) => api.delete<void>(`/api/v1/monitors/port/${id}/`),
+  deletePort: (id: string) => api.delete(`/api/v1/monitors/port/${id}/`),
 }

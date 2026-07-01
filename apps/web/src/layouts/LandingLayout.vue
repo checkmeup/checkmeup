@@ -132,7 +132,7 @@ const mobileMenuOpen = ref(false)
               Cron, uptime, SSL, domain, and port monitoring for developers.
             </p>
           </div>
-          <div class="flex-1 flex flex-wrap sm:justify-end gap-x-12 gap-y-6">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-10 sm:gap-x-14 gap-y-6 sm:ml-auto">
             <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
               <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
               <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
