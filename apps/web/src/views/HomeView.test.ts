@@ -107,4 +107,20 @@ describe('HomeView', () => {
     expect(ctas.length).toBeGreaterThan(0)
     expect(ctas[0].props('to')).toBe('/sign-up')
   })
+
+  it('renders the hero live mockup', () => {
+    const wrapper = mountHome()
+
+    expect(wrapper.text()).toContain('checkmeup.net — Monitor')
+    expect(wrapper.text()).toContain('Uptime 24h')
+    expect(wrapper.find('svg path').exists()).toBe(true)
+  })
+
+  it('renders the status page live mockup', () => {
+    const wrapper = mountHome()
+
+    expect(wrapper.text()).toContain('All systems operational')
+    expect(wrapper.text()).toContain('Hourly Cron Monitor')
+    expect(wrapper.text()).toContain('Operational')
+  })
 })

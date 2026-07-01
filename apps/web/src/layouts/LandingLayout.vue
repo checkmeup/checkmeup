@@ -124,27 +124,35 @@ const mobileMenuOpen = ref(false)
 
     <!-- Footer -->
     <footer class="border-t" style="border-color: var(--border)">
-      <div
-        class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
-      >
-        <div>
-          <img :src="logoGrey" alt="checkmeup" class="h-6 mb-2" />
-          <p class="text-xs" style="color: var(--text-muted)">
-            Cron, uptime, SSL, domain, and port monitoring for developers.
-          </p>
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-11">
+        <div class="flex flex-col sm:flex-row gap-10 sm:gap-12 items-start mb-9">
+          <div class="flex-shrink-0 sm:min-w-[190px]">
+            <img :src="logoGrey" alt="checkmeup" class="h-6 mb-2" />
+            <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
+              Cron, uptime, SSL, domain, and port monitoring for developers.
+            </p>
+          </div>
+          <div class="flex-1 flex flex-wrap sm:justify-end gap-x-12 gap-y-6">
+            <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
+              <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
+              <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
+              <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
+              <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
+            </nav>
+            <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
+              <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
+              <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors">Sign in</RouterLink>
+              <RouterLink to="/sign-up" class="hover:text-[var(--text-strong)] transition-colors">Sign up</RouterLink>
+            </nav>
+            <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
+              <RouterLink to="/terms" class="hover:text-[var(--text-strong)] transition-colors">Terms</RouterLink>
+              <RouterLink to="/privacy" class="hover:text-[var(--text-strong)] transition-colors">Privacy</RouterLink>
+            </nav>
+          </div>
         </div>
-        <nav class="flex flex-wrap gap-x-6 gap-y-2 text-xs" style="color: var(--text-muted)">
-          <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors">Docs</RouterLink>
-          <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
-          <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
-          <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
-          <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>
-          <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors">Sign in</RouterLink>
-          <RouterLink to="/sign-up" class="hover:text-[var(--text-strong)] transition-colors">Sign up</RouterLink>
-          <RouterLink to="/terms" class="hover:text-[var(--text-strong)] transition-colors">Terms</RouterLink>
-          <RouterLink to="/privacy" class="hover:text-[var(--text-strong)] transition-colors">Privacy</RouterLink>
-        </nav>
-        <p class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</p>
+        <div class="pt-5 border-t" style="border-color: var(--border)">
+          <span class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</span>
+        </div>
       </div>
     </footer>
   </div>

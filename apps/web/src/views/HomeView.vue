@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import logoIcon from '@/assets/logo-icon.svg'
+
+const statusRows = [
+  { name: 'Hourly Cron Monitor', pct: '98%' },
+  { name: 'Hourly Cron Monitor Ping', pct: '100%' },
+  { name: 'checkmeup.net', pct: '99%' },
+]
 
 const plans = [
   {
@@ -180,9 +187,9 @@ const testimonials = [
         </RouterLink>
       </div>
 
-      <!-- Hero screenshot -->
+      <!-- Hero mockup -->
       <div
-        class="max-w-4xl mx-auto rounded-xl border overflow-hidden"
+        class="max-w-4xl mx-auto rounded-xl border overflow-hidden text-left"
         style="
           border-color: var(--border);
           box-shadow:
@@ -190,11 +197,126 @@ const testimonials = [
             0 40px 80px rgba(0, 0, 0, 0.4);
         "
       >
-        <img
-          src="/img/uptime-monitor.png"
-          alt="Uptime monitor dashboard"
-          class="w-full h-auto block"
-        />
+        <!-- Fake browser chrome -->
+        <div
+          class="flex items-center gap-1.5 px-4 py-3 border-b"
+          style="border-color: var(--border); background-color: var(--surface-raised)"
+        >
+          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #ff5f57"></span>
+          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #febc2e"></span>
+          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #28c840"></span>
+          <span
+            class="flex-1 text-center font-mono text-xs"
+            style="color: var(--text-muted); margin-right: 76px"
+          >
+            checkmeup.net — Monitor
+          </span>
+        </div>
+
+        <div class="p-5 sm:p-6" style="background-color: var(--surface)">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="font-mono text-xs" style="color: var(--text-muted)">← Back</span>
+            <span class="text-base font-semibold" style="color: var(--text-strong)"
+              >checkmeup.net</span
+            >
+          </div>
+
+          <div
+            class="flex items-start justify-between pb-4 mb-4 border-b"
+            style="border-color: var(--border)"
+          >
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="relative inline-block w-2.5 h-2.5">
+                  <span
+                    class="absolute inset-0 rounded-full animate-ping"
+                    style="background-color: var(--status-up); opacity: 0.55"
+                  ></span>
+                  <span
+                    class="absolute inset-0 rounded-full"
+                    style="background-color: var(--status-up)"
+                  ></span>
+                </span>
+                <span class="text-sm font-semibold" style="color: var(--status-up)">Up</span>
+              </div>
+              <div class="font-mono text-xs" style="color: var(--text-muted)">
+                https://checkmeup.net
+              </div>
+              <div class="font-mono text-xs mt-0.5" style="color: var(--text-muted)">
+                Every 10 min · Last checked 7m ago
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                class="px-2.5 py-1.5 rounded-md border text-xs"
+                style="
+                  border-color: var(--border);
+                  background-color: var(--surface-raised);
+                  color: var(--text-dim);
+                "
+              >
+                Edit
+              </button>
+              <button
+                class="px-2.5 py-1.5 rounded-md border text-xs"
+                style="
+                  border-color: var(--border);
+                  background-color: var(--surface-raised);
+                  color: var(--text-dim);
+                "
+              >
+                Pause
+              </button>
+              <button
+                class="px-2.5 py-1.5 rounded-md border text-xs"
+                style="
+                  border-color: rgba(239, 68, 68, 0.3);
+                  background-color: rgba(239, 68, 68, 0.1);
+                  color: var(--status-down);
+                "
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 mb-4">
+            <div class="text-center py-3 border-r" style="border-color: var(--border)">
+              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
+                100.00%
+              </div>
+              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 24h</div>
+            </div>
+            <div class="text-center py-3 border-r" style="border-color: var(--border)">
+              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
+                100.00%
+              </div>
+              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 7d</div>
+            </div>
+            <div class="text-center py-3">
+              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
+                99.91%
+              </div>
+              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 30d</div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t" style="border-color: var(--border)">
+            <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
+              Response time — last 24h
+            </div>
+            <svg viewBox="0 0 640 48" fill="none" class="w-full h-12 block">
+              <path
+                d="M0 34 C10 32 18 27 32 30 C46 33 54 24 68 27 C82 30 92 37 106 34 C120 31 128 22 142 25 C156 28 166 34 180 31 C194 28 202 20 216 23 C230 26 240 33 254 29 C268 25 278 17 292 21 C306 25 316 33 330 29 C344 25 352 17 366 21 C380 25 392 33 406 29 C420 25 428 17 442 21 C456 25 468 33 482 29 C496 25 504 17 518 21 C532 25 544 33 558 29 C572 25 580 17 594 21 C608 25 620 33 634 29 C638 27 640 26 640 27"
+                style="stroke: var(--status-up); stroke-width: 1.5px"
+                fill="none"
+              />
+            </svg>
+            <div class="font-mono text-xs mt-1.5" style="color: var(--text-muted)">
+              Red dots = failed checks. Y axis = response time (max 77ms).
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -798,25 +920,69 @@ const testimonials = [
           >
             Create a status page →
           </RouterLink>
+
+          <div
+            class="mt-6 p-4 rounded-lg border"
+            style="border-color: var(--border); background-color: var(--surface-raised)"
+          >
+            <p class="text-sm mb-2.5" style="color: var(--text-dim)">
+              Embed a live status badge anywhere — links straight to your status page
+            </p>
+            <a href="https://checkmeup.net/status/checkmeup-net">
+              <img
+                src="https://checkmeup.net/status/checkmeup-net/badge.svg"
+                alt="When you run a successful product, your monitors run quietly"
+              />
+            </a>
+          </div>
         </div>
 
-        <!-- Status page screenshot -->
+        <!-- Status page mockup -->
         <div
-          class="w-full lg:w-80 rounded-xl border overflow-hidden flex-shrink-0"
+          class="w-full lg:w-80 rounded-xl border overflow-hidden flex-shrink-0 text-sm"
           style="border-color: var(--border); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35)"
         >
-          <img src="/img/status-page.png" alt="Status page example" class="w-full h-auto block" />
+          <div
+            class="flex items-center gap-2 px-4 py-3 border-b"
+            style="border-color: var(--border); background-color: var(--surface)"
+          >
+            <img :src="logoIcon" alt="" class="w-4 h-4" />
+            <span class="font-semibold" style="color: var(--text-strong)">checkmeup</span>
+          </div>
+          <div
+            class="px-4 py-2.5 border-b"
+            style="border-color: var(--border); background-color: rgba(29, 158, 117, 0.08)"
+          >
+            <span class="text-xs font-semibold" style="color: var(--color-green-500)"
+              >● All systems operational</span
+            >
+          </div>
+          <div
+            v-for="row in statusRows"
+            :key="row.name"
+            class="px-4 py-3 border-b last:border-0"
+            style="border-color: var(--border); background-color: var(--surface)"
+          >
+            <div class="flex items-center justify-between mb-1.5">
+              <span style="color: var(--text-dim)">{{ row.name }}</span>
+              <span
+                class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style="background-color: rgba(29, 158, 117, 0.1); color: var(--color-green-500)"
+              >
+                Operational
+              </span>
+            </div>
+            <div
+              class="h-1.5 rounded overflow-hidden"
+              style="background-color: rgba(29, 158, 117, 0.1)"
+            >
+              <div
+                class="h-full rounded"
+                :style="{ width: row.pct, backgroundColor: 'var(--color-green-500)' }"
+              ></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <p class="text-base pt-10 mx-auto text-center" style="color: var(--text-dim)">
-        Embed a live status badge anywhere — links straight to your status page
-      </p>
-      <div class="flex justify-center pt-4">
-        <a href="https://checkmeup.net/status/checkmeup-net"
-          ><img
-            src="https://checkmeup.net/status/checkmeup-net/badge.svg"
-            alt="When you run a successful product, your monitors run quietly"
-        /></a>
       </div>
     </section>
 
