@@ -191,23 +191,9 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Plan  string `json:"plan"`
-		Cycle string `json:"cycle"` // "monthly" or "annual"; ignored for hobby
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid request", "bad_request")
-		return
-	}
-	if req.Plan != "hobby" && req.Plan != "solo" && req.Plan != "startup" && req.Plan != "enterprise" {
-		respond.Error(w, http.StatusBadRequest, "invalid plan", "bad_request")
-		return
-	}
-	if req.Cycle == "" {
-		req.Cycle = cycleMonthly
-	}
-	if req.Cycle != cycleMonthly && req.Cycle != cycleAnnual {
-		respond.Error(w, http.StatusBadRequest, "invalid cycle", "bad_request")
+	plan, cycle, errMsg, errCode := decodeChangePlanRequest(r)
+	if errMsg != "" {
+		respond.Error(w, http.StatusBadRequest, errMsg, errCode)
 		return
 	}
 
@@ -226,7 +212,7 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Plan == "hobby" {
+	if plan == "hobby" {
 		if err := h.cancelPaddleSubscription(info.PaddleSubscriptionID.String); err != nil {
 			respondForPaddlePlanChangeError(w, r, orgID, "cancel", "failed to cancel subscription", err)
 			return
@@ -235,7 +221,7 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	priceID := h.priceIDForPlan(req.Plan, req.Cycle)
+	priceID := h.priceIDForPlan(plan, cycle)
 	if priceID == "" {
 		respond.Error(w, http.StatusServiceUnavailable, "this plan isn't available yet", "not_configured")
 		return
@@ -245,6 +231,29 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// decodeChangePlanRequest decodes and validates a ChangePlan request body.
+// A non-empty errMsg means the request is invalid and the caller should
+// respond with it (and errCode) directly instead of proceeding.
+func decodeChangePlanRequest(r *http.Request) (plan, cycle, errMsg, errCode string) {
+	var req struct {
+		Plan  string `json:"plan"`
+		Cycle string `json:"cycle"` // "monthly" or "annual"; ignored for hobby
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return "", "", "invalid request", "bad_request"
+	}
+	if req.Plan != "hobby" && req.Plan != "solo" && req.Plan != "startup" && req.Plan != "enterprise" {
+		return "", "", "invalid plan", "bad_request"
+	}
+	if req.Cycle == "" {
+		req.Cycle = cycleMonthly
+	}
+	if req.Cycle != cycleMonthly && req.Cycle != cycleAnnual {
+		return "", "", "invalid cycle", "bad_request"
+	}
+	return req.Plan, req.Cycle, "", ""
 }
 
 // respondForPaddlePlanChangeError maps a Paddle API failure from ChangePlan
