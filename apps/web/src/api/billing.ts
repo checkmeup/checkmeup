@@ -28,4 +28,8 @@ export const billingApi = {
   ): Promise<{ transactionId: string }> {
     return api.post('/api/v1/billing/checkout', { plan, cycle })
   },
+
+  async changePlan(plan: string, cycle: BillingCycle = 'monthly'): Promise<{ ok: boolean }> {
+    return api.post('/api/v1/billing/change-plan', { plan, cycle })
+  },
 }

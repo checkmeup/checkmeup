@@ -157,6 +157,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Route("/billing", func(r chi.Router) {
 				r.Get("/", billing.GetBillingInfo)
 				r.Post("/checkout", billing.CreateCheckout)
+				r.Post("/change-plan", billing.ChangePlan)
 			})
 
 			r.Route("/status-pages", func(r chi.Router) {

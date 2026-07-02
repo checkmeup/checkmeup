@@ -402,6 +402,76 @@ func TestCreateCheckout(t *testing.T) {
 	})
 }
 
+func TestChangePlan(t *testing.T) {
+	authH, billH, pool := testBillingHandler(t)
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		w := doJSON(t, billH.ChangePlan, http.MethodPost, "/api/v1/billing/change-plan", map[string]string{"plan": "hobby"})
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("want 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid plan", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, billH.ChangePlan, u.access, map[string]string{"plan": "not-a-real-plan"})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid cycle", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, billH.ChangePlan, u.access, map[string]string{"plan": "solo", "cycle": "weekly"})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("billing not configured (no Paddle API key)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, billH.ChangePlan, u.access, map[string]string{"plan": "hobby"})
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("want 503, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "not_configured" {
+			t.Fatalf("want code not_configured, got %q", body["code"])
+		}
+	})
+
+	// A Hobby org has no paddle_subscription_id to change — exercised against
+	// a handler with a Paddle API key configured so the request gets past the
+	// "not configured" gate and into the no-subscription check.
+	t.Run("no active subscription", func(t *testing.T) {
+		pool := testPool(t)
+		cfg := &config.Config{
+			Env:           "development",
+			JWTSecret:     testJWTSecret,
+			JWTAccessTTL:  15 * time.Minute,
+			JWTRefreshTTL: 7 * 24 * time.Hour,
+			PaddleAPIKey:  "test-key",
+		}
+		authH2 := NewAuthHandler(cfg, pool)
+		billH2 := NewBillingHandler(cfg, pool)
+		u := signUpTestUser(t, authH2, pool)
+
+		w := doAuthed(t, http.MethodPost, billH2.ChangePlan, u.access, map[string]string{"plan": "hobby"})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "no_subscription" {
+			t.Fatalf("want code no_subscription, got %q", body["code"])
+		}
+	})
+
+	// The actual Paddle subscription update/cancel API calls (updatePaddleSubscription,
+	// cancelPaddleSubscription) aren't covered here for the same reason
+	// CreateCheckout's success path isn't — http.DefaultClient isn't injectable,
+	// and hitting the real Paddle API from a test isn't appropriate.
+}
+
 func TestVerifyPaddleSignature(t *testing.T) {
 	body := []byte(`{"hello":"world"}`)
 	ts := "1700000000"

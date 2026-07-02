@@ -177,6 +177,77 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, http.StatusOK, map[string]string{"transactionId": transactionID})
 }
 
+// POST /api/v1/billing/change-plan
+//
+// Only handles changes to an *existing* Paddle subscription (upgrade or
+// downgrade between paid tiers, or cancellation down to Hobby). Moving off
+// Hobby onto a first paid plan has no subscription yet to modify, so that
+// still goes through CreateCheckout + the Paddle.js overlay.
+func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
+	orgID, err := orgIDFrom(r)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "unauthorized", "unauthorized")
+		return
+	}
+
+	var req struct {
+		Plan  string `json:"plan"`
+		Cycle string `json:"cycle"` // "monthly" or "annual"; ignored for hobby
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid request", "bad_request")
+		return
+	}
+	if req.Plan != "hobby" && req.Plan != "solo" && req.Plan != "startup" && req.Plan != "enterprise" {
+		respond.Error(w, http.StatusBadRequest, "invalid plan", "bad_request")
+		return
+	}
+	if req.Cycle == "" {
+		req.Cycle = cycleMonthly
+	}
+	if req.Cycle != cycleMonthly && req.Cycle != cycleAnnual {
+		respond.Error(w, http.StatusBadRequest, "invalid cycle", "bad_request")
+		return
+	}
+
+	if h.cfg.PaddleAPIKey == "" {
+		respond.Error(w, http.StatusServiceUnavailable, "billing not configured", "not_configured")
+		return
+	}
+
+	info, err := h.queries.GetOrgBillingInfo(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "failed to load billing info", "internal_error")
+		return
+	}
+	if !info.PaddleSubscriptionID.Valid || info.PaddleSubscriptionID.String == "" {
+		respond.Error(w, http.StatusBadRequest, "no active subscription to change", "no_subscription")
+		return
+	}
+
+	if req.Plan == "hobby" {
+		if err := h.cancelPaddleSubscription(info.PaddleSubscriptionID.String); err != nil {
+			slog.ErrorContext(r.Context(), "failed to cancel paddle subscription", "org_id", orgID, "error", err)
+			respond.Error(w, http.StatusInternalServerError, "failed to cancel subscription", "internal_error")
+			return
+		}
+		respond.JSON(w, http.StatusOK, map[string]bool{"ok": true})
+		return
+	}
+
+	priceID := h.priceIDForPlan(req.Plan, req.Cycle)
+	if priceID == "" {
+		respond.Error(w, http.StatusServiceUnavailable, "this plan isn't available yet", "not_configured")
+		return
+	}
+	if err := h.updatePaddleSubscription(info.PaddleSubscriptionID.String, priceID); err != nil {
+		slog.ErrorContext(r.Context(), "failed to update paddle subscription", "org_id", orgID, "error", err)
+		respond.Error(w, http.StatusInternalServerError, "failed to change plan", "internal_error")
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 // POST /webhook/paddle
 func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
@@ -360,6 +431,59 @@ func (h *BillingHandler) createPaddleTransaction(orgID uuid.UUID, priceID string
 		return "", fmt.Errorf("empty transaction ID from Paddle")
 	}
 	return result.Data.ID, nil
+}
+
+// updatePaddleSubscription changes an existing subscription to a new price —
+// used for upgrades/downgrades between paid tiers. "prorated_immediately"
+// charges/credits the difference right away rather than waiting for the
+// next billing cycle, matching how the one-off CreateCheckout upgrade path
+// (from Hobby) takes effect immediately too.
+func (h *BillingHandler) updatePaddleSubscription(subscriptionID, priceID string) error {
+	payload := map[string]any{
+		"items": []map[string]any{
+			{"price_id": priceID, "quantity": 1},
+		},
+		"proration_billing_mode": "prorated_immediately",
+	}
+	b, _ := json.Marshal(payload)
+	url := fmt.Sprintf("%s/subscriptions/%s", h.paddleAPIBase(), subscriptionID)
+	req, _ := http.NewRequest(http.MethodPatch, url, bytes.NewReader(b))
+	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("paddle subscription update failed: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// cancelPaddleSubscription schedules cancellation for the end of the current
+// billing period (not immediately) — the org keeps paid-tier access until
+// then, matching the "Access until <date>" copy already shown in the billing
+// UI for a cancelled subscription. The plan itself only flips to Hobby once
+// Paddle's subscription.canceled webhook actually fires at period end.
+func (h *BillingHandler) cancelPaddleSubscription(subscriptionID string) error {
+	payload := map[string]any{"effective_from": "next_billing_period"}
+	b, _ := json.Marshal(payload)
+	url := fmt.Sprintf("%s/subscriptions/%s/cancel", h.paddleAPIBase(), subscriptionID)
+	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("paddle subscription cancel failed: status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // createPaddlePortalSession generates a single-use, short-lived customer

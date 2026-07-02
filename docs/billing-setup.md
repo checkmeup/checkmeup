@@ -16,7 +16,7 @@ All the code is ready (EP-07, EP-27, [ADR-026](decisions/026-billing-paddle-mor.
 
    Annual prices are exactly 10× monthly (2 months free) — keep them that way unless the pricing model changes (see [ADR-019](decisions/019-plan-limits.md), [EP-27](stories/ep-27-annual-billing.md)). Quantity: min 1, max 1 (not a per-seat product). Custom data per price: `plan`/`cycle` (e.g. `plan: solo`, `cycle: monthly`) — not required by the code, but makes every webhook self-describing.
 4. **Set the default payment link** to `https://checkmeup.net/billing` (Checkout > Checkout settings) — this is the URL Paddle Checkout is approved to run from. Submit `checkmeup.net` for domain approval if not already done (the same domain-verification gate that prompted the Terms/Privacy/Refund Policy overhaul — see the v1.14 release notes).
-5. **Create an API key** (Authentication > API keys) — non-expiring, scopes: `Transactions` (read + write) and `Customer portal sessions` (write) only. This becomes `PADDLE_API_KEY`.
+5. **Create an API key** (Authentication > API keys) — non-expiring, scopes: `Transactions` (read + write), `Customer portal sessions` (write), and `Subscriptions` (read + write — needed for in-app plan downgrades/cancellations, which call Paddle's subscription update/cancel APIs directly). This becomes `PADDLE_API_KEY`.
 6. **Create a client-side token** (Authentication > Client-side tokens) — this is public, safe to expose in the browser. Becomes `VITE_PADDLE_CLIENT_TOKEN` on the frontend.
 7. **Set up the webhook** — destination URL `https://checkmeup.net/webhook/paddle`, subscribed to `subscription.created`, `subscription.updated`, `subscription.canceled`. Grab the endpoint's signing secret → `PADDLE_WEBHOOK_SECRET`.
 8. **Set env vars**:
@@ -48,7 +48,7 @@ Paddle's sandbox and production are fully separate environments — separate API
 
 ## What's already handled in code, so you don't need to configure it manually
 
-- **Success redirect** — Paddle.js's `Checkout.open()` call includes an explicit `settings.successUrl` back to `/billing?upgraded=true`. No dashboard-level redirect setting needed.
+- **Success redirect** — Paddle.js's `Checkout.open()` call includes an explicit `settings.successUrl` back to `/billing?upgraded=true`. On that redirect, `BillingView.vue` polls `GET /api/v1/billing` for a few seconds waiting for the plan to actually change, since Paddle's webhook that persists the new plan lands asynchronously and can trail the browser redirect by a few seconds.
 - **Checkout theme** — the overlay automatically matches whichever light/dark theme the user is currently in.
 - **Failed payments** — handled natively by Paddle's checkout overlay (the user stays there and can retry); nothing for us to configure.
-- **Plan downgrades/cancellations** — handled via Paddle's Customer Portal (the "Manage subscription" link on the Billing page, generated per-request via the API — see ADR-026), not a custom UI.
+- **Plan downgrades between paid tiers, and cancellation down to Hobby** — an in-app "Downgrade" section on the Billing page, backed by `POST /api/v1/billing/change-plan`. Paid-to-paid changes call Paddle's subscription update API directly (`prorated_immediately`); dropping to Hobby schedules a cancellation for the end of the current billing period via Paddle's subscription cancel API — the org keeps paid-tier access until then. The Customer Portal link ("Manage subscription") still exists for anything else (payment method, invoices).
