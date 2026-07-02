@@ -50,3 +50,6 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-01 | Wed | License change to BUSL                          | 1 h   |
 | 2026-07-01 | Wed | Codacy fixes                                    | 2 h   |
 | 2026-07-01 | Wed | Blog, docs                                      | 1 h   |
+| 2026-07-02 | Thu | Legal docs (Terms, Privacy, Refund Policy)      | 6 h   |
+| 2026-07-02 | Thu | Docker/GHCR housekeeping                        | 1 h   |
+| 2026-07-02 | Thu | Blog, docs                                      | 1 h   |
