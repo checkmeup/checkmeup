@@ -35,6 +35,14 @@ ssh:
 
 builder:
   arch: amd64
+  # BuildKit generates a provenance attestation by default, which forces the
+  # push to be an OCI image *index* (manifest list) even for this single
+  # linux/amd64 platform — GitHub's package UI then looks for
+  # org.opencontainers.image.description on the index's annotations, not on
+  # the inner image's LABEL/config, and shows "No description provided"
+  # even though the LABEL is set correctly. Disabling provenance restores a
+  # plain single-platform manifest.
+  provenance: false
   args:
     APP_VERSION: <%= `git describe --tags --always --dirty 2>/dev/null || echo dev`.strip %>
     VCS_REF: <%= `git rev-parse HEAD 2>/dev/null || echo dev`.strip %>

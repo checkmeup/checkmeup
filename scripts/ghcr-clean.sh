@@ -23,6 +23,26 @@ api() {
   curl -sf -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "$@"
 }
 
+# delete_version calls the API without -f so a failure prints GitHub's actual
+# error body (e.g. "Resource not accessible by personal access token" when
+# the token is missing the delete:packages scope) instead of a bare curl
+# exit code.
+delete_version() {
+  local id="$1"
+  local response status body
+  response=$(curl -s -w '\n%{http_code}' \
+    -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+    -X DELETE "https://api.github.com/orgs/$ORG/packages/container/$PACKAGE/versions/$id")
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+    echo "ghcr-clean: failed to delete version $id (HTTP $status)" >&2
+    echo "$body" >&2
+    echo "ghcr-clean: likely cause — the token is missing the delete:packages scope (write:packages alone can push but not delete)" >&2
+    exit 1
+  fi
+}
+
 to_delete=$(api "https://api.github.com/orgs/$ORG/packages/container/$PACKAGE/versions?per_page=100" | python3 -c "
 import json, sys
 versions = json.load(sys.stdin)
@@ -38,7 +58,7 @@ fi
 
 for id in $to_delete; do
   echo "ghcr-clean: deleting version $id"
-  api -X DELETE "https://api.github.com/orgs/$ORG/packages/container/$PACKAGE/versions/$id" > /dev/null
+  delete_version "$id"
 done
 
 echo "ghcr-clean: done, kept the $KEEP most recent versions"
