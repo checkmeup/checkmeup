@@ -248,18 +248,22 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 }
 
 // respondForPaddlePlanChangeError maps a Paddle API failure from ChangePlan
-// to an HTTP response. A 4xx from Paddle is usually a legitimate,
-// retryable business-rule conflict (e.g. "subscription already has a
-// pending scheduled change") — surfaced as 409 so the org knows to just try
-// again shortly, rather than the same opaque 500 used for a real failure
-// (network error, 5xx, misconfigured key).
+// to an HTTP response. A 4xx from Paddle is a business-rule rejection (bad
+// state, bad input, permissions, etc.) rather than an infrastructure
+// failure, so it's surfaced as 409 with Paddle's own code/detail — never a
+// hardcoded guess — so the actual reason is visible without a log dive.
+// Anything else (network error, 5xx, unparseable response) stays a generic
+// 500, since those aren't actionable from the error text alone.
 func respondForPaddlePlanChangeError(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, action, genericMsg string, err error) {
 	var paddleErr *paddleAPIError
 	if errors.As(err, &paddleErr) && paddleErr.StatusCode >= 400 && paddleErr.StatusCode < 500 {
-		slog.WarnContext(r.Context(), "paddle rejected plan change", "org_id", orgID, "action", action, "error", err)
-		respond.Error(w, http.StatusConflict,
-			"this subscription can't be changed right now — it may already have a pending change; try again in a few minutes",
-			"conflict")
+		code, detail := paddleErr.detail()
+		slog.WarnContext(r.Context(), "paddle rejected plan change", "org_id", orgID, "action", action, "paddle_code", code, "paddle_detail", detail)
+		msg := "Paddle rejected this change"
+		if detail != "" {
+			msg = fmt.Sprintf("Paddle rejected this change: %s", detail)
+		}
+		respond.Error(w, http.StatusConflict, msg, "conflict")
 		return
 	}
 	slog.ErrorContext(r.Context(), "failed to "+action+" paddle subscription", "org_id", orgID, "error", err)
@@ -462,6 +466,22 @@ type paddleAPIError struct {
 
 func (e *paddleAPIError) Error() string {
 	return fmt.Sprintf("paddle API error: status %d, body: %s", e.StatusCode, e.Body)
+}
+
+// detail extracts Paddle's own error code/detail from its standard error
+// envelope (`{"error":{"code":"...","detail":"..."}}`), so callers can
+// surface the real reason instead of guessing at one.
+func (e *paddleAPIError) detail() (code, detail string) {
+	var parsed struct {
+		Error struct {
+			Code   string `json:"code"`
+			Detail string `json:"detail"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(e.Body), &parsed); err != nil {
+		return "", ""
+	}
+	return parsed.Error.Code, parsed.Error.Detail
 }
 
 // updatePaddleSubscription changes an existing subscription to a new price —
