@@ -3,6 +3,16 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import BillingView from './BillingView.vue'
 
+const { routerReplaceMock } = vi.hoisted(() => ({
+  routerReplaceMock: vi.fn(),
+}))
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ replace: routerReplaceMock }),
+  useRoute: () => ({ query: {} }),
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
+}))
+
 vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
@@ -156,7 +166,7 @@ describe('BillingView', () => {
   })
 
   it('shows "Access until" wording when the subscription is cancelled', () => {
-    infoData.value = { ...soloInfo, subscriptionStatus: 'cancelled' }
+    infoData.value = { ...soloInfo, subscriptionStatus: 'canceled' }
     const wrapper = mount(BillingView)
 
     expect(wrapper.text()).toContain('Access until')
@@ -205,6 +215,7 @@ describe('BillingView', () => {
   })
 
   it('shows a not-configured message when the Paddle client token is missing', async () => {
+    vi.stubEnv('VITE_PADDLE_CLIENT_TOKEN', '')
     infoData.value = { ...hobbyInfo }
     createCheckoutMock.mockResolvedValueOnce({ transactionId: 'txn_01example' })
     const wrapper = mount(BillingView)
