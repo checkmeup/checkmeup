@@ -37,6 +37,8 @@ builder:
   arch: amd64
   args:
     APP_VERSION: <%= `git describe --tags --always --dirty 2>/dev/null || echo dev`.strip %>
+    VCS_REF: <%= `git rev-parse HEAD 2>/dev/null || echo dev`.strip %>
+    BUILD_DATE: <%= Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ') %>
 
 accessories:
   db:

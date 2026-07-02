@@ -23,6 +23,19 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-X main.v
 
 # ── Stage 3: Runtime (amd64 — matches server) ───────────────────────────────
 FROM debian:bookworm-slim
+ARG APP_VERSION=dev
+ARG VCS_REF=dev
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.source="https://github.com/checkmeup/checkmeup" \
+      org.opencontainers.image.title="checkmeup" \
+      org.opencontainers.image.description="Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and white-label status pages for agencies." \
+      org.opencontainers.image.url="https://checkmeup.net" \
+      org.opencontainers.image.licenses="BUSL-1.1" \
+      org.opencontainers.image.vendor="Andrew Molyuk" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

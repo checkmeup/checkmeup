@@ -102,6 +102,7 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 
 ## Don't
 
+- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine. This isn't hypothetical: `make -n deploy` (meant as a dry run) once triggered a real deploy anyway, because the `deploy` target's recipe references `$(MAKE)` (for the post-deploy `ghcr-clean` step) — GNU Make always executes a recipe line that contains a `$(MAKE)`/`${MAKE}` reference, even under `-n`, so it can show what a recursive sub-make would print. `-n` is not a safe way to preview this target.
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR-001](docs/decisions/001-worker-model.md))
 - Use an ORM — sqlc only ([ADR-004](docs/decisions/004-sqlc-over-orm.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants

@@ -1,4 +1,4 @@
-.PHONY: install update lint test dev build clean migrate migrate-create deploy next
+.PHONY: install update lint test dev build clean migrate migrate-create deploy ghcr-clean next
 
 install:
 	bun install
@@ -32,7 +32,20 @@ clean:
 	rm -Rf apps/web/coverage
 
 deploy:
-	bash -c 'set -a && source .env && set +a && kamal $(or $(cmd),deploy)'
+	bash -c 'set -a && source .env && set +a && \
+	  cmd="$(or $(cmd),deploy)"; \
+	  kamal "$$cmd"; status=$$?; \
+	  if [ $$status -eq 0 ] && { [ "$$cmd" = "deploy" ] || [ "$$cmd" = "setup" ]; }; then \
+	    $(MAKE) ghcr-clean; \
+	  fi; \
+	  exit $$status'
+
+# Prune old ghcr.io/checkmeup/checkmeup image versions, keeping the last 5.
+# Runs automatically after `make deploy` / `make deploy cmd=setup`; call
+# directly (make ghcr-clean) to prune on demand, or `make ghcr-clean keep=10`
+# to keep a different number.
+ghcr-clean:
+	bash -c 'set -a && source .env && set +a && bash scripts/ghcr-clean.sh $(or $(keep),5)'
 
 # Load DATABASE_URL from apps/api/.env and run goose
 DB_URL := $(shell grep '^DATABASE_URL=' apps/api/.env 2>/dev/null | cut -d= -f2-)
