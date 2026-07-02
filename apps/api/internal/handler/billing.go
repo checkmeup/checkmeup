@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -227,8 +228,7 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 
 	if req.Plan == "hobby" {
 		if err := h.cancelPaddleSubscription(info.PaddleSubscriptionID.String); err != nil {
-			slog.ErrorContext(r.Context(), "failed to cancel paddle subscription", "org_id", orgID, "error", err)
-			respond.Error(w, http.StatusInternalServerError, "failed to cancel subscription", "internal_error")
+			respondForPaddlePlanChangeError(w, r, orgID, "cancel", "failed to cancel subscription", err)
 			return
 		}
 		respond.JSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -241,11 +241,29 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.updatePaddleSubscription(info.PaddleSubscriptionID.String, priceID); err != nil {
-		slog.ErrorContext(r.Context(), "failed to update paddle subscription", "org_id", orgID, "error", err)
-		respond.Error(w, http.StatusInternalServerError, "failed to change plan", "internal_error")
+		respondForPaddlePlanChangeError(w, r, orgID, "update", "failed to change plan", err)
 		return
 	}
 	respond.JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// respondForPaddlePlanChangeError maps a Paddle API failure from ChangePlan
+// to an HTTP response. A 4xx from Paddle is usually a legitimate,
+// retryable business-rule conflict (e.g. "subscription already has a
+// pending scheduled change") — surfaced as 409 so the org knows to just try
+// again shortly, rather than the same opaque 500 used for a real failure
+// (network error, 5xx, misconfigured key).
+func respondForPaddlePlanChangeError(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, action, genericMsg string, err error) {
+	var paddleErr *paddleAPIError
+	if errors.As(err, &paddleErr) && paddleErr.StatusCode >= 400 && paddleErr.StatusCode < 500 {
+		slog.WarnContext(r.Context(), "paddle rejected plan change", "org_id", orgID, "action", action, "error", err)
+		respond.Error(w, http.StatusConflict,
+			"this subscription can't be changed right now — it may already have a pending change; try again in a few minutes",
+			"conflict")
+		return
+	}
+	slog.ErrorContext(r.Context(), "failed to "+action+" paddle subscription", "org_id", orgID, "error", err)
+	respond.Error(w, http.StatusInternalServerError, genericMsg, "internal_error")
 }
 
 // POST /webhook/paddle
@@ -433,6 +451,19 @@ func (h *BillingHandler) createPaddleTransaction(orgID uuid.UUID, priceID string
 	return result.Data.ID, nil
 }
 
+// paddleAPIError wraps a non-2xx Paddle response so callers can distinguish
+// a client-side conflict (4xx — e.g. "subscription already has a pending
+// scheduled change") from a real failure (5xx, network error), instead of
+// collapsing every failure into the same generic 500.
+type paddleAPIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *paddleAPIError) Error() string {
+	return fmt.Sprintf("paddle API error: status %d, body: %s", e.StatusCode, e.Body)
+}
+
 // updatePaddleSubscription changes an existing subscription to a new price —
 // used for upgrades/downgrades between paid tiers. "prorated_immediately"
 // charges/credits the difference right away rather than waiting for the
@@ -458,7 +489,7 @@ func (h *BillingHandler) updatePaddleSubscription(subscriptionID, priceID string
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
-		return fmt.Errorf("paddle subscription update failed: status %d, body: %s", resp.StatusCode, respBody)
+		return &paddleAPIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 	return nil
 }
@@ -483,7 +514,7 @@ func (h *BillingHandler) cancelPaddleSubscription(subscriptionID string) error {
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
-		return fmt.Errorf("paddle subscription cancel failed: status %d, body: %s", resp.StatusCode, respBody)
+		return &paddleAPIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 	return nil
 }
