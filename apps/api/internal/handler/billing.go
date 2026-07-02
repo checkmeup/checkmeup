@@ -457,7 +457,8 @@ func (h *BillingHandler) updatePaddleSubscription(subscriptionID, priceID string
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("paddle subscription update failed: status %d", resp.StatusCode)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		return fmt.Errorf("paddle subscription update failed: status %d, body: %s", resp.StatusCode, respBody)
 	}
 	return nil
 }
@@ -481,7 +482,8 @@ func (h *BillingHandler) cancelPaddleSubscription(subscriptionID string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("paddle subscription cancel failed: status %d", resp.StatusCode)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		return fmt.Errorf("paddle subscription cancel failed: status %d, body: %s", resp.StatusCode, respBody)
 	}
 	return nil
 }
