@@ -270,6 +270,80 @@ func respondForPaddlePlanChangeError(w http.ResponseWriter, r *http.Request, org
 	respond.Error(w, http.StatusInternalServerError, genericMsg, "internal_error")
 }
 
+// paddleWebhookPayload is the subset of a Paddle subscription webhook body
+// (subscription.created/.updated/.canceled) that Webhook reads.
+type paddleWebhookPayload struct {
+	EventType string `json:"event_type"`
+	Data      struct {
+		ID                   string  `json:"id"`
+		Status               string  `json:"status"`
+		CustomerID           string  `json:"customer_id"`
+		NextBilledAt         *string `json:"next_billed_at"`
+		CurrentBillingPeriod *struct {
+			EndsAt string `json:"ends_at"`
+		} `json:"current_billing_period"`
+		// ScheduledChange is present on subscription.updated the moment a
+		// cancellation is scheduled (e.g. via ChangePlan's cancel-to-Hobby
+		// path) — the subscription stays "active" until it actually takes
+		// effect at ScheduledChange.EffectiveAt, so without reading this the
+		// org still looks like a normal active subscription and the UI has
+		// no way to know a cancellation is already pending.
+		ScheduledChange *struct {
+			Action      string `json:"action"`
+			EffectiveAt string `json:"effective_at"`
+		} `json:"scheduled_change"`
+		CustomData struct {
+			OrgID string `json:"org_id"`
+		} `json:"custom_data"`
+		Items []struct {
+			Price struct {
+				ID string `json:"id"`
+			} `json:"price"`
+		} `json:"items"`
+	} `json:"data"`
+}
+
+// resolveOrgPlanUpdate turns a webhook's subscription data + resolved
+// plan/cycle into the fields UpdateOrgPlan needs, handling the two special
+// cases (actual cancellation, and a cancellation merely scheduled for
+// period end) that don't just pass the plan/cycle straight through.
+func resolveOrgPlanUpdate(pc planCycle, data *paddleWebhookPayload) (plan db.Plan, cycle, status, subscriptionID, customerID string, renewsAt pgtype.Timestamptz) {
+	plan, cycle = pc.Plan, pc.Cycle
+	status = data.Data.Status
+	subscriptionID = data.Data.ID
+	customerID = data.Data.CustomerID
+
+	// On cancellation, downgrade to hobby — billing_cycle resets to the
+	// column default since Hobby has no cycle of its own.
+	if status == "canceled" {
+		plan = db.PlanHobby
+		cycle = cycleMonthly
+		customerID = ""
+		subscriptionID = ""
+	}
+
+	isCancelScheduled := status == "active" && data.Data.ScheduledChange != nil && data.Data.ScheduledChange.Action == "cancel"
+	if isCancelScheduled {
+		status = "cancel_scheduled"
+	}
+
+	var tsStr *string
+	switch {
+	case data.Data.Status == "canceled" && data.Data.CurrentBillingPeriod != nil:
+		tsStr = &data.Data.CurrentBillingPeriod.EndsAt
+	case isCancelScheduled:
+		tsStr = &data.Data.ScheduledChange.EffectiveAt
+	default:
+		tsStr = data.Data.NextBilledAt
+	}
+	if tsStr != nil {
+		if t, err := time.Parse(time.RFC3339, *tsStr); err == nil {
+			renewsAt = pgtype.Timestamptz{Time: t, Valid: true}
+		}
+	}
+	return plan, cycle, status, subscriptionID, customerID, renewsAt
+}
+
 // POST /webhook/paddle
 func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
@@ -289,26 +363,7 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload struct {
-		EventType string `json:"event_type"`
-		Data      struct {
-			ID                   string  `json:"id"`
-			Status               string  `json:"status"`
-			CustomerID           string  `json:"customer_id"`
-			NextBilledAt         *string `json:"next_billed_at"`
-			CurrentBillingPeriod *struct {
-				EndsAt string `json:"ends_at"`
-			} `json:"current_billing_period"`
-			CustomData struct {
-				OrgID string `json:"org_id"`
-			} `json:"custom_data"`
-			Items []struct {
-				Price struct {
-					ID string `json:"id"`
-				} `json:"price"`
-			} `json:"items"`
-		} `json:"data"`
-	}
+	var payload paddleWebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -341,33 +396,7 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	plan, cycle := pc.Plan, pc.Cycle
-
-	status := payload.Data.Status
-	subscriptionID := payload.Data.ID
-	customerID := payload.Data.CustomerID
-
-	// On cancellation, downgrade to hobby — billing_cycle resets to the
-	// column default since Hobby has no cycle of its own.
-	if status == "canceled" {
-		plan = db.PlanHobby
-		cycle = cycleMonthly
-		customerID = ""
-		subscriptionID = ""
-	}
-
-	var renewsAt pgtype.Timestamptz
-	var tsStr *string
-	if status == "canceled" && payload.Data.CurrentBillingPeriod != nil {
-		tsStr = &payload.Data.CurrentBillingPeriod.EndsAt
-	} else {
-		tsStr = payload.Data.NextBilledAt
-	}
-	if tsStr != nil {
-		if t, err := time.Parse(time.RFC3339, *tsStr); err == nil {
-			renewsAt = pgtype.Timestamptz{Time: t, Valid: true}
-		}
-	}
+	plan, cycle, status, subscriptionID, customerID, renewsAt := resolveOrgPlanUpdate(pc, &payload)
 
 	if err := h.queries.UpdateOrgPlan(r.Context(), db.UpdateOrgPlanParams{
 		ID:                   orgID,

@@ -82,13 +82,22 @@ const planPrice = computed(() => {
 })
 
 const upgradeOptions = computed(() => {
-  if (!info.value) return []
+  if (!info.value || cancelScheduled.value) return []
   const currentRank = planRank[info.value.plan]
   return (['solo', 'startup', 'enterprise'] as const).filter((p) => planRank[p] > currentRank)
 })
 
+// A cancellation that's already scheduled (subscriptionStatus
+// 'cancel_scheduled', set by the webhook the moment ChangePlan's
+// cancel-to-Hobby call succeeds) locks the subscription on Paddle's side —
+// any further upgrade/downgrade/cancel attempt gets rejected as a conflict
+// until it actually takes effect at period end. Hiding the actions here
+// (rather than letting them fail) is what stops a second "Cancel
+// subscription" click from looking like a broken feature.
+const cancelScheduled = computed(() => info.value?.subscriptionStatus === 'cancel_scheduled')
+
 const downgradeOptions = computed(() => {
-  if (!info.value) return []
+  if (!info.value || cancelScheduled.value) return []
   const currentRank = planRank[info.value.plan]
   return (['hobby', 'solo', 'startup'] as const).filter((p) => planRank[p] < currentRank)
 })
@@ -121,7 +130,6 @@ const downgradeTargetLabel = computed(() =>
 )
 const changingPlan = ref<string | null>(null)
 const changePlanError = ref('')
-const cancelNotice = ref('')
 
 function effectiveMonthly(plan: string): string {
   return (annualPrice[plan] / 12).toFixed(2).replace(/\.00$/, '')
@@ -167,9 +175,11 @@ async function downgrade(plan: string) {
     await billingApi.changePlan(plan, cycle.value)
     downgradeTarget.value = null
     if (plan === 'hobby') {
-      // Cancellation takes effect at period end — nothing changes in the DB
-      // yet for refetch to observe, so just confirm and leave it there.
-      cancelNotice.value = 'Your subscription will be canceled at the end of the current billing period.'
+      // The plan itself doesn't change yet (cancellation takes effect at
+      // period end) — wait for subscriptionStatus to flip to
+      // 'cancel_scheduled' instead, so the cancel button actually
+      // disappears once the webhook lands, rather than staying clickable.
+      await waitForPlanUpdate(() => info.value?.subscriptionStatus === 'cancel_scheduled')
     } else {
       await waitForPlanUpdate(() => info.value?.plan === plan)
     }
@@ -242,11 +252,13 @@ function limitLabel(used: number, limit: number) {
             </a>
           </div>
 
-          <p v-if="info.planRenewsAt" class="text-xs mb-4" style="color: var(--text-muted)">
+          <p v-if="cancelScheduled" class="text-xs mb-4" style="color: var(--text-muted)">
+            Cancellation scheduled — you'll keep {{ planLabel[info.plan] }} access until {{ info.planRenewsAt }}, then drop to Hobby.
+          </p>
+          <p v-else-if="info.planRenewsAt" class="text-xs mb-4" style="color: var(--text-muted)">
             {{ info.subscriptionStatus === 'canceled' ? 'Access until' : 'Renews' }}
             {{ info.planRenewsAt }}
           </p>
-          <p v-if="cancelNotice" class="text-xs mb-4" style="color: var(--text-muted)">{{ cancelNotice }}</p>
 
           <!-- Usage bars -->
           <div class="space-y-4">

@@ -270,6 +270,56 @@ func TestWebhook(t *testing.T) {
 			t.Fatal("want plan_renews_at set from current_billing_period.ends_at")
 		}
 	})
+
+	t.Run("scheduled cancellation marks status cancel_scheduled without downgrading yet", func(t *testing.T) {
+		authH, billH, pool := testBillingHandler(t)
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+
+		nextBilledAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		upW := doWebhook(t, billH, webhookEvent("subscription.created", u.resp.OrgID, "active", testSoloPriceID, "ctm_4242", "sub_abc", &nextBilledAt, nil))
+		if upW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", upW.Code, upW.Body.String())
+		}
+
+		effectiveAt := time.Now().Add(20 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		payload := map[string]any{
+			"event_type": "subscription.updated",
+			"data": map[string]any{
+				"id":             "sub_abc",
+				"status":         "active",
+				"customer_id":    "ctm_4242",
+				"custom_data":    map[string]any{"org_id": u.resp.OrgID},
+				"items":          []map[string]any{{"price": map[string]any{"id": testSoloPriceID}}},
+				"next_billed_at": nil,
+				"scheduled_change": map[string]any{
+					"action":       "cancel",
+					"effective_at": effectiveAt,
+				},
+			},
+		}
+		w := doWebhook(t, billH, payload)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		info, err := billH.queries.GetOrgBillingInfo(context.Background(), orgID)
+		if err != nil {
+			t.Fatalf("lookup billing info: %v", err)
+		}
+		if info.Plan != db.PlanSolo {
+			t.Fatalf("want plan still solo (not yet downgraded), got %s", info.Plan)
+		}
+		if info.SubscriptionStatus != "cancel_scheduled" {
+			t.Fatalf("want subscription status cancel_scheduled, got %q", info.SubscriptionStatus)
+		}
+		if !info.PlanRenewsAt.Valid {
+			t.Fatal("want plan_renews_at set from scheduled_change.effective_at")
+		}
+		if !info.PaddleSubscriptionID.Valid || info.PaddleSubscriptionID.String != "sub_abc" {
+			t.Fatalf("want paddle_subscription_id still set (not cleared until actual cancellation), got %+v", info.PaddleSubscriptionID)
+		}
+	})
 }
 
 type billingInfoResponse struct {

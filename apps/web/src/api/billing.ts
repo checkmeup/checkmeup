@@ -29,7 +29,12 @@ export const billingApi = {
     return api.post('/api/v1/billing/checkout', { plan, cycle })
   },
 
-  async changePlan(plan: string, cycle: BillingCycle = 'monthly'): Promise<{ ok: boolean }> {
-    return api.post('/api/v1/billing/change-plan', { plan, cycle })
+  async changePlan(plan: string, cycle?: BillingCycle): Promise<{ ok: boolean }> {
+    // Hobby has no billing cycle — omit the field entirely rather than
+    // sending a meaningless default.
+    return api.post(
+      '/api/v1/billing/change-plan',
+      plan === 'hobby' ? { plan } : { plan, cycle: cycle ?? 'monthly' },
+    )
   },
 }
