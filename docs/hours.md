@@ -53,3 +53,6 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-02 | Thu | Legal docs (Terms, Privacy, Refund Policy)      | 6 h   |
 | 2026-07-02 | Thu | Docker/GHCR housekeeping                        | 1 h   |
 | 2026-07-02 | Thu | Blog, docs                                      | 1 h   |
+| 2026-07-02 | Thu | EP-07 (Paddle migration, ADR-026)                 | 2 h   |
+| 2026-07-02 | Thu | EP-07 (change plan, cancellation webhook, Codacy) | 2 h   |
+| 2026-07-02 | Thu | Blog, docs                                        | 1 h   |
