@@ -1,5 +1,7 @@
 # EP-07: Billing & plan limits
 
+> LemonSqueezy was replaced by Paddle as the payment provider/MoR on 2026-07-03 — see [ADR-026](../decisions/026-billing-paddle-mor.md). The LemonSqueezy references below describe this epic as originally shipped; not reflective of the current integration.
+
 LemonSqueezy (Merchant of Record) handles payment, tax collection, and invoicing. Plan limits are enforced server-side. Hobby ($0) requires no payment flow — it's the default for all new accounts. See [ADR-018](../decisions/018-billing-lemonsqueezy-mor.md) and [ADR-019](../decisions/019-plan-limits.md).
 
 Plan limits:

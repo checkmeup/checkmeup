@@ -41,7 +41,7 @@ describe('billingApi.getInfo', () => {
 
 describe('billingApi.createCheckout', () => {
   it('defaults to a monthly billing cycle', async () => {
-    postMock.mockResolvedValueOnce({ url: 'https://checkout.example.com' })
+    postMock.mockResolvedValueOnce({ transactionId: 'txn_01example' })
 
     const result = await billingApi.createCheckout('solo')
 
@@ -49,11 +49,11 @@ describe('billingApi.createCheckout', () => {
       plan: 'solo',
       cycle: 'monthly',
     })
-    expect(result).toEqual({ url: 'https://checkout.example.com' })
+    expect(result).toEqual({ transactionId: 'txn_01example' })
   })
 
   it('passes an explicit annual billing cycle through', async () => {
-    postMock.mockResolvedValueOnce({ url: 'https://checkout.example.com' })
+    postMock.mockResolvedValueOnce({ transactionId: 'txn_01example' })
 
     await billingApi.createCheckout('startup', 'annual')
 

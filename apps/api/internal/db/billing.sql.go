@@ -54,8 +54,8 @@ const getOrgBillingInfo = `-- name: GetOrgBillingInfo :one
 SELECT
     o.plan,
     o.billing_cycle,
-    o.ls_customer_id,
-    o.ls_subscription_id,
+    o.paddle_customer_id,
+    o.paddle_subscription_id,
     o.subscription_status,
     o.plan_renews_at,
     (
@@ -74,8 +74,8 @@ WHERE o.id = $1
 type GetOrgBillingInfoRow struct {
 	Plan                     Plan               `json:"plan"`
 	BillingCycle             string             `json:"billing_cycle"`
-	LsCustomerID             pgtype.Text        `json:"ls_customer_id"`
-	LsSubscriptionID         pgtype.Text        `json:"ls_subscription_id"`
+	PaddleCustomerID         pgtype.Text        `json:"paddle_customer_id"`
+	PaddleSubscriptionID     pgtype.Text        `json:"paddle_subscription_id"`
 	SubscriptionStatus       string             `json:"subscription_status"`
 	PlanRenewsAt             pgtype.Timestamptz `json:"plan_renews_at"`
 	MonitorCount             int32              `json:"monitor_count"`
@@ -89,8 +89,8 @@ func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBi
 	err := row.Scan(
 		&i.Plan,
 		&i.BillingCycle,
-		&i.LsCustomerID,
-		&i.LsSubscriptionID,
+		&i.PaddleCustomerID,
+		&i.PaddleSubscriptionID,
 		&i.SubscriptionStatus,
 		&i.PlanRenewsAt,
 		&i.MonitorCount,
@@ -114,24 +114,24 @@ func (q *Queries) GetOrgPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
 const updateOrgPlan = `-- name: UpdateOrgPlan :exec
 UPDATE orgs
 SET
-    plan                = $2,
-    billing_cycle        = $3,
-    ls_customer_id      = $4,
-    ls_subscription_id  = $5,
-    subscription_status = $6,
+    plan                    = $2,
+    billing_cycle           = $3,
+    paddle_customer_id      = $4,
+    paddle_subscription_id  = $5,
+    subscription_status     = $6,
     plan_renews_at      = $7,
     updated_at          = NOW()
 WHERE id = $1
 `
 
 type UpdateOrgPlanParams struct {
-	ID                 uuid.UUID          `json:"id"`
-	Plan               Plan               `json:"plan"`
-	BillingCycle       string             `json:"billing_cycle"`
-	LsCustomerID       pgtype.Text        `json:"ls_customer_id"`
-	LsSubscriptionID   pgtype.Text        `json:"ls_subscription_id"`
-	SubscriptionStatus string             `json:"subscription_status"`
-	PlanRenewsAt       pgtype.Timestamptz `json:"plan_renews_at"`
+	ID                   uuid.UUID          `json:"id"`
+	Plan                 Plan               `json:"plan"`
+	BillingCycle         string             `json:"billing_cycle"`
+	PaddleCustomerID     pgtype.Text        `json:"paddle_customer_id"`
+	PaddleSubscriptionID pgtype.Text        `json:"paddle_subscription_id"`
+	SubscriptionStatus   string             `json:"subscription_status"`
+	PlanRenewsAt         pgtype.Timestamptz `json:"plan_renews_at"`
 }
 
 func (q *Queries) UpdateOrgPlan(ctx context.Context, arg UpdateOrgPlanParams) error {
@@ -139,8 +139,8 @@ func (q *Queries) UpdateOrgPlan(ctx context.Context, arg UpdateOrgPlanParams) er
 		arg.ID,
 		arg.Plan,
 		arg.BillingCycle,
-		arg.LsCustomerID,
-		arg.LsSubscriptionID,
+		arg.PaddleCustomerID,
+		arg.PaddleSubscriptionID,
 		arg.SubscriptionStatus,
 		arg.PlanRenewsAt,
 	)

@@ -6,9 +6,9 @@ package handler
 // itself uses, and the shared test helpers (testPool, doJSON, decodeBody,
 // findCookie, signUpTestUser, testJWTSecret) defined there are reused here.
 //
-// CreateCheckout's success path (the actual call to the LemonSqueezy API)
-// is not covered — http.DefaultClient is not injectable in createLSCheckout,
-// and hitting the real LemonSqueezy API from a test isn't appropriate. The
+// CreateCheckout's success path (the actual call to the Paddle API) is not
+// covered — http.DefaultClient is not injectable in createPaddleTransaction,
+// and hitting the real Paddle API from a test isn't appropriate. The
 // validation/configuration-gating branches that run before that call are
 // covered instead.
 
@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -35,56 +36,56 @@ import (
 )
 
 const (
-	testLSWebhookSecret  = "test-ls-webhook-secret"
-	testSoloVariantIDStr = "5551001"
-	testSoloVariantID    = 5551001
-	testUnknownVariantID = 9999999
+	testPaddleWebhookSecret = "test-paddle-webhook-secret"
+	testSoloPriceID         = "pri_solo_test"
+	testUnknownPriceID      = "pri_unknown_test"
 )
 
 // testBillingHandler builds an AuthHandler and BillingHandler sharing one
 // pool/config, so a user signed up via the AuthHandler is visible to the
-// BillingHandler's queries. LemonSqueezy API key/store are left unset
-// (CreateCheckout's "not configured" tests rely on that); only the webhook
-// secret and the Solo variant ID are configured.
+// BillingHandler's queries. The Paddle API key is left unset (CreateCheckout's
+// "not configured" tests rely on that); only the webhook secret and the Solo
+// price ID are configured.
 func testBillingHandler(t *testing.T) (*AuthHandler, *BillingHandler, *pgxpool.Pool) {
 	t.Helper()
 	pool := testPool(t)
 	cfg := &config.Config{
-		Env:             "development",
-		JWTSecret:       testJWTSecret,
-		JWTAccessTTL:    15 * time.Minute,
-		JWTRefreshTTL:   7 * 24 * time.Hour,
-		AppURL:          "http://localhost:5173",
-		LSWebhookSecret: testLSWebhookSecret,
-		LSSoloVariantID: testSoloVariantIDStr,
+		Env:                 "development",
+		JWTSecret:           testJWTSecret,
+		JWTAccessTTL:        15 * time.Minute,
+		JWTRefreshTTL:       7 * 24 * time.Hour,
+		AppURL:              "http://localhost:5173",
+		PaddleWebhookSecret: testPaddleWebhookSecret,
+		PaddleSoloPriceID:   testSoloPriceID,
 	}
 	return NewAuthHandler(cfg, pool), NewBillingHandler(cfg, pool), pool
 }
 
-func signWebhookBody(body []byte, secret string) string {
+func signWebhookBody(ts string, body []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(ts + ":"))
 	mac.Write(body)
-	return hex.EncodeToString(mac.Sum(nil))
+	h1 := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("ts=%s;h1=%s", ts, h1)
 }
 
-// webhookEvent builds a payload shaped like a LemonSqueezy webhook, matching
-// the fields billing.go's Webhook handler reads.
-func webhookEvent(orgID, status string, variantID, customerID int64, subscriptionID string, renewsAt, endsAt *string) map[string]any {
+// webhookEvent builds a payload shaped like a Paddle subscription webhook,
+// matching the fields billing.go's Webhook handler reads.
+func webhookEvent(eventType, orgID, status, priceID, customerID, subscriptionID string, nextBilledAt, periodEndsAt *string) map[string]any {
+	data := map[string]any{
+		"id":             subscriptionID,
+		"status":         status,
+		"customer_id":    customerID,
+		"custom_data":    map[string]any{"org_id": orgID},
+		"items":          []map[string]any{{"price": map[string]any{"id": priceID}}},
+		"next_billed_at": nextBilledAt,
+	}
+	if periodEndsAt != nil {
+		data["current_billing_period"] = map[string]any{"ends_at": *periodEndsAt}
+	}
 	return map[string]any{
-		"meta": map[string]any{
-			"event_name":  "subscription_updated",
-			"custom_data": map[string]any{"org_id": orgID},
-		},
-		"data": map[string]any{
-			"id": subscriptionID,
-			"attributes": map[string]any{
-				"status":      status,
-				"variant_id":  variantID,
-				"customer_id": customerID,
-				"renews_at":   renewsAt,
-				"ends_at":     endsAt,
-			},
-		},
+		"event_type": eventType,
+		"data":       data,
 	}
 }
 
@@ -94,8 +95,9 @@ func doWebhook(t *testing.T, h *BillingHandler, payload map[string]any) *httptes
 	if err != nil {
 		t.Fatalf("marshal webhook payload: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/webhook/lemonsqueezy", bytes.NewReader(b))
-	req.Header.Set("X-Signature", signWebhookBody(b, testLSWebhookSecret))
+	ts := fmt.Sprintf("%d", time.Now().Unix())
+	req := httptest.NewRequest(http.MethodPost, "/webhook/paddle", bytes.NewReader(b))
+	req.Header.Set("Paddle-Signature", signWebhookBody(ts, b, testPaddleWebhookSecret))
 	w := httptest.NewRecorder()
 	h.Webhook(w, req)
 	return w
@@ -125,7 +127,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("missing secret config returns 503", func(t *testing.T) {
 		pool := testPool(t)
 		h := NewBillingHandler(&config.Config{Env: "development"}, pool)
-		req := httptest.NewRequest(http.MethodPost, "/webhook/lemonsqueezy", bytes.NewReader([]byte("{}")))
+		req := httptest.NewRequest(http.MethodPost, "/webhook/paddle", bytes.NewReader([]byte("{}")))
 		w := httptest.NewRecorder()
 		h.Webhook(w, req)
 		if w.Code != http.StatusServiceUnavailable {
@@ -135,9 +137,9 @@ func TestWebhook(t *testing.T) {
 
 	t.Run("invalid signature returns 401", func(t *testing.T) {
 		_, h, _ := testBillingHandler(t)
-		body := []byte(`{"meta":{"event_name":"subscription_updated"}}`)
-		req := httptest.NewRequest(http.MethodPost, "/webhook/lemonsqueezy", bytes.NewReader(body))
-		req.Header.Set("X-Signature", "0000000000000000000000000000000000000000000000000000000000000000")
+		body := []byte(`{"event_type":"subscription.updated"}`)
+		req := httptest.NewRequest(http.MethodPost, "/webhook/paddle", bytes.NewReader(body))
+		req.Header.Set("Paddle-Signature", "ts=1700000000;h1=0000000000000000000000000000000000000000000000000000000000000000")
 		w := httptest.NewRecorder()
 		h.Webhook(w, req)
 		if w.Code != http.StatusUnauthorized {
@@ -148,8 +150,9 @@ func TestWebhook(t *testing.T) {
 	t.Run("malformed JSON body returns 400", func(t *testing.T) {
 		_, h, _ := testBillingHandler(t)
 		body := []byte("not json")
-		req := httptest.NewRequest(http.MethodPost, "/webhook/lemonsqueezy", bytes.NewReader(body))
-		req.Header.Set("X-Signature", signWebhookBody(body, testLSWebhookSecret))
+		ts := fmt.Sprintf("%d", time.Now().Unix())
+		req := httptest.NewRequest(http.MethodPost, "/webhook/paddle", bytes.NewReader(body))
+		req.Header.Set("Paddle-Signature", signWebhookBody(ts, body, testPaddleWebhookSecret))
 		w := httptest.NewRecorder()
 		h.Webhook(w, req)
 		if w.Code != http.StatusBadRequest {
@@ -157,20 +160,28 @@ func TestWebhook(t *testing.T) {
 		}
 	})
 
+	t.Run("non-subscription event is a no-op", func(t *testing.T) {
+		_, h, _ := testBillingHandler(t)
+		w := doWebhook(t, h, webhookEvent("transaction.completed", "not-a-uuid", "completed", testSoloPriceID, "cust-1", "sub-1", nil, nil))
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
 	t.Run("invalid org_id returns 400", func(t *testing.T) {
 		_, h, _ := testBillingHandler(t)
-		w := doWebhook(t, h, webhookEvent("not-a-uuid", "active", testSoloVariantID, 1, "sub-1", nil, nil))
+		w := doWebhook(t, h, webhookEvent("subscription.updated", "not-a-uuid", "active", testSoloPriceID, "cust-1", "sub-1", nil, nil))
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("want 400, got %d", w.Code)
 		}
 	})
 
-	t.Run("unknown variant is a no-op", func(t *testing.T) {
+	t.Run("unknown price is a no-op", func(t *testing.T) {
 		authH, billH, pool := testBillingHandler(t)
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 
-		w := doWebhook(t, billH, webhookEvent(u.resp.OrgID, "active", testUnknownVariantID, 1, "sub-1", nil, nil))
+		w := doWebhook(t, billH, webhookEvent("subscription.updated", u.resp.OrgID, "active", testUnknownPriceID, "cust-1", "sub-1", nil, nil))
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 		}
@@ -184,13 +195,13 @@ func TestWebhook(t *testing.T) {
 		}
 	})
 
-	t.Run("known variant upgrades the org's plan", func(t *testing.T) {
+	t.Run("known price upgrades the org's plan", func(t *testing.T) {
 		authH, billH, pool := testBillingHandler(t)
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 
-		renewsAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
-		w := doWebhook(t, billH, webhookEvent(u.resp.OrgID, "active", testSoloVariantID, 4242, "sub-abc", &renewsAt, nil))
+		nextBilledAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		w := doWebhook(t, billH, webhookEvent("subscription.created", u.resp.OrgID, "active", testSoloPriceID, "ctm_4242", "sub_abc", &nextBilledAt, nil))
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 		}
@@ -208,11 +219,11 @@ func TestWebhook(t *testing.T) {
 		if info.SubscriptionStatus != "active" {
 			t.Fatalf("want subscription status active, got %q", info.SubscriptionStatus)
 		}
-		if !info.LsCustomerID.Valid || info.LsCustomerID.String != "4242" {
-			t.Fatalf("want ls_customer_id 4242, got %+v", info.LsCustomerID)
+		if !info.PaddleCustomerID.Valid || info.PaddleCustomerID.String != "ctm_4242" {
+			t.Fatalf("want paddle_customer_id ctm_4242, got %+v", info.PaddleCustomerID)
 		}
-		if !info.LsSubscriptionID.Valid || info.LsSubscriptionID.String != "sub-abc" {
-			t.Fatalf("want ls_subscription_id sub-abc, got %+v", info.LsSubscriptionID)
+		if !info.PaddleSubscriptionID.Valid || info.PaddleSubscriptionID.String != "sub_abc" {
+			t.Fatalf("want paddle_subscription_id sub_abc, got %+v", info.PaddleSubscriptionID)
 		}
 		if !info.PlanRenewsAt.Valid {
 			t.Fatal("want plan_renews_at set")
@@ -224,14 +235,14 @@ func TestWebhook(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 
-		renewsAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
-		upW := doWebhook(t, billH, webhookEvent(u.resp.OrgID, "active", testSoloVariantID, 4242, "sub-abc", &renewsAt, nil))
+		nextBilledAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		upW := doWebhook(t, billH, webhookEvent("subscription.created", u.resp.OrgID, "active", testSoloPriceID, "ctm_4242", "sub_abc", &nextBilledAt, nil))
 		if upW.Code != http.StatusOK {
 			t.Fatalf("setup: want 200, got %d: %s", upW.Code, upW.Body.String())
 		}
 
-		endsAt := time.Now().Add(5 * 24 * time.Hour).UTC().Format(time.RFC3339)
-		cancelW := doWebhook(t, billH, webhookEvent(u.resp.OrgID, "cancelled", testSoloVariantID, 4242, "sub-abc", nil, &endsAt))
+		periodEndsAt := time.Now().Add(5 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		cancelW := doWebhook(t, billH, webhookEvent("subscription.canceled", u.resp.OrgID, "canceled", testSoloPriceID, "ctm_4242", "sub_abc", nil, &periodEndsAt))
 		if cancelW.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", cancelW.Code, cancelW.Body.String())
 		}
@@ -246,17 +257,17 @@ func TestWebhook(t *testing.T) {
 		if info.BillingCycle != cycleMonthly {
 			t.Fatalf("want billing cycle reset to monthly, got %q", info.BillingCycle)
 		}
-		if info.LsCustomerID.Valid {
-			t.Fatal("want ls_customer_id cleared")
+		if info.PaddleCustomerID.Valid {
+			t.Fatal("want paddle_customer_id cleared")
 		}
-		if info.LsSubscriptionID.Valid {
-			t.Fatal("want ls_subscription_id cleared")
+		if info.PaddleSubscriptionID.Valid {
+			t.Fatal("want paddle_subscription_id cleared")
 		}
-		if info.SubscriptionStatus != "cancelled" {
-			t.Fatalf("want subscription status cancelled, got %q", info.SubscriptionStatus)
+		if info.SubscriptionStatus != "canceled" {
+			t.Fatalf("want subscription status canceled, got %q", info.SubscriptionStatus)
 		}
 		if !info.PlanRenewsAt.Valid {
-			t.Fatal("want plan_renews_at set from ends_at")
+			t.Fatal("want plan_renews_at set from current_billing_period.ends_at")
 		}
 	})
 }
@@ -294,18 +305,24 @@ func TestGetBillingInfo(t *testing.T) {
 			t.Fatalf("want monitor count 0, got %d", resp.MonitorCount)
 		}
 		if resp.CustomerPortalURL != "" {
-			t.Fatalf("want no customer portal URL with no ls_customer_id, got %q", resp.CustomerPortalURL)
+			t.Fatalf("want no customer portal URL with no paddle_customer_id, got %q", resp.CustomerPortalURL)
 		}
 	})
 
-	t.Run("reflects an upgraded plan and exposes a portal URL once billed", func(t *testing.T) {
+	// A non-empty paddle_customer_id would normally trigger a live call to
+	// Paddle's portal-sessions API (createPaddlePortalSession) — not covered
+	// here for the same reason CreateCheckout's success path isn't (no real
+	// Paddle API access from a test). GetBillingInfo degrades gracefully
+	// (empty portalURL, logged error) when that call fails, which is what
+	// this case exercises against a fake customer ID.
+	t.Run("plan reflects an upgrade even when the portal session call fails", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 		if err := billH.queries.UpdateOrgPlan(context.Background(), db.UpdateOrgPlanParams{
 			ID:                 orgID,
 			Plan:               db.PlanSolo,
 			BillingCycle:       cycleMonthly,
-			LsCustomerID:       pgtype.Text{String: "cust-1", Valid: true},
+			PaddleCustomerID:   pgtype.Text{String: "ctm_fake", Valid: true},
 			SubscriptionStatus: "active",
 		}); err != nil {
 			t.Fatalf("seed plan: %v", err)
@@ -318,9 +335,6 @@ func TestGetBillingInfo(t *testing.T) {
 		resp := decodeBody[billingInfoResponse](t, w)
 		if resp.Plan != "solo" {
 			t.Fatalf("want plan solo, got %q", resp.Plan)
-		}
-		if resp.CustomerPortalURL == "" {
-			t.Fatal("want a customer portal URL once ls_customer_id is set")
 		}
 	})
 }
@@ -351,7 +365,7 @@ func TestCreateCheckout(t *testing.T) {
 		}
 	})
 
-	t.Run("billing not configured (no LemonSqueezy API key/store)", func(t *testing.T) {
+	t.Run("billing not configured (no Paddle API key)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, billH.CreateCheckout, u.access, map[string]string{"plan": "solo"})
 		if w.Code != http.StatusServiceUnavailable {
@@ -363,16 +377,15 @@ func TestCreateCheckout(t *testing.T) {
 		}
 	})
 
-	t.Run("plan not available (configured store but no variant for the plan)", func(t *testing.T) {
+	t.Run("plan not available (configured API key but no price for the plan)", func(t *testing.T) {
 		pool := testPool(t)
 		cfg := &config.Config{
 			Env:           "development",
 			JWTSecret:     testJWTSecret,
 			JWTAccessTTL:  15 * time.Minute,
 			JWTRefreshTTL: 7 * 24 * time.Hour,
-			LSAPIKey:      "test-key",
-			LSStoreID:     "test-store",
-			// No LS*VariantID set for any plan.
+			PaddleAPIKey:  "test-key",
+			// No Paddle*PriceID set for any plan.
 		}
 		authH2 := NewAuthHandler(cfg, pool)
 		billH2 := NewBillingHandler(cfg, pool)
@@ -389,16 +402,20 @@ func TestCreateCheckout(t *testing.T) {
 	})
 }
 
-func TestVerifyLSSignature(t *testing.T) {
+func TestVerifyPaddleSignature(t *testing.T) {
 	body := []byte(`{"hello":"world"}`)
-	sig := signWebhookBody(body, testLSWebhookSecret)
-	if !verifyLSSignature(body, sig, testLSWebhookSecret) {
+	ts := "1700000000"
+	header := signWebhookBody(ts, body, testPaddleWebhookSecret)
+	if !verifyPaddleSignature(body, header, testPaddleWebhookSecret) {
 		t.Fatal("expected matching signature to verify")
 	}
-	if verifyLSSignature(body, sig, "a-different-secret") {
+	if verifyPaddleSignature(body, header, "a-different-secret") {
 		t.Fatal("expected signature verification to fail with the wrong secret")
 	}
-	if verifyLSSignature([]byte(`{"hello":"mars"}`), sig, testLSWebhookSecret) {
+	if verifyPaddleSignature([]byte(`{"hello":"mars"}`), header, testPaddleWebhookSecret) {
 		t.Fatal("expected signature verification to fail for a tampered body")
+	}
+	if verifyPaddleSignature(body, "not-a-valid-header", testPaddleWebhookSecret) {
+		t.Fatal("expected signature verification to fail for a malformed header")
 	}
 }

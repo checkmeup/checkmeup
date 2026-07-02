@@ -217,9 +217,9 @@ func TestLoad(t *testing.T) {
 	optionalVars := []string{
 		"ENV", "PORT", "JWT_ACCESS_TTL", "JWT_REFRESH_TTL", "CORS_ORIGINS",
 		"MIGRATIONS_DIR", "STATIC_DIR", "RESEND_API_KEY", "APP_URL", "BASE_URL",
-		"TELEGRAM_BOT_TOKEN", "LS_API_KEY", "LS_STORE_ID", "LS_WEBHOOK_SECRET",
-		"LS_SOLO_VARIANT_ID", "LS_STARTUP_VARIANT_ID", "LS_ENTERPRISE_VARIANT_ID",
-		"LS_SOLO_ANNUAL_VARIANT_ID", "LS_STARTUP_ANNUAL_VARIANT_ID", "LS_ENTERPRISE_ANNUAL_VARIANT_ID",
+		"TELEGRAM_BOT_TOKEN", "PADDLE_ENVIRONMENT", "PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET",
+		"PADDLE_SOLO_PRICE_ID", "PADDLE_STARTUP_PRICE_ID", "PADDLE_ENTERPRISE_PRICE_ID",
+		"PADDLE_SOLO_ANNUAL_PRICE_ID", "PADDLE_STARTUP_ANNUAL_PRICE_ID", "PADDLE_ENTERPRISE_ANNUAL_PRICE_ID",
 	}
 
 	t.Run("required fields and computed defaults", func(t *testing.T) {
@@ -260,6 +260,9 @@ func TestLoad(t *testing.T) {
 		}
 		if cfg.AppURL != "http://localhost:5173" {
 			t.Fatalf("want default AppURL, got %q", cfg.AppURL)
+		}
+		if cfg.PaddleEnvironment != "production" {
+			t.Fatalf("want default PaddleEnvironment production, got %q", cfg.PaddleEnvironment)
 		}
 		if cfg.BaseURL != "http://localhost:8080" {
 			t.Fatalf("want default BaseURL, got %q", cfg.BaseURL)

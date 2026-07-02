@@ -52,10 +52,10 @@ describe('TermsView', () => {
     expect(wrapper.text()).toContain('merger, acquisition, or sale of assets')
   })
 
-  it('mentions LemonSqueezy as the merchant of record for billing', () => {
+  it('mentions Paddle as the merchant of record for billing', () => {
     const wrapper = mount(TermsView, mountOptions)
 
-    expect(wrapper.text()).toContain('LemonSqueezy')
+    expect(wrapper.text()).toContain('Paddle')
     expect(wrapper.text()).toContain('merchant of record')
   })
 

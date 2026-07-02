@@ -48,7 +48,7 @@ describe('PrivacyView', () => {
 
     expect(wrapper.text()).toContain('Resend')
     expect(wrapper.text()).toContain('Telegram')
-    expect(wrapper.text()).toContain('LemonSqueezy')
+    expect(wrapper.text()).toContain('Paddle')
     expect(wrapper.text()).toContain('Hetzner')
   })
 })

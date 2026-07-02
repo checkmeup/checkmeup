@@ -10,6 +10,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,8 +24,8 @@ import (
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
 
-// planCycle is what a LemonSqueezy variant ID resolves to — a plan tier and
-// its billing cycle (EP-27). "monthly" is the only cycle that existed before
+// planCycle is what a Paddle price ID resolves to — a plan tier and its
+// billing cycle (EP-27). "monthly" is the only cycle that existed before
 // annual billing; it's also the zero-value/default for Hobby, which has none.
 type planCycle struct {
 	Plan  db.Plan
@@ -36,25 +38,25 @@ const (
 )
 
 type BillingHandler struct {
-	cfg        *config.Config
-	queries    *db.Queries
-	variantMap map[string]planCycle // variantID → plan + cycle
+	cfg      *config.Config
+	queries  *db.Queries
+	priceMap map[string]planCycle // priceID → plan + cycle
 }
 
 func NewBillingHandler(cfg *config.Config, pool *pgxpool.Pool) *BillingHandler {
 	m := map[string]planCycle{}
-	add := func(variantID string, plan db.Plan, cycle string) {
-		if variantID != "" {
-			m[variantID] = planCycle{Plan: plan, Cycle: cycle}
+	add := func(priceID string, plan db.Plan, cycle string) {
+		if priceID != "" {
+			m[priceID] = planCycle{Plan: plan, Cycle: cycle}
 		}
 	}
-	add(cfg.LSSoloVariantID, db.PlanSolo, cycleMonthly)
-	add(cfg.LSStartupVariantID, db.PlanStartup, cycleMonthly)
-	add(cfg.LSEnterpriseVariantID, db.PlanEnterprise, cycleMonthly)
-	add(cfg.LSSoloAnnualVariantID, db.PlanSolo, cycleAnnual)
-	add(cfg.LSStartupAnnualVariantID, db.PlanStartup, cycleAnnual)
-	add(cfg.LSEnterpriseAnnualVariantID, db.PlanEnterprise, cycleAnnual)
-	return &BillingHandler{cfg: cfg, queries: db.New(pool), variantMap: m}
+	add(cfg.PaddleSoloPriceID, db.PlanSolo, cycleMonthly)
+	add(cfg.PaddleStartupPriceID, db.PlanStartup, cycleMonthly)
+	add(cfg.PaddleEnterprisePriceID, db.PlanEnterprise, cycleMonthly)
+	add(cfg.PaddleSoloAnnualPriceID, db.PlanSolo, cycleAnnual)
+	add(cfg.PaddleStartupAnnualPriceID, db.PlanStartup, cycleAnnual)
+	add(cfg.PaddleEnterpriseAnnualPriceID, db.PlanEnterprise, cycleAnnual)
+	return &BillingHandler{cfg: cfg, queries: db.New(pool), priceMap: m}
 }
 
 // GET /api/v1/billing
@@ -74,18 +76,18 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 	limits := billing.GetLimits(info.Plan)
 
 	type response struct {
-		Plan                        string  `json:"plan"`
-		BillingCycle                string  `json:"billingCycle"`
-		SubscriptionStatus          string  `json:"subscriptionStatus"`
-		PlanRenewsAt                *string `json:"planRenewsAt"`
-		MonitorCount                int32   `json:"monitorCount"`
-		MonitorLimit                int     `json:"monitorLimit"`
-		StatusPageCount             int32   `json:"statusPageCount"`
-		StatusPageLimit             int     `json:"statusPageLimit"`
-		NotificationChannelCount    int32   `json:"notificationChannelCount"`
-		NotificationChannelLimit    int     `json:"notificationChannelLimit"`
-		MinIntervalMins             int     `json:"minIntervalMins"`
-		CustomerPortalURL           string  `json:"customerPortalUrl"`
+		Plan                     string  `json:"plan"`
+		BillingCycle             string  `json:"billingCycle"`
+		SubscriptionStatus       string  `json:"subscriptionStatus"`
+		PlanRenewsAt             *string `json:"planRenewsAt"`
+		MonitorCount             int32   `json:"monitorCount"`
+		MonitorLimit             int     `json:"monitorLimit"`
+		StatusPageCount          int32   `json:"statusPageCount"`
+		StatusPageLimit          int     `json:"statusPageLimit"`
+		NotificationChannelCount int32   `json:"notificationChannelCount"`
+		NotificationChannelLimit int     `json:"notificationChannelLimit"`
+		MinIntervalMins          int     `json:"minIntervalMins"`
+		CustomerPortalURL        string  `json:"customerPortalUrl"`
 	}
 
 	var renewsAt *string
@@ -95,23 +97,32 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 	}
 
 	portalURL := ""
-	if info.LsCustomerID.Valid && info.LsCustomerID.String != "" {
-		portalURL = "https://app.lemonsqueezy.com/my-orders/"
+	if info.PaddleCustomerID.Valid && info.PaddleCustomerID.String != "" {
+		// Paddle portal links are single-use, short-lived, and must be
+		// generated on demand — unlike LemonSqueezy's static my-orders URL,
+		// there's no fixed link to hand back, so this costs an API call on
+		// every GetBillingInfo request for orgs with a paid plan.
+		url, err := h.createPaddlePortalSession(info.PaddleCustomerID.String)
+		if err != nil {
+			slog.ErrorContext(r.Context(), "failed to create paddle portal session", "org_id", orgID, "error", err)
+		} else {
+			portalURL = url
+		}
 	}
 
 	respond.JSON(w, http.StatusOK, response{
-		Plan:                        string(info.Plan),
-		BillingCycle:                info.BillingCycle,
-		SubscriptionStatus:          info.SubscriptionStatus,
-		PlanRenewsAt:                renewsAt,
-		MonitorCount:                info.MonitorCount,
-		MonitorLimit:                limits.MonitorTotal,
-		StatusPageCount:             info.StatusPageCount,
-		StatusPageLimit:             limits.StatusPages,
-		NotificationChannelCount:    info.NotificationChannelCount,
-		NotificationChannelLimit:    limits.NotificationChannels,
-		MinIntervalMins:             limits.MinIntervalMins,
-		CustomerPortalURL:           portalURL,
+		Plan:                     string(info.Plan),
+		BillingCycle:             info.BillingCycle,
+		SubscriptionStatus:       info.SubscriptionStatus,
+		PlanRenewsAt:             renewsAt,
+		MonitorCount:             info.MonitorCount,
+		MonitorLimit:             limits.MonitorTotal,
+		StatusPageCount:          info.StatusPageCount,
+		StatusPageLimit:          limits.StatusPages,
+		NotificationChannelCount: info.NotificationChannelCount,
+		NotificationChannelLimit: limits.NotificationChannels,
+		MinIntervalMins:          limits.MinIntervalMins,
+		CustomerPortalURL:        portalURL,
 	})
 }
 
@@ -143,30 +154,30 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Check configuration before resolving a variant ID, so an unconfigured
-	// store reports "not configured" rather than the misleading "invalid plan"
-	// for a plan name that was perfectly valid.
-	if h.cfg.LSAPIKey == "" || h.cfg.LSStoreID == "" {
+	// Check configuration before resolving a price ID, so an unconfigured
+	// account reports "not configured" rather than the misleading "invalid
+	// plan" for a plan name that was perfectly valid.
+	if h.cfg.PaddleAPIKey == "" {
 		respond.Error(w, http.StatusServiceUnavailable, "billing not configured", "not_configured")
 		return
 	}
 
-	variantID := h.variantIDForPlan(req.Plan, req.Cycle)
-	if variantID == "" {
+	priceID := h.priceIDForPlan(req.Plan, req.Cycle)
+	if priceID == "" {
 		respond.Error(w, http.StatusServiceUnavailable, "this plan isn't available yet", "not_configured")
 		return
 	}
 
-	checkoutURL, err := h.createLSCheckout(orgID, variantID)
+	transactionID, err := h.createPaddleTransaction(orgID, priceID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "failed to create checkout", "internal_error")
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, map[string]string{"url": checkoutURL})
+	respond.JSON(w, http.StatusOK, map[string]string{"transactionId": transactionID})
 }
 
-// POST /webhook/lemonsqueezy
+// POST /webhook/paddle
 func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
 	if err != nil {
@@ -174,33 +185,35 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.cfg.LSWebhookSecret == "" {
-		slog.ErrorContext(r.Context(), "lemonsqueezy webhook received but LS_WEBHOOK_SECRET is not configured")
+	if h.cfg.PaddleWebhookSecret == "" {
+		slog.ErrorContext(r.Context(), "paddle webhook received but PADDLE_WEBHOOK_SECRET is not configured")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	sig := r.Header.Get("X-Signature")
-	if !verifyLSSignature(body, sig, h.cfg.LSWebhookSecret) {
+	sig := r.Header.Get("Paddle-Signature")
+	if !verifyPaddleSignature(body, sig, h.cfg.PaddleWebhookSecret) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	var payload struct {
-		Meta struct {
-			EventName  string `json:"event_name"`
+		EventType string `json:"event_type"`
+		Data      struct {
+			ID                   string  `json:"id"`
+			Status               string  `json:"status"`
+			CustomerID           string  `json:"customer_id"`
+			NextBilledAt         *string `json:"next_billed_at"`
+			CurrentBillingPeriod *struct {
+				EndsAt string `json:"ends_at"`
+			} `json:"current_billing_period"`
 			CustomData struct {
 				OrgID string `json:"org_id"`
 			} `json:"custom_data"`
-		} `json:"meta"`
-		Data struct {
-			ID         string `json:"id"`
-			Attributes struct {
-				Status     string  `json:"status"`
-				VariantID  int64   `json:"variant_id"`
-				CustomerID int64   `json:"customer_id"`
-				RenewsAt   *string `json:"renews_at"`
-				EndsAt     *string `json:"ends_at"`
-			} `json:"attributes"`
+			Items []struct {
+				Price struct {
+					ID string `json:"id"`
+				} `json:"price"`
+			} `json:"items"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -208,28 +221,42 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID, err := uuid.Parse(payload.Meta.CustomData.OrgID)
+	// Only subscription lifecycle events carry the subscription shape parsed
+	// above (transaction.* events have a different data shape) — anything
+	// else is a no-op, same forgiving style as the unknown-price case below.
+	if payload.EventType != "subscription.created" &&
+		payload.EventType != "subscription.updated" &&
+		payload.EventType != "subscription.canceled" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	orgID, err := uuid.Parse(payload.Data.CustomData.OrgID)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	variantIDStr := fmt.Sprintf("%d", payload.Data.Attributes.VariantID)
-	pc, ok := h.variantMap[variantIDStr]
+	if len(payload.Data.Items) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	priceID := payload.Data.Items[0].Price.ID
+	pc, ok := h.priceMap[priceID]
 	if !ok {
-		// Unknown variant — ignore
+		// Unknown price — ignore
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 	plan, cycle := pc.Plan, pc.Cycle
 
-	status := payload.Data.Attributes.Status
+	status := payload.Data.Status
 	subscriptionID := payload.Data.ID
-	customerID := fmt.Sprintf("%d", payload.Data.Attributes.CustomerID)
+	customerID := payload.Data.CustomerID
 
-	// On cancellation, downgrade to hobby at period end — billing_cycle resets
-	// to the column default since Hobby has no cycle of its own.
-	if status == "cancelled" || status == "expired" {
+	// On cancellation, downgrade to hobby — billing_cycle resets to the
+	// column default since Hobby has no cycle of its own.
+	if status == "canceled" {
 		plan = db.PlanHobby
 		cycle = cycleMonthly
 		customerID = ""
@@ -237,9 +264,11 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var renewsAt pgtype.Timestamptz
-	tsStr := payload.Data.Attributes.RenewsAt
-	if status == "cancelled" {
-		tsStr = payload.Data.Attributes.EndsAt
+	var tsStr *string
+	if status == "canceled" && payload.Data.CurrentBillingPeriod != nil {
+		tsStr = &payload.Data.CurrentBillingPeriod.EndsAt
+	} else {
+		tsStr = payload.Data.NextBilledAt
 	}
 	if tsStr != nil {
 		if t, err := time.Parse(time.RFC3339, *tsStr); err == nil {
@@ -248,15 +277,15 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.queries.UpdateOrgPlan(r.Context(), db.UpdateOrgPlanParams{
-		ID:                 orgID,
-		Plan:               plan,
-		BillingCycle:       cycle,
-		LsCustomerID:       pgtype.Text{String: customerID, Valid: customerID != ""},
-		LsSubscriptionID:   pgtype.Text{String: subscriptionID, Valid: subscriptionID != ""},
-		SubscriptionStatus: status,
-		PlanRenewsAt:       renewsAt,
+		ID:                   orgID,
+		Plan:                 plan,
+		BillingCycle:         cycle,
+		PaddleCustomerID:     pgtype.Text{String: customerID, Valid: customerID != ""},
+		PaddleSubscriptionID: pgtype.Text{String: subscriptionID, Valid: subscriptionID != ""},
+		SubscriptionStatus:   status,
+		PlanRenewsAt:         renewsAt,
 	}); err != nil {
-		slog.ErrorContext(r.Context(), "failed to update org plan from lemonsqueezy webhook", "org_id", orgID, "error", err)
+		slog.ErrorContext(r.Context(), "failed to update org plan from paddle webhook", "org_id", orgID, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -264,56 +293,54 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *BillingHandler) variantIDForPlan(plan, cycle string) string {
+func (h *BillingHandler) priceIDForPlan(plan, cycle string) string {
 	annual := cycle == cycleAnnual
 	switch plan {
 	case "solo":
 		if annual {
-			return h.cfg.LSSoloAnnualVariantID
+			return h.cfg.PaddleSoloAnnualPriceID
 		}
-		return h.cfg.LSSoloVariantID
+		return h.cfg.PaddleSoloPriceID
 	case "startup":
 		if annual {
-			return h.cfg.LSStartupAnnualVariantID
+			return h.cfg.PaddleStartupAnnualPriceID
 		}
-		return h.cfg.LSStartupVariantID
+		return h.cfg.PaddleStartupPriceID
 	case "enterprise":
 		if annual {
-			return h.cfg.LSEnterpriseAnnualVariantID
+			return h.cfg.PaddleEnterpriseAnnualPriceID
 		}
-		return h.cfg.LSEnterpriseVariantID
+		return h.cfg.PaddleEnterprisePriceID
 	}
 	return ""
 }
 
-func (h *BillingHandler) createLSCheckout(orgID uuid.UUID, variantID string) (string, error) {
+// paddleAPIBase returns Paddle's production or sandbox API host — these are
+// entirely separate environments (separate API keys, price IDs, customers),
+// so a sandbox key against the production host (or vice versa) just fails.
+func (h *BillingHandler) paddleAPIBase() string {
+	if h.cfg.PaddleEnvironment == "sandbox" {
+		return "https://sandbox-api.paddle.com"
+	}
+	return "https://api.paddle.com"
+}
+
+// createPaddleTransaction creates a Paddle transaction server-side so
+// custom_data.org_id comes from the authenticated session (orgIDFrom),
+// never from client input — the frontend only ever sees the resulting
+// transaction ID, which it hands to Paddle.js to open the checkout overlay.
+func (h *BillingHandler) createPaddleTransaction(orgID uuid.UUID, priceID string) (string, error) {
 	payload := map[string]any{
-		"data": map[string]any{
-			"type": "checkouts",
-			"attributes": map[string]any{
-				"checkout_data": map[string]any{
-					"custom": map[string]string{"org_id": orgID.String()},
-				},
-				// Explicit success redirect rather than relying on the LemonSqueezy
-				// store/product dashboard default (EP-07 US-0703). Failed payments
-				// stay on LemonSqueezy's own hosted checkout page natively — no
-				// redirect needed for that case.
-				"product_options": map[string]any{
-					"redirect_url": h.cfg.AppURL + "/billing?upgraded=true",
-				},
-			},
-			"relationships": map[string]any{
-				"store":   map[string]any{"data": map[string]string{"type": "stores", "id": h.cfg.LSStoreID}},
-				"variant": map[string]any{"data": map[string]string{"type": "variants", "id": variantID}},
-			},
+		"items": []map[string]any{
+			{"price_id": priceID, "quantity": 1},
 		},
+		"custom_data": map[string]string{"org_id": orgID.String()},
 	}
 
 	b, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(http.MethodPost, "https://api.lemonsqueezy.com/v1/checkouts", bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+h.cfg.LSAPIKey)
-	req.Header.Set("Content-Type", "application/vnd.api+json")
-	req.Header.Set("Accept", "application/vnd.api+json")
+	req, _ := http.NewRequest(http.MethodPost, h.paddleAPIBase()+"/transactions", bytes.NewReader(b))
+	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -323,23 +350,75 @@ func (h *BillingHandler) createLSCheckout(orgID uuid.UUID, variantID string) (st
 
 	var result struct {
 		Data struct {
-			Attributes struct {
-				URL string `json:"url"`
-			} `json:"attributes"`
+			ID string `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
-	if result.Data.Attributes.URL == "" {
-		return "", fmt.Errorf("empty checkout URL from LemonSqueezy")
+	if result.Data.ID == "" {
+		return "", fmt.Errorf("empty transaction ID from Paddle")
 	}
-	return result.Data.Attributes.URL, nil
+	return result.Data.ID, nil
 }
 
-func verifyLSSignature(body []byte, signature, secret string) bool {
+// createPaddlePortalSession generates a single-use, short-lived customer
+// portal URL — Paddle explicitly documents these as not cacheable, unlike
+// LemonSqueezy's static my-orders link, so this is called fresh every time.
+func (h *BillingHandler) createPaddlePortalSession(customerID string) (string, error) {
+	url := fmt.Sprintf("%s/customers/%s/portal-sessions", h.paddleAPIBase(), customerID)
+	req, _ := http.NewRequest(http.MethodPost, url, nil)
+	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Data struct {
+			URLs struct {
+				General struct {
+					Overview string `json:"overview"`
+				} `json:"general"`
+			} `json:"urls"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	return result.Data.URLs.General.Overview, nil
+}
+
+// verifyPaddleSignature checks the Paddle-Signature header, formatted as
+// "ts=<unix_timestamp>;h1=<hex_hmac>". The signed string is "ts:rawBody" —
+// see https://developer.paddle.com/webhooks/signature-verification.
+func verifyPaddleSignature(body []byte, header, secret string) bool {
+	var ts, h1 string
+	for _, part := range strings.Split(header, ";") {
+		k, v, ok := strings.Cut(part, "=")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ts":
+			ts = v
+		case "h1":
+			h1 = v
+		}
+	}
+	if ts == "" || h1 == "" {
+		return false
+	}
+	if _, err := strconv.ParseInt(ts, 10, 64); err != nil {
+		return false
+	}
+
 	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(ts + ":"))
 	mac.Write(body)
 	expected := hex.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(expected), []byte(signature))
+	return hmac.Equal([]byte(expected), []byte(h1))
 }

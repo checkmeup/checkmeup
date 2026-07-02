@@ -8,7 +8,7 @@ const stack = [
   { label: 'Database', value: 'PostgreSQL' },
   { label: 'Infrastructure', value: 'Hetzner · Kamal · Traefik' },
   { label: 'Alerts', value: 'Telegram Bot API' },
-  { label: 'Billing', value: 'LemonSqueezy (Merchant of Record)' },
+  { label: 'Billing', value: 'Paddle (Merchant of Record)' },
 ]
 
 const values = [

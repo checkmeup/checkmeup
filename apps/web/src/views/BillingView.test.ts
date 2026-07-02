@@ -15,6 +15,19 @@ vi.mock('@/api/billing', () => ({
   billingApi: { createCheckout: createCheckoutMock },
 }))
 
+const { initializePaddleMock, checkoutOpenMock } = vi.hoisted(() => ({
+  initializePaddleMock: vi.fn(),
+  checkoutOpenMock: vi.fn(),
+}))
+
+vi.mock('@paddle/paddle-js', () => ({
+  initializePaddle: initializePaddleMock,
+}))
+
+vi.mock('@/lib/theme', () => ({
+  useTheme: () => ({ theme: ref('light') }),
+}))
+
 const { ApiError } = vi.hoisted(() => ({
   ApiError: class ApiError extends Error {
     status: number
@@ -84,22 +97,16 @@ function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((b) => b.text() === text)
 }
 
-let originalLocation: Location
-
 beforeEach(() => {
   infoData.value = null
   infoPending.value = false
   infoError.value = null
-  originalLocation = window.location
-  // @ts-expect-error allow reassigning location for the redirect assertion
-  delete window.location
-  // @ts-expect-error partial Location stub
-  window.location = { href: '' }
+  initializePaddleMock.mockResolvedValue({ Checkout: { open: checkoutOpenMock } })
 })
 
 afterEach(() => {
   vi.clearAllMocks()
-  window.location = originalLocation
+  vi.unstubAllEnvs()
 })
 
 describe('BillingView', () => {
@@ -174,16 +181,39 @@ describe('BillingView', () => {
     expect(wrapper.text()).toContain('$90/yr ($7.50/mo)')
   })
 
-  it('starts checkout and redirects to the returned url on success', async () => {
+  it('starts checkout and opens the Paddle overlay with the returned transaction', async () => {
+    vi.stubEnv('VITE_PADDLE_CLIENT_TOKEN', 'test-client-token')
     infoData.value = { ...hobbyInfo }
-    createCheckoutMock.mockResolvedValueOnce({ url: 'https://checkout.example.com/session' })
+    createCheckoutMock.mockResolvedValueOnce({ transactionId: 'txn_01example' })
     const wrapper = mount(BillingView)
 
     await findButtonByText(wrapper, 'Upgrade to Solo')!.trigger('click')
     await flushPromises()
 
     expect(createCheckoutMock).toHaveBeenCalledExactlyOnceWith('solo', 'monthly')
-    expect(window.location.href).toBe('https://checkout.example.com/session')
+    expect(initializePaddleMock).toHaveBeenCalledExactlyOnceWith({
+      token: 'test-client-token',
+      environment: 'sandbox',
+    })
+    expect(checkoutOpenMock).toHaveBeenCalledExactlyOnceWith({
+      transactionId: 'txn_01example',
+      settings: {
+        theme: 'light',
+        successUrl: `${window.location.origin}/billing?upgraded=true`,
+      },
+    })
+  })
+
+  it('shows a not-configured message when the Paddle client token is missing', async () => {
+    infoData.value = { ...hobbyInfo }
+    createCheckoutMock.mockResolvedValueOnce({ transactionId: 'txn_01example' })
+    const wrapper = mount(BillingView)
+
+    await findButtonByText(wrapper, 'Upgrade to Solo')!.trigger('click')
+    await flushPromises()
+
+    expect(initializePaddleMock).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain("Billing isn't activated yet")
   })
 
   it('shows a not-configured message when billing has not been activated', async () => {

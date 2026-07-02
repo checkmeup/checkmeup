@@ -17,7 +17,7 @@ const effectiveDate = '2026-07-01'
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. Scope</h2>
           <p>
             This policy covers charges for checkmeup's paid plans (Solo, Startup, Enterprise), billed and
-            processed by LemonSqueezy, our merchant of record. The Hobby plan is free and has no charges to
+            processed by Paddle, our merchant of record. The Hobby plan is free and has no charges to
             refund.
           </p>
         </section>
@@ -39,7 +39,7 @@ const effectiveDate = '2026-07-01'
               >andrew@checkmeup.net</a
             >
             with the email address on your account. Refunds are issued back to your original payment method
-            via LemonSqueezy, typically within a few business days.
+            via Paddle, typically within a few business days.
           </p>
         </section>
 

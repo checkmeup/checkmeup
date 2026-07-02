@@ -50,7 +50,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Which payment methods do you accept?',
-        a: 'All major credit and debit cards via LemonSqueezy, which handles global tax compliance so you pay the right tax wherever you are.',
+        a: 'All major credit and debit cards via Paddle, which handles global tax compliance so you pay the right tax wherever you are.',
       },
       {
         q: 'Is there a refund policy?',

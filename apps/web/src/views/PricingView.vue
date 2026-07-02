@@ -312,7 +312,7 @@ const featureRows: TableRow[] = [
       </div>
 
       <p class="text-center text-xs mt-6" style="color: var(--text-muted)">
-        All prices in USD. Billing handled by LemonSqueezy — taxes calculated at checkout based on
+        All prices in USD. Billing handled by Paddle — taxes calculated at checkout based on
         your location.
       </p>
     </section>

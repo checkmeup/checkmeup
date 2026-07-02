@@ -1,7 +1,7 @@
 # ADR-018: Billing via LemonSqueezy (Merchant of Record)
 
 **Date:** 2026-06-15  
-**Status:** Accepted
+**Status:** Superseded by [ADR-026](026-billing-paddle-mor.md) (2026-07-03) — LemonSqueezy replaced by Paddle. Kept below for historical context; not reflective of the current integration.
 
 ---
 

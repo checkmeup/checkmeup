@@ -1,5 +1,7 @@
 # EP-21: Terms and Privacy
 
+> LemonSqueezy was replaced by Paddle as the payment provider/MoR on 2026-07-03 — see [ADR-026](../decisions/026-billing-paddle-mor.md). The subprocessor list below reflects this epic as originally shipped; the live Privacy Policy lists Paddle today.
+
 The product is live, collecting emails and payment data (via LemonSqueezy) and sharing data with third-party processors (Resend, Telegram, LemonSqueezy, Hetzner), with no published Terms of Service or Privacy Policy and no sign-up acceptance step. This is a real gap today, not a future nice-to-have — worth prioritizing ahead of most other post-MVP work.
 
 ---

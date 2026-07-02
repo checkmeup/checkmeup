@@ -19,8 +19,8 @@ SELECT COUNT(*)::int AS total FROM notification_channels WHERE org_id = $1;
 SELECT
     o.plan,
     o.billing_cycle,
-    o.ls_customer_id,
-    o.ls_subscription_id,
+    o.paddle_customer_id,
+    o.paddle_subscription_id,
     o.subscription_status,
     o.plan_renews_at,
     (
@@ -38,11 +38,11 @@ WHERE o.id = $1;
 -- name: UpdateOrgPlan :exec
 UPDATE orgs
 SET
-    plan                = $2,
-    billing_cycle        = $3,
-    ls_customer_id      = $4,
-    ls_subscription_id  = $5,
-    subscription_status = $6,
+    plan                    = $2,
+    billing_cycle           = $3,
+    paddle_customer_id      = $4,
+    paddle_subscription_id  = $5,
+    subscription_status     = $6,
     plan_renews_at      = $7,
     updated_at          = NOW()
 WHERE id = $1;

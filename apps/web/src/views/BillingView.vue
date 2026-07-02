@@ -1,10 +1,26 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { initializePaddle, type Paddle } from '@paddle/paddle-js'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import { billingApi, type BillingCycle } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import { useBilling } from '@/composables/useBilling'
+import { useTheme } from '@/lib/theme'
+
+const { theme } = useTheme()
+
+let paddle: Paddle | undefined
+async function getPaddle(): Promise<Paddle | undefined> {
+  if (paddle) return paddle
+  const token = import.meta.env.VITE_PADDLE_CLIENT_TOKEN
+  if (!token) return undefined
+  paddle = await initializePaddle({
+    token,
+    environment: import.meta.env.VITE_PADDLE_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
+  })
+  return paddle
+}
 
 const { data: info, isPending: loading, error: queryError } = useBilling()
 const error = computed(() => queryError.value?.message ?? '')
@@ -45,8 +61,19 @@ async function upgrade(plan: string) {
   checkingOut.value = plan
   checkoutError.value = ''
   try {
-    const { url } = await billingApi.createCheckout(plan, cycle.value)
-    window.location.href = url
+    const { transactionId } = await billingApi.createCheckout(plan, cycle.value)
+    const p = await getPaddle()
+    if (!p) {
+      checkoutError.value = "Billing isn't activated yet — check back soon, or email andrew@checkmeup.net."
+      return
+    }
+    p.Checkout.open({
+      transactionId,
+      settings: {
+        theme: theme.value,
+        successUrl: `${window.location.origin}/billing?upgraded=true`,
+      },
+    })
   } catch (e: unknown) {
     if (e instanceof ApiError && e.code === 'not_configured') {
       checkoutError.value = "Billing isn't activated yet — check back soon, or email andrew@checkmeup.net."
@@ -232,7 +259,7 @@ function limitLabel(used: number, limit: number) {
                 </p>
               </div>
               <Button size="sm" :disabled="checkingOut === plan" @click="upgrade(plan)">
-                {{ checkingOut === plan ? 'Redirecting…' : `Upgrade to ${planLabel[plan]}` }}
+                {{ checkingOut === plan ? 'Opening checkout…' : `Upgrade to ${planLabel[plan]}` }}
               </Button>
             </div>
           </div>

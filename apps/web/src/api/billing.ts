@@ -22,7 +22,10 @@ export const billingApi = {
     return api.get('/api/v1/billing')
   },
 
-  async createCheckout(plan: string, cycle: BillingCycle = 'monthly'): Promise<{ url: string }> {
+  async createCheckout(
+    plan: string,
+    cycle: BillingCycle = 'monthly',
+  ): Promise<{ transactionId: string }> {
     return api.post('/api/v1/billing/checkout', { plan, cycle })
   },
 }

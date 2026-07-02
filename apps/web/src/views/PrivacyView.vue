@@ -6,7 +6,7 @@ const effectiveDate = '2026-06-17'
 const subprocessors = [
   { name: 'Resend', use: 'Transactional email — password reset, account notices' },
   { name: 'Telegram', use: 'Delivering down/recovery alerts to the chat you connect' },
-  { name: 'LemonSqueezy', use: 'Payment processing and billing for paid plans (merchant of record)' },
+  { name: 'Paddle', use: 'Payment processing and billing for paid plans (merchant of record)' },
   { name: 'Hetzner', use: 'Application hosting and database storage (Germany)' },
 ]
 </script>
@@ -35,7 +35,7 @@ const subprocessors = [
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">2. Information you provide</h2>
           <p>
             Account data: email address and password (stored as a salted hash, never in plain text). Billing
-            data: handled directly by LemonSqueezy — we never see or store your card details. Monitor data:
+            data: handled directly by Paddle — we never see or store your card details. Monitor data:
             the URLs, cron schedules, and check results you configure. Telegram chat ID, if you connect
             alerts. Anything you write in a status page's title, description, or a support email.
           </p>

@@ -29,6 +29,14 @@ env:
     - JWT_SECRET
     - TELEGRAM_BOT_TOKEN
     - RESEND_API_KEY
+    - PADDLE_API_KEY
+    - PADDLE_WEBHOOK_SECRET
+    - PADDLE_SOLO_PRICE_ID
+    - PADDLE_STARTUP_PRICE_ID
+    - PADDLE_ENTERPRISE_PRICE_ID
+    - PADDLE_SOLO_ANNUAL_PRICE_ID
+    - PADDLE_STARTUP_ANNUAL_PRICE_ID
+    - PADDLE_ENTERPRISE_ANNUAL_PRICE_ID
 
 ssh:
   user: deploy
@@ -47,6 +55,14 @@ builder:
     APP_VERSION: <%= `git describe --tags --always --dirty 2>/dev/null || echo dev`.strip %>
     VCS_REF: <%= `git rev-parse HEAD 2>/dev/null || echo dev`.strip %>
     BUILD_DATE: <%= Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ') %>
+    # Paddle's client-side token is public (safe to expose — Paddle.js needs
+    # it in the browser bundle either way), so it's fine as a plain build arg
+    # rather than a builder secret. Vite only bakes VITE_* vars in at build
+    # time, so these have to be threaded through here, not env.clear/secret
+    # (which only reach the running container, after the frontend is already
+    # built).
+    VITE_PADDLE_CLIENT_TOKEN: <%= ENV["VITE_PADDLE_CLIENT_TOKEN"] %>
+    VITE_PADDLE_ENVIRONMENT: <%= ENV.fetch("VITE_PADDLE_ENVIRONMENT", "production") %>
 
 accessories:
   db:

@@ -24,7 +24,7 @@ Options considered:
 
 Use **`go-chi/httprate`** applied per-route in `buildRouter()`. Limits are enforced at the application layer. Each route gets the narrowest key that makes sense (IP for auth endpoints, ping token for the ping endpoint).
 
-Limits chosen (table kept current as routes are added after this ADR's original write-up — `POST /webhook/telegram`, `POST /webhook/lemonsqueezy`, `POST /suggestions`, and `POST /notification-channels/{id}/test` predate this entry but were missing from the table until 2026-06-23):
+Limits chosen (table kept current as routes are added after this ADR's original write-up — `POST /webhook/telegram`, `POST /webhook/paddle` (`/webhook/lemonsqueezy` until [ADR-026](026-billing-paddle-mor.md)), `POST /suggestions`, and `POST /notification-channels/{id}/test` predate this entry but were missing from the table until 2026-06-23):
 
 | Endpoint | Limit | Window | Key |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Limits chosen (table kept current as routes are added after this ADR's original 
 | `GET /status/:slug/badge.svg` | 300 | 1 minute | IP |
 | `GET /status/:slug/badge/:monitor_id.svg` | 300 | 1 minute | IP |
 | `POST /webhook/telegram` | 60 | 1 minute | IP |
-| `POST /webhook/lemonsqueezy` | 60 | 1 minute | IP |
+| `POST /webhook/paddle` | 60 | 1 minute | IP |
 | `POST /suggestions` | 5 | 1 hour | IP |
 | `POST /suggestions` | 20 | 1 hour | org |
 | `POST /notification-channels/{id}/test` | 5 | 1 minute | IP |

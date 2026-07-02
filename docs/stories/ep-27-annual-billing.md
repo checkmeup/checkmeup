@@ -1,5 +1,7 @@
 # EP-27: Annual billing
 
+> LemonSqueezy was replaced by Paddle as the payment provider/MoR on 2026-07-03 — see [ADR-026](../decisions/026-billing-paddle-mor.md). The LemonSqueezy references below (including the `LS_*` env var names) describe this epic as originally shipped; not reflective of the current integration.
+
 Today, paid plans are monthly-only (Solo $9, Startup $29, Enterprise $99 — see [ADR-019](../decisions/019-plan-limits.md)). This epic adds an annual option at roughly 2 months free — Solo $90/yr, Startup $290/yr, Enterprise $990/yr (each is exactly 10× the monthly price) — reusing the existing LemonSqueezy MoR integration ([ADR-018](../decisions/018-billing-lemonsqueezy-mor.md)).
 
 All 3 stories are done in code. The only remaining step is LemonSqueezy dashboard setup (3 more variants, one annual per paid plan, alongside the 3 monthly ones) — see [`docs/billing-setup.md`](../billing-setup.md). That's account/business setup only the account holder can do, not engineering work.

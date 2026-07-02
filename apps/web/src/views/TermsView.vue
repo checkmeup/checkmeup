@@ -55,7 +55,7 @@ const effectiveDate = '2026-06-17'
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">5. Fees and billing</h2>
           <p>
             The Hobby plan is free. Paid plans renew automatically and are billed in advance by
-            LemonSqueezy, our merchant of record, who handles payment processing and applicable tax. You can
+            Paddle, our merchant of record, who handles payment processing and applicable tax. You can
             change or cancel your plan at any time from Billing settings; a cancelled subscription stays
             active until the end of the current billing period, then reverts to Hobby. If we change a paid
             plan's price, we'll give you at least 30 days' notice before it takes effect on your next billing

@@ -23,7 +23,7 @@ make migrate-create name=foo  # create a new goose migration file
 
 ## Stack
 
-**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · LemonSqueezy (billing) · go-chi/httprate (rate limiting) · air (hot reload)  
+**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · Paddle (billing) · go-chi/httprate (rate limiting) · air (hot reload)  
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
 **Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
@@ -40,18 +40,18 @@ make migrate-create name=foo  # create a new goose migration file
 | `APP_URL` | optional | frontend origin (default `http://localhost:5173`) |
 | `BASE_URL` | optional | backend origin (default `http://localhost:8080`) |
 | `TELEGRAM_BOT_TOKEN` | optional | enables Telegram alerts |
-| `LS_API_KEY` | billing | LemonSqueezy API key |
-| `LS_STORE_ID` | billing | LemonSqueezy store ID |
-| `LS_WEBHOOK_SECRET` | billing | LemonSqueezy webhook signing secret |
-| `LS_SOLO_VARIANT_ID` | billing | variant ID for Solo plan (monthly) |
-| `LS_STARTUP_VARIANT_ID` | billing | variant ID for Startup plan (monthly) |
-| `LS_ENTERPRISE_VARIANT_ID` | billing | variant ID for Enterprise plan (monthly) |
-| `LS_SOLO_ANNUAL_VARIANT_ID` | billing | variant ID for Solo plan (annual, [EP-27](docs/stories/ep-27-annual-billing.md)) |
-| `LS_STARTUP_ANNUAL_VARIANT_ID` | billing | variant ID for Startup plan (annual) |
-| `LS_ENTERPRISE_ANNUAL_VARIANT_ID` | billing | variant ID for Enterprise plan (annual) |
+| `PADDLE_ENVIRONMENT` | optional | `production` (default) or `sandbox` — selects `api.paddle.com` vs `sandbox-api.paddle.com`; set to `sandbox` for local dev, leave unset in production |
+| `PADDLE_API_KEY` | billing | Paddle API key (server-side, secret) |
+| `PADDLE_WEBHOOK_SECRET` | billing | Paddle webhook signing secret |
+| `PADDLE_SOLO_PRICE_ID` | billing | price ID for Solo plan (monthly) |
+| `PADDLE_STARTUP_PRICE_ID` | billing | price ID for Startup plan (monthly) |
+| `PADDLE_ENTERPRISE_PRICE_ID` | billing | price ID for Enterprise plan (monthly) |
+| `PADDLE_SOLO_ANNUAL_PRICE_ID` | billing | price ID for Solo plan (annual, [EP-27](docs/stories/ep-27-annual-billing.md)) |
+| `PADDLE_STARTUP_ANNUAL_PRICE_ID` | billing | price ID for Startup plan (annual) |
+| `PADDLE_ENTERPRISE_ANNUAL_PRICE_ID` | billing | price ID for Enterprise plan (annual) |
 | `CODACY_API_TOKEN` | CI only | account-level Codacy token |
 
-> All `LS_*` vars are unset by default — see [`docs/billing-setup.md`](docs/billing-setup.md) for the LemonSqueezy dashboard checklist to activate billing.
+> All `PADDLE_*` vars are unset by default — see [`docs/billing-setup.md`](docs/billing-setup.md) for the Paddle dashboard checklist to activate billing. The frontend also needs `VITE_PADDLE_CLIENT_TOKEN` (public, safe to expose) in `apps/web/.env` for Paddle.js — see [`apps/web/.env.example`](apps/web/.env.example).
 
 > `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
 
@@ -109,6 +109,6 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - Add subdomains for status pages — `/status/:slug` path is intentional ([ADR-005](docs/decisions/005-status-page-same-domain.md))
 - Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))
 - Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
-- Switch payment providers — LemonSqueezy is the MoR (handles global tax); see [ADR-018](docs/decisions/018-billing-lemonsqueezy-mor.md)
+- Switch payment providers — Paddle is the MoR (handles global tax); see [ADR-026](docs/decisions/026-billing-paddle-mor.md) (supersedes [ADR-018](docs/decisions/018-billing-lemonsqueezy-mor.md), which chose LemonSqueezy)
 - Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`. Found broken across `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` during EP-10 — e.g. the sign-in button had no background in *either* theme until fixed
 - Build a public feature-request board, voting system, or ticketing queue — feedback goes straight to the founder via the in-app form (Settings, EP-23), email, and GitHub Issues; that's a deliberate choice, not a gap (see `DocsView.vue`'s "Need help?" section)

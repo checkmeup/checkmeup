@@ -94,7 +94,7 @@ func (s *Server) buildRouter() *chi.Mux {
 		return chi.URLParam(r, "token"), nil
 	}))).Get("/ping/{token}", ping.ReceivePing)
 	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
-	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/lemonsqueezy", billing.Webhook)
+	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/paddle", billing.Webhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
