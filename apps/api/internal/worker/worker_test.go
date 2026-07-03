@@ -42,6 +42,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/rdap"
+	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -170,6 +171,83 @@ func testDomainMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, domai
 	return m
 }
 
+// testPortMonitor creates a port monitor pointed at host:port with
+// AlertAfterNFailures left at 0, matching testUptimeMonitor's convention
+// (see TestCheckUptimeMonitors) — the first failing check is already enough
+// to trip it down.
+func testPortMonitor(t *testing.T, queries *db.Queries, orgID uuid.UUID, host string, port int32, expectedState db.PortExpectedState) db.PortMonitor {
+	t.Helper()
+	m, err := queries.CreatePortMonitor(context.Background(), db.CreatePortMonitorParams{
+		OrgID: orgID, Name: "Port monitor", Host: host, Port: port,
+		ExpectedState: expectedState, IntervalMins: 10, MaxAlertsPerIncident: 3,
+	})
+	if err != nil {
+		t.Fatalf("create test port monitor: %v", err)
+	}
+	return m
+}
+
+// openTCPPort starts a local listener that accepts (and immediately drops)
+// connections, simulating a reachable port for performTCPCheck. Returns the
+// host/port to point a monitor at and a closer the caller must call.
+func openTCPPort(t *testing.T) (host string, port int32, closeFn func()) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+	host, portStr, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatalf("split host/port: %v", err)
+	}
+	if _, err := fmt.Sscanf(portStr, "%d", &port); err != nil {
+		t.Fatalf("parse port: %v", err)
+	}
+	return host, port, func() { _ = ln.Close() }
+}
+
+// freeTCPPort returns a host/port that nothing is listening on — obtained by
+// binding then immediately releasing, so it's a real ephemeral port rather
+// than a guessed number, keeping the "closed" case honest.
+func freeTCPPort(t *testing.T) (host string, port int32) {
+	t.Helper()
+	host, port, closeFn := openTCPPort(t)
+	closeFn()
+	return host, port
+}
+
+// listenOnPort starts a listener on a specific, already-known host:port —
+// used to simulate a monitored service coming back up on the same address a
+// freeTCPPort call previously released. Small window between free and
+// re-bind; accepted the same way the rest of this file accepts real sockets
+// over mocks for TCP checks.
+func listenOnPort(t *testing.T, host string, port int32) (string, int32, func()) {
+	t.Helper()
+	ln, err := net.Listen("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", port)))
+	if err != nil {
+		t.Fatalf("listen on %s:%d: %v", host, port, err)
+	}
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+	return host, port, func() { _ = ln.Close() }
+}
+
 func getCronStatus(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 	t.Helper()
 	var status string
@@ -185,6 +263,16 @@ func getUptimeRow(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) (status string
 		"SELECT status, consecutive_failures FROM uptime_monitors WHERE id = $1", id,
 	).Scan(&status, &consecutiveFailures); err != nil {
 		t.Fatalf("query uptime row: %v", err)
+	}
+	return status, consecutiveFailures
+}
+
+func getPortRow(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) (status string, consecutiveFailures int32) {
+	t.Helper()
+	if err := pool.QueryRow(context.Background(),
+		"SELECT status, consecutive_failures FROM port_monitors WHERE id = $1", id,
+	).Scan(&status, &consecutiveFailures); err != nil {
+		t.Fatalf("query port row: %v", err)
 	}
 	return status, consecutiveFailures
 }
@@ -355,6 +443,189 @@ func TestPerformHTTPCheck(t *testing.T) {
 			t.Fatalf("want the status code to win over the keyword, got isUp=%v reason=%q", isUp, reason)
 		}
 	})
+
+	t.Run("a passing JSON assertion is up", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = fmt.Fprint(w, `{"status":"ok"}`)
+		}))
+		defer srv.Close()
+
+		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
+			Url:            srv.URL,
+			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
+		})
+		if !isUp || reason != "" {
+			t.Fatalf("want up with no failure reason, got isUp=%v reason=%q", isUp, reason)
+		}
+	})
+
+	t.Run("a failing JSON assertion is down with the assertion failure as the reason", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = fmt.Fprint(w, `{"status":"degraded"}`)
+		}))
+		defer srv.Close()
+
+		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
+			Url:            srv.URL,
+			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
+		})
+		if isUp || !strings.Contains(reason, "JSON assertion failed") {
+			t.Fatalf("want down with a JSON assertion failure reason, got isUp=%v reason=%q", isUp, reason)
+		}
+	})
+}
+
+// ─── JSON assertions (pure functions) ─────────────────────────────────────
+
+func TestEvaluateJsonAssertion(t *testing.T) {
+	cases := []struct {
+		name    string
+		body    string
+		a       jsonAssertion
+		wantOK  bool
+		wantMsg string // only checked when non-empty
+	}{
+		{
+			name:   "equals passes",
+			body:   `{"status":"ok"}`,
+			a:      jsonAssertion{Path: "$.status", Comparator: "equals", Expected: "ok"},
+			wantOK: true,
+		},
+		{
+			name:    "equals fails",
+			body:    `{"status":"degraded"}`,
+			a:       jsonAssertion{Path: "$.status", Comparator: "equals", Expected: "ok"},
+			wantOK:  false,
+			wantMsg: `JSON assertion failed: "$.status" equals "ok" (got "degraded")`,
+		},
+		{
+			name:   "not_equals passes",
+			body:   `{"status":"degraded"}`,
+			a:      jsonAssertion{Path: "$.status", Comparator: "not_equals", Expected: "ok"},
+			wantOK: true,
+		},
+		{
+			name:   "contains passes (default comparator)",
+			body:   `{"message":"all systems nominal"}`,
+			a:      jsonAssertion{Path: "$.message", Comparator: "contains", Expected: "nominal"},
+			wantOK: true,
+		},
+		{
+			name:   "nested path resolves",
+			body:   `{"data":{"health":{"status":"ok"}}}`,
+			a:      jsonAssertion{Path: "$.data.health.status", Comparator: "equals", Expected: "ok"},
+			wantOK: true,
+		},
+		{
+			name:    "missing path fails with a not-found reason",
+			body:    `{"status":"ok"}`,
+			a:       jsonAssertion{Path: "$.missing", Comparator: "equals", Expected: "ok"},
+			wantOK:  false,
+			wantMsg: `JSON path "$.missing" not found`,
+		},
+		{
+			name:    "path through a non-object segment fails",
+			body:    `{"status":"ok"}`,
+			a:       jsonAssertion{Path: "$.status.nested", Comparator: "equals", Expected: "ok"},
+			wantOK:  false,
+			wantMsg: `JSON path "$.status.nested" not found`,
+		},
+		{
+			name:    "invalid JSON body fails",
+			body:    `not json`,
+			a:       jsonAssertion{Path: "$.status", Comparator: "equals", Expected: "ok"},
+			wantOK:  false,
+			wantMsg: "response is not valid JSON",
+		},
+		{
+			name:   "greater_than passes",
+			body:   `{"uptime":99.95}`,
+			a:      jsonAssertion{Path: "$.uptime", Comparator: "greater_than", Expected: "99"},
+			wantOK: true,
+		},
+		{
+			name:   "less_than fails",
+			body:   `{"latency":250}`,
+			a:      jsonAssertion{Path: "$.latency", Comparator: "less_than", Expected: "100"},
+			wantOK: false,
+		},
+		{
+			name:   "greater_than with a non-numeric actual value fails closed",
+			body:   `{"count":"not-a-number"}`,
+			a:      jsonAssertion{Path: "$.count", Comparator: "greater_than", Expected: "5"},
+			wantOK: false,
+		},
+		{
+			name:   "boolean value coerces to true/false",
+			body:   `{"healthy":true}`,
+			a:      jsonAssertion{Path: "$.healthy", Comparator: "equals", Expected: "true"},
+			wantOK: true,
+		},
+		{
+			name:   "null value coerces to the string null",
+			body:   `{"error":null}`,
+			a:      jsonAssertion{Path: "$.error", Comparator: "equals", Expected: "null"},
+			wantOK: true,
+		},
+		{
+			name:   "integer-valued float renders without a decimal point",
+			body:   `{"count":42}`,
+			a:      jsonAssertion{Path: "$.count", Comparator: "equals", Expected: "42"},
+			wantOK: true,
+		},
+		{
+			name:   "a leading '.' on the path is tolerated the same as '$.'",
+			body:   `{"status":"ok"}`,
+			a:      jsonAssertion{Path: ".status", Comparator: "equals", Expected: "ok"},
+			wantOK: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			msg, ok := evaluateJsonAssertion(tc.body, tc.a)
+			if ok != tc.wantOK {
+				t.Fatalf("ok = %v, want %v (msg: %q)", ok, tc.wantOK, msg)
+			}
+			if tc.wantMsg != "" && msg != tc.wantMsg {
+				t.Fatalf("msg = %q, want %q", msg, tc.wantMsg)
+			}
+		})
+	}
+}
+
+func TestJsonValueToString(t *testing.T) {
+	cases := []struct {
+		name string
+		in   any
+		want string
+	}{
+		{"string", "hello", "hello"},
+		{"true", true, "true"},
+		{"false", false, "false"},
+		{"nil", nil, "null"},
+		{"whole-number float", float64(42), "42"},
+		{"fractional float", 3.14, "3.14"},
+		{"array falls back to JSON encoding", []any{"a", "b"}, `["a","b"]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := jsonValueToString(tc.in); got != tc.want {
+				t.Fatalf("jsonValueToString(%v) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseNumericPair(t *testing.T) {
+	if _, _, ok := parseNumericPair("12.5", "10"); !ok {
+		t.Fatal("want ok for two valid numbers")
+	}
+	if _, _, ok := parseNumericPair("abc", "10"); ok {
+		t.Fatal("want not-ok when actual isn't numeric")
+	}
+	if _, _, ok := parseNumericPair("10", "abc"); ok {
+		t.Fatal("want not-ok when expected isn't numeric")
+	}
 }
 
 func TestPerformTLSCheck(t *testing.T) {
@@ -375,12 +646,13 @@ func TestDispatchAlert(t *testing.T) {
 	queries := db.New(pool)
 	tg := telegram.NewClient("")  // no token: SendMessage always errors, no network call
 	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR-012)
-	// Webhook subtests below POST to a local httptest server, which
+	// Webhook/Slack subtests below POST to a local httptest server, which
 	// NewClient's SSRF protections (loopback blocked) would refuse to dial —
 	// not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	sl := slack.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	logger := testLogger()
-	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, Logger: logger}
 	msg := AlertMessage{Telegram: "down", EmailSubject: "down", EmailHTML: "<p>down</p>"}
 
 	t.Run("no channel attached and no org user falls back to nothing", func(t *testing.T) {
@@ -503,6 +775,95 @@ func TestDispatchAlert(t *testing.T) {
 		}
 		if updated.LastDeliveryDetail.String != "500" {
 			t.Fatalf("want last_delivery_detail 500, got %q", updated.LastDeliveryDetail.String)
+		}
+	})
+
+	t.Run("slack channel without a Slack message on the alert does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSlack, map[string]string{"url": "https://hooks.slack.com/services/x"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		// msg has no Slack field set — same guard as the webhook case above.
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg)
+		if sent {
+			t.Fatal("want no delivery when the message carries no Slack payload")
+		}
+	})
+
+	t.Run("slack channel delivers and records success on the channel row", func(t *testing.T) {
+		var gotBody slack.Message
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotBody)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSlack, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		alertMsg := AlertMessage{Slack: &slack.Message{Text: "down"}}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, alertMsg)
+		if !sent {
+			t.Fatal("want the Slack delivery to count as sent")
+		}
+		if gotBody.Text != "down" {
+			t.Fatalf("want the posted body to carry the message text, got %+v", gotBody)
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryStatus.String != "success" {
+			t.Fatalf("want last_delivery_status success, got %q", updated.LastDeliveryStatus.String)
+		}
+		if updated.LastDeliveryDetail.String != "200" {
+			t.Fatalf("want last_delivery_detail 200, got %q", updated.LastDeliveryDetail.String)
+		}
+	})
+
+	t.Run("slack channel records failure on a non-2xx response", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSlack, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		alertMsg := AlertMessage{Slack: &slack.Message{Text: "down"}}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, alertMsg)
+		if sent {
+			t.Fatal("want a 500 response to not count as delivered")
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryStatus.String != "failed" {
+			t.Fatalf("want last_delivery_status failed, got %q", updated.LastDeliveryStatus.String)
+		}
+		if updated.LastDeliveryDetail.String != "500" {
+			t.Fatalf("want last_delivery_detail 500, got %q", updated.LastDeliveryDetail.String)
+		}
+	})
+
+	t.Run("slack channel with no configured URL does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSlack, map[string]string{})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		alertMsg := AlertMessage{Slack: &slack.Message{Text: "down"}}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, alertMsg)
+		if sent {
+			t.Fatal("want no delivery when the channel has no configured URL")
 		}
 	})
 }
@@ -800,6 +1161,252 @@ func TestCheckUptimeMonitors(t *testing.T) {
 	})
 }
 
+// ─── SSL alert building (pure functions) ──────────────────────────────────
+
+func TestSslCrossedThreshold(t *testing.T) {
+	t.Run("crosses the 7-day threshold and sets alerted7d", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		if !sslCrossedThreshold(5, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want a crossing at 5 days left")
+		}
+		if !alerted7d || alerted14d || alerted30d {
+			t.Fatalf("want only alerted7d set, got 30d=%v 14d=%v 7d=%v", alerted30d, alerted14d, alerted7d)
+		}
+	})
+
+	t.Run("expired (negative days) also crosses the 7-day threshold", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		if !sslCrossedThreshold(-1, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want a crossing when already expired")
+		}
+		if !alerted7d {
+			t.Fatal("want alerted7d set for an expired cert")
+		}
+	})
+
+	t.Run("does not re-alert once every threshold up to daysLeft has already fired", func(t *testing.T) {
+		// Falling through to a higher, not-yet-alerted threshold (14d, 30d)
+		// is itself a crossing, so all three flags need to already be set
+		// for daysLeft=3 to genuinely produce no crossing.
+		alerted30d, alerted14d, alerted7d := true, true, true
+		if sslCrossedThreshold(3, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want no crossing once every threshold is already alerted")
+		}
+	})
+
+	t.Run("crosses the 14-day threshold without touching 7d", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		if !sslCrossedThreshold(10, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want a crossing at 10 days left")
+		}
+		if !alerted14d || alerted7d {
+			t.Fatalf("want only alerted14d set, got 14d=%v 7d=%v", alerted14d, alerted7d)
+		}
+	})
+
+	t.Run("crosses the 30-day threshold without touching 14d or 7d", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		if !sslCrossedThreshold(25, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want a crossing at 25 days left")
+		}
+		if !alerted30d || alerted14d || alerted7d {
+			t.Fatalf("want only alerted30d set, got 30d=%v 14d=%v 7d=%v", alerted30d, alerted14d, alerted7d)
+		}
+	})
+
+	t.Run("beyond 30 days is not a crossing", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		if sslCrossedThreshold(45, &alerted30d, &alerted14d, &alerted7d) {
+			t.Fatal("want no crossing beyond the 30-day threshold")
+		}
+	})
+}
+
+func TestSslExpiredMessages(t *testing.T) {
+	m := db.SslMonitor{Name: "Prod API", Hostname: "api.example.com"}
+	subject, telegramMsg, emailHTML := sslExpiredMessages(m, "2026-01-01")
+
+	if !strings.Contains(subject, "Prod API") || !strings.Contains(subject, "expired") {
+		t.Fatalf("want subject to name the monitor and say expired, got %q", subject)
+	}
+	if !strings.Contains(telegramMsg, "api.example.com") || !strings.Contains(telegramMsg, "2026-01-01") {
+		t.Fatalf("want telegram message to include hostname and date, got %q", telegramMsg)
+	}
+	if !strings.Contains(emailHTML, "api.example.com") {
+		t.Fatalf("want email HTML to include hostname, got %q", emailHTML)
+	}
+}
+
+func TestSslExpiringSoonMessages(t *testing.T) {
+	m := db.SslMonitor{Name: "Prod API", Hostname: "api.example.com"}
+	subject, telegramMsg, emailHTML := sslExpiringSoonMessages(m, 7, "2026-01-08")
+
+	if !strings.Contains(subject, "Prod API") || !strings.Contains(subject, "7 days") {
+		t.Fatalf("want subject to name the monitor and say 7 days, got %q", subject)
+	}
+	if !strings.Contains(telegramMsg, "api.example.com") || !strings.Contains(telegramMsg, "7 days") {
+		t.Fatalf("want telegram message to include hostname and day count, got %q", telegramMsg)
+	}
+	if !strings.Contains(emailHTML, "2026-01-08") {
+		t.Fatalf("want email HTML to include the expiry date, got %q", emailHTML)
+	}
+}
+
+func TestSslThresholdAlert(t *testing.T) {
+	m := db.SslMonitor{Name: "Prod API", Hostname: "api.example.com"}
+	expiresAt := time.Now().Add(5 * 24 * time.Hour)
+
+	t.Run("returns nil when no new threshold is crossed", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := true, true, true // already alerted at every threshold
+		alert := sslThresholdAlert(m, 5, expiresAt, &alerted30d, &alerted14d, &alerted7d)
+		if alert != nil {
+			t.Fatalf("want nil, got %+v", alert)
+		}
+	})
+
+	t.Run("builds an expired-phrased alert for negative days left", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		alert := sslThresholdAlert(m, -2, expiresAt, &alerted30d, &alerted14d, &alerted7d)
+		if alert == nil {
+			t.Fatal("want a non-nil alert")
+		}
+		if !strings.Contains(alert.EmailSubject, "expired") {
+			t.Fatalf("want an 'expired' subject, got %q", alert.EmailSubject)
+		}
+		if alert.Webhook == nil || alert.Webhook.EventType != "down" || alert.Webhook.MonitorType != "ssl" {
+			t.Fatalf("want a down/ssl webhook event, got %+v", alert.Webhook)
+		}
+		if alert.Slack == nil {
+			t.Fatal("want a non-nil Slack message")
+		}
+	})
+
+	t.Run("builds an expiring-soon-phrased alert for non-negative days left", func(t *testing.T) {
+		alerted30d, alerted14d, alerted7d := false, false, false
+		alert := sslThresholdAlert(m, 5, expiresAt, &alerted30d, &alerted14d, &alerted7d)
+		if alert == nil {
+			t.Fatal("want a non-nil alert")
+		}
+		if !strings.Contains(alert.EmailSubject, "expires in 5 days") {
+			t.Fatalf("want an 'expires in 5 days' subject, got %q", alert.EmailSubject)
+		}
+	})
+}
+
+func TestBuildSSLCheckResult(t *testing.T) {
+	baseMonitor := db.SslMonitor{
+		Name: "Prod API", Hostname: "api.example.com",
+		AlertsEnabled: true, MaxAlertsPerIncident: 3,
+	}
+
+	t.Run("a check error sets status error and increments consecutive failures", func(t *testing.T) {
+		m := baseMonitor
+		m.ConsecutiveFailures = 2
+		r := buildSSLCheckResult(m, time.Time{}, "", 0, fmt.Errorf("dial tcp: connection refused"))
+
+		if r.status != db.SslMonitorStatusError {
+			t.Fatalf("want status error, got %q", r.status)
+		}
+		if !r.errorMsgParam.Valid || r.errorMsgParam.String == "" {
+			t.Fatal("want a non-empty error message")
+		}
+		if r.consecutiveFailures != 3 {
+			t.Fatalf("want consecutiveFailures 3, got %d", r.consecutiveFailures)
+		}
+		if r.alert != nil {
+			t.Fatal("want no alert on a check-error result")
+		}
+	})
+
+	t.Run("more than 30 days left is up and resets alert state", func(t *testing.T) {
+		m := baseMonitor
+		m.Alerted30d, m.Alerted14d, m.Alerted7d = true, true, true
+		m.ConsecutiveFailures = 4
+		m.AlertCount = 2
+		expiresAt := time.Now().Add(60 * 24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", 60, nil)
+
+		if r.status != db.SslMonitorStatusUp {
+			t.Fatalf("want status up, got %q", r.status)
+		}
+		if r.alerted30d || r.alerted14d || r.alerted7d {
+			t.Fatal("want all alerted flags reset on renewal")
+		}
+		if r.consecutiveFailures != 0 || r.alertCount != 0 {
+			t.Fatalf("want consecutiveFailures and alertCount reset to 0, got %d and %d", r.consecutiveFailures, r.alertCount)
+		}
+		if r.alert != nil {
+			t.Fatal("want no alert when the cert is comfortably valid")
+		}
+	})
+
+	t.Run("expiring soon with alerts enabled crosses the threshold and alerts", func(t *testing.T) {
+		m := baseMonitor
+		expiresAt := time.Now().Add(5 * 24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", 5, nil)
+
+		if r.status != db.SslMonitorStatusExpiringSoon {
+			t.Fatalf("want status expiring_soon, got %q", r.status)
+		}
+		if r.alert == nil {
+			t.Fatal("want an alert on first crossing of the 7-day threshold")
+		}
+		if r.alertCount != 1 {
+			t.Fatalf("want alertCount 1, got %d", r.alertCount)
+		}
+	})
+
+	t.Run("expired sets status expired", func(t *testing.T) {
+		m := baseMonitor
+		expiresAt := time.Now().Add(-24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", -1, nil)
+
+		if r.status != db.SslMonitorStatusExpired {
+			t.Fatalf("want status expired, got %q", r.status)
+		}
+	})
+
+	t.Run("alerts disabled crosses the threshold but sends no alert", func(t *testing.T) {
+		m := baseMonitor
+		m.AlertsEnabled = false
+		expiresAt := time.Now().Add(5 * 24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", 5, nil)
+
+		if r.alert != nil {
+			t.Fatal("want no alert when alerts are disabled")
+		}
+	})
+
+	t.Run("the per-incident alert cap suppresses further alerts", func(t *testing.T) {
+		m := baseMonitor
+		m.MaxAlertsPerIncident = 1
+		m.AlertCount = 1 // already at the cap
+		expiresAt := time.Now().Add(5 * 24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", 5, nil)
+
+		if r.alert != nil {
+			t.Fatal("want no alert once the per-incident cap is reached")
+		}
+	})
+
+	t.Run("alert_after_n_failures suppresses the alert until the threshold is met", func(t *testing.T) {
+		m := baseMonitor
+		m.AlertAfterNFailures = 2
+		expiresAt := time.Now().Add(5 * 24 * time.Hour)
+
+		r := buildSSLCheckResult(m, expiresAt, "Let's Encrypt", 5, nil)
+
+		if r.alert != nil {
+			t.Fatal("want no alert before consecutive failures exceed alert_after_n_failures")
+		}
+	})
+}
+
 // ─── checkSSLMonitors / checkOneSSLMonitor ────────────────────────────────
 
 func TestCheckSSLMonitors(t *testing.T) {
@@ -997,6 +1604,21 @@ func TestCheckDomainMonitors(t *testing.T) {
 	})
 }
 
+func TestDomainExpiredMessages(t *testing.T) {
+	m := db.DomainMonitor{Name: "Prod domain", Domain: "example.com"}
+	subject, telegramMsg, emailHTML := domainExpiredMessages(m, "2026-01-01")
+
+	if !strings.Contains(subject, "Prod domain") || !strings.Contains(subject, "expired") {
+		t.Fatalf("want subject to name the monitor and say expired, got %q", subject)
+	}
+	if !strings.Contains(telegramMsg, "example.com") || !strings.Contains(telegramMsg, "2026-01-01") {
+		t.Fatalf("want telegram message to include the domain and date, got %q", telegramMsg)
+	}
+	if !strings.Contains(emailHTML, "example.com") {
+		t.Fatalf("want email HTML to include the domain, got %q", emailHTML)
+	}
+}
+
 // ─── pruneOldPings ─────────────────────────────────────────────────────────
 
 func TestPruneOldPings(t *testing.T) {
@@ -1035,41 +1657,186 @@ func mustExecWorker(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 	}
 }
 
-func TestPerformTCPCheck(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	defer func() { _ = ln.Close() }()
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			_ = conn.Close()
-		}
-	}()
-	host, portStr, err := net.SplitHostPort(ln.Addr().String())
-	if err != nil {
-		t.Fatalf("split host/port: %v", err)
-	}
-	var openPort int32
-	if _, err := fmt.Sscanf(portStr, "%d", &openPort); err != nil {
-		t.Fatalf("parse port: %v", err)
-	}
+// ─── checkPortMonitors / checkOnePortMonitor ──────────────────────────────
 
-	// A closed port on the same host — nothing listens here.
-	closedLn, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	_, closedPortStr, _ := net.SplitHostPort(closedLn.Addr().String())
-	var closedPort int32
-	if _, err := fmt.Sscanf(closedPortStr, "%d", &closedPort); err != nil {
-		t.Fatalf("parse port: %v", err)
-	}
-	_ = closedLn.Close() // freed immediately — nothing accepts connections here now
+func TestCheckPortMonitors(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	tg := telegram.NewClient("")
+	mailer := email.NewSender("")
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	logger := testLogger()
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
+
+	t.Run("escalates to down after two consecutive failures, then recovers", func(t *testing.T) {
+		host, port := freeTCPPort(t) // nothing listening yet — first checks fail
+
+		org := testOrg(t, queries, pool)
+		mon, err := queries.CreatePortMonitor(context.Background(), db.CreatePortMonitorParams{
+			OrgID: org.ID, Name: "Port monitor", Host: host, Port: port,
+			ExpectedState: db.PortExpectedStateOpen, IntervalMins: 10,
+			MaxAlertsPerIncident: 3, AlertAfterNFailures: 1,
+		})
+		if err != nil {
+			t.Fatalf("create port monitor: %v", err)
+		}
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
+
+		// First failure: recorded, but alert_after_n_failures=1 suppresses the alert.
+		checkPortMonitors(context.Background(), n)
+		if status, failures := getPortRow(t, pool, mon.ID); status == "down" || failures != 1 {
+			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
+		}
+
+		// Second consecutive failure: trips down, opens an incident, alerts.
+		forceDueNow(t, pool, "port_monitors", mon.ID)
+		checkPortMonitors(context.Background(), n)
+		status, failures := getPortRow(t, pool, mon.ID)
+		if status != "down" || failures != 2 {
+			t.Fatalf("after 2nd failure: want down with 2 consecutive failures, got status=%q failures=%d", status, failures)
+		}
+		var alertCount int32
+		var resolvedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT alert_count, resolved_at FROM port_incidents WHERE monitor_id = $1", mon.ID,
+		).Scan(&alertCount, &resolvedAt); err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		if resolvedAt.Valid {
+			t.Fatal("want an unresolved incident after going down")
+		}
+		if alertCount != 1 {
+			t.Fatalf("want 1 alert delivered, got %d", alertCount)
+		}
+
+		// Recovery: start a listener on the exact same port, then recheck.
+		_, _, closeFn := listenOnPort(t, host, port)
+		defer closeFn()
+		forceDueNow(t, pool, "port_monitors", mon.ID)
+		checkPortMonitors(context.Background(), n)
+		status, failures = getPortRow(t, pool, mon.ID)
+		if status != "up" || failures != 0 {
+			t.Fatalf("after recovery: want up with 0 consecutive failures, got status=%q failures=%d", status, failures)
+		}
+		if err := pool.QueryRow(context.Background(),
+			"SELECT resolved_at FROM port_incidents WHERE monitor_id = $1", mon.ID,
+		).Scan(&resolvedAt); err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		if !resolvedAt.Valid {
+			t.Fatal("want the incident resolved after recovery")
+		}
+	})
+
+	t.Run("delivers a recovery webhook event with a non-zero downtime duration", func(t *testing.T) {
+		host, port := freeTCPPort(t)
+
+		var gotEvents []webhook.Event
+		hookSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var e webhook.Event
+			_ = json.NewDecoder(r.Body).Decode(&e)
+			gotEvents = append(gotEvents, e)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer hookSrv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": hookSrv.URL, "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
+
+		checkPortMonitors(context.Background(), n) // 1st failure trips down + webhook (alert_after_n_failures defaults to 0)
+
+		_, _, closeFn := listenOnPort(t, host, port)
+		defer closeFn()
+		forceDueNow(t, pool, "port_monitors", mon.ID)
+		checkPortMonitors(context.Background(), n) // recovery + webhook
+
+		if len(gotEvents) != 2 {
+			t.Fatalf("want 2 webhook events (down, recovery), got %d: %+v", len(gotEvents), gotEvents)
+		}
+		if gotEvents[0].EventType != "down" || gotEvents[0].Reason == "" {
+			t.Fatalf("want a down event with a reason, got %+v", gotEvents[0])
+		}
+		if gotEvents[1].EventType != "recovery" || gotEvents[1].DowntimeDuration == "" {
+			t.Fatalf("want a recovery event with a non-empty downtime duration, got %+v", gotEvents[1])
+		}
+	})
+
+	t.Run("a closed-state monitor alerts when the port unexpectedly opens", func(t *testing.T) {
+		host, port, closeFn := openTCPPort(t)
+		defer closeFn()
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateClosed)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
+
+		checkPortMonitors(context.Background(), n)
+
+		status, _ := getPortRow(t, pool, mon.ID)
+		if status != "down" {
+			t.Fatalf("want down when a closed-state monitor's port is unexpectedly open, got %q", status)
+		}
+		var reason string
+		if err := pool.QueryRow(context.Background(),
+			"SELECT failure_reason FROM port_checks WHERE monitor_id = $1", mon.ID,
+		).Scan(&reason); err != nil {
+			t.Fatalf("query check: %v", err)
+		}
+		if reason != "port is unexpectedly open" {
+			t.Fatalf("want the unexpectedly-open reason recorded, got %q", reason)
+		}
+	})
+
+	t.Run("records a check row for every poll", func(t *testing.T) {
+		host, port, closeFn := openTCPPort(t)
+		defer closeFn()
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
+		checkPortMonitors(context.Background(), n)
+
+		var count int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM port_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
+			t.Fatalf("count checks: %v", err)
+		}
+		if count != 1 {
+			t.Fatalf("want 1 check recorded, got %d", count)
+		}
+	})
+
+	t.Run("a monitor under an active maintenance window is excluded", func(t *testing.T) {
+		host, port := freeTCPPort(t)
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
+		var windowID uuid.UUID
+		if err := pool.QueryRow(context.Background(),
+			"INSERT INTO maintenance_windows (org_id, title, message, starts_at) VALUES ($1, 'Scheduled', '', NOW() - INTERVAL '1 minute') RETURNING id",
+			org.ID,
+		).Scan(&windowID); err != nil {
+			t.Fatalf("seed maintenance window: %v", err)
+		}
+		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'port', $2)", windowID, mon.ID)
+
+		checkPortMonitors(context.Background(), n)
+
+		var count int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM port_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
+			t.Fatalf("count checks: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("want no check performed under maintenance, got %d", count)
+		}
+	})
+}
+
+func TestPerformTCPCheck(t *testing.T) {
+	host, openPort, closeFn := openTCPPort(t)
+	defer closeFn()
+	_, closedPort := freeTCPPort(t)
 
 	t.Run("expected open + reachable port is up", func(t *testing.T) {
 		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateOpen})
