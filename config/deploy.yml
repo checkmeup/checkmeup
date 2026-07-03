@@ -64,6 +64,10 @@ builder:
     # built).
     VITE_PADDLE_CLIENT_TOKEN: <%= ENV["VITE_PADDLE_CLIENT_TOKEN"] %>
     VITE_PADDLE_ENVIRONMENT: <%= ENV.fetch("VITE_PADDLE_ENVIRONMENT", "production") %>
+    # GTM container ID is public (same posture as the Paddle client token
+    # above) — needed here for the same reason, Vite only bakes VITE_* in
+    # at build time.
+    VITE_GTM_ID: <%= ENV["VITE_GTM_ID"] %>
 
 accessories:
   db:
