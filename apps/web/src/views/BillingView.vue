@@ -94,7 +94,15 @@ const upgradeOptions = computed(() => {
 // until it actually takes effect at period end. Hiding the actions here
 // (rather than letting them fail) is what stops a second "Cancel
 // subscription" click from looking like a broken feature.
-const cancelScheduled = computed(() => info.value?.subscriptionStatus === 'cancel_scheduled')
+//
+// Once the org is actually back on Hobby, though, there's nothing left to
+// cancel — a stale 'cancel_scheduled' status lingering after the plan has
+// already reverted (e.g. an out-of-order or retried webhook) must never
+// hide the Upgrade section for a Hobby org; that's a dead end with no way
+// back in.
+const cancelScheduled = computed(
+  () => info.value?.plan !== 'hobby' && info.value?.subscriptionStatus === 'cancel_scheduled',
+)
 
 const downgradeOptions = computed(() => {
   if (!info.value || cancelScheduled.value) return []

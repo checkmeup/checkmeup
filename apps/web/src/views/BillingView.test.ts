@@ -172,6 +172,33 @@ describe('BillingView', () => {
     expect(wrapper.text()).toContain('Access until')
   })
 
+  it('hides upgrade/downgrade actions and shows the cancellation-scheduled note for a paid plan', () => {
+    infoData.value = {
+      ...soloInfo,
+      subscriptionStatus: 'cancel_scheduled',
+      planRenewsAt: '2026-08-02',
+    }
+    const wrapper = mount(BillingView)
+
+    expect(wrapper.text()).toContain('Cancellation scheduled')
+    expect(wrapper.text()).toContain('2026-08-02')
+    expect(wrapper.text()).not.toContain('Upgrade to')
+    expect(wrapper.text()).not.toContain('Downgrade to')
+    expect(wrapper.text()).not.toContain('Cancel subscription')
+  })
+
+  it('still shows upgrade options for a hobby plan with a stale cancel_scheduled status', () => {
+    infoData.value = {
+      ...hobbyInfo,
+      subscriptionStatus: 'cancel_scheduled',
+      planRenewsAt: '2026-08-02',
+    }
+    const wrapper = mount(BillingView)
+
+    expect(wrapper.text()).toContain('Upgrade to Solo')
+    expect(wrapper.text()).not.toContain('Cancellation scheduled')
+  })
+
   it('shows unlimited usage labels and hides upgrade options for the top enterprise plan', () => {
     infoData.value = { ...enterpriseInfo }
     const wrapper = mount(BillingView)
