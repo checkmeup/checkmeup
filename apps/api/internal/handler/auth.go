@@ -434,7 +434,7 @@ func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, user d
 // infeasible regardless of hash speed, unlike a low-entropy human password
 // where slow/salted hashing meaningfully raises attacker cost.
 func hashToken(raw string) string {
-	sum := sha256.Sum256([]byte(raw)) // lgtm[go/weak-sensitive-data-hashing]
+	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
 
