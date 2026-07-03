@@ -57,6 +57,8 @@ make migrate-create name=foo  # create a new goose migration file
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)).
 
+**Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log (`Date | Day | Epic/Story | Hours`). When asked to log/update hours for a day, check `git log --since/--until` for that day's commits (exclude stash artifacts — `git log --all` surfaces `refs/stash` entries as fake commits titled "On <branch>:"/"index on <branch>:"/"untracked files on <branch>:"), group related commits into one line per logical task, and estimate effort from diff size and complexity — minimum 1h per task/line, combine small related commits rather than one line per commit. Non-commit work in the same session (launch/marketing copy, doc corrections, etc.) gets its own line too. Roll the new daily total into that month's `docs/reports/YYYY-MM.md` Notes section.
+
 ---
 
 ## Conventions

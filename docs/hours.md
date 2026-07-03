@@ -56,3 +56,10 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-02 | Thu | EP-07 (Paddle migration, ADR-026)                 | 2 h   |
 | 2026-07-02 | Thu | EP-07 (change plan, cancellation webhook, Codacy) | 2 h   |
 | 2026-07-02 | Thu | Blog, docs                                        | 1 h   |
+| 2026-07-03 | Fri | GA4 analytics + GTM build-arg threading           | 2 h   |
+| 2026-07-03 | Fri | Billing fix (hobby org cancel_scheduled)          | 1 h   |
+| 2026-07-03 | Fri | JWT secret validation, security headers, v1.17 release notes | 2 h   |
+| 2026-07-03 | Fri | Code quality fixes (delete return types, duration parsing, relativeTime) | 2 h   |
+| 2026-07-03 | Fri | Tests (NotificationChannelsCard, port monitoring/TCP) | 3 h   |
+| 2026-07-03 | Fri | Perf: SPA compression/caching, OG tags (PR #24)   | 2 h   |
+| 2026-07-03 | Fri | Launch prep (HN/IH/Reddit/LinkedIn/FB copy, doc correction) | 3 h   |

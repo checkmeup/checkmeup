@@ -8,7 +8,7 @@ Not a committed plan. Pull items into `roadmap.md`/`stories/` individually when 
 
 ## Already covered (not repeated below)
 
-Multi-channel alerts (Telegram, email, webhook shipped; Slack/Teams/WhatsApp/Signal/SMS/Viber queued), maintenance windows, status pages with manual incidents (EP-24), keyword monitoring on uptime checks, 2FA (EP-25), public API + keys (EP-26), team management (EP-12), annual billing, execution log capture (cron monitor's stdout/stderr — none of the three competitors do this).
+Multi-channel alerts (Telegram, email, webhook shipped; Slack/Teams/WhatsApp/Signal/SMS/Viber queued), maintenance windows, status pages with manual incidents (EP-24), keyword monitoring on uptime checks, 2FA (EP-25), public API + keys (EP-26), team management (EP-12), annual billing.
 
 ---
 
@@ -37,6 +37,7 @@ Multi-channel alerts (Telegram, email, webhook shipped; Slack/Teams/WhatsApp/Sig
 
 ## Developer experience
 
+- **Execution log capture (cron monitor's stdout/stderr)** — none of the three named competitors do this, so it'd be a real differentiator, but it is **not shipped**: `GET /ping/{token}` (`ping.go`) takes no request body, and `cron_pings` only stores `monitor_id`/`received_at`/`source_ip` (`003_cron_monitors.sql`) — no output column anywhere in the schema. What ships today is a ping *history* (timestamps + source IP), not output capture. Would need the ping endpoint to accept a POST body (or a body on the existing GET), a new column/table for the payload, and a retention/size-cap policy so a chatty job can't bloat storage. Corrected 2026-07-03 after this was miscategorized as already-shipped and repeated in launch copy before the code was checked.
 - **CLI / language SDKs for cron jobs** — Cronitor publishes open-source SDKs that wrap a job command and auto-ping on success/failure, instead of users hand-rolling a `curl` call. Would lower the integration friction on EP-02's existing ping-URL mechanism without changing the underlying model.
 - **Publish static monitoring IP ranges** — UptimeRobot publishes the IPs its checks come from so users behind a firewall can allowlist them. Cheap (a docs page + stable egress IP on the Hetzner box) and removes a real adoption blocker for users monitoring non-public endpoints.
 

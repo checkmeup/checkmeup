@@ -1,15 +1,23 @@
 {
   "name": "checkmeup",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "dev",
-  "runServices": ["dev", "db"],
+  "service": "app",
   "workspaceFolder": "/workspaces/checkmeup",
   "postCreateCommand": "make install",
-  "postStartCommand": "sudo chmod 666 /var/run/docker.sock",
   "customizations": {
     "vscode": {
       "settings": {
-        "github.copilot.chat.generateCommitMessage.enabled": false,
+        "github.copilot.chat.welcomeMessage": "never",
+        "github.copilot.chat.startDebuggingFlow.enabled": false,
+        "github.copilot.chat.runCommand.enabled": false,
+        "github.copilot.chat.setupTests.enabled": false,
+        "github.copilot.chat.fixTestFailure.enabled": false,
+        "github.copilot.chat.edits.enabled": false,
+        "github.copilot.chat.agent.thinkingTool": false,
+        "chat.commandCenter.enabled": false,
+        "workbench.activityBar.hidden": false,
+        "github.copilot.chat.generateCommitMessage.enabled": true,
+        "github.copilot.editor.enableAutoCompletions": true,
         "editor.fontFamily": "'JetBrains Mono', Consolas, 'Courier New', monospace",
         "editor.fontSize": 13,
         "editor.fontLigatures": true,
@@ -34,13 +42,10 @@
         },
         "explorer.fileNesting.enabled": true,
         "explorer.fileNesting.patterns": {
-          "tsconfig.json": "tsconfig.*.json, env.d.ts, typed-router.d.ts",
-          "go.mod": "go.sum, .air.toml, sqlc.yaml, .env, .env.*",
+          "tsconfig.json": "tsconfig.*.json, env.d.ts",
           "vite.config.*": "vitest.config.*",
-          "package.json": "bun.lock, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json"
-        },
-        "coverage-gutters.coverageBaseDir": "coverage",
-        "coverage-gutters.coverageFileNames": ["lcov.info"]
+          "package.json": "pnpm-lock.yaml, .oxlint*, .oxfmt*, .commitlint*, .lintstagedrc, cspell.json, .editorconfig, .markdownlint.json, .releaserc.json"
+        }
       },
       "extensions": [
         "anthropic.claude-code",
@@ -56,13 +61,7 @@
       ]
     }
   },
-  "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/home/dev/.ssh,type=bind,consistency=cached",
-    "source=/run/host-services/ssh-auth.sock,target=/ssh-agent.sock,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.zsh_history,target=/home/dev/.zsh_history,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/dev/.claude,type=bind,consistency=cached"
-  ],
-  "forwardPorts": [5173, 8080],
+  "forwardPorts": [5173, 8080, 5433],
   "portsAttributes": {
     "5173": {
       "label": "Vue Dev Server",
@@ -70,6 +69,10 @@
     },
     "8080": {
       "label": "Go API",
+      "onAutoForward": "notify"
+    },
+    "5433": {
+      "label": "Postgres",
       "onAutoForward": "notify"
     }
   },
