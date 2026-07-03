@@ -57,7 +57,7 @@ export const statusPagesApi = {
   get: (id: string) => api.get<StatusPageDetail>(`/api/v1/status-pages/${id}/`),
   update: (id: string, input: UpdateStatusPageInput) =>
     api.patch<StatusPage>(`/api/v1/status-pages/${id}/`, input),
-  delete: (id: string) => api.delete<void>(`/api/v1/status-pages/${id}/`),
+  delete: (id: string) => api.delete(`/api/v1/status-pages/${id}/`),
   setMonitors: (id: string, input: SetMonitorsInput) =>
     api.put<StatusPageMonitorItem[]>(`/api/v1/status-pages/${id}/monitors`, input),
 }

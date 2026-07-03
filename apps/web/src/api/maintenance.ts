@@ -33,6 +33,6 @@ export const maintenanceApi = {
     api.post<MaintenanceWindow>('/api/v1/maintenance-windows/', input),
   update: (id: string, input: SaveMaintenanceWindowInput) =>
     api.patch<MaintenanceWindow>(`/api/v1/maintenance-windows/${id}/`, input),
-  delete: (id: string) => api.delete<void>(`/api/v1/maintenance-windows/${id}/`),
+  delete: (id: string) => api.delete(`/api/v1/maintenance-windows/${id}/`),
   endNow: (id: string) => api.post<MaintenanceWindow>(`/api/v1/maintenance-windows/${id}/end`, {}),
 }

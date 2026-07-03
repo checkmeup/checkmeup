@@ -289,7 +289,7 @@ export const monitorsApi = {
     api.patch<CronMonitor>(`/api/v1/monitors/cron/${id}/`, input),
   pauseCron: (id: string) => api.post<CronMonitor>(`/api/v1/monitors/cron/${id}/pause`, {}),
   resumeCron: (id: string) => api.post<CronMonitor>(`/api/v1/monitors/cron/${id}/resume`, {}),
-  deleteCron: (id: string) => api.delete<void>(`/api/v1/monitors/cron/${id}/`),
+  deleteCron: (id: string) => api.delete(`/api/v1/monitors/cron/${id}/`),
   getCronPings: (id: string, page = 1) =>
     api.get<CronPing[]>(`/api/v1/monitors/cron/${id}/pings?page=${page}`),
 
@@ -300,7 +300,7 @@ export const monitorsApi = {
     api.patch<SSLMonitor>(`/api/v1/monitors/ssl/${id}/`, input),
   pauseSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/pause`, {}),
   resumeSSL: (id: string) => api.post<SSLMonitor>(`/api/v1/monitors/ssl/${id}/resume`, {}),
-  deleteSSL: (id: string) => api.delete<void>(`/api/v1/monitors/ssl/${id}/`),
+  deleteSSL: (id: string) => api.delete(`/api/v1/monitors/ssl/${id}/`),
 
   listDomain: () => api.get<DomainMonitor[]>('/api/v1/monitors/domain/'),
   getDomain: (id: string) => api.get<DomainMonitor>(`/api/v1/monitors/domain/${id}/`),
@@ -320,7 +320,7 @@ export const monitorsApi = {
     api.patch<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/`, input),
   pauseUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/pause`, {}),
   resumeUptime: (id: string) => api.post<UptimeMonitor>(`/api/v1/monitors/uptime/${id}/resume`, {}),
-  deleteUptime: (id: string) => api.delete<void>(`/api/v1/monitors/uptime/${id}/`),
+  deleteUptime: (id: string) => api.delete(`/api/v1/monitors/uptime/${id}/`),
 
   listPort: () => api.get<PortMonitor[]>('/api/v1/monitors/port/'),
   getPort: (id: string) => api.get<PortMonitorDetail>(`/api/v1/monitors/port/${id}/`),

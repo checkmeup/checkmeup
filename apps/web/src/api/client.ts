@@ -18,10 +18,10 @@ async function attemptRefresh(): Promise<void> {
       method: 'POST',
       credentials: 'include',
     })
-      .then(async (res) => {
+      .then((res) => {
         if (!res.ok) throw new ApiError(res.status, 'session expired')
       })
-      .catch(async (err) => {
+      .catch(async (err: unknown) => {
         const { useAuthStore } = await import('@/stores/auth')
         const { router } = await import('@/router')
         useAuthStore().clear()
