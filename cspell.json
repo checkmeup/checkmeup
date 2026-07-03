@@ -47,6 +47,7 @@
     "stdlib",
     "stretchr",
     "trimpath",
+    "unhashed",
     "usermod",
     "VITE",
     "wagoid",

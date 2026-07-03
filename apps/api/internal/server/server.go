@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -54,6 +55,10 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
+	r.Use(middleware.Compress(5,
+		"text/html", "text/css", "text/javascript", "application/javascript",
+		"application/json", "image/svg+xml",
+	))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r.Body = http.MaxBytesReader(w, r.Body, 64*1024) // 64 KB — no legitimate payload exceeds this
@@ -267,8 +272,20 @@ func suggestionRateLimited(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Join(s.cfg.StaticDir, filepath.Clean("/"+r.URL.Path))
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// index.html is unhashed and must be revalidated every time, or
+		// deploys wouldn't reach clients holding a cached copy.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(s.cfg.StaticDir, "index.html"))
 		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/assets/") {
+		// Vite content-hashes every file under /assets/ (new hash per
+		// build), so a cached copy can never go stale under its old name.
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		// Unhashed public/ files (favicon.svg, theme-init.js) — same
+		// revalidate-every-time reasoning as index.html above.
+		w.Header().Set("Cache-Control", "no-cache")
 	}
 	http.ServeFile(w, r, path)
 }

@@ -164,6 +164,29 @@ func TestRoutes_NoStaticDirMeansNoSPAFallback(t *testing.T) {
 	}
 }
 
+func TestRoutes_SPAResponseIsCompressedWhenAccepted(t *testing.T) {
+	dir := t.TempDir()
+	// Large enough to clear chi's compress middleware minimum size threshold.
+	body := bytes.Repeat([]byte("a"), 4096)
+	if err := os.WriteFile(filepath.Join(dir, "app.js"), body, 0o600); err != nil {
+		t.Fatalf("write app.js: %v", err)
+	}
+
+	srv, _ := testServer(t, &config.Config{StaticDir: dir})
+
+	req := httptest.NewRequest(http.MethodGet, "/app.js", http.NoBody)
+	req.Header.Set("Accept-Encoding", "gzip")
+	w := httptest.NewRecorder()
+	srv.router.ServeHTTP(w, req)
+
+	if got, want := w.Header().Get("Content-Encoding"), "gzip"; got != want {
+		t.Fatalf("Content-Encoding = %q, want %q", got, want)
+	}
+	if w.Body.Len() >= len(body) {
+		t.Fatalf("compressed body len = %d, want < uncompressed len %d", w.Body.Len(), len(body))
+	}
+}
+
 // ─── handleSPA ───────────────────────────────────────────────────────────────
 
 func TestHandleSPA(t *testing.T) {
@@ -200,6 +223,43 @@ func TestHandleSPA(t *testing.T) {
 		}
 		if w.Body.String() != "<html>spa-shell</html>" {
 			t.Fatalf("body = %q, want index.html contents", w.Body.String())
+		}
+	})
+
+	t.Run("hashed asset under /assets/ gets a long-lived immutable cache header", func(t *testing.T) {
+		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o750); err != nil {
+			t.Fatalf("mkdir assets: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "assets", "index-abc123.js"), []byte("console.log('hashed')"), 0o600); err != nil {
+			t.Fatalf("write hashed asset: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/assets/index-abc123.js", http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if got, want := w.Header().Get("Cache-Control"), "public, max-age=31536000, immutable"; got != want {
+			t.Fatalf("Cache-Control = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("index.html fallback gets a no-cache header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/some/client/route", http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if got, want := w.Header().Get("Cache-Control"), "no-cache"; got != want {
+			t.Fatalf("Cache-Control = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("unhashed static file gets a no-cache header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/app.js", http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if got, want := w.Header().Get("Cache-Control"), "no-cache"; got != want {
+			t.Fatalf("Cache-Control = %q, want %q", got, want)
 		}
 	})
 
