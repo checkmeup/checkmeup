@@ -3,6 +3,7 @@ FROM --platform=${BUILDPLATFORM} oven/bun:1.3-alpine AS frontend
 ARG APP_VERSION=dev
 ARG VITE_PADDLE_CLIENT_TOKEN
 ARG VITE_PADDLE_ENVIRONMENT=production
+ARG VITE_GTM_ID
 WORKDIR /app
 
 COPY apps/web/package.json ./
@@ -11,7 +12,8 @@ RUN bun install --ignore-scripts
 COPY apps/web .
 ENV VITE_APP_VERSION=$APP_VERSION \
     VITE_PADDLE_CLIENT_TOKEN=$VITE_PADDLE_CLIENT_TOKEN \
-    VITE_PADDLE_ENVIRONMENT=$VITE_PADDLE_ENVIRONMENT
+    VITE_PADDLE_ENVIRONMENT=$VITE_PADDLE_ENVIRONMENT \
+    VITE_GTM_ID=$VITE_GTM_ID
 RUN ./node_modules/.bin/vite build
 
 # ── Stage 2: Build Go API (native arch + cross-compile target) ──────────────
