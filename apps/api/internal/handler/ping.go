@@ -132,19 +132,7 @@ func computeNextPing(schedule string, now time.Time, graceMins int) time.Time {
 // parseEveryDuration parses "1h", "1hr", "1hour", "30m", "30min", "30mins",
 // "1d", "1day", "1w", "1week" etc.
 func parseEveryDuration(s string) time.Duration {
-	s = strings.TrimSpace(strings.ToLower(s))
-	// Normalise word suffixes to single-char unit before parsing.
-	for _, r := range []struct{ old, new string }{
-		{"minutes", "m"}, {"minute", "m"}, {"mins", "m"}, {"min", "m"},
-		{"hours", "h"}, {"hour", "h"}, {"hrs", "h"}, {"hr", "h"},
-		{"weeks", "w"}, {"week", "w"},
-		{"days", "d"}, {"day", "d"},
-	} {
-		if strings.HasSuffix(s, r.old) {
-			s = strings.TrimSpace(s[:len(s)-len(r.old)]) + r.new
-			break
-		}
-	}
+	s = normalizeDurationSuffix(strings.TrimSpace(strings.ToLower(s)))
 	if len(s) < 2 {
 		return 0
 	}
@@ -153,15 +141,37 @@ func parseEveryDuration(s string) time.Duration {
 	if err != nil || n <= 0 {
 		return 0
 	}
+	return time.Duration(n) * durationUnit(unit)
+}
+
+// normalizeDurationSuffix rewrites a word suffix ("minutes", "hour", "days",
+// "week", ...) to the single-char unit parseEveryDuration expects.
+func normalizeDurationSuffix(s string) string {
+	for _, r := range []struct{ old, new string }{
+		{"minutes", "m"}, {"minute", "m"}, {"mins", "m"}, {"min", "m"},
+		{"hours", "h"}, {"hour", "h"}, {"hrs", "h"}, {"hr", "h"},
+		{"weeks", "w"}, {"week", "w"},
+		{"days", "d"}, {"day", "d"},
+	} {
+		if strings.HasSuffix(s, r.old) {
+			return strings.TrimSpace(s[:len(s)-len(r.old)]) + r.new
+		}
+	}
+	return s
+}
+
+// durationUnit maps a single-char unit to its time.Duration multiplier, or
+// 0 for an unrecognized unit (parseEveryDuration treats that as invalid).
+func durationUnit(unit byte) time.Duration {
 	switch unit {
 	case 'm':
-		return time.Duration(n) * time.Minute
+		return time.Minute
 	case 'h':
-		return time.Duration(n) * time.Hour
+		return time.Hour
 	case 'd':
-		return time.Duration(n) * 24 * time.Hour
+		return 24 * time.Hour
 	case 'w':
-		return time.Duration(n) * 7 * 24 * time.Hour
+		return 7 * 24 * time.Hour
 	}
 	return 0
 }
