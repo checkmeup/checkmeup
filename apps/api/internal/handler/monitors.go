@@ -53,9 +53,25 @@ type cronMonitorResponse struct {
 }
 
 type cronPingResponse struct {
-	ID         string `json:"id"`
-	ReceivedAt string `json:"receivedAt"`
-	SourceIP   string `json:"sourceIp"`
+	ID         string            `json:"id"`
+	ReceivedAt string            `json:"receivedAt"`
+	SourceIP   string            `json:"sourceIp"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
+}
+
+func cronPingToResponse(p db.CronPing) cronPingResponse {
+	r := cronPingResponse{
+		ID:         p.ID.String(),
+		ReceivedAt: p.ReceivedAt.Time.Format("2006-01-02T15:04:05Z"),
+		SourceIP:   p.SourceIp,
+	}
+	if len(p.Metadata) > 0 {
+		meta := map[string]string{}
+		if json.Unmarshal(p.Metadata, &meta) == nil {
+			r.Metadata = meta
+		}
+	}
+	return r
 }
 
 type cronIncidentResponse struct {
@@ -311,11 +327,7 @@ func (h *MonitorHandler) GetCronMonitor(w http.ResponseWriter, r *http.Request) 
 
 	pingResp := make([]cronPingResponse, len(pings))
 	for i, p := range pings {
-		pingResp[i] = cronPingResponse{
-			ID:         p.ID.String(),
-			ReceivedAt: p.ReceivedAt.Time.Format("2006-01-02T15:04:05Z"),
-			SourceIP:   p.SourceIp,
-		}
+		pingResp[i] = cronPingToResponse(p)
 	}
 
 	incidentResp := make([]cronIncidentResponse, len(incidents))
@@ -380,11 +392,7 @@ func (h *MonitorHandler) GetCronPings(w http.ResponseWriter, r *http.Request) {
 
 	result := make([]cronPingResponse, len(pings))
 	for i, p := range pings {
-		result[i] = cronPingResponse{
-			ID:         p.ID.String(),
-			ReceivedAt: p.ReceivedAt.Time.Format("2006-01-02T15:04:05Z"),
-			SourceIP:   p.SourceIp,
-		}
+		result[i] = cronPingToResponse(p)
 	}
 	respond.JSON(w, http.StatusOK, result)
 }

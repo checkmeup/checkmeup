@@ -111,7 +111,7 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - Use an ORM — sqlc only ([ADR-004](docs/decisions/004-sqlc-over-orm.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants
 - Add subdomains for status pages — `/status/:slug` path is intentional ([ADR-005](docs/decisions/005-status-page-same-domain.md))
-- Use `Authorization` header for auth — the `access_token` httpOnly cookie is the only auth mechanism ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md))
+- Use `Authorization` header for **browser session** auth — the `access_token` httpOnly cookie is the only mechanism there ([ADR-003](docs/decisions/003-auth-jwt-httponly-cookie.md)). The public API (EP-26) is a separate, non-browser mechanism and authenticates via `X-API-Key` instead — never `Authorization`, to keep the two visibly distinct ([ADR-028](docs/decisions/028-api-key-auth-scope.md))
 - Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
 - Switch payment providers — Paddle is the MoR (handles global tax); see [ADR-026](docs/decisions/026-billing-paddle-mor.md) (supersedes [ADR-018](docs/decisions/018-billing-lemonsqueezy-mor.md), which chose LemonSqueezy)
 - Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`. Found broken across `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` during EP-10 — e.g. the sign-in button had no background in *either* theme until fixed

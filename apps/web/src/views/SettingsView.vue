@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelsCard from '@/components/NotificationChannelsCard.vue'
+import ApiKeysCard from '@/components/ApiKeysCard.vue'
 import { suggestionsApi } from '@/api/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/lib/theme'
@@ -38,7 +39,6 @@ function formatDate(iso: string | null): string {
     day: 'numeric',
   })
 }
-
 </script>
 
 <template>
@@ -86,6 +86,9 @@ function formatDate(iso: string | null): string {
 
       <!-- Notification channels -->
       <NotificationChannelsCard class="mt-6" />
+
+      <!-- API keys -->
+      <ApiKeysCard class="mt-6" />
 
       <!-- Legal -->
       <div

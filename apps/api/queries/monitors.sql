@@ -60,12 +60,15 @@ WHERE status = 'up' AND next_ping_at < NOW()
   );
 
 -- name: CreateCronPing :one
-INSERT INTO cron_pings (monitor_id, received_at, source_ip)
-VALUES ($1, NOW(), $2)
+INSERT INTO cron_pings (monitor_id, received_at, source_ip, metadata)
+VALUES ($1, NOW(), $2, $3)
 RETURNING *;
 
 -- name: ListCronPings :many
 SELECT * FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT $2 OFFSET $3;
+
+-- name: GetLatestCronPing :one
+SELECT * FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT 1;
 
 -- name: CountCronPings :one
 SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1;

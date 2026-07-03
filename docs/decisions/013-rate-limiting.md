@@ -39,10 +39,17 @@ Limits chosen (table kept current as routes are added after this ADR's original 
 | `POST /suggestions` | 5 | 1 hour | IP |
 | `POST /suggestions` | 20 | 1 hour | org |
 | `POST /notification-channels/{id}/test` | 5 | 1 minute | IP |
+| `GET /api/v1/public/monitors/{type}/{id}/status` | 60 | 1 minute | API key |
 
 The ping limit (60/min) is deliberately generous — a real cron job might hit the endpoint once per minute at most, but we want to leave headroom for retries and misconfigured jobs before blocking. The real protection is against floods, not occasional bursts.
 
 Badges (EP-30, [story](../stories/ep-30-status-badges.md)) are keyed by IP rather than slug: unlike the ping token, a badge URL isn't a secret, so keying by slug would let one popular badge's many embedders collectively exhaust the limit for everyone viewing that same page. 300/min is generous because badges are meant to be embedded in READMEs and external sites; `Cache-Control: max-age=60` on the response (US-3004) is the actual defense against repeated hits, the rate limit is just a backstop.
+
+The public API status endpoint ([ADR-028](028-api-key-auth-scope.md)) is keyed by API key rather
+than IP or org — bounds how hard a single leaked or misbehaving key can hammer the API regardless
+of how many keys an org has or what network it calls from. 60/min is a flat limit, not tiered by
+plan, for the same reason most limits above are simple: no observed usage pattern justifies the
+added complexity of a per-request plan lookup yet.
 
 ## Consequences
 

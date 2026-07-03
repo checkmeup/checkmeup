@@ -41,6 +41,7 @@ describe('DocsView', () => {
       '#maintenance',
       '#appearance',
       '#plans',
+      '#api',
       '#help',
     ])
   })
@@ -61,6 +62,7 @@ describe('DocsView', () => {
     expect(wrapper.text()).toContain('Maintenance windows')
     expect(wrapper.text()).toContain('Appearance')
     expect(wrapper.text()).toContain('Plans & limits')
+    expect(wrapper.text()).toContain('Public API')
     expect(wrapper.text()).toContain('Need help?')
   })
 
@@ -68,6 +70,16 @@ describe('DocsView', () => {
     const wrapper = mount(DocsView)
 
     expect(wrapper.text()).toContain('curl -s https://checkmeup.net/ping/<your-monitor-token>')
+  })
+
+  it('documents the public API status endpoint with a curl example', () => {
+    const wrapper = mount(DocsView)
+
+    expect(wrapper.text()).toContain('X-API-Key: cmu_live_...')
+    expect(wrapper.text()).toContain(
+      'https://checkmeup.net/api/v1/public/monitors/cron/<monitor-id>/status',
+    )
+    expect(wrapper.text()).toContain('lastPingMetadata')
   })
 
   it('renders the plans and limits table with all four tiers', () => {

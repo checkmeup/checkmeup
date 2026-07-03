@@ -100,9 +100,15 @@ function copyPingUrl() {
               </h1>
               <span
                 class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full"
-                :style="{ color: statusColors[monitor.status], backgroundColor: 'var(--surface-raised)' }"
+                :style="{
+                  color: statusColors[monitor.status],
+                  backgroundColor: 'var(--surface-raised)',
+                }"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusColors[monitor.status] }"></span>
+                <span
+                  class="w-1.5 h-1.5 rounded-full"
+                  :style="{ backgroundColor: statusColors[monitor.status] }"
+                ></span>
                 {{ monitor.status.charAt(0).toUpperCase() + monitor.status.slice(1) }}
               </span>
             </div>
@@ -124,13 +130,7 @@ function copyPingUrl() {
             >
               Pause
             </Button>
-            <Button
-              v-else
-              variant="secondary"
-              size="sm"
-              :disabled="actionPending"
-              @click="resume"
-            >
+            <Button v-else variant="secondary" size="sm" :disabled="actionPending" @click="resume">
               Resume
             </Button>
             <Button
@@ -145,7 +145,10 @@ function copyPingUrl() {
         </div>
 
         <!-- Config card -->
-        <div class="rounded-xl border p-5 mb-5" style="background-color: var(--surface); border-color: var(--border)">
+        <div
+          class="rounded-xl border p-5 mb-5"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
           <h2 class="text-sm font-medium mb-4" style="color: var(--text-muted)">Configuration</h2>
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -181,7 +184,11 @@ function copyPingUrl() {
         </div>
 
         <!-- Incidents -->
-        <div v-if="detail!.incidents.length > 0" class="rounded-xl border p-5 mb-5" style="background-color: var(--surface); border-color: var(--border)">
+        <div
+          v-if="detail!.incidents.length > 0"
+          class="rounded-xl border p-5 mb-5"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
           <h2 class="text-sm font-medium mb-4" style="color: var(--text-muted)">Incidents</h2>
           <div class="space-y-2">
             <div
@@ -192,14 +199,21 @@ function copyPingUrl() {
             >
               <div style="color: var(--text)">{{ fmt(inc.startedAt) }}</div>
               <div class="text-xs" style="color: var(--text-muted)">
-                {{ inc.resolvedAt ? `Resolved after ${duration(inc.startedAt, inc.resolvedAt)}` : 'Ongoing' }}
+                {{
+                  inc.resolvedAt
+                    ? `Resolved after ${duration(inc.startedAt, inc.resolvedAt)}`
+                    : 'Ongoing'
+                }}
               </div>
             </div>
           </div>
         </div>
 
         <!-- Ping log -->
-        <div class="rounded-xl border p-5" style="background-color: var(--surface); border-color: var(--border)">
+        <div
+          class="rounded-xl border p-5"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
           <h2 class="text-sm font-medium mb-4" style="color: var(--text-muted)">Execution log</h2>
 
           <div v-if="detail!.pings.length === 0" class="text-sm" style="color: var(--text-muted)">
@@ -210,14 +224,32 @@ function copyPingUrl() {
             <div
               v-for="ping in detail!.pings"
               :key="ping.id"
-              class="flex items-center justify-between text-sm py-2 border-b last:border-0"
+              class="py-2 border-b last:border-0"
               style="border-color: var(--border)"
             >
-              <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--status-up)"></span>
-                <span style="color: var(--text)">{{ fmt(ping.receivedAt) }}</span>
+              <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    style="background-color: var(--status-up)"
+                  ></span>
+                  <span style="color: var(--text)">{{ fmt(ping.receivedAt) }}</span>
+                </div>
+                <div class="text-xs font-mono" style="color: var(--text-muted)">
+                  {{ ping.sourceIp || '—' }}
+                </div>
               </div>
-              <div class="text-xs font-mono" style="color: var(--text-muted)">{{ ping.sourceIp || '—' }}</div>
+              <div v-if="ping.metadata" class="flex flex-wrap gap-1.5 mt-1.5 ml-3.5">
+                <span
+                  v-for="(value, key) in ping.metadata"
+                  :key="key"
+                  :title="`${key}: ${value}`"
+                  class="inline-block max-w-[220px] truncate text-xs font-mono px-1.5 py-0.5 rounded"
+                  style="background-color: var(--surface-raised); color: var(--text-dim)"
+                >
+                  {{ key }}: {{ value }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -227,13 +259,18 @@ function copyPingUrl() {
       <div
         v-if="showDeleteConfirm"
         class="fixed inset-0 flex items-center justify-center z-50"
-        style="background-color: rgba(0,0,0,0.6)"
+        style="background-color: rgba(0, 0, 0, 0.6)"
         @click.self="showDeleteConfirm = false"
       >
-        <div class="rounded-xl border p-6 max-w-sm w-full mx-4" style="background-color: var(--surface); border-color: var(--border)">
+        <div
+          class="rounded-xl border p-6 max-w-sm w-full mx-4"
+          style="background-color: var(--surface); border-color: var(--border)"
+        >
           <h3 class="font-medium mb-2" style="color: var(--text-strong)">Delete monitor?</h3>
           <p class="text-sm mb-5" style="color: var(--text-muted)">
-            This will permanently delete <strong style="color: var(--text)">{{ monitor?.name }}</strong> and all its ping history. The ping URL will stop working immediately.
+            This will permanently delete
+            <strong style="color: var(--text)">{{ monitor?.name }}</strong> and all its ping
+            history. The ping URL will stop working immediately.
           </p>
           <div class="flex gap-3">
             <Button variant="destructive" :disabled="actionPending" @click="confirmDelete">

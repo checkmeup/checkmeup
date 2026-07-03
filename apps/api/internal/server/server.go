@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
@@ -80,6 +81,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	billing := handler.NewBillingHandler(s.cfg, s.db)
 	maintenance := handler.NewMaintenanceHandler(s.db)
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
+	apiKeys := handler.NewAPIKeyHandler(s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.With(httprate.LimitByIP(300, time.Minute)).Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -129,6 +131,12 @@ func (s *Server) buildRouter() *chi.Mux {
 				httprate.Limit(5, time.Hour, httprate.WithKeyByIP(), httprate.WithLimitHandler(suggestionRateLimited)),
 				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
 			).Post("/suggestions", suggestions.SubmitSuggestion)
+
+			r.Route("/api-keys", func(r chi.Router) {
+				r.Get("/", apiKeys.ListAPIKeys)
+				r.Post("/", apiKeys.CreateAPIKey)
+				r.Delete("/{id}", apiKeys.RevokeAPIKey)
+			})
 
 			r.Route("/notification-channels", func(r chi.Router) {
 				r.Get("/", notifChannels.ListNotificationChannels)
@@ -234,6 +242,21 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 		})
+
+		// Public API (EP-26 / ADR-028): authenticated via X-API-Key, never
+		// the session cookie — deliberately its own route group rather than
+		// nested under the RequireAuth group above, so the two auth
+		// mechanisms can never be silently conflated.
+		r.Route("/public", func(r chi.Router) {
+			r.Use(apimiddleware.RequireAPIKey(db.New(s.db)))
+			r.Use(httprate.Limit(60, time.Minute, httprate.WithKeyFuncs(apiKeyRateKey)))
+
+			r.Get("/monitors/cron/{id}/status", monitors.GetCronStatus)
+			r.Get("/monitors/uptime/{id}/status", monitors.GetUptimeStatus)
+			r.Get("/monitors/ssl/{id}/status", monitors.GetSSLStatus)
+			r.Get("/monitors/domain/{id}/status", monitors.GetDomainStatus)
+			r.Get("/monitors/port/{id}/status", monitors.GetPortStatus)
+		})
 	})
 
 	return r
@@ -263,6 +286,17 @@ func authOrgKey(r *http.Request) (string, error) {
 		return "", errors.New("no claims in context")
 	}
 	return claims.OrgID, nil
+}
+
+// apiKeyRateKey rate-limits the public API per API key rather than per org
+// or IP — bounds how hard a single leaked/misbehaving key can hammer the
+// API regardless of how many keys an org has or what network it calls from.
+func apiKeyRateKey(r *http.Request) (string, error) {
+	key := r.Header.Get("X-API-Key")
+	if key == "" {
+		return "", errors.New("no API key in request")
+	}
+	return key, nil
 }
 
 func suggestionRateLimited(w http.ResponseWriter, r *http.Request) {

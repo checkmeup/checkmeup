@@ -136,6 +136,46 @@ describe('CronMonitorDetailView', () => {
     expect(wrapper.text()).toContain('Execution log')
   })
 
+  it("renders a ping's metadata as key: value chips", () => {
+    detailData.value = {
+      ...detail,
+      monitor: { ...monitor },
+      pings: [
+        {
+          id: 'p1',
+          receivedAt: new Date().toISOString(),
+          sourceIp: '1.2.3.4',
+          metadata: { build: '142', state: 'success' },
+        },
+      ],
+    }
+    const wrapper = mount(CronMonitorDetailView)
+
+    expect(wrapper.text()).toContain('build: 142')
+    expect(wrapper.text()).toContain('state: success')
+  })
+
+  it('truncates a long metadata value and exposes the full text via title', () => {
+    const longValue = 'x'.repeat(256)
+    detailData.value = {
+      ...detail,
+      monitor: { ...monitor },
+      pings: [
+        {
+          id: 'p1',
+          receivedAt: new Date().toISOString(),
+          sourceIp: '1.2.3.4',
+          metadata: { log: longValue },
+        },
+      ],
+    }
+    const wrapper = mount(CronMonitorDetailView)
+
+    const chip = wrapper.find('span.truncate')
+    expect(chip.exists()).toBe(true)
+    expect(chip.attributes('title')).toBe(`log: ${longValue}`)
+  })
+
   it('shows an empty state when there are no pings', () => {
     detailData.value = { ...detail, monitor: { ...monitor }, pings: [] }
     const wrapper = mount(CronMonitorDetailView)

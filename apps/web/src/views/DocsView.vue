@@ -16,6 +16,7 @@ const sections = [
   { id: 'maintenance', label: 'Maintenance windows' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'plans', label: 'Plans & limits' },
+  { id: 'api', label: 'Public API' },
   { id: 'help', label: 'Need help?' },
 ]
 </script>
@@ -67,10 +68,10 @@ const sections = [
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
             checkmeup watches five kinds of things: scheduled jobs that should run on a cadence
             (cron monitors), URLs that should always respond (uptime monitors), TLS certificates
-            that shouldn't be allowed to quietly expire (SSL monitors), domain registrations
-            that shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity
-            for anything that isn't HTTP (port monitors). Connect Telegram, add an alert
-            email, or both — every monitor type alerts through whichever channels you enable.
+            that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that
+            shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity for
+            anything that isn't HTTP (port monitors). Connect Telegram, add an alert email, or both
+            — every monitor type alerts through whichever channels you enable.
           </p>
         </section>
 
@@ -126,6 +127,24 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
                 schedule.</span
               >
             </li>
+            <li class="flex items-start gap-2">
+              <span
+                class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+                style="background-color: var(--color-green-500)"
+              ></span>
+              <span
+                ><strong style="color: var(--text-strong)">Attach custom data to a ping</strong> —
+                add query params to the ping URL and they're stored with that ping, e.g.
+                <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+                  >curl -s
+                  "https://checkmeup.net/ping/&lt;token&gt;?build=142&amp;state=success"</code
+                >. Capped at 20 key/value pairs, 64 characters per key, 256 per value — extra pairs
+                are silently dropped rather than failing the ping. Only the most recent ping's data
+                is kept (each ping overwrites it, it isn't a history). Read it back through the
+                <a href="#api" class="underline" style="color: var(--color-green-500)">public API</a
+                >.</span
+              >
+            </li>
           </ul>
         </section>
 
@@ -179,10 +198,9 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
               ></span>
               <span>
                 <strong style="color: var(--text-strong)">Keyword monitoring</strong> (every plan,
-                including Hobby) — add an
-                optional keyword check alongside the status code, so a maintenance page served with
-                a 200 or an error embedded in a JSON response still trips an alert. Set it to
-                require the keyword (<code
+                including Hobby) — add an optional keyword check alongside the status code, so a
+                maintenance page served with a 200 or an error embedded in a JSON response still
+                trips an alert. Set it to require the keyword (<code
                   class="px-1 rounded text-xs"
                   style="background-color: var(--surface-raised)"
                   >Contains</code
@@ -243,19 +261,20 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             Port (TCP) monitoring
           </h2>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
-            For anything that doesn't speak HTTP — a mail server, a database, a custom daemon —
-            give us a host and a port and we open a raw TCP connection on your chosen interval, no
-            data sent or received. Host and port are editable after creation, unlike SSL and
-            domain monitors' hostname field.
+            For anything that doesn't speak HTTP — a mail server, a database, a custom daemon — give
+            us a host and a port and we open a raw TCP connection on your chosen interval, no data
+            sent or received. Host and port are editable after creation, unlike SSL and domain
+            monitors' hostname field.
           </p>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            Each monitor has an expected state. The default, <strong style="color: var(--text-strong)">open</strong>,
-            alerts if the port stops accepting connections — the familiar uptime check. The other
-            option, <strong style="color: var(--text-strong)">closed</strong>, inverts that: alerts
-            if the port unexpectedly starts accepting connections. That's a security check, not an
-            uptime one — confirming a port that should be firewalled off (a database bound to a
-            public interface, an admin panel, a debug port left on by mistake) actually stays
-            unreachable, and catching the exact moment it doesn't.
+            Each monitor has an expected state. The default,
+            <strong style="color: var(--text-strong)">open</strong>, alerts if the port stops
+            accepting connections — the familiar uptime check. The other option,
+            <strong style="color: var(--text-strong)">closed</strong>, inverts that: alerts if the
+            port unexpectedly starts accepting connections. That's a security check, not an uptime
+            one — confirming a port that should be firewalled off (a database bound to a public
+            interface, an admin panel, a debug port left on by mistake) actually stays unreachable,
+            and catching the exact moment it doesn't.
           </p>
         </section>
 
@@ -285,8 +304,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             <li>The bot replies with your Chat ID.</li>
             <li>
               In Settings → Notification channels, click
-              <strong style="color: var(--text-strong)">Add channel</strong>, choose Telegram,
-              paste your Chat ID, and click
+              <strong style="color: var(--text-strong)">Add channel</strong>, choose Telegram, paste
+              your Chat ID, and click
               <strong style="color: var(--text-strong)">Send test message</strong> to confirm it
               works.
             </li>
@@ -308,8 +327,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           </p>
           <ol class="space-y-2 text-sm list-decimal list-inside" style="color: var(--text-dim)">
             <li>
-              Click <strong style="color: var(--text-strong)">Add channel</strong> and choose
-              Email.
+              Click <strong style="color: var(--text-strong)">Add channel</strong> and choose Email.
             </li>
             <li>
               Enter an address — can be a shared inbox like
@@ -324,10 +342,10 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             </li>
           </ol>
           <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
-            Down and recovery alerts include monitor name, reason, and timestamp, with a subject line
-            containing the monitor name and "DOWN" for inbox filtering. A single alert event fires
-            on each assigned channel independently; the per-incident alert cap counts it as one
-            notification regardless of how many channels fire.
+            Down and recovery alerts include monitor name, reason, and timestamp, with a subject
+            line containing the monitor name and "DOWN" for inbox filtering. A single alert event
+            fires on each assigned channel independently; the per-incident alert cap counts it as
+            one notification regardless of how many channels fire.
           </p>
         </section>
 
@@ -341,8 +359,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           <ol class="space-y-2 text-sm list-decimal list-inside" style="color: var(--text-dim)">
             <li>
               In Slack, go to
-              <strong style="color: var(--text-strong)">Apps → Incoming Webhooks</strong> and
-              create a new webhook for your target channel.
+              <strong style="color: var(--text-strong)">Apps → Incoming Webhooks</strong> and create
+              a new webhook for your target channel.
             </li>
             <li>
               Copy the Webhook URL (starts with
@@ -353,7 +371,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
             <li>
               In Settings → Notification channels, click
               <strong style="color: var(--text-strong)">Add channel</strong>, choose Slack, paste
-              the URL, and click <strong style="color: var(--text-strong)">Send test message</strong>
+              the URL, and click
+              <strong style="color: var(--text-strong)">Send test message</strong>
               to verify, then Save.
             </li>
           </ol>
@@ -389,9 +408,9 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
             Schedule a maintenance window from the
             <strong style="color: var(--text-strong)">Maintenance</strong> page and pick any
-            combination of cron, uptime, SSL, domain, and port monitors to cover. While a window is active, those
-            monitors aren't checked at all — no alerts, no incidents, and your uptime stats stay
-            untouched.
+            combination of cron, uptime, SSL, domain, and port monitors to cover. While a window is
+            active, those monitors aren't checked at all — no alerts, no incidents, and your uptime
+            stats stay untouched.
           </p>
           <ul class="space-y-2 text-sm" style="color: var(--text-dim)">
             <li class="flex items-start gap-2">
@@ -501,6 +520,89 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           >
             Full pricing details →
           </RouterLink>
+        </section>
+
+        <!-- Public API -->
+        <section id="api" class="scroll-mt-24">
+          <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Public API</h2>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            Read a monitor's current status from scripts, CI pipelines, or your own dashboard —
+            useful for a build step that should surface its result somewhere else, or a status
+            display that isn't checkmeup itself (think a physical LED, an internal ops dashboard).
+            Generate a key in
+            <strong style="color: var(--text-strong)">Settings → API keys</strong> — the raw key is
+            shown once, so copy it immediately — then send it as an
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >X-API-Key</code
+            >
+            header. Keys are read-only for now and rate-limited to 60 requests/minute.
+          </p>
+          <pre
+            class="rounded-xl border p-4 text-xs overflow-x-auto font-mono leading-relaxed mb-4"
+            style="
+              background-color: var(--surface);
+              border-color: var(--border);
+              color: var(--color-green-300);
+            "
+          ><code>curl -H "X-API-Key: cmu_live_..." \
+  https://checkmeup.net/api/v1/public/monitors/cron/&lt;monitor-id&gt;/status</code></pre>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            The monitor ID is the UUID in its detail page URL. Swap
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >cron</code
+            >
+            for
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >uptime</code
+            >,
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >ssl</code
+            >,
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >domain</code
+            >, or
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >port</code
+            >
+            to match the monitor type. A cron monitor's response looks like:
+          </p>
+          <pre
+            class="rounded-xl border p-4 text-xs overflow-x-auto font-mono leading-relaxed mb-4"
+            style="
+              background-color: var(--surface);
+              border-color: var(--border);
+              color: var(--color-green-300);
+            "
+          ><code>{
+  "id": "5e2b...",
+  "name": "Nightly export",
+  "type": "cron",
+  "status": "up",
+  "lastCheckedAt": "2026-07-03T20:33:47Z",
+  "lastPingMetadata": { "build": "142", "state": "success" }
+}</code></pre>
+          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >lastPingMetadata</code
+            >
+            only appears for cron monitors, and only once a ping has arrived — a CI job can attach
+            its own key/value pairs (build number, exit state, anything short) as query params on
+            the ping URL itself, e.g.
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >?build=142&amp;state=success</code
+            >, and read them back through this endpoint. It always reflects the
+            <strong style="color: var(--text-strong)">most recent</strong> ping — sending a new one
+            overwrites it, it isn't a history. Capped at 20 key/value pairs per ping, 64 characters
+            per key, and 256 characters per value; anything past that is silently dropped rather
+            than rejected, since a ping must always succeed. SSL and domain monitors instead include
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >expiresAt</code
+            >
+            and
+            <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+              >daysUntilExpiry</code
+            >.
+          </p>
         </section>
 
         <!-- Help -->

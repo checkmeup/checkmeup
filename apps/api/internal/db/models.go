@@ -320,6 +320,17 @@ func (ns NullSslMonitorStatus) Value() (driver.Value, error) {
 	return string(ns.SslMonitorStatus), nil
 }
 
+type ApiKey struct {
+	ID         uuid.UUID          `json:"id"`
+	OrgID      uuid.UUID          `json:"org_id"`
+	KeyHash    string             `json:"key_hash"`
+	KeyPrefix  string             `json:"key_prefix"`
+	Label      string             `json:"label"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type CronIncident struct {
 	ID         uuid.UUID          `json:"id"`
 	MonitorID  uuid.UUID          `json:"monitor_id"`
@@ -351,6 +362,7 @@ type CronPing struct {
 	MonitorID  uuid.UUID          `json:"monitor_id"`
 	ReceivedAt pgtype.Timestamptz `json:"received_at"`
 	SourceIp   string             `json:"source_ip"`
+	Metadata   []byte             `json:"metadata"`
 }
 
 type DomainMonitor struct {

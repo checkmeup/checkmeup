@@ -319,6 +319,34 @@ func TestGetCronPings(t *testing.T) {
 			t.Fatalf("want 0 pings on page 2 (offset 50, only 3 rows exist), got %d", len(page2))
 		}
 	})
+
+	t.Run("includes a ping's query-string metadata", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		wCreate := doAuthed(t, http.MethodPost, monitorH.CreateCronMonitor, u.access, map[string]any{
+			"name": "CI job", "schedule": "every 1h",
+		})
+		if wCreate.Code != http.StatusCreated {
+			t.Fatalf("create cron monitor: want 201, got %d: %s", wCreate.Code, wCreate.Body.String())
+		}
+		mon := decodeBody[cronMonitorRef](t, wCreate)
+
+		pingReq := httptest.NewRequest(http.MethodGet, "/ping/"+mon.PingToken+"?build=142&state=success", nil)
+		ping := NewPingHandler(pool, nil, nil, nil, nil)
+		pingW := httptest.NewRecorder()
+		ping.ReceivePing(pingW, withURLParam(pingReq, "token", mon.PingToken))
+		if pingW.Code != http.StatusOK {
+			t.Fatalf("ping: want 200, got %d", pingW.Code)
+		}
+
+		w := doMonitorRequest(t, http.MethodGet, monitorH.GetCronPings, u.access, mon.ID, nil)
+		pings := decodeBody[[]cronPingResponse](t, w)
+		if len(pings) != 1 {
+			t.Fatalf("want 1 ping, got %d", len(pings))
+		}
+		if pings[0].Metadata["build"] != "142" || pings[0].Metadata["state"] != "success" {
+			t.Fatalf("metadata = %+v, want build=142 state=success", pings[0].Metadata)
+		}
+	})
 }
 
 func TestUpdateCronMonitor(t *testing.T) {

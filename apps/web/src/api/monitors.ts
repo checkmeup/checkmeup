@@ -21,6 +21,7 @@ export interface CronPing {
   id: string
   receivedAt: string
   sourceIp: string
+  metadata?: Record<string, string>
 }
 
 export interface CronIncident {

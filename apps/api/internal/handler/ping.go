@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -19,6 +20,15 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 	"github.com/checkmeup/checkmeup/internal/worker"
+)
+
+// Caps on ping query-string metadata (e.g. ?build=142&state=success from a
+// CI job) so a chatty caller can't bloat cron_pings storage — see ADR-015's
+// retention math, which assumed near-empty rows.
+const (
+	maxPingMetadataPairs    = 20
+	maxPingMetadataKeyLen   = 64
+	maxPingMetadataValueLen = 256
 )
 
 type PingHandler struct {
@@ -51,6 +61,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	if _, err := h.queries.CreateCronPing(r.Context(), db.CreateCronPingParams{
 		MonitorID: monitor.ID,
 		SourceIp:  sourceIP,
+		Metadata:  buildPingMetadata(r),
 	}); err != nil {
 		// Log but don't fail — the job must always get 200.
 		w.WriteHeader(http.StatusOK)
@@ -174,6 +185,39 @@ func durationUnit(unit byte) time.Duration {
 		return 7 * 24 * time.Hour
 	}
 	return 0
+}
+
+// buildPingMetadata captures the ping's query-string params (e.g. a CI job
+// reporting ?build=142&state=success) as JSON, capped so one chatty caller
+// can't bloat storage. Returns nil (no metadata column write) when the ping
+// carries no query params. Never errors — an oversized or malformed param
+// set is truncated, not rejected, since a ping must always succeed.
+func buildPingMetadata(r *http.Request) []byte {
+	query := r.URL.Query()
+	if len(query) == 0 {
+		return nil
+	}
+
+	meta := make(map[string]string, len(query))
+	for key, values := range query {
+		if len(meta) >= maxPingMetadataPairs {
+			break
+		}
+		if len(key) > maxPingMetadataKeyLen {
+			key = key[:maxPingMetadataKeyLen]
+		}
+		value := values[0]
+		if len(value) > maxPingMetadataValueLen {
+			value = value[:maxPingMetadataValueLen]
+		}
+		meta[key] = value
+	}
+
+	b, err := json.Marshal(meta)
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 // realIP extracts the client IP, respecting common proxy headers.

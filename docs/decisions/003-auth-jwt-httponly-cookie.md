@@ -1,6 +1,6 @@
 # ADR-003: JWT in httpOnly cookie with DB-backed refresh tokens
 
-**Status:** Accepted  
+**Status:** Accepted — scope narrowed to browser session auth by [ADR-028](028-api-key-auth-scope.md) (2026-07-03); the "no `Authorization` header" rule below does not apply to the separate `X-API-Key` public-API mechanism
 **Date:** 2026-06-13
 
 ## Context

@@ -90,24 +90,26 @@ func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorPa
 }
 
 const createCronPing = `-- name: CreateCronPing :one
-INSERT INTO cron_pings (monitor_id, received_at, source_ip)
-VALUES ($1, NOW(), $2)
-RETURNING id, monitor_id, received_at, source_ip
+INSERT INTO cron_pings (monitor_id, received_at, source_ip, metadata)
+VALUES ($1, NOW(), $2, $3)
+RETURNING id, monitor_id, received_at, source_ip, metadata
 `
 
 type CreateCronPingParams struct {
 	MonitorID uuid.UUID `json:"monitor_id"`
 	SourceIp  string    `json:"source_ip"`
+	Metadata  []byte    `json:"metadata"`
 }
 
 func (q *Queries) CreateCronPing(ctx context.Context, arg CreateCronPingParams) (CronPing, error) {
-	row := q.db.QueryRow(ctx, createCronPing, arg.MonitorID, arg.SourceIp)
+	row := q.db.QueryRow(ctx, createCronPing, arg.MonitorID, arg.SourceIp, arg.Metadata)
 	var i CronPing
 	err := row.Scan(
 		&i.ID,
 		&i.MonitorID,
 		&i.ReceivedAt,
 		&i.SourceIp,
+		&i.Metadata,
 	)
 	return i, err
 }
@@ -190,6 +192,23 @@ func (q *Queries) GetCronMonitorByToken(ctx context.Context, pingToken string) (
 		&i.MaxAlertsPerIncident,
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
+	)
+	return i, err
+}
+
+const getLatestCronPing = `-- name: GetLatestCronPing :one
+SELECT id, monitor_id, received_at, source_ip, metadata FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT 1
+`
+
+func (q *Queries) GetLatestCronPing(ctx context.Context, monitorID uuid.UUID) (CronPing, error) {
+	row := q.db.QueryRow(ctx, getLatestCronPing, monitorID)
+	var i CronPing
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.ReceivedAt,
+		&i.SourceIp,
+		&i.Metadata,
 	)
 	return i, err
 }
@@ -312,7 +331,7 @@ func (q *Queries) ListCronMonitors(ctx context.Context, orgID uuid.UUID) ([]Cron
 }
 
 const listCronPings = `-- name: ListCronPings :many
-SELECT id, monitor_id, received_at, source_ip FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT $2 OFFSET $3
+SELECT id, monitor_id, received_at, source_ip, metadata FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT $2 OFFSET $3
 `
 
 type ListCronPingsParams struct {
@@ -335,6 +354,7 @@ func (q *Queries) ListCronPings(ctx context.Context, arg ListCronPingsParams) ([
 			&i.MonitorID,
 			&i.ReceivedAt,
 			&i.SourceIp,
+			&i.Metadata,
 		); err != nil {
 			return nil, err
 		}

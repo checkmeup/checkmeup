@@ -16,6 +16,10 @@ vi.mock('@/components/NotificationChannelsCard.vue', () => ({
   default: { name: 'NotificationChannelsCard', template: '<div />' },
 }))
 
+vi.mock('@/components/ApiKeysCard.vue', () => ({
+  default: { name: 'ApiKeysCard', template: '<div />' },
+}))
+
 const authStoreMock = reactive({
   user: null as {
     email: string

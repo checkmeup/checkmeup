@@ -14,7 +14,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-(empty)
+- [EP-26](stories/ep-26-public-api-keys.md) — Public API and API keys — **6.5 h**. Unblocked — [ADR-028](decisions/028-api-key-auth-scope.md) scopes ADR-003's cookie-only rule to browser session auth and approves a separate `X-API-Key` mechanism for the public API. Third-party demand is the driver; first cut is a read-only monitor status endpoint.
 
 ### Later
 
@@ -25,7 +25,6 @@ Ordered by how easy the blocker is to clear — internal decisions first, extern
 
 - Activate billing — all code is done (inline upgrade prompt on 402, Billing page checkout buttons with monthly/annual toggle, Paddle.js checkout overlay). What's left is account setup in the Paddle dashboard, which only the account holder can do — see [`docs/billing-setup.md`](billing-setup.md) for the exact checklist. Trigger: first 402 hit in production, or a user asks about a paid plan.
 - [EP-25](stories/ep-25-two-factor-auth.md) — Two-factor authentication — **6 h**. Blocked on the secret-encryption decision in [decision backlog](decisions/backlog.md) — an internal technical choice, quick to resolve.
-- [EP-26](stories/ep-26-public-api-keys.md) — Public API and API keys — **6.5 h**. Blocked on amending ADR-003 in [decision backlog](decisions/backlog.md) — a policy call, not an external dependency.
 - [EP-24](stories/ep-24-incident-management.md) — Incident management — **5.5 h**. Blocked on the manual-incident schema decision in [decision backlog](decisions/backlog.md) — internal schema design.
 - [EP-12](stories/ep-12-team-management.md) — Team management — **6 h**. Blocked on resolving the multi-user-org design question in [decision backlog](decisions/backlog.md) — a bigger architectural call than the items above.
 - [EP-15](stories/ep-15-whatsapp-alerts.md) — WhatsApp alerts — **4 h**. Blocked on the provider decision in [decision backlog](decisions/backlog.md) — external: provider choice, cost, Meta template approval lead time.
