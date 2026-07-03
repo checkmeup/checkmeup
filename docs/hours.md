@@ -63,3 +63,8 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-03 | Fri | Tests (NotificationChannelsCard, port monitoring/TCP) | 3 h   |
 | 2026-07-03 | Fri | Perf: SPA compression/caching, OG tags (PR #24)   | 2 h   |
 | 2026-07-03 | Fri | Launch prep (HN/IH/Reddit/LinkedIn/FB copy, doc correction) | 3 h   |
+| 2026-07-03 | Fri | Devcontainer Docker socket fix + merge conventions docs (PR #28, #29) | 2 h   |
+| 2026-07-03 | Fri | EP-26 (public API + API keys: schema, middleware, endpoints, tests, Settings UI, docs) | 6 h   |
+| 2026-07-03 | Fri | Security review (EP-26) + design-gap documentation (ADR-028, backlog) | 1 h   |
+| 2026-07-03 | Fri | Cron ping metadata in dashboard UI (execution log chips, truncation) | 1 h   |
+| 2026-07-03 | Fri | v1.18 release notes                                       | 1 h   |

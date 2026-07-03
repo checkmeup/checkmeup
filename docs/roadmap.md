@@ -14,7 +14,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Next
 
-- [EP-26](stories/ep-26-public-api-keys.md) — Public API and API keys — **6.5 h**. Unblocked — [ADR-028](decisions/028-api-key-auth-scope.md) scopes ADR-003's cookie-only rule to browser session auth and approves a separate `X-API-Key` mechanism for the public API. Third-party demand is the driver; first cut is a read-only monitor status endpoint.
+(empty)
 
 ### Later
 
