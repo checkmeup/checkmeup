@@ -224,7 +224,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("required fields and computed defaults", func(t *testing.T) {
 		t.Setenv("DATABASE_URL", "postgres://test")
-		t.Setenv("JWT_SECRET", "test-secret")
+		t.Setenv("JWT_SECRET", "test-secret-that-is-at-least-32-chars-long")
 		for _, k := range optionalVars {
 			t.Setenv(k, "")
 		}
@@ -234,7 +234,7 @@ func TestLoad(t *testing.T) {
 		if cfg.DatabaseURL != "postgres://test" {
 			t.Fatalf("want DatabaseURL postgres://test, got %q", cfg.DatabaseURL)
 		}
-		if cfg.JWTSecret != "test-secret" {
+		if cfg.JWTSecret != "test-secret-that-is-at-least-32-chars-long" {
 			t.Fatalf("want JWTSecret test-secret, got %q", cfg.JWTSecret)
 		}
 		if cfg.Env != "development" {
@@ -277,7 +277,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("custom values override defaults", func(t *testing.T) {
 		t.Setenv("DATABASE_URL", "postgres://custom")
-		t.Setenv("JWT_SECRET", "custom-secret")
+		t.Setenv("JWT_SECRET", "custom-secret-that-is-at-least-32-chars-long")
 		t.Setenv("ENV", "production")
 		t.Setenv("PORT", "9090")
 		t.Setenv("JWT_ACCESS_TTL", "5m")
@@ -309,7 +309,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("derives the Telegram webhook secret from the bot token", func(t *testing.T) {
 		t.Setenv("DATABASE_URL", "postgres://test")
-		t.Setenv("JWT_SECRET", "test-secret")
+		t.Setenv("JWT_SECRET", "test-secret-that-is-at-least-32-chars-long")
 		t.Setenv("TELEGRAM_BOT_TOKEN", "my-bot-token")
 
 		cfg := Load()

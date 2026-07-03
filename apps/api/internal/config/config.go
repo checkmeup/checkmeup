@@ -43,7 +43,7 @@ func Load() *Config {
 		Env:                           getEnv("ENV", "development"),
 		Port:                          getEnv("PORT", "8080"),
 		DatabaseURL:                   mustEnv("DATABASE_URL"),
-		JWTSecret:                     mustEnv("JWT_SECRET"),
+		JWTSecret:                     mustJWTSecret(),
 		JWTAccessTTL:                  parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),
 		JWTRefreshTTL:                 parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
 		CORSOrigins:                   parseOrigins(getEnv("CORS_ORIGINS", "http://localhost:5173")),
@@ -106,6 +106,19 @@ func mustEnv(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
 		slog.Error("required environment variable not set", "key", key)
+		os.Exit(1)
+	}
+	return v
+}
+
+// mustJWTSecret requires JWT_SECRET to be at least 32 bytes (256 bits) —
+// short enough to matter and the docs already tell operators to generate
+// "32+ random bytes" (see docs/deploy.md), so this just enforces what was
+// already documented instead of trusting it silently.
+func mustJWTSecret() string {
+	v := mustEnv("JWT_SECRET")
+	if len(v) < 32 {
+		slog.Error("JWT_SECRET too short — must be at least 32 characters", "length", len(v))
 		os.Exit(1)
 	}
 	return v

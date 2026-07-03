@@ -50,6 +50,7 @@ func (s *Server) buildRouter() *chi.Mux {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	r.Use(s.securityHeaders())
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
@@ -102,20 +103,26 @@ func (s *Server) buildRouter() *chi.Mux {
 		r.Route("/auth", func(r chi.Router) {
 			r.With(httprate.LimitByIP(5, time.Hour)).Post("/sign-up", auth.SignUp)
 			r.With(httprate.LimitByIP(10, 10*time.Minute)).Post("/sign-in", auth.SignIn)
-			r.Post("/sign-out", auth.SignOut)
-			r.Post("/refresh", auth.Refresh)
+			r.With(httprate.LimitByIP(30, time.Minute)).Post("/sign-out", auth.SignOut)
+			r.With(httprate.LimitByIP(30, time.Minute)).Post("/refresh", auth.Refresh)
 			r.With(httprate.LimitByIP(3, 10*time.Minute)).Post("/forgot-password", auth.ForgotPassword)
-			r.Post("/reset-password", auth.ResetPassword)
+			r.With(httprate.LimitByIP(10, time.Hour)).Post("/reset-password", auth.ResetPassword)
 		})
 
 		r.Group(func(r chi.Router) {
 			r.Use(apimiddleware.RequireAuth(s.cfg.JWTSecret))
+			// Blanket per-org ceiling on every authenticated route, on top
+			// of any tighter per-route limit below — bounds how hard a
+			// leaked/compromised access token can hammer the API even
+			// though it already passed auth. Keyed by org (not IP) since
+			// the whole point is limiting a token, not an address.
+			r.Use(httprate.Limit(300, time.Minute, httprate.WithKeyFuncs(authOrgKey)))
 
 			r.Get("/me", auth.Me)
 			r.Post("/auth/accept-terms", auth.AcceptTerms)
 			r.With(
 				httprate.Limit(5, time.Hour, httprate.WithKeyByIP(), httprate.WithLimitHandler(suggestionRateLimited)),
-				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(suggestionOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
+				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
 			).Post("/suggestions", suggestions.SubmitSuggestion)
 
 			r.Route("/notification-channels", func(r chi.Router) {
@@ -156,8 +163,11 @@ func (s *Server) buildRouter() *chi.Mux {
 
 			r.Route("/billing", func(r chi.Router) {
 				r.Get("/", billing.GetBillingInfo)
-				r.Post("/checkout", billing.CreateCheckout)
-				r.Post("/change-plan", billing.ChangePlan)
+				// Real Paddle API calls, not just DB writes — tighter than
+				// the blanket per-org limit above since a normal org
+				// changes plans a handful of times a year, not per minute.
+				r.With(httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey))).Post("/checkout", billing.CreateCheckout)
+				r.With(httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey))).Post("/change-plan", billing.ChangePlan)
 			})
 
 			r.Route("/status-pages", func(r chi.Router) {
@@ -239,10 +249,10 @@ func (s *Server) Start() error {
 	return srv.ListenAndServe()
 }
 
-// suggestionOrgKey rate-limits POST /suggestions per org, on top of the
-// per-IP limit, so a single abusive org can't bypass the IP limit via
-// rotating addresses. Runs after RequireAuth, so claims are always present.
-func suggestionOrgKey(r *http.Request) (string, error) {
+// authOrgKey rate-limits per org rather than per IP, so a single abusive
+// org can't dodge an IP-keyed limit by rotating addresses. Only usable
+// behind RequireAuth, since it reads claims out of the request context.
+func authOrgKey(r *http.Request) (string, error) {
 	claims := apimiddleware.ClaimsFrom(r.Context())
 	if claims == nil {
 		return "", errors.New("no claims in context")
@@ -274,6 +284,51 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.version})
+}
+
+// contentSecurityPolicy allow-lists the third parties actually loaded by the
+// SPA: Google Tag Manager/Analytics (ADR-027) and Paddle's checkout overlay
+// (ADR-026). Paddle's own JS dynamically pulls in more of *.paddle.com than
+// its cdn.paddle.com entry point, so those directives are host-wildcarded
+// per Paddle's own CSP guidance rather than enumerated.
+//
+// img-src is wide open (any https origin) rather than allow-listed: status
+// pages render an org-supplied LogoURL (see StatusPageCreateView.vue) that
+// can point at any external host, so a tight img-src would silently break
+// every custom-logo status page instead of failing loudly.
+const contentSecurityPolicy = "default-src 'self'; " +
+	"script-src 'self' https://www.googletagmanager.com https://cdn.paddle.com; " +
+	"style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' data: https:; " +
+	"connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.paddle.com; " +
+	"frame-src https://*.paddle.com; " +
+	"font-src 'self'; " +
+	"object-src 'none'; " +
+	"base-uri 'self'; " +
+	"form-action 'self'; " +
+	"frame-ancestors 'none'"
+
+// securityHeaders sets response headers with no legitimate reason to be
+// absent — they cost nothing per-request and the app has no product need
+// (embeds, third-party framing) that would justify leaving them off.
+func (s *Server) securityHeaders() func(http.Handler) http.Handler {
+	secure := !s.cfg.IsDev()
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := w.Header()
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("X-Frame-Options", "DENY")
+			h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+			h.Set("Content-Security-Policy", contentSecurityPolicy)
+			if secure {
+				// Only sent over HTTPS (prod) — sending it over plain HTTP
+				// dev has no effect but is a confusing thing to see in
+				// devtools while debugging.
+				h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (s *Server) requestLogger() func(http.Handler) http.Handler {

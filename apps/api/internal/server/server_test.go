@@ -5,12 +5,12 @@ package server
 // reachable Postgres with migrations applied (docker-compose db service
 // locally, the CI service container in GitHub Actions) — because New()
 // constructs every handler in the tree, several of which take a *pgxpool.Pool.
-// The pure-logic helpers (handleSPA, requestLogger, suggestionOrgKey,
+// The pure-logic helpers (handleSPA, requestLogger, authOrgKey,
 // suggestionRateLimited) are exercised directly against a bare *Server
 // without a pool, since none of them touch the database.
 //
 // package server (not server_test) so it can call the unexported
-// handleHealth/handleSPA/suggestionOrgKey/suggestionRateLimited/
+// handleHealth/handleSPA/authOrgKey/suggestionRateLimited/
 // requestLogger directly instead of only through the router's public surface.
 
 import (
@@ -218,12 +218,12 @@ func TestHandleSPA(t *testing.T) {
 	})
 }
 
-// ─── suggestionOrgKey / suggestionRateLimited ───────────────────────────────
+// ─── authOrgKey / suggestionRateLimited ───────────────────────────────
 
 func TestSuggestionOrgKey_NoClaimsInContext(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/suggestions", http.NoBody)
 
-	key, err := suggestionOrgKey(req)
+	key, err := authOrgKey(req)
 
 	if err == nil {
 		t.Fatal("want an error when no claims are in the request context")
@@ -237,7 +237,7 @@ func TestSuggestionOrgKey_ReturnsOrgIDFromClaims(t *testing.T) {
 	var gotKey string
 	var gotErr error
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotKey, gotErr = suggestionOrgKey(r)
+		gotKey, gotErr = authOrgKey(r)
 		w.WriteHeader(http.StatusOK)
 	})
 	// RequireAuth is the only way claims end up in the request context
@@ -261,7 +261,7 @@ func TestSuggestionOrgKey_ReturnsOrgIDFromClaims(t *testing.T) {
 		t.Fatalf("status = %d, want %d (body: %s)", w.Code, http.StatusOK, w.Body.String())
 	}
 	if gotErr != nil {
-		t.Fatalf("suggestionOrgKey error: %v", gotErr)
+		t.Fatalf("authOrgKey error: %v", gotErr)
 	}
 	if gotKey != "org-abc" {
 		t.Fatalf("key = %q, want org-abc", gotKey)
