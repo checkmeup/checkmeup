@@ -64,6 +64,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 ## Conventions
 
 - **Commits:** conventional commits enforced by commitlint — `feat:`, `fix:`, `chore:`, etc.
+- **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line
 - **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged)
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`

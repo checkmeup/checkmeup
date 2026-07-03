@@ -169,15 +169,25 @@ Add your SSH public key to `/home/deploy/.ssh/authorized_keys`.
 
 ### Devcontainer Docker socket
 
-The devcontainer mounts `/var/run/docker.sock` from the Mac host. After every devcontainer
-rebuild, the socket lands as `root:root 660` inside the container and `dev` can't use it.
+The devcontainer mounts `/var/run/docker.sock` from the Mac host (`docker-compose.yml`).
+Docker Desktop (re)creates that socket as `root:root 660` — not root:docker, since its VM
+has no group that maps to a container's non-root user — so `dev` gets `permission denied`
+running `docker`/`kamal` commands until it's chmod'd wide open.
 
-The updated devcontainer runs `postStartCommand: sudo chmod 666 /var/run/docker.sock` to fix
-this automatically. If it's still broken (pre-rebuild), fix it from your **Mac terminal**:
+This isn't a one-time fix: the socket resets to `660` any time Docker Desktop restarts,
+the Mac reboots, or the devcontainer is rebuilt. `devcontainer.json`'s
+`postStartCommand: sudo chmod 666 /var/run/docker.sock` re-applies the fix on every
+container start (the `Dockerfile` pre-authorizes this exact `sudo chmod` via
+`/etc/sudoers.d/dev-docker` so it needs no password). If it's still broken, run that same
+command by hand inside the container: `sudo chmod 666 /var/run/docker.sock`.
 
-```bash
-docker exec -u root <container-id> chmod 666 /var/run/docker.sock
-```
+**It's a shared, host-wide resource.** The socket is one file on the host — every
+devcontainer across every project bind-mounts the *same* inode. Whichever container chmods
+it first fixes access for all of them until the next Docker Desktop restart. So this isn't
+checkmeup-specific: any other project's devcontainer hitting the same error needs its own
+copy of both pieces (the sudoers rule in its `Dockerfile`, the `postStartCommand` in its
+`devcontainer.json`) to self-heal independently, rather than depending on checkmeup's
+container happening to start first.
 
 ---
 

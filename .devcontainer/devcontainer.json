@@ -4,6 +4,7 @@
   "service": "app",
   "workspaceFolder": "/workspaces/checkmeup",
   "postCreateCommand": "make install",
+  "postStartCommand": "sudo chmod 666 /var/run/docker.sock",
   "customizations": {
     "vscode": {
       "settings": {
