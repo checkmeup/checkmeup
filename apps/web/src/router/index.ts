@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useConsent } from '@/lib/consent'
+import { trackPageview } from '@/lib/analytics'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -304,4 +306,9 @@ router.beforeEach(async (to) => {
   if (to.name === 'home' && auth.isAuthenticated) {
     return { name: 'dashboard' }
   }
+})
+
+router.afterEach((to) => {
+  const { status } = useConsent()
+  if (status.value === 'granted') trackPageview(to.fullPath)
 })
