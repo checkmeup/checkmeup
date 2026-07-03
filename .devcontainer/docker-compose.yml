@@ -9,6 +9,7 @@ services:
       - ~/.ssh:/home/dev/.ssh:cached
       - ~/.zsh_history:/home/dev/.zsh_history:cached
       - ~/.claude:/home/dev/.claude:cached
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN_CHECKMEUP}
     command: sleep infinity
