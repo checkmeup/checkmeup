@@ -427,8 +427,14 @@ func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, user d
 	return nil
 }
 
+// hashToken hashes high-entropy random secrets (refresh tokens, API keys) —
+// not user-chosen passwords, which use bcrypt (see SignUp/SignIn below). A
+// fast, unsalted hash is the correct choice here: brute-forcing a specific
+// 256-bit crypto/rand value via its SHA-256 hash is computationally
+// infeasible regardless of hash speed, unlike a low-entropy human password
+// where slow/salted hashing meaningfully raises attacker cost.
 func hashToken(raw string) string {
-	sum := sha256.Sum256([]byte(raw))
+	sum := sha256.Sum256([]byte(raw)) // codeql[go/weak-sensitive-data-hashing] -- high-entropy secret, not a password; see doc comment above
 	return hex.EncodeToString(sum[:])
 }
 

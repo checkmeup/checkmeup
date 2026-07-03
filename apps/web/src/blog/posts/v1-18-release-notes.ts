@@ -27,7 +27,7 @@ export const post: BlogPost = {
     {
       type: 'code',
       lang: 'bash',
-      text: 'curl -H "X-API-Key: cmu_live_..." \\\n  https://checkmeup.net/api/v1/public/monitors/cron/<monitor-id>/status',
+      text: 'curl -H "X-API-Key: cmu_live_..." \\\n  https://checkmeup.net/api/v1/public/monitors/cron/your-monitor-id/status',
     },
     {
       type: 'p',
