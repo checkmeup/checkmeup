@@ -64,7 +64,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 ## Conventions
 
 - **Commits:** conventional commits enforced by commitlint — `feat:`, `fix:`, `chore:`, etc.
-- **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line
+- **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line. Merge with plain git (`git merge --ff-only` after rebasing on `main`, then `git push origin main`), not `gh pr merge` — the GitHub PAT in use here lacks merge permissions on the repo
 - **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged)
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
