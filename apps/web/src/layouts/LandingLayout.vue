@@ -98,8 +98,8 @@ const mobileMenuOpen = ref(false)
         <RouterLink to="/pricing" class="block text-sm py-1" style="color: var(--text-dim)"
           >Pricing</RouterLink
         >
-        <a href="/blog" class="block text-sm py-1" style="color: var(--text-dim)">Blog</a>
-        <a href="/about" class="block text-sm py-1" style="color: var(--text-dim)">About</a>
+        <RouterLink to="/blog" class="block text-sm py-1" style="color: var(--text-dim)">Blog</RouterLink>
+        <RouterLink to="/about" class="block text-sm py-1" style="color: var(--text-dim)">About</RouterLink>
         <div class="pt-2 flex flex-col gap-2">
           <RouterLink
             to="/sign-in"
