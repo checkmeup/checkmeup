@@ -430,8 +430,8 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           </p>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
             There's no subdomain or DNS setup. Status pages live on the same domain by design, which
-            means agencies can share a clean link with clients in seconds instead of provisioning
-            DNS for every account.
+            means freelancers and agencies can share a clean link with clients in seconds instead
+            of provisioning DNS for every account.
           </p>
         </section>
 

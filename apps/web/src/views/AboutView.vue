@@ -48,7 +48,7 @@ const values = [
       </h1>
 
       <p class="text-lg leading-relaxed mb-4" style="color: var(--text-dim)">
-        Every developer has been there. A cron job silently fails for three days. A certificate expires over a holiday weekend. A site goes down and you find out from a customer, not from your own tooling.
+        Every developer has been there. A cron job silently fails for three days. A certificate expires over a holiday weekend. A site goes down and you find out from a client, not from your own tooling.
       </p>
       <p class="text-lg leading-relaxed" style="color: var(--text-dim)">
         checkmeup started as the tool I wished existed — simple, reliable, and built the way developers actually want to use software.

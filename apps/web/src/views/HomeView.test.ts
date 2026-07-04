@@ -29,7 +29,7 @@ describe('HomeView', () => {
     const wrapper = mountHome()
 
     expect(wrapper.text()).toContain('Know before')
-    expect(wrapper.text()).toContain('your users do.')
+    expect(wrapper.text()).toContain('your client does.')
     expect(wrapper.text()).toContain(
       'Cron job monitoring, uptime checks, SSL and domain expiry alerts',
     )

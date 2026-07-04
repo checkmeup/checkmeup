@@ -97,10 +97,10 @@ const testimonials = [
   },
   {
     name: 'Marcus T.',
-    role: 'Agency Owner',
+    role: 'Freelance Web Developer',
     avatar: 'img/avatar2.png',
     quote:
-      "We manage 40+ client sites. Having a white-label status page for each one changed how our clients perceive us. They feel taken care of, and we don't get 3am calls.",
+      "I maintain 25+ client sites solo. Having a branded status page for each one changed how my clients perceive me. They feel taken care of, and I don't get 3am calls.",
   },
   {
     name: 'Gracy R.',
@@ -159,7 +159,7 @@ const testimonials = [
           class="w-1.5 h-1.5 rounded-full"
           style="background-color: var(--color-green-500)"
         ></span>
-        Monitoring for developers and agencies
+        Built for freelancers &amp; solo devs with client sites
       </div>
 
       <h1
@@ -172,12 +172,13 @@ const testimonials = [
         "
       >
         Know before<br class="hidden sm:block" />
-        your users do.
+        your client does.
       </h1>
 
       <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-10" style="color: var(--text-dim)">
         Cron job monitoring, uptime checks, SSL and domain expiry alerts, and raw TCP port checks —
-        all in one place. Get alerted on Telegram, Slack, or email the moment something breaks.
+        for every client site you maintain. Get alerted on Telegram, Slack, or email before your
+        client ever notices something's wrong.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -337,7 +338,7 @@ const testimonials = [
           class="text-center text-xs font-semibold uppercase tracking-widest mb-8"
           style="color: var(--text-muted)"
         >
-          Trusted by developers worldwide
+          Trusted by freelancers and solo devs worldwide
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
@@ -358,7 +359,7 @@ const testimonials = [
           <div class="text-center sm:text-left">
             <span class="text-2xl font-bold" style="color: var(--text-strong)">200+</span>
             <span class="text-sm ml-1.5" style="color: var(--text-dim)"
-              >developers monitoring with checkmeup</span
+              >freelancers monitoring client sites with checkmeup</span
             >
           </div>
         </div>
@@ -367,11 +368,11 @@ const testimonials = [
         <div class="flex flex-wrap justify-center gap-2 mt-8">
           <span
             v-for="tag in [
-              'Solo developers',
-              'Web agencies',
-              'DevOps teams',
-              'SaaS startups',
               'Freelancers',
+              'Solo agency operators',
+              'Web agencies',
+              'Solo developers',
+              'SaaS startups',
             ]"
             :key="tag"
             class="text-xs px-3 py-1 rounded-full border"
@@ -834,7 +835,7 @@ const testimonials = [
             Public status pages
           </h3>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            White-label status pages your users or clients can bookmark — uptime, incidents, and
+            A branded status page for every client site — your logo, uptime, incidents, and
             maintenance windows, no login required to view.
           </p>
           <ul class="mt-4 space-y-2">
@@ -850,7 +851,7 @@ const testimonials = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              White-label branding
+              Your logo, your branding
             </li>
             <li class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
               <svg
@@ -920,8 +921,8 @@ const testimonials = [
             Give your clients a page they can bookmark.
           </h2>
           <p class="text-base leading-relaxed mb-6" style="color: var(--text-dim)">
-            Create white-label status pages for every client. They see uptime, incidents, and
-            maintenance windows — you stay in control.
+            Create a branded status page for every client site. They see uptime, incidents, and
+            maintenance windows — you stay in control, and it looks like your work.
           </p>
           <RouterLink
             to="/sign-up"
@@ -1068,10 +1069,10 @@ const testimonials = [
     <section class="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
       <div class="text-center mb-12">
         <h2 class="text-2xl sm:text-3xl font-bold mb-3" style="color: var(--text-strong)">
-          Loved by developers
+          Loved by freelancers and solo devs
         </h2>
         <p class="text-base" style="color: var(--text-dim)">
-          Monitoring that gets out of your way.
+          Monitoring that gets out of your way — so you can focus on client work.
         </p>
       </div>
 
