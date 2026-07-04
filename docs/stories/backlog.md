@@ -24,7 +24,7 @@
 | [EP-16](ep-16-signal-alerts.md)       | Signal alerts                   | 0/5           |
 | [EP-17](ep-17-slack-alerts.md)        | Slack alerts                    | 0/5           |
 | [EP-18](ep-18-teams-alerts.md)        | Microsoft Teams alerts          | 0/5           |
-| [EP-19](ep-19-sms-alerts.md)          | SMS alerts                      | 0/5           |
+| [EP-19](ep-19-sms-alerts.md)          | SMS alerts                      | 7/8****       |
 | [EP-20](ep-20-viber-alerts.md)        | Viber alerts                    | 0/5           |
 | [EP-21](ep-21-terms-and-privacy.md)   | Terms and Privacy               | 4/4           |
 | [EP-22](ep-22-faq.md)                 | FAQ                             | 3/3           |
@@ -37,6 +37,6 @@
 | [EP-29](ep-29-domain-expiry-monitoring.md) | Domain expiry monitoring   | 3/5**         |
 | [EP-30](ep-30-status-badges.md)       | Public status badges            | 4/4           |
 
-`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note. \*\*\* EP-28: US-2804's legacy-column-drop AC is deliberately deferred to a later migration, after the cutover has proven stable in production — see the epic file.
+`x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note. \*\*\* EP-28: US-2804's legacy-column-drop AC is deliberately deferred to a later migration, after the cutover has proven stable in production — see the epic file. \*\*\*\* EP-19: US-1906 shipped with its destination-weighted cost-band AC not built (flat 1-credit-per-send instead — needs a hand-built per-country pricing table, deferred as a data-entry task) — see the epic file's implementation note.
 
 See [roadmap.md](../roadmap.md) for the Now / Next / Later priority order ([ADR-022](../decisions/022-post-mvp-docs-organization.md)).

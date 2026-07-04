@@ -21,14 +21,24 @@ const plans = [
     price: 9,
     description: 'For solo builders',
     highlight: false,
-    features: ['30 monitors', '1-min checks', 'Telegram, Slack & email alerts', '3 status pages'],
+    features: [
+      '30 monitors',
+      '1-min checks',
+      'Telegram, Slack, email & SMS alerts',
+      '3 status pages',
+    ],
   },
   {
     name: 'Startup',
     price: 29,
     description: 'For small agencies',
     highlight: true,
-    features: ['100 monitors', '1-min checks', 'Telegram, Slack & email alerts', '10 status pages'],
+    features: [
+      '100 monitors',
+      '1-min checks',
+      'Telegram, Slack, email & SMS alerts',
+      '10 status pages',
+    ],
   },
   {
     name: 'Enterprise',
@@ -38,7 +48,7 @@ const plans = [
     features: [
       '1000 monitors',
       '1-min checks',
-      'Telegram, Slack & email alerts',
+      'Telegram, Slack, email & SMS alerts',
       '100 status pages',
     ],
   },
@@ -464,7 +474,7 @@ const testimonials = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Telegram, Slack &amp; email alerts
+              Telegram, Slack, email &amp; SMS alerts
             </li>
           </ul>
         </div>

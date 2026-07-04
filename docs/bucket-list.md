@@ -8,7 +8,7 @@ Not a committed plan. Pull items into `roadmap.md`/`stories/` individually when 
 
 ## Already covered (not repeated below)
 
-Multi-channel alerts (Telegram, email, webhook shipped; Slack/Teams/WhatsApp/Signal/SMS/Viber queued), maintenance windows, status pages with manual incidents (EP-24), keyword monitoring on uptime checks, 2FA (EP-25), public API + keys (EP-26), team management (EP-12), annual billing.
+Multi-channel alerts (Telegram, email, webhook, SMS shipped; Slack/Teams/WhatsApp/Signal/Viber queued), maintenance windows, status pages with manual incidents (EP-24), keyword monitoring on uptime checks, 2FA (EP-25), public API + keys (EP-26), team management (EP-12), annual billing.
 
 ---
 

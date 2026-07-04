@@ -20,6 +20,7 @@ interface Plan {
   statusPages: string
   checkInterval: string
   notificationChannels: string
+  smsCredits: string
 }
 
 const plans: Plan[] = [
@@ -34,6 +35,7 @@ const plans: Plan[] = [
     statusPages: '1',
     checkInterval: '5 min',
     notificationChannels: '5',
+    smsCredits: '0',
   },
   {
     name: 'Solo',
@@ -46,6 +48,7 @@ const plans: Plan[] = [
     statusPages: '3',
     checkInterval: '1 min',
     notificationChannels: '20',
+    smsCredits: '10',
   },
   {
     name: 'Startup',
@@ -58,6 +61,7 @@ const plans: Plan[] = [
     statusPages: '10',
     checkInterval: '1 min',
     notificationChannels: '50',
+    smsCredits: '30',
   },
   {
     name: 'Enterprise',
@@ -70,6 +74,7 @@ const plans: Plan[] = [
     statusPages: '100',
     checkInterval: '1 min',
     notificationChannels: '100',
+    smsCredits: '100',
   },
 ]
 
@@ -87,6 +92,7 @@ const featureRows: TableRow[] = [
   { label: 'Uptime check interval', values: ['5 min', '1 min', '1 min', '1 min'] },
   { label: 'Status pages', values: ['1', '3', '10', '100'] },
   { label: 'Notification channels', values: ['5', '20', '50', '100'] },
+  { label: 'SMS credits / month', values: ['—', '10', '30', '100'] },
   { label: 'Cron job monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Uptime monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Keyword monitoring', values: ['✓', '✓', '✓', '✓'] },
@@ -94,7 +100,7 @@ const featureRows: TableRow[] = [
   { label: 'Domain expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Port (TCP) monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
-  { label: 'Alerts (Telegram, email, Slack)', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Alerts (Telegram, email, Slack, webhook)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
   { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
 ]
@@ -293,7 +299,29 @@ const featureRows: TableRow[] = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Telegram, email &amp; Slack alerts
+              Telegram, email, Slack &amp; webhook alerts
+            </li>
+            <li
+              v-if="plan.smsCredits !== '0'"
+              class="flex items-start gap-2.5 text-sm"
+              style="color: var(--text-dim)"
+            >
+              <svg
+                class="flex-shrink-0 mt-0.5"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                style="color: var(--color-green-500)"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span
+                ><strong style="color: var(--text-strong)">{{ plan.smsCredits }}</strong> SMS
+                credits / month</span
+              >
             </li>
           </ul>
 

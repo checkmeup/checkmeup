@@ -64,7 +64,7 @@ export const faqCategories: FaqCategory[] = [
     entries: [
       {
         q: 'How do alerts work?',
-        a: "Add notification channels in Settings — Telegram, email, Slack, or webhook — then assign them to each monitor. Alerts are capped at 3 per incident by default (configurable per monitor) so a flapping check doesn't spam you; a single alert event counts as one toward the cap regardless of how many channels it fires on. The recovery alert always sends regardless of the cap.",
+        a: "Add notification channels in Settings — Telegram, email, Slack, webhook, or SMS (paid plans) — then assign them to each monitor. Alerts are capped at 3 per incident by default (configurable per monitor) so a flapping check doesn't spam you; a single alert event counts as one toward the cap regardless of how many channels it fires on. The recovery alert always sends regardless of the cap.",
       },
       {
         q: "What's the minimum check interval?",

@@ -15,7 +15,6 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 ### Next
 
 - [EP-12](stories/ep-12-team-management.md) — Team management — **6 h**. Invite-conflict handling decided ([ADR-031](decisions/031-team-invite-conflict.md)) — ready to implement.
-- [EP-19](stories/ep-19-sms-alerts.md) — SMS alerts — **4.5 h**. Provider and compliance flow decided ([ADR-029](decisions/029-sms-alerts-twilio.md)) — ready to implement.
 - [EP-25](stories/ep-25-two-factor-auth.md) — Two-factor authentication — **6 h**. Encryption approach decided ([ADR-030](decisions/030-totp-secret-encryption.md)) — ready to implement.
 
 ### Later

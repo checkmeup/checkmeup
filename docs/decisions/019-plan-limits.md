@@ -10,6 +10,8 @@
 **Revised:** 2026-06-23 — domain expiry monitoring ([EP-29](../stories/ep-29-domain-expiry-monitoring.md)) added to the aggregate monitor count
 **Revised:** 2026-06-25 — notification channel limits added (Hobby 5 / Solo 20 / Startup 50 / Enterprise 100)
 **Revised:** 2026-07-01 — port monitoring ([EP-33](../stories/ep-33-port-monitoring.md)) added to the aggregate monitor count
+**Revised:** 2026-07-04 — SMS credit quotas added (Hobby 0 / Solo 10 / Startup 30 / Enterprise 100 per month), see [ADR-032](032-sms-credit-quotas.md)
+**Revised:** 2026-07-04 — downgrade behavior changed for monitors and notification channels: resources beyond the new plan's limit are now auto-paused/disabled (newest-created first), not just blocked from further creation — see "Downgrade" under Enforcement below
 
 ---
 
@@ -29,6 +31,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL + domain
 | Status pages | 1 | 3 | 10 | 100 |
 | Notification channels | 5 | 20 | 50 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |
+| SMS credits / month ([ADR-032](032-sms-credit-quotas.md)) | 0 | 10 | 30 | 100 |
 
 Keyword monitoring (uptime) is available on every plan, including Hobby — not a plan limit.
 
@@ -55,8 +58,12 @@ Competitors offer 30-second check intervals at the $10–38/mo tier. Supporting 
 - **API**: returns `402 Payment Required` with `{"code": "plan_limit_reached", "message": "..."}` when a limit is exceeded
 - **UI**: catches `402`, shows an inline upgrade prompt (not a page redirect)
 - **Interval clamping**: if the requested interval is below the plan minimum, the API rejects with `402` and explains the minimum allowed
-- **Downgrade**: monitors and pages already over the new limit are NOT deleted — they stay but the user cannot create new ones until under the limit
+- **Downgrade**: nothing is ever deleted. Behavior differs by resource type:
+  - **Status pages**: unchanged (grandfathered) — already-over-limit pages stay fully live; the user just can't create new ones until under the limit. No pause/disable primitive exists for status pages today.
+  - **Monitors and notification channels**: also grandfathered in the sense that nothing is deleted, but the org's *active* count is now enforced down to the new plan's limit automatically, not left over-limit indefinitely. When the Paddle webhook applies a plan change, `billing.EnforceMonitorLimit`/`billing.EnforceNotificationChannelLimit` (`internal/billing/enforce.go`) auto-pause/disable the **newest-created** active monitors/channels beyond the limit — oldest stays active, since that's usually what the user set up first and cares about most. Re-activating a paused monitor (`POST .../resume`) or re-enabling a disabled channel (`PATCH` with `enabled: true`) is blocked with the same `402 plan_limit_reached` if doing so would push the active count back over the limit — checked against an active-only count (`CountActiveMonitorsForOrg`/`CountEnabledNotificationChannelsForOrg`), not the raw total the creation-time check uses. This run is idempotent and unconditional on every plan webhook event (not just detected downgrades), so it's a no-op whenever the org is already within its limit.
 
 ## Implementation
 
 Limits are defined as Go constants in `internal/billing/plans.go`. Each create handler calls `billing.CheckMonitorLimit` / `billing.CheckStatusPageLimit` / `billing.CheckNotificationChannelLimit` / `billing.ClampInterval` before inserting. `GET /api/v1/billing` returns `notificationChannelCount` and `notificationChannelLimit` alongside the existing monitor and status page counts so the billing dashboard can display usage. Keyword monitoring (`uptime_monitors.keyword`) was previously gated the same way via `billing.CheckKeywordMonitoringAllowed` and a `keywordMonitoringEnabled` field on `GET /api/v1/billing` — both removed 2026-06-21; the field is now unconditionally available, validated only for length (1–500 chars), same as any other monitor field.
+
+Downgrade enforcement (`internal/billing/enforce.go`) is separate from the creation-time checks above: `EnforceMonitorLimit`/`EnforceNotificationChannelLimit` are called from the Paddle webhook handler (`internal/handler/billing.go`'s `Webhook`, right after `UpdateOrgPlan`) and each pause/disable the newest-created active resources beyond the new limit, using `ListActiveMonitorsForOrg` (a union across all 5 monitor tables, newest-first) and `ListNotificationChannels` filtered to enabled. The 5 `Resume<Type>Monitor` handlers and `UpdateNotificationChannel`'s re-enable path call `billing.CheckMonitorLimit`/`billing.CheckNotificationChannelLimit` again, against `CountActiveMonitorsForOrg`/`CountEnabledNotificationChannelsForOrg` (active/enabled-only, unlike the creation-time counts which include paused/disabled resources) — this is what blocks reactivating past the limit.

@@ -12,6 +12,7 @@ const sections = [
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'email', label: 'Email alerts' },
   { id: 'slack', label: 'Slack alerts' },
+  { id: 'sms', label: 'SMS alerts' },
   { id: 'status-pages', label: 'Status pages' },
   { id: 'maintenance', label: 'Maintenance windows' },
   { id: 'appearance', label: 'Appearance' },
@@ -70,8 +71,8 @@ const sections = [
             (cron monitors), URLs that should always respond (uptime monitors), TLS certificates
             that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that
             shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity for
-            anything that isn't HTTP (port monitors). Connect Telegram, add an alert email, or both
-            — every monitor type alerts through whichever channels you enable.
+            anything that isn't HTTP (port monitors). Connect Telegram, Slack, email, a webhook, or
+            SMS (paid plans) — every monitor type alerts through whichever channels you enable.
           </p>
         </section>
 
@@ -382,6 +383,40 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           </p>
         </section>
 
+        <!-- SMS -->
+        <section id="sms" class="scroll-mt-24">
+          <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">SMS alerts</h2>
+          <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+            Text alerts to a phone number — available on Solo, Startup, and Enterprise (not Hobby),
+            since carrier fees give SMS a real per-message cost the other channels don't have. Set
+            it up in
+            <strong style="color: var(--text-strong)">Settings → Notification channels</strong>:
+          </p>
+          <ol class="space-y-2 text-sm list-decimal list-inside" style="color: var(--text-dim)">
+            <li>
+              Click <strong style="color: var(--text-strong)">Add channel</strong> and choose SMS.
+            </li>
+            <li>
+              Enter the number in E.164 format (e.g.
+              <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+                >+14155551234</code
+              >) and check the consent box — required before any automated text can be sent to that
+              number.
+            </li>
+            <li>
+              Click <strong style="color: var(--text-strong)">Send test SMS</strong> to confirm
+              delivery, then <strong style="color: var(--text-strong)">Save</strong>.
+            </li>
+          </ol>
+          <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
+            Down and recovery texts are kept to a single message segment. Each plan includes a
+            monthly SMS credit allowance (Solo 10 / Startup 30 / Enterprise 100 — one credit per
+            message sent) that resets on the 1st of each calendar month and doesn't roll over; if a
+            month's credits run out, that monitor's other alert channels (or your account email)
+            still fire as normal.
+          </p>
+        </section>
+
         <!-- Status pages -->
         <section id="status-pages" class="scroll-mt-24">
           <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Status pages</h2>
@@ -483,6 +518,9 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
                   <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
                     Status pages
                   </th>
+                  <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+                    SMS credits/mo
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -490,20 +528,24 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
                   <td class="px-4 py-3" style="color: var(--text-strong)">Hobby — Free</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">10</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">1</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">—</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
                   <td class="px-4 py-3" style="color: var(--text-strong)">Solo — $9/mo</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">30</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">3</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">10</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
                   <td class="px-4 py-3" style="color: var(--text-strong)">Startup — $29/mo</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">100</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">10</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">30</td>
                 </tr>
                 <tr style="border-top: 1px solid var(--border)">
                   <td class="px-4 py-3" style="color: var(--text-strong)">Enterprise — $99/mo</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">1000</td>
+                  <td class="px-4 py-3" style="color: var(--text-dim)">100</td>
                   <td class="px-4 py-3" style="color: var(--text-dim)">100</td>
                 </tr>
               </tbody>

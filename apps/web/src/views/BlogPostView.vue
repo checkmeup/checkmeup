@@ -135,15 +135,17 @@ const post = computed(() => getPost(route.params.slug as string))
                 gridTemplateColumns: `minmax(140px, 1.4fr) repeat(${block.headers.length - 1}, minmax(90px, 1fr))`,
               }"
             >
-              <div
-                class="contents"
-              >
+              <div class="contents">
                 <div
                   v-for="(h, hi) in block.headers"
                   :key="h"
                   class="px-4 py-3 text-xs font-semibold border-b"
                   :class="hi === 0 ? 'text-left' : 'text-center'"
-                  style="border-color: var(--border); background-color: var(--surface); color: var(--text-strong)"
+                  style="
+                    border-color: var(--border);
+                    background-color: var(--surface);
+                    color: var(--text-strong);
+                  "
                 >
                   {{ h }}
                 </div>

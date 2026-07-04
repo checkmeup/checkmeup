@@ -37,6 +37,7 @@ describe('DocsView', () => {
       '#telegram',
       '#email',
       '#slack',
+      '#sms',
       '#status-pages',
       '#maintenance',
       '#appearance',

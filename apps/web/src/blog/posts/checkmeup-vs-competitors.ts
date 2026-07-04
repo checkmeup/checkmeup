@@ -2,7 +2,7 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'checkmeup-vs-healthchecks-uptimerobot-cronitor',
-  title: 'checkmeup vs. Healthchecks.io, UptimeRobot, and Cronitor: The Honest Comparison',
+  title: 'Checkmeup vs. Healthchecks.io, UptimeRobot, and Cronitor: The Honest Comparison',
   date: 'July 4, 2026',
   readTime: '6 min read',
   excerpt:
@@ -22,7 +22,7 @@ export const post: BlogPost = {
         "Healthchecks.io — the deepest, most mature cron-job monitoring tool that exists. It does one thing (dead man's switches for scheduled jobs) and does it very well. It does not do uptime, SSL, domain, or port checks, and it does not have a real status page product — only public status badges.",
         'UptimeRobot — the default answer for "is my website up." Huge free tier (50 monitors), and it also covers SSL/domain expiry and TCP port checks. Cron-style heartbeat monitoring exists, but as an add-on on top of a product built around polling a URL, not the other way around.',
         'Cronitor — cron and uptime monitoring in one product, with real per-check assertions (including SSL certificate expiry conditions). The catch is the pricing model: monitors are $2/month each with no bundled tier, so the bill scales linearly with how much you watch.',
-        'checkmeup — cron, uptime, SSL, domain, and port monitoring in one flat-rate product, with white-label status pages included from the cheapest paid tier. Built specifically because none of the three above bundle all five monitor types at a flat, predictable price.',
+        'Checkmeup — cron, uptime, SSL, domain, and port monitoring in one flat-rate product, with white-label status pages included from the cheapest paid tier. Built specifically because none of the three above bundle all five monitor types at a flat, predictable price.',
       ],
     },
     {
@@ -31,7 +31,7 @@ export const post: BlogPost = {
     },
     {
       type: 'table',
-      headers: ['Monitor type', 'Healthchecks.io', 'UptimeRobot', 'Cronitor', 'checkmeup'],
+      headers: ['Monitor type', 'Healthchecks.io', 'UptimeRobot', 'Cronitor', 'Checkmeup'],
       rows: [
         [
           'Cron / heartbeat monitoring',
@@ -72,7 +72,7 @@ export const post: BlogPost = {
         'Healthchecks.io Business',
         'UptimeRobot Solo',
         'Cronitor Business',
-        'checkmeup Solo',
+        'Checkmeup Solo',
       ],
       rows: [
         ['Price', '$20/mo', '~$9–10/mo', '$2 / monitor / mo', '$9/mo'],
@@ -108,11 +108,12 @@ export const post: BlogPost = {
         'White-label status pages from the $9/mo tier, not gated behind a $33+/mo plan or a separate branded-page add-on — relevant specifically for agencies running status pages for multiple clients.',
         'Predictable cost as you grow: going from 10 to 30 to 100 monitors moves you between three fixed price points ($0 → $9 → $29), never a per-monitor multiplication.',
         'A public read-only API (X-API-Key auth) with per-ping metadata for CI pipelines and status LEDs — none of the three named here expose that combination the same way.',
+        'SMS alerts with credits bundled into the flat plan price (Solo 10/mo, Startup 30/mo, Enterprise 100/mo) rather than a separate paid add-on or metered per-message charge — same flat-pricing philosophy as the monitor tiers above, applied to the one channel that actually has a real per-message cost behind it.',
       ],
     },
     {
       type: 'h2',
-      text: "Where checkmeup doesn't win yet",
+      text: "Where Checkmeup doesn't win yet",
     },
     {
       type: 'p',
@@ -121,10 +122,10 @@ export const post: BlogPost = {
     {
       type: 'ul',
       items: [
-        'No SMS or voice-call alerts — UptimeRobot and Healthchecks.io both offer them as a paid add-on. checkmeup has Telegram, email, Slack, and webhooks; SMS/WhatsApp/Signal are on the roadmap but not shipped.',
-        'No native mobile app — UptimeRobot has iOS/Android apps with push notifications. checkmeup is a responsive web app; there is no dedicated mobile client.',
-        'No two-factor authentication yet — UptimeRobot offers it on paid plans today. It is designed and queued on the checkmeup roadmap but not live.',
-        'No team/multi-user accounts yet — Cronitor and UptimeRobot both support additional seats. checkmeup is single-user per organization for now; team management is planned but not built.',
+        'No voice-call alerts — UptimeRobot and Healthchecks.io both offer it as a more attention-grabbing escalation than SMS. Checkmeup has Telegram, email, Slack, webhooks, and SMS today; voice, WhatsApp, and Signal are on the roadmap but not shipped.',
+        'No native mobile app — UptimeRobot has iOS/Android apps with push notifications. Checkmeup is a responsive web app; there is no dedicated mobile client.',
+        'No two-factor authentication yet — UptimeRobot offers it on paid plans today. It is designed and queued on the Checkmeup roadmap but not live.',
+        'No team/multi-user accounts yet — Cronitor and UptimeRobot both support additional seats. Checkmeup is single-user per organization for now; team management is planned but not built.',
       ],
     },
     {

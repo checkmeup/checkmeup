@@ -40,6 +40,10 @@ make migrate-create name=foo  # create a new goose migration file
 | `APP_URL` | optional | frontend origin (default `http://localhost:5173`) |
 | `BASE_URL` | optional | backend origin (default `http://localhost:8080`) |
 | `TELEGRAM_BOT_TOKEN` | optional | enables Telegram alerts |
+| `TWILIO_ACCOUNT_SID` | optional | enables SMS alerts ([EP-19](docs/stories/ep-19-sms-alerts.md)) — see [`docs/twilio-setup.md`](docs/twilio-setup.md) |
+| `TWILIO_API_KEY_SID` | optional | scoped API Key SID (not the primary Account SID) |
+| `TWILIO_API_KEY_SECRET` | optional | scoped API Key secret — never the primary Account Auth Token |
+| `TWILIO_MESSAGING_SERVICE_SID` | optional | Messaging Service SID SMS is sent from |
 | `PADDLE_ENVIRONMENT` | optional | `production` (default) or `sandbox` — selects `api.paddle.com` vs `sandbox-api.paddle.com`; set to `sandbox` for local dev, leave unset in production |
 | `PADDLE_API_KEY` | billing | Paddle API key (server-side, secret) |
 | `PADDLE_WEBHOOK_SECRET` | billing | Paddle webhook signing secret |
