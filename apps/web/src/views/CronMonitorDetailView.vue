@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { ApiError } from '@/api/client'
 import { monitorsApi } from '@/api/monitors'
 import { useCronMonitor } from '@/composables/useCronMonitors'
 
@@ -13,6 +15,8 @@ const id = route.params.id as string
 const { data: detail, isPending: loading, error: queryError, refetch } = useCronMonitor(id)
 const error = computed(() => queryError.value?.message ?? '')
 const actionPending = ref(false)
+const actionError = ref('')
+const limitReached = ref(false)
 const showDeleteConfirm = ref(false)
 
 const monitor = computed(() => detail.value?.monitor)
@@ -41,9 +45,13 @@ function duration(startIso: string, endIso: string | null) {
 
 async function pause() {
   actionPending.value = true
+  actionError.value = ''
+  limitReached.value = false
   try {
     await monitorsApi.pauseCron(id)
     await refetch()
+  } catch (e: unknown) {
+    actionError.value = e instanceof Error ? e.message : 'Action failed'
   } finally {
     actionPending.value = false
   }
@@ -51,9 +59,18 @@ async function pause() {
 
 async function resume() {
   actionPending.value = true
+  actionError.value = ''
+  limitReached.value = false
   try {
     await monitorsApi.resumeCron(id)
     await refetch()
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+      limitReached.value = true
+      actionError.value = e.message
+    } else {
+      actionError.value = e instanceof Error ? e.message : 'Action failed'
+    }
   } finally {
     actionPending.value = false
   }
@@ -143,6 +160,9 @@ function copyPingUrl() {
             </Button>
           </div>
         </div>
+
+        <UpgradePrompt v-if="limitReached" class="mb-5" :message="actionError" />
+        <p v-else-if="actionError" class="text-sm mb-5" style="color: var(--status-down)">{{ actionError }}</p>
 
         <!-- Config card -->
         <div

@@ -8,7 +8,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 const { data, isPending: loading } = useNotificationChannels()
 const channels = computed(() => data.value ?? [])
 
-const typeLabel: Record<string, string> = { telegram: 'Telegram', email: 'Email' }
+const typeLabel: Record<string, string> = { telegram: 'Telegram', email: 'Email', sms: 'SMS' }
 const selected = computed(() => new Set(props.modelValue))
 
 // Disabled channels are excluded from delivery the same way unselected ones

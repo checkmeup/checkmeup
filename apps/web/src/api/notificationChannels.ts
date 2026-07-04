@@ -1,11 +1,13 @@
 import { api } from './client'
 
-export type NotificationChannelType = 'telegram' | 'email' | 'webhook' | 'slack'
+export type NotificationChannelType = 'telegram' | 'email' | 'webhook' | 'slack' | 'sms'
 
 export interface NotificationChannel {
   id: string
   type: NotificationChannelType
   name: string
+  // sms config: { phone_number: '+972...', consent_at: '2026-...' } —
+  // consent_at is set server-side once, never re-sent by the client (ADR-029)
   config: Record<string, string>
   enabled: boolean
   createdAt: string

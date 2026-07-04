@@ -11,6 +11,7 @@ import { useDomainMonitors } from '@/composables/useDomainMonitors'
 import { usePortMonitors } from '@/composables/usePortMonitors'
 import { useStatusPages } from '@/composables/useStatusPages'
 import { useNotificationChannels } from '@/composables/useNotificationChannels'
+import { useBilling } from '@/composables/useBilling'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -25,6 +26,7 @@ const { data: domainData } = useDomainMonitors()
 const { data: portData } = usePortMonitors()
 const { data: statusPageData } = useStatusPages()
 const { data: channelData } = useNotificationChannels()
+const { data: billingInfo } = useBilling()
 
 const cronCount = computed(() => cronData.value?.length ?? null)
 const uptimeCount = computed(() => uptimeData.value?.length ?? null)
@@ -33,6 +35,8 @@ const domainCount = computed(() => domainData.value?.length ?? null)
 const portCount = computed(() => portData.value?.length ?? null)
 const statusPageCount = computed(() => statusPageData.value?.length ?? null)
 const channelCount = computed(() => channelData.value?.length ?? null)
+
+const smsSentCount = computed(() => billingInfo.value?.smsCreditsUsed ?? null)
 </script>
 
 <template>
@@ -211,7 +215,7 @@ const channelCount = computed(() => channelData.value?.length ?? null)
             </span>
           </div>
           <p class="text-xs" style="color: var(--text-muted)">
-            Telegram, email, Slack, and webhook alert destinations.
+            Telegram, email, Slack, webhook, and SMS alert destinations.
           </p>
           <Button
             variant="secondary"
@@ -220,6 +224,29 @@ const channelCount = computed(() => channelData.value?.length ?? null)
             @click.stop="router.push({ name: 'settings' })"
           >
             Manage channels
+          </Button>
+        </div>
+
+        <!-- SMS sent -->
+        <div
+          class="rounded-xl border p-6 space-y-4 cursor-pointer transition-colors hover:border-[var(--color-green-700)]"
+          style="background-color: var(--surface); border-color: var(--border)"
+          @click="router.push({ name: 'billing' })"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium" style="color: var(--text-dim)">SMS sent</span>
+            <span class="text-2xl font-bold" style="color: var(--text-strong)">
+              {{ smsSentCount ?? '—' }}
+            </span>
+          </div>
+          <p class="text-xs" style="color: var(--text-muted)">SMS alerts sent this month.</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="w-full"
+            @click.stop="router.push({ name: 'billing' })"
+          >
+            View billing
           </Button>
         </div>
       </div>
@@ -236,7 +263,7 @@ const channelCount = computed(() => channelData.value?.length ?? null)
           </li>
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">2</span>
-            Set up an alert channel — Telegram, email, or webhook
+            Set up an alert channel — Telegram, email, Slack, webhook, or SMS
           </li>
           <li class="flex items-start gap-2">
             <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--surface-raised); color: var(--text-muted)">3</span>

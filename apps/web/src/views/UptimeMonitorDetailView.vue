@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
+import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import { ApiError } from '@/api/client'
 import { monitorsApi } from '@/api/monitors'
 import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
 
@@ -13,11 +15,13 @@ const id = route.params.id as string
 const { data: detail, isPending: loading, error: queryError, refetch } = useUptimeMonitor(id)
 const error = computed(() => queryError.value?.message ?? '')
 const actionError = ref('')
+const limitReached = ref(false)
 const confirmDelete = ref(false)
 
 async function togglePause() {
   if (!detail.value) return
   actionError.value = ''
+  limitReached.value = false
   try {
     if (detail.value.monitor.status === 'paused') {
       await monitorsApi.resumeUptime(id)
@@ -26,7 +30,12 @@ async function togglePause() {
     }
     await refetch()
   } catch (e: unknown) {
-    actionError.value = e instanceof Error ? e.message : 'Action failed'
+    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+      limitReached.value = true
+      actionError.value = e.message
+    } else {
+      actionError.value = e instanceof Error ? e.message : 'Action failed'
+    }
   }
 }
 
@@ -191,7 +200,8 @@ const chart = computed(() => {
           </div>
         </div>
 
-        <p v-if="actionError" class="text-sm mb-4" style="color: var(--status-down)">{{ actionError }}</p>
+        <UpgradePrompt v-if="limitReached" class="mb-4" :message="actionError" />
+        <p v-else-if="actionError" class="text-sm mb-4" style="color: var(--status-down)">{{ actionError }}</p>
 
         <!-- Uptime stats -->
         <div class="grid grid-cols-3 gap-4 mb-6">

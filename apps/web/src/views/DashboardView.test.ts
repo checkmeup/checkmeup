@@ -51,6 +51,12 @@ vi.mock('@/composables/useNotificationChannels', () => ({
   useNotificationChannels: () => ({ data: channelData }),
 }))
 
+const billingData = ref<{ smsCreditsUsed: number; smsCreditsLimit: number } | null>(null)
+
+vi.mock('@/composables/useBilling', () => ({
+  useBilling: () => ({ data: billingData }),
+}))
+
 function findCard(wrapper: ReturnType<typeof mount>, label: string) {
   return wrapper.findAll('.rounded-xl.border').find((c) => c.text().includes(label))
 }
@@ -64,6 +70,7 @@ beforeEach(() => {
   portData.value = null
   statusPageData.value = null
   channelData.value = null
+  billingData.value = null
 })
 
 afterEach(() => {
@@ -154,6 +161,47 @@ describe('DashboardView', () => {
     await button!.trigger('click')
 
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'status-page-create' })
+  })
+
+  it('shows a dash for sms sent while billing info has not resolved', () => {
+    const wrapper = mount(DashboardView)
+
+    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('—')
+  })
+
+  it('shows the count of sms credits used this month', () => {
+    billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
+    const wrapper = mount(DashboardView)
+
+    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('3')
+  })
+
+  it('shows 0 for sms sent on a 0-credit plan (Hobby)', () => {
+    billingData.value = { smsCreditsUsed: 0, smsCreditsLimit: 0 }
+    const wrapper = mount(DashboardView)
+
+    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('0')
+  })
+
+  it('navigates to billing when the sms sent card is clicked', async () => {
+    billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
+    const wrapper = mount(DashboardView)
+
+    await findCard(wrapper, 'SMS sent')!.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'billing' })
+  })
+
+  it('navigates to billing from the sms sent card button', async () => {
+    billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
+    const wrapper = mount(DashboardView)
+
+    const button = findCard(wrapper, 'SMS sent')!
+      .findAll('button')
+      .find((b) => b.text() === 'View billing')
+    await button!.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'billing' })
   })
 
   it('renders the getting started checklist', () => {

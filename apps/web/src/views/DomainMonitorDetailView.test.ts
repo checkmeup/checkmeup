@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import DomainMonitorDetailView from './DomainMonitorDetailView.vue'
+import { ApiError } from '@/api/client'
 
 const pushMock = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
   useRoute: () => ({ params: { id: 'd1' } }),
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
 }))
 
 vi.mock('@/layouts/AppLayout.vue', () => ({
@@ -195,6 +197,25 @@ describe('DomainMonitorDetailView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Action failed')
+    expect(refetchMock).not.toHaveBeenCalled()
+  })
+
+  it('shows an upgrade prompt instead of a plain error when resume is blocked by the plan limit', async () => {
+    detailData.value = { ...monitor, status: 'paused' }
+    resumeDomainMock.mockRejectedValueOnce(
+      new ApiError(
+        402,
+        'monitor limit reached for your plan — upgrade to add more',
+        'plan_limit_reached',
+      ),
+    )
+    const wrapper = mount(DomainMonitorDetailView)
+
+    await findButtonByText(wrapper, 'Resume')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('monitor limit reached for your plan')
+    expect(wrapper.text()).toContain('View plans')
     expect(refetchMock).not.toHaveBeenCalled()
   })
 

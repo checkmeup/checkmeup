@@ -73,6 +73,8 @@ const hobbyInfo = {
   monitorLimit: 5,
   statusPageCount: 0,
   statusPageLimit: 1,
+  smsCreditsUsed: 0,
+  smsCreditsLimit: 0,
   minIntervalMins: 30,
   customerPortalUrl: '',
 }
@@ -86,6 +88,8 @@ const soloInfo = {
   monitorLimit: 20,
   statusPageCount: 1,
   statusPageLimit: 3,
+  smsCreditsUsed: 3,
+  smsCreditsLimit: 10,
   minIntervalMins: 5,
   customerPortalUrl: 'https://billing.example.com/portal',
 }
@@ -99,6 +103,8 @@ const enterpriseInfo = {
   monitorLimit: -1,
   statusPageCount: 2,
   statusPageLimit: -1,
+  smsCreditsUsed: 12,
+  smsCreditsLimit: 100,
   minIntervalMins: 1,
   customerPortalUrl: 'https://billing.example.com/portal',
 }
@@ -142,6 +148,7 @@ describe('BillingView', () => {
     expect(wrapper.text()).toContain('Free')
     expect(wrapper.text()).toContain('2 / 5')
     expect(wrapper.text()).toContain('0 / 1')
+    expect(wrapper.text()).toContain('Not available on your plan')
     expect(findButtonByText(wrapper, 'Upgrade to Solo')).toBeTruthy()
     expect(findButtonByText(wrapper, 'Upgrade to Startup')).toBeTruthy()
     expect(findButtonByText(wrapper, 'Upgrade to Enterprise')).toBeTruthy()
@@ -163,6 +170,7 @@ describe('BillingView', () => {
     expect(wrapper.text()).toContain('Manage subscription')
     expect(wrapper.text()).toContain('Renews')
     expect(wrapper.text()).toContain('2026-07-01')
+    expect(wrapper.text()).toContain('3 / 10')
   })
 
   it('shows "Access until" wording when the subscription is cancelled', () => {
@@ -205,6 +213,7 @@ describe('BillingView', () => {
 
     expect(wrapper.text()).toContain('50 / unlimited')
     expect(wrapper.text()).toContain('2 / unlimited')
+    expect(wrapper.text()).toContain('12 / 100')
     expect(wrapper.text()).not.toContain('Upgrade')
   })
 

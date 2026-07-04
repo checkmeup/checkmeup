@@ -3,6 +3,11 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import NotificationChannelsCard from './NotificationChannelsCard.vue'
 import type { NotificationChannel } from '@/api/notificationChannels'
+import { ApiError } from '@/api/client'
+
+vi.mock('vue-router', () => ({
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
+}))
 
 const { createMock, updateMock, deleteMock, testMock, regenerateMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
@@ -34,6 +39,12 @@ vi.mock('@/composables/useNotificationChannels', () => ({
   }),
 }))
 
+const billingData = ref<{ plan: string } | null>(null)
+
+vi.mock('@/composables/useBilling', () => ({
+  useBilling: () => ({ data: billingData }),
+}))
+
 const telegramChannel: NotificationChannel = {
   id: 'ch1',
   type: 'telegram',
@@ -55,6 +66,15 @@ const webhookChannel: NotificationChannel = {
   lastDeliveryAt: new Date().toISOString(),
 }
 
+const smsChannel: NotificationChannel = {
+  id: 'ch3',
+  type: 'sms',
+  name: 'Ops SMS',
+  config: { phone_number: '+15005550006', consent_at: '2026-01-01T00:00:00Z' },
+  enabled: true,
+  createdAt: '2026-01-01T00:00:00Z',
+}
+
 function findButtonByText(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((b) => b.text() === text)
 }
@@ -66,6 +86,7 @@ function mountCard() {
 beforeEach(() => {
   channelsData.value = []
   channelsPending.value = false
+  billingData.value = { plan: 'solo' }
 })
 
 afterEach(() => {
@@ -111,6 +132,25 @@ describe('NotificationChannelsCard', () => {
       enabled: false,
     })
     expect(refetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('shows an upgrade prompt instead of failing silently when re-enabling a channel is blocked by the plan limit', async () => {
+    channelsData.value = [{ ...telegramChannel, enabled: false }]
+    updateMock.mockRejectedValueOnce(
+      new ApiError(
+        402,
+        'notification channel limit reached for your plan — upgrade to add more',
+        'plan_limit_reached',
+      ),
+    )
+    const wrapper = mountCard()
+
+    await wrapper.find('input[type="checkbox"]').trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('notification channel limit reached for your plan')
+    expect(wrapper.text()).toContain('View plans')
+    expect(refetchMock).not.toHaveBeenCalled()
   })
 
   it('opens the add-channel form with telegram defaults', async () => {
@@ -326,6 +366,136 @@ describe('NotificationChannelsCard', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('regeneration failed')
+  })
+
+  it('rejects a phone number that is not E.164', async () => {
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+    await wrapper.find('select#channel-type').setValue('sms')
+    await wrapper.find('#channel-name').setValue('Ops SMS')
+    await wrapper.find('#channel-value').setValue('0501234567')
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+
+    await findButtonByText(wrapper, 'Add channel')?.trigger('click')
+
+    expect(wrapper.text()).toContain('Phone number must be in E.164 format')
+    expect(createMock).not.toHaveBeenCalled()
+  })
+
+  it('disables save and test until the sms consent checkbox is checked', async () => {
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+    await wrapper.find('select#channel-type').setValue('sms')
+    await wrapper.find('#channel-name').setValue('Ops SMS')
+    await wrapper.find('#channel-value').setValue('+15005550006')
+
+    expect(findButtonByText(wrapper, 'Send test SMS')?.attributes('disabled')).toBeDefined()
+    expect(findButtonByText(wrapper, 'Add channel')?.attributes('disabled')).toBeDefined()
+
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+
+    expect(findButtonByText(wrapper, 'Send test SMS')?.attributes('disabled')).toBeUndefined()
+    expect(findButtonByText(wrapper, 'Add channel')?.attributes('disabled')).toBeUndefined()
+  })
+
+  it('creates an sms channel with consent in the config', async () => {
+    createMock.mockResolvedValueOnce({ ...smsChannel })
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+    await wrapper.find('select#channel-type').setValue('sms')
+    await wrapper.find('#channel-name').setValue('Ops SMS')
+    await wrapper.find('#channel-value').setValue('+15005550006')
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+
+    await findButtonByText(wrapper, 'Add channel')?.trigger('click')
+    await flushPromises()
+
+    expect(createMock).toHaveBeenCalledExactlyOnceWith({
+      type: 'sms',
+      name: 'Ops SMS',
+      config: { phone_number: '+15005550006', consent: 'true' },
+    })
+    expect(refetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('shows an upgrade prompt instead of a plain error when sms is blocked on the Hobby plan', async () => {
+    createMock.mockRejectedValueOnce(
+      new ApiError(
+        402,
+        'SMS alerts require a paid plan — upgrade to enable this channel',
+        'plan_limit_reached',
+      ),
+    )
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+    await wrapper.find('select#channel-type').setValue('sms')
+    await wrapper.find('#channel-name').setValue('Ops SMS')
+    await wrapper.find('#channel-value').setValue('+15005550006')
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+
+    await findButtonByText(wrapper, 'Add channel')?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('SMS alerts require a paid plan')
+    expect(wrapper.text()).toContain('View plans')
+  })
+
+  it('hides the SMS option from the type picker on the Hobby plan', async () => {
+    billingData.value = { plan: 'hobby' }
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+
+    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
+    expect(options).not.toContain('sms')
+    expect(wrapper.text()).toContain('SMS alerts require a paid plan')
+  })
+
+  it('shows the SMS option on a paid plan', async () => {
+    billingData.value = { plan: 'solo' }
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+
+    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
+    expect(options).toContain('sms')
+  })
+
+  it('still shows sms as an option when editing an existing sms channel on the Hobby plan (e.g. after a downgrade)', async () => {
+    billingData.value = { plan: 'hobby' }
+    channelsData.value = [smsChannel]
+    const wrapper = mountCard()
+
+    await findButtonByText(wrapper, 'Edit')?.trigger('click')
+
+    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
+    expect(options).toContain('sms')
+    expect((wrapper.find('select#channel-type').element as HTMLSelectElement).value).toBe('sms')
+  })
+
+  it('shows consent-on-file instead of a checkbox when editing an already-consented sms channel', async () => {
+    channelsData.value = [smsChannel]
+    const wrapper = mountCard()
+
+    await findButtonByText(wrapper, 'Edit')?.trigger('click')
+
+    expect(wrapper.text()).toContain('Consent given on')
+    // Scoped to a label, not just any checkbox — the channel-list row above
+    // the form also renders an unrelated "enabled" toggle checkbox.
+    expect(wrapper.find('label input[type="checkbox"]').exists()).toBe(false)
+    // Consent already on file for the unchanged number — save/test aren't blocked.
+    expect(findButtonByText(wrapper, 'Save changes')?.attributes('disabled')).toBeUndefined()
+  })
+
+  it('re-requires consent when the phone number is edited away from the one on file', async () => {
+    channelsData.value = [smsChannel]
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, 'Edit')?.trigger('click')
+    expect(wrapper.text()).toContain('Consent given on')
+
+    await wrapper.find('#channel-value').setValue('+15005550001')
+
+    expect(wrapper.text()).not.toContain('Consent given on')
+    expect(wrapper.find('label input[type="checkbox"]').exists()).toBe(true)
+    expect(findButtonByText(wrapper, 'Save changes')?.attributes('disabled')).toBeDefined()
   })
 
   it('cancels the form without saving', async () => {

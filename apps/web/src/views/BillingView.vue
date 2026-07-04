@@ -216,6 +216,12 @@ const notificationChannelPct = computed(() => {
   return Math.min(100, Math.round((info.value.notificationChannelCount / info.value.notificationChannelLimit) * 100))
 })
 
+const smsCreditsPct = computed(() => {
+  if (!info.value) return 0
+  if (info.value.smsCreditsLimit <= 0) return 0
+  return Math.min(100, Math.round((info.value.smsCreditsUsed / info.value.smsCreditsLimit) * 100))
+})
+
 function limitLabel(used: number, limit: number) {
   return limit === -1 ? `${used} / unlimited` : `${used} / ${limit}`
 }
@@ -313,6 +319,27 @@ function limitLabel(used: number, limit: number) {
                   :style="{
                     width: info.notificationChannelLimit === -1 ? '0%' : `${notificationChannelPct}%`,
                     backgroundColor: notificationChannelPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                  }"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
+                <span>SMS credits (this month)</span>
+                <span v-if="info.smsCreditsLimit <= 0">Not available on your plan</span>
+                <span v-else>{{ limitLabel(info.smsCreditsUsed, info.smsCreditsLimit) }}</span>
+              </div>
+              <div
+                v-if="info.smsCreditsLimit > 0"
+                class="h-1.5 rounded-full overflow-hidden"
+                style="background-color: var(--surface-raised)"
+              >
+                <div
+                  class="h-full rounded-full transition-all"
+                  :style="{
+                    width: `${smsCreditsPct}%`,
+                    backgroundColor: smsCreditsPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
                   }"
                 />
               </div>

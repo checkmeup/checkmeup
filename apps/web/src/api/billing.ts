@@ -13,6 +13,8 @@ export interface BillingInfo {
   statusPageLimit: number
   notificationChannelCount: number
   notificationChannelLimit: number
+  smsCreditsUsed: number
+  smsCreditsLimit: number
   minIntervalMins: number
   customerPortalUrl: string
 }
