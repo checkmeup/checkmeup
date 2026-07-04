@@ -76,6 +76,17 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 
 	limits := billing.GetLimits(info.Plan)
 
+	// The monthly reset (ADR-032/US-1907) is only physically applied lazily,
+	// at the next SMS send (worker.go's ConsumeSMSCredit) — so a GET here
+	// right after the reset date passes, with nothing sent yet this month,
+	// would otherwise still show last month's stale used count. Mirror the
+	// same "reset_at <= today" check for display so the dashboard/billing
+	// page always shows the current month's true count.
+	smsCreditsUsed := info.SmsCreditsUsedThisMonth
+	if info.SmsCreditsResetAt.Valid && !info.SmsCreditsResetAt.Time.After(time.Now()) {
+		smsCreditsUsed = 0
+	}
+
 	type response struct {
 		Plan                     string  `json:"plan"`
 		BillingCycle             string  `json:"billingCycle"`
@@ -87,6 +98,8 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 		StatusPageLimit          int     `json:"statusPageLimit"`
 		NotificationChannelCount int32   `json:"notificationChannelCount"`
 		NotificationChannelLimit int     `json:"notificationChannelLimit"`
+		SmsCreditsUsed           int32   `json:"smsCreditsUsed"`
+		SmsCreditsLimit          int     `json:"smsCreditsLimit"`
 		MinIntervalMins          int     `json:"minIntervalMins"`
 		CustomerPortalURL        string  `json:"customerPortalUrl"`
 	}
@@ -122,6 +135,8 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 		StatusPageLimit:          limits.StatusPages,
 		NotificationChannelCount: info.NotificationChannelCount,
 		NotificationChannelLimit: limits.NotificationChannels,
+		SmsCreditsUsed:           smsCreditsUsed,
+		SmsCreditsLimit:          limits.SMSCredits,
 		MinIntervalMins:          limits.MinIntervalMins,
 		CustomerPortalURL:        portalURL,
 	})
@@ -419,6 +434,20 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(r.Context(), "failed to update org plan from paddle webhook", "org_id", orgID, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	// Auto-pause/disable resources beyond the new plan's limits (ADR-019) —
+	// newest-created first, oldest stays active. Run unconditionally rather
+	// than only on a detected downgrade: it's a no-op when already under the
+	// limit, and this avoids needing to diff old vs. new plan here. Logged
+	// but non-fatal — Paddle shouldn't see a 500 because this internal
+	// bookkeeping pass hiccuped; the plan change itself already succeeded.
+	limits := billing.GetLimits(plan)
+	if err := billing.EnforceMonitorLimit(r.Context(), h.queries, orgID, limits.MonitorTotal); err != nil {
+		slog.ErrorContext(r.Context(), "failed to enforce monitor limit after plan change", "org_id", orgID, "error", err)
+	}
+	if err := billing.EnforceNotificationChannelLimit(r.Context(), h.queries, orgID, limits.NotificationChannels); err != nil {
+		slog.ErrorContext(r.Context(), "failed to enforce notification channel limit after plan change", "org_id", orgID, "error", err)
 	}
 
 	w.WriteHeader(http.StatusOK)

@@ -40,7 +40,7 @@ func (q *Queries) AcceptUserTerms(ctx context.Context, arg AcceptUserTermsParams
 const createOrg = `-- name: CreateOrg :one
 INSERT INTO orgs (name, alert_email)
 VALUES ($1, $2)
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id
+RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
 `
 
 type CreateOrgParams struct {
@@ -65,6 +65,8 @@ func (q *Queries) CreateOrg(ctx context.Context, arg CreateOrgParams) (Org, erro
 		&i.EmailAlertsEnabled,
 		&i.PaddleCustomerID,
 		&i.PaddleSubscriptionID,
+		&i.SmsCreditsUsedThisMonth,
+		&i.SmsCreditsResetAt,
 	)
 	return i, err
 }

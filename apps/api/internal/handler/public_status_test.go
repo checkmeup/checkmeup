@@ -69,7 +69,7 @@ func TestGetCronStatus_ReturnsStatusAndPingMetadata(t *testing.T) {
 
 	// Ping with build metadata, same as a CI job would.
 	pingReq := httptest.NewRequest(http.MethodGet, "/ping/"+monitor.PingToken+"?build=142&state=success", nil)
-	ping := NewPingHandler(pool, nil, nil, nil, nil)
+	ping := NewPingHandler(pool, nil, nil, nil, nil, nil)
 	pingW := httptest.NewRecorder()
 	ping.ReceivePing(pingW, withURLParam(pingReq, "token", monitor.PingToken))
 	if pingW.Code != http.StatusOK {

@@ -11,13 +11,14 @@ type Limits struct {
 	StatusPages          int // -1 = unlimited
 	NotificationChannels int // -1 = unlimited
 	MinIntervalMins      int // minimum uptime check interval
+	SMSCredits           int // monthly SMS sends allowed (ADR-032); 0 = sms unavailable on this plan
 }
 
 var planLimits = map[db.Plan]Limits{
-	db.PlanHobby:      {MonitorTotal: 10, StatusPages: 1, NotificationChannels: 5, MinIntervalMins: 5},
-	db.PlanSolo:       {MonitorTotal: 30, StatusPages: 3, NotificationChannels: 20, MinIntervalMins: 1},
-	db.PlanStartup:    {MonitorTotal: 100, StatusPages: 10, NotificationChannels: 50, MinIntervalMins: 1},
-	db.PlanEnterprise: {MonitorTotal: 1000, StatusPages: 100, NotificationChannels: 100, MinIntervalMins: 1},
+	db.PlanHobby:      {MonitorTotal: 10, StatusPages: 1, NotificationChannels: 5, MinIntervalMins: 5, SMSCredits: 0},
+	db.PlanSolo:       {MonitorTotal: 30, StatusPages: 3, NotificationChannels: 20, MinIntervalMins: 1, SMSCredits: 10},
+	db.PlanStartup:    {MonitorTotal: 100, StatusPages: 10, NotificationChannels: 50, MinIntervalMins: 1, SMSCredits: 30},
+	db.PlanEnterprise: {MonitorTotal: 1000, StatusPages: 100, NotificationChannels: 100, MinIntervalMins: 1, SMSCredits: 100},
 }
 
 var (

@@ -487,10 +487,46 @@ func (h *MonitorHandler) PauseCronMonitor(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, http.StatusOK, h.monitorToResponse(monitor))
 }
 
+// checkMonitorResumeLimit returns billing.ErrMonitorLimit when resuming a
+// paused monitor would push the org's active-monitor count over its plan
+// limit (ADR-019) — after a downgrade, resuming doesn't create anything
+// new, but it does grow the active count, so it's gated the same way
+// creation is, just checked against CountActiveMonitorsForOrg (non-paused
+// only) rather than the raw total CreateXMonitor checks. A non-nil error
+// that isn't billing.ErrMonitorLimit means the check itself failed (DB
+// error) — callers should treat that as an internal error, not a 402;
+// distinguish with errors.Is(err, billing.ErrMonitorLimit).
+func (h *MonitorHandler) checkMonitorResumeLimit(ctx context.Context, orgID uuid.UUID) error {
+	plan, err := h.queries.GetOrgPlan(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	active, err := h.queries.CountActiveMonitorsForOrg(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	return billing.CheckMonitorLimit(plan, int(active))
+}
+
+// respondResumeLimitErr writes the right response for checkMonitorResumeLimit's
+// error, telling a real plan-limit block (402) apart from an internal
+// failure (500) that happened while checking.
+func respondResumeLimitErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, billing.ErrMonitorLimit) {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+}
+
 // ResumeCronMonitor POST /api/v1/monitors/cron/{id}/resume
 func (h *MonitorHandler) ResumeCronMonitor(w http.ResponseWriter, r *http.Request) {
 	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
+		return
+	}
+	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
+		respondResumeLimitErr(w, err)
 		return
 	}
 

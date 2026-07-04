@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -19,6 +21,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
@@ -28,10 +31,32 @@ type NotificationChannelHandler struct {
 	mailer  *email.Sender
 	wh      *webhook.Client
 	sl      *slack.Client
+	sm      *twilio.Client
+	// smsTestLimiter/smsTestHourlyLimiter/smsTestDailyLimiter bound "send test
+	// SMS" to 10/minute, 10/hour, and 20/day per org — SMS is the only
+	// test-send with a real per-message cost, so it gets tighter, org-scoped
+	// limits (burst + sustained + daily ceiling) on top of the route's
+	// blanket per-IP one. Built directly (not via httprate.Limit middleware)
+	// since the limit only applies to one channel type within a shared
+	// endpoint — see TestNotificationChannel, which supplies the org-derived
+	// key itself rather than a route-level KeyFunc.
+	smsTestLimiter       *httprate.RateLimiter
+	smsTestHourlyLimiter *httprate.RateLimiter
+	smsTestDailyLimiter  *httprate.RateLimiter
 }
 
-func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client) *NotificationChannelHandler {
-	return &NotificationChannelHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh, sl: sl}
+func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client, sm *twilio.Client) *NotificationChannelHandler {
+	return &NotificationChannelHandler{
+		queries:              db.New(pool),
+		tg:                   tg,
+		mailer:               mailer,
+		wh:                   wh,
+		sl:                   sl,
+		sm:                   sm,
+		smsTestLimiter:       httprate.NewRateLimiter(10, time.Minute),
+		smsTestHourlyLimiter: httprate.NewRateLimiter(10, time.Hour),
+		smsTestDailyLimiter:  httprate.NewRateLimiter(20, 24*time.Hour),
+	}
 }
 
 type notificationChannelResponse struct {
@@ -95,10 +120,65 @@ func validateChannelConfig(channelType string, config map[string]any) error {
 		return validateWebhookURL(config)
 	case "slack":
 		return validateSlackURL(config)
+	case "sms":
+		return validateSMSConfig(config)
 	default:
 		return errors.New("unsupported channel type")
 	}
 	return nil
+}
+
+// e164Pattern matches E.164 phone numbers (US-1901): a leading +, no leading
+// zero, up to 15 digits total.
+var e164Pattern = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+
+// validateSMSConfig enforces US-1901: a valid E.164 phone number, and an
+// explicit opt-in checkbox — a TCPA-style regulatory requirement for
+// automated texts, not satisfied just by providing a number (ADR-029).
+// consent is required true on every request that reaches here; callers that
+// want to carry an existing consent forward without re-prompting the user
+// (see resolveUpdatedChannelConfig, for an unchanged phone number on update)
+// inject consent: true themselves before calling validateChannelConfig.
+func validateSMSConfig(config map[string]any) error {
+	phone, _ := config["phone_number"].(string)
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return errors.New("phone_number is required")
+	}
+	if !e164Pattern.MatchString(phone) {
+		return errors.New("phone_number must be in E.164 format (e.g. +14155551234)")
+	}
+	if !consentGiven(config["consent"]) {
+		return errors.New("consent is required — check the opt-in box before saving")
+	}
+	return nil
+}
+
+// consentGiven reports true for either a JSON boolean true or the string
+// "true" — config values arrive as any (json.Unmarshal into map[string]any),
+// but every other channel's config is plain strings on the wire (chatId,
+// email, url...), so the frontend sends "true" here too rather than being
+// the one field that needs a non-string type.
+func consentGiven(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		return t == "true"
+	default:
+		return false
+	}
+}
+
+// finalizeSMSConsent strips the client-supplied consent flag (already
+// validated true by validateSMSConfig) and stamps a server-set consent_at —
+// never trusting a client-supplied timestamp — unless one was already
+// carried forward from an existing channel (see resolveUpdatedChannelConfig).
+func finalizeSMSConsent(config map[string]any) {
+	if _, ok := config["consent_at"]; !ok {
+		config["consent_at"] = time.Now().UTC().Format(time.RFC3339)
+	}
+	delete(config, "consent")
 }
 
 // validateWebhookURL enforces the US-1401 AC that a webhook URL must be
@@ -172,6 +252,9 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
+	// consent_at is always server-stamped (finalizeSMSConsent) — never trust
+	// a client-supplied value here, or a forged timestamp would persist.
+	delete(req.Config, "consent_at")
 
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
@@ -193,6 +276,12 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}
+	// A plan with 0 monthly SMS credits (Hobby, per ADR-032) can't create an
+	// sms channel at all — no point saving one that can never send.
+	if req.Type == "sms" && billing.GetLimits(plan).SMSCredits <= 0 {
+		respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
+		return
+	}
 
 	if err := validateChannelConfig(req.Type, req.Config); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
@@ -205,6 +294,9 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 			return
 		}
 		req.Config["secret"] = secret
+	}
+	if req.Type == "sms" {
+		finalizeSMSConsent(req.Config)
 	}
 	configBytes, err := json.Marshal(req.Config)
 	if err != nil {
@@ -237,6 +329,10 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
+	// consent_at is always server-stamped (finalizeSMSConsent, or carried
+	// forward explicitly in resolveUpdatedChannelConfig) — never trust a
+	// client-supplied value here, or a forged timestamp would persist.
+	delete(req.Config, "consent_at")
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
@@ -256,6 +352,26 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
+	}
+	// Re-enabling a previously-disabled channel grows the org's active
+	// channel count, same as creating one — gated the same way (ADR-019),
+	// checked against enabled-only count since a disabled channel doesn't
+	// count against the limit at all.
+	if enabled && !existing.Enabled {
+		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		enabledCount, err := h.queries.CountEnabledNotificationChannelsForOrg(r.Context(), orgID)
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		if err := billing.CheckNotificationChannelLimit(plan, int(enabledCount)); err != nil {
+			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+			return
+		}
 	}
 
 	channel, err := h.queries.UpdateNotificationChannel(r.Context(), db.UpdateNotificationChannelParams{
@@ -289,8 +405,28 @@ func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificati
 		}
 		req.Config["secret"] = existingCfg["secret"]
 	}
+	if existing.Type == db.NotificationChannelTypeSms {
+		// Consent (ADR-029) is tied to the phone number, not to the act of
+		// editing — re-saving the same number shouldn't force the user to
+		// re-check the opt-in box. Only require fresh consent when the
+		// number itself is changing (a new recipient).
+		var existingCfg map[string]any
+		_ = json.Unmarshal(existing.Config, &existingCfg)
+		existingPhone, _ := existingCfg["phone_number"].(string)
+		if req.Config == nil {
+			req.Config = map[string]any{}
+		}
+		newPhone, _ := req.Config["phone_number"].(string)
+		if strings.TrimSpace(newPhone) == strings.TrimSpace(existingPhone) {
+			req.Config["consent"] = true
+			req.Config["consent_at"] = existingCfg["consent_at"]
+		}
+	}
 	if err := validateChannelConfig(string(existing.Type), req.Config); err != nil {
 		return nil, false, err
+	}
+	if existing.Type == db.NotificationChannelTypeSms {
+		finalizeSMSConsent(req.Config)
 	}
 	configBytes, err := json.Marshal(req.Config)
 	if err != nil {
@@ -387,6 +523,35 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		return
 	}
 
+	if req.Type == "sms" {
+		orgID, err := orgIDFrom(r)
+		if err != nil {
+			respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+			return
+		}
+		// Same guard as CreateNotificationChannel — without this, a
+		// zero-credit-plan org could rack up real Twilio spend via test
+		// sends alone, without ever being able to save/use an sms channel.
+		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		if billing.GetLimits(plan).SMSCredits <= 0 {
+			respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
+			return
+		}
+		if h.smsTestLimiter.RespondOnLimit(w, r, orgID.String()) {
+			return
+		}
+		if h.smsTestHourlyLimiter.RespondOnLimit(w, r, orgID.String()) {
+			return
+		}
+		if h.smsTestDailyLimiter.RespondOnLimit(w, r, orgID.String()) {
+			return
+		}
+	}
+
 	switch req.Type {
 	case "telegram":
 		chatID, _ := req.Config["chatId"].(string)
@@ -424,6 +589,12 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		url, _ := req.Config["url"].(string)
 		if _, err := h.sl.Send(strings.TrimSpace(url), slack.TestMessage()); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "slack_error")
+			return
+		}
+	case "sms":
+		phone, _ := req.Config["phone_number"].(string)
+		if _, err := h.sm.Send(strings.TrimSpace(phone), "checkmeup: this is a test SMS alert. You're all set!"); err != nil {
+			respond.Error(w, http.StatusBadGateway, err.Error(), "sms_error")
 			return
 		}
 	}

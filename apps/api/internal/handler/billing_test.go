@@ -320,12 +320,102 @@ func TestWebhook(t *testing.T) {
 			t.Fatalf("want paddle_subscription_id still set (not cleared until actual cancellation), got %+v", info.PaddleSubscriptionID)
 		}
 	})
+
+	t.Run("downgrade to hobby auto-pauses the newest monitors and disables the newest channels beyond the new limit (ADR-019)", func(t *testing.T) {
+		authH, billH, pool := testBillingHandler(t)
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+
+		nextBilledAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		upW := doWebhook(t, billH, webhookEvent("subscription.created", u.resp.OrgID, "active", testSoloPriceID, "ctm_downgrade", "sub_downgrade", &nextBilledAt, nil))
+		if upW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", upW.Code, upW.Body.String())
+		}
+
+		// Hobby allows 10 monitors — create 11, oldest to newest, so exactly
+		// one (the newest) should get paused by the downgrade below.
+		var oldestMonitorID, newestMonitorID uuid.UUID
+		for i := range 11 {
+			m, err := billH.queries.CreateCronMonitor(context.Background(), db.CreateCronMonitorParams{
+				OrgID: orgID, Name: fmt.Sprintf("mon-%d", i), Schedule: "every 1h",
+				GracePeriodMins: 5, PingToken: uuid.NewString(), MaxAlertsPerIncident: 3,
+			})
+			if err != nil {
+				t.Fatalf("create monitor %d: %v", i, err)
+			}
+			if i == 0 {
+				oldestMonitorID = m.ID
+			}
+			newestMonitorID = m.ID
+			// Backdate so creation order is deterministic regardless of clock resolution.
+			if _, err := pool.Exec(context.Background(), "UPDATE cron_monitors SET created_at = $2 WHERE id = $1", m.ID, time.Now().Add(-time.Duration(11-i)*time.Hour)); err != nil {
+				t.Fatalf("backdate monitor %d: %v", i, err)
+			}
+		}
+
+		// Hobby allows 5 channels — create 6, so the newest gets disabled.
+		var oldestChannelID, newestChannelID uuid.UUID
+		for i := range 6 {
+			c, err := billH.queries.CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+				OrgID: orgID, Type: db.NotificationChannelTypeEmail, Name: fmt.Sprintf("chan-%d", i),
+				Config: []byte(`{"email":"a@b.com"}`),
+			})
+			if err != nil {
+				t.Fatalf("create channel %d: %v", i, err)
+			}
+			if i == 0 {
+				oldestChannelID = c.ID
+			}
+			newestChannelID = c.ID
+			if _, err := pool.Exec(context.Background(), "UPDATE notification_channels SET created_at = $2 WHERE id = $1", c.ID, time.Now().Add(-time.Duration(6-i)*time.Hour)); err != nil {
+				t.Fatalf("backdate channel %d: %v", i, err)
+			}
+		}
+
+		periodEndsAt := time.Now().Add(5 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		cancelW := doWebhook(t, billH, webhookEvent("subscription.canceled", u.resp.OrgID, "canceled", testSoloPriceID, "ctm_downgrade", "sub_downgrade", nil, &periodEndsAt))
+		if cancelW.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", cancelW.Code, cancelW.Body.String())
+		}
+
+		oldestMonitor, err := billH.queries.GetCronMonitor(context.Background(), db.GetCronMonitorParams{ID: oldestMonitorID, OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get oldest monitor: %v", err)
+		}
+		if oldestMonitor.Status == db.MonitorStatusPaused {
+			t.Fatal("want the oldest monitor to stay active after downgrade")
+		}
+		newestMonitor, err := billH.queries.GetCronMonitor(context.Background(), db.GetCronMonitorParams{ID: newestMonitorID, OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get newest monitor: %v", err)
+		}
+		if newestMonitor.Status != db.MonitorStatusPaused {
+			t.Fatalf("want the newest monitor auto-paused after downgrading past the 10-monitor Hobby limit, got status %q", newestMonitor.Status)
+		}
+
+		oldestChannel, err := billH.queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: oldestChannelID, OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get oldest channel: %v", err)
+		}
+		if !oldestChannel.Enabled {
+			t.Fatal("want the oldest channel to stay enabled after downgrade")
+		}
+		newestChannel, err := billH.queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: newestChannelID, OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get newest channel: %v", err)
+		}
+		if newestChannel.Enabled {
+			t.Fatal("want the newest channel auto-disabled after downgrading past the 5-channel Hobby limit")
+		}
+	})
 }
 
 type billingInfoResponse struct {
 	Plan              string `json:"plan"`
 	BillingCycle      string `json:"billingCycle"`
 	MonitorCount      int32  `json:"monitorCount"`
+	SmsCreditsUsed    int32  `json:"smsCreditsUsed"`
+	SmsCreditsLimit   int    `json:"smsCreditsLimit"`
 	CustomerPortalURL string `json:"customerPortalUrl"`
 }
 
@@ -356,6 +446,69 @@ func TestGetBillingInfo(t *testing.T) {
 		}
 		if resp.CustomerPortalURL != "" {
 			t.Fatalf("want no customer portal URL with no paddle_customer_id, got %q", resp.CustomerPortalURL)
+		}
+		if resp.SmsCreditsLimit != 0 {
+			t.Fatalf("want sms credits limit 0 on Hobby (ADR-032), got %d", resp.SmsCreditsLimit)
+		}
+		if resp.SmsCreditsUsed != 0 {
+			t.Fatalf("want sms credits used 0 for a fresh org, got %d", resp.SmsCreditsUsed)
+		}
+	})
+
+	t.Run("a paid plan reports its sms credit limit", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+		if err := billH.queries.UpdateOrgPlan(context.Background(), db.UpdateOrgPlanParams{
+			ID: orgID, Plan: db.PlanSolo, BillingCycle: cycleMonthly, SubscriptionStatus: "active",
+		}); err != nil {
+			t.Fatalf("seed plan: %v", err)
+		}
+
+		w := doAuthed(t, http.MethodGet, billH.GetBillingInfo, u.access, nil)
+		resp := decodeBody[billingInfoResponse](t, w)
+		if resp.SmsCreditsLimit != 10 {
+			t.Fatalf("want sms credits limit 10 on Solo (ADR-032), got %d", resp.SmsCreditsLimit)
+		}
+	})
+
+	t.Run("reflects credits already consumed this month", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+		if err := billH.queries.UpdateOrgPlan(context.Background(), db.UpdateOrgPlanParams{
+			ID: orgID, Plan: db.PlanSolo, BillingCycle: cycleMonthly, SubscriptionStatus: "active",
+		}); err != nil {
+			t.Fatalf("seed plan: %v", err)
+		}
+		if _, err := billH.queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: orgID, CreditCost: 1, CreditLimit: 10}); err != nil {
+			t.Fatalf("consume credit: %v", err)
+		}
+
+		w := doAuthed(t, http.MethodGet, billH.GetBillingInfo, u.access, nil)
+		resp := decodeBody[billingInfoResponse](t, w)
+		if resp.SmsCreditsUsed != 1 {
+			t.Fatalf("want sms credits used 1, got %d", resp.SmsCreditsUsed)
+		}
+	})
+
+	t.Run("displays 0 used once the reset date has passed, even before any send applies it", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+		if err := billH.queries.UpdateOrgPlan(context.Background(), db.UpdateOrgPlanParams{
+			ID: orgID, Plan: db.PlanSolo, BillingCycle: cycleMonthly, SubscriptionStatus: "active",
+		}); err != nil {
+			t.Fatalf("seed plan: %v", err)
+		}
+		if _, err := billH.queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: orgID, CreditCost: 1, CreditLimit: 10}); err != nil {
+			t.Fatalf("consume credit: %v", err)
+		}
+		if _, err := pool.Exec(context.Background(), "UPDATE orgs SET sms_credits_reset_at = CURRENT_DATE - 1 WHERE id = $1", orgID); err != nil {
+			t.Fatalf("force reset date: %v", err)
+		}
+
+		w := doAuthed(t, http.MethodGet, billH.GetBillingInfo, u.access, nil)
+		resp := decodeBody[billingInfoResponse](t, w)
+		if resp.SmsCreditsUsed != 0 {
+			t.Fatalf("want sms credits used 0 once the reset date has passed (lazy reset not yet physically applied), got %d", resp.SmsCreditsUsed)
 		}
 	})
 

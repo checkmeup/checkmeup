@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,13 +16,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
@@ -38,6 +42,7 @@ type Notifiers struct {
 	Mailer   *email.Sender
 	Webhook  *webhook.Client
 	Slack    *slack.Client
+	SMS      *twilio.Client
 	RDAP     *rdap.Client
 	Logger   *slog.Logger
 }
@@ -82,7 +87,10 @@ type AlertMessage struct {
 	Webhook *webhook.Event
 	// Slack is nil for the same reason as Webhook above.
 	Slack *slack.Message
-
+	// SMS is "" for call sites that haven't been updated — sendSMSAlert skips
+	// the sms channel type in that case rather than sending an empty text.
+	// Always pre-truncated to one SMS segment via TruncateSMS (US-1902/1903).
+	SMS string
 }
 
 // MonitorRef identifies the monitor an alert is for. Bundled into one value
@@ -96,11 +104,13 @@ type MonitorRef struct {
 
 // DispatchAlert sends msg to every channel attached to the monitor, logging
 // per-channel failures without aborting the others. If the monitor has no
-// attached, enabled channels, it falls back to emailing every user in the
-// org instead of staying silent (ADR-023) — a monitor always has somewhere
-// to send an alert. Reports whether the alert was delivered at all — per
-// ADR-016 / US-2805, the per-incident alert cap counts one notification
-// event regardless of how many channels (or the fallback) it went out on.
+// attached, enabled channels — or every attached channel failed to deliver
+// (wrong number, exhausted SMS credit once ADR-032 ships, provider outage,
+// etc.) — it falls back to emailing every user in the org instead of staying
+// silent (ADR-023) — a monitor always has somewhere to send an alert.
+// Reports whether the alert was delivered at all — per ADR-016 / US-2805,
+// the per-incident alert cap counts one notification event regardless of how
+// many channels (or the fallback) it went out on.
 func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon MonitorRef, msg AlertMessage) bool {
 	channels, err := n.Queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
 		MonitorType: mon.Type, MonitorID: mon.ID,
@@ -110,15 +120,14 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 		return false
 	}
 
-	if len(channels) == 0 {
-		return dispatchFallbackEmail(ctx, n, orgID, msg, mon.ID)
-	}
-
 	sent := false
 	for _, c := range channels {
 		if sendToChannel(ctx, n, c, msg, mon.ID) {
 			sent = true
 		}
+	}
+	if !sent {
+		return dispatchFallbackEmail(ctx, n, orgID, msg, mon.ID)
 	}
 	return sent
 }
@@ -151,6 +160,8 @@ func sendToChannel(ctx context.Context, n Notifiers, c db.NotificationChannel, m
 		return sendWebhookAlert(ctx, n, c, msg, monitorID)
 	case db.NotificationChannelTypeSlack:
 		return sendSlackAlert(ctx, n, c, msg, monitorID)
+	case db.NotificationChannelTypeSms:
+		return sendSMSAlert(ctx, n, c, msg, monitorID)
 	}
 	return false
 }
@@ -229,6 +240,88 @@ func sendSlackAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, 
 	return true
 }
 
+// consumeSMSCredit enforces the org's monthly SMS credit quota (ADR-032)
+// before a send is attempted — 1 credit per send in this simplified,
+// unweighted pass (no per-destination cost band yet). Returns false and
+// records a delivery failure if the org has no credit left this month,
+// leaving DispatchAlert's existing fallback-email path (worker.go's
+// DispatchAlert, once every attached channel including this one fails to
+// deliver) as the safety net, same as any other sms send failure.
+func consumeSMSCredit(ctx context.Context, n Notifiers, c db.NotificationChannel) bool {
+	plan, err := n.Queries.GetOrgPlan(ctx, c.OrgID)
+	if err != nil {
+		n.Logger.Error("worker: get org plan for sms credit check", "channel_id", c.ID, "err", err)
+		return false
+	}
+	limit := billing.GetLimits(plan).SMSCredits
+
+	// CreditCost is hardcoded to 1 in this pass (no per-destination cost
+	// band yet — ADR-032's "Implementation note"); a future weighted-cost
+	// lookup would compute this from the phone number's E.164 calling code
+	// instead.
+	_, err = n.Queries.ConsumeSMSCredit(ctx, db.ConsumeSMSCreditParams{ID: c.OrgID, CreditCost: 1, CreditLimit: int32(limit)})
+	if err != nil {
+		status, detail := "failed", "sms credit quota exhausted"
+		if !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("worker: consume sms credit", "channel_id", c.ID, "err", err)
+			detail = "internal error checking sms credit"
+		}
+		if updErr := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+			ID:                 c.ID,
+			LastDeliveryStatus: pgtype.Text{String: status, Valid: true},
+			LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
+		}); updErr != nil {
+			n.Logger.Error("worker: record sms delivery status", "channel_id", c.ID, "err", updErr)
+		}
+		return false
+	}
+	return true
+}
+
+// sendSMSAlert texts msg.SMS to the channel's configured phone number via
+// Twilio and records the delivery outcome on the channel row (US-1904),
+// mirroring sendWebhookAlert/sendSlackAlert's fire-and-forget, no-retry
+// pattern. Opt-out compliance is handled entirely by the in-app channel
+// toggle, not by anything here (ADR-029) — a bounce from a number that
+// opted out via STOP on a two-way sender just comes back as an ordinary
+// delivery failure below, same as a carrier rejection or invalid number.
+func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
+	if msg.SMS == "" {
+		return false
+	}
+	phone := channelConfigValue(c.Config, "phone_number")
+	if phone == "" {
+		return false
+	}
+
+	if !consumeSMSCredit(ctx, n, c) {
+		return false
+	}
+
+	statusCode, sendErr := n.SMS.Send(phone, msg.SMS)
+
+	status, detail := "success", fmt.Sprintf("%d", statusCode)
+	if sendErr != nil {
+		status = "failed"
+		if statusCode == 0 {
+			detail = "timeout / connection error"
+		}
+	}
+	if err := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+		ID:                 c.ID,
+		LastDeliveryStatus: pgtype.Text{String: status, Valid: true},
+		LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
+	}); err != nil {
+		n.Logger.Error("worker: record sms delivery status", "channel_id", c.ID, "err", err)
+	}
+
+	if sendErr != nil {
+		n.Logger.Error("worker: send sms alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
+		return false
+	}
+	return true
+}
+
 // dispatchFallbackEmail emails every user in the org when a monitor has no
 // attached channels. Every org has exactly one user today (EP-12 team
 // invites aren't built), but this is written against org_id rather than a
@@ -280,6 +373,24 @@ func FormatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dm %ds", m, s)
 	}
 	return fmt.Sprintf("%ds", s)
+}
+
+// smsSegmentLimit is the length of a single GSM-7 SMS segment. Messages
+// longer than this are truncated (US-1902/US-1903) rather than silently
+// split across extra segments, which would multiply per-message cost.
+const smsSegmentLimit = 160
+
+// TruncateSMS trims s to fit a single SMS segment, appending an ellipsis if
+// anything had to be cut. Exported so handler/ping.go's cron-recovery path
+// (built outside worker.go's build*Alert functions) applies the same rule.
+// Truncates by rune, not byte, so a monitor name containing multi-byte
+// characters can't be cut mid-character.
+func TruncateSMS(s string) string {
+	runes := []rune(s)
+	if len(runes) <= smsSegmentLimit {
+		return s
+	}
+	return string(runes[:smsSegmentLimit-1]) + "…"
 }
 
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
@@ -375,6 +486,7 @@ func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "cron", reason)),
+		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, reason)),
 	}
 }
 
@@ -467,6 +579,7 @@ func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage 
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.RecoveryMessage(m.Name, "uptime", downtime)),
+		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s downtime", m.Name, downtime)),
 	}
 }
 
@@ -523,6 +636,7 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "uptime", failureReason)),
+		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
 	}
 }
 
@@ -845,6 +959,7 @@ func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alert
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "ssl", subject)),
+		SMS:   TruncateSMS("checkmeup: " + subject),
 	}
 }
 
@@ -1053,6 +1168,7 @@ func domainThresholdAlert(m db.DomainMonitor, daysLeft int, expiresAt time.Time,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "domain", subject)),
+		SMS:   TruncateSMS("checkmeup: " + subject),
 	}
 }
 
@@ -1162,6 +1278,7 @@ func buildPortRecoveryAlert(m db.PortMonitor, downtime string) AlertMessage {
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.RecoveryMessage(m.Name, "port", downtime)),
+		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s downtime", m.Name, downtime)),
 	}
 }
 
@@ -1225,6 +1342,7 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 				Timestamp:   time.Now().UTC().Format(time.RFC3339),
 			},
 			Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
+			SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s", subject)),
 		}
 	}
 	return AlertMessage{
@@ -1241,6 +1359,7 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
+		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
 	}
 }
 

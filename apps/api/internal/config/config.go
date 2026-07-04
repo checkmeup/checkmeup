@@ -25,6 +25,10 @@ type Config struct {
 	BaseURL                       string
 	TelegramBotToken              string
 	TelegramWebhookSecret         string // sha256(TelegramBotToken) hex — derived, never stored separately
+	TwilioAccountSID              string
+	TwilioAPIKeySID               string
+	TwilioAPIKeySecret            string
+	TwilioMessagingServiceSID     string
 	PaddleEnvironment             string // "production" (default) or "sandbox" — selects api.paddle.com vs sandbox-api.paddle.com
 	PaddleAPIKey                  string // Paddle API key (server-side, secret)
 	PaddleWebhookSecret           string // Paddle webhook signing secret
@@ -53,6 +57,10 @@ func Load() *Config {
 		AppURL:                        getEnv("APP_URL", "http://localhost:5173"),
 		BaseURL:                       getEnv("BASE_URL", "http://localhost:8080"),
 		TelegramBotToken:              getEnv("TELEGRAM_BOT_TOKEN", ""),
+		TwilioAccountSID:              getEnv("TWILIO_ACCOUNT_SID", ""),
+		TwilioAPIKeySID:               getEnv("TWILIO_API_KEY_SID", ""),
+		TwilioAPIKeySecret:            getEnv("TWILIO_API_KEY_SECRET", ""),
+		TwilioMessagingServiceSID:     getEnv("TWILIO_MESSAGING_SERVICE_SID", ""),
 		PaddleEnvironment:             getEnv("PADDLE_ENVIRONMENT", "production"),
 		PaddleAPIKey:                  getEnv("PADDLE_API_KEY", ""),
 		PaddleWebhookSecret:           getEnv("PADDLE_WEBHOOK_SECRET", ""),

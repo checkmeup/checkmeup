@@ -299,6 +299,10 @@ func (h *MonitorHandler) ResumeDomainMonitor(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
+	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
+		respondResumeLimitErr(w, err)
+		return
+	}
 
 	monitor, err := h.queries.ResumeDomainMonitor(r.Context(), db.ResumeDomainMonitorParams{
 		ID: monitorID, OrgID: orgID,

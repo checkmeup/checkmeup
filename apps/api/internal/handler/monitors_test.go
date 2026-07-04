@@ -10,15 +10,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/db"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
@@ -331,7 +334,7 @@ func TestGetCronPings(t *testing.T) {
 		mon := decodeBody[cronMonitorRef](t, wCreate)
 
 		pingReq := httptest.NewRequest(http.MethodGet, "/ping/"+mon.PingToken+"?build=142&state=success", nil)
-		ping := NewPingHandler(pool, nil, nil, nil, nil)
+		ping := NewPingHandler(pool, nil, nil, nil, nil, nil)
 		pingW := httptest.NewRecorder()
 		ping.ReceivePing(pingW, withURLParam(pingReq, "token", mon.PingToken))
 		if pingW.Code != http.StatusOK {
@@ -484,6 +487,51 @@ func TestPauseResumeCronMonitor(t *testing.T) {
 		resumed := decodeBody[cronMonitorResponse](t, resumeW)
 		if resumed.Status != "waiting" {
 			t.Fatalf("want status waiting after resume, got %q", resumed.Status)
+		}
+	})
+
+	t.Run("resume is blocked once active monitors are already at the plan limit (ADR-019)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		orgID := uuid.MustParse(u.resp.OrgID)
+
+		var monitors []monitorRef
+		for i := range 10 { // Hobby's monitor limit
+			monitors = append(monitors, createCronMonitor(t, monitorH, u.access, fmt.Sprintf("mon-%d", i)))
+		}
+
+		pauseW := doMonitorRequest(t, http.MethodPost, monitorH.PauseCronMonitor, u.access, monitors[0].ID, nil)
+		if pauseW.Code != http.StatusOK {
+			t.Fatalf("pause setup: want 200, got %d: %s", pauseW.Code, pauseW.Body.String())
+		}
+
+		// Directly create an 11th, already-active monitor — simulating an
+		// org that's over its limit (e.g. from a prior higher plan) rather
+		// than going through the full downgrade webhook flow (covered
+		// separately in billing_test.go) — so active count is back at 10
+		// (the limit) even with one paused.
+		if _, err := monitorH.queries.CreateCronMonitor(context.Background(), db.CreateCronMonitorParams{
+			OrgID: orgID, Name: "extra", Schedule: "every 1h", GracePeriodMins: 5,
+			PingToken: uuid.NewString(), MaxAlertsPerIncident: 3,
+		}); err != nil {
+			t.Fatalf("create extra monitor: %v", err)
+		}
+
+		resumeW := doMonitorRequest(t, http.MethodPost, monitorH.ResumeCronMonitor, u.access, monitors[0].ID, nil)
+		if resumeW.Code != http.StatusPaymentRequired {
+			t.Fatalf("want 402, got %d: %s", resumeW.Code, resumeW.Body.String())
+		}
+		body := decodeBody[map[string]string](t, resumeW)
+		if body["code"] != "plan_limit_reached" {
+			t.Fatalf("want code plan_limit_reached, got %q", body["code"])
+		}
+
+		// The monitor stays paused — the blocked resume must not have applied.
+		still, err := monitorH.queries.GetCronMonitor(context.Background(), db.GetCronMonitorParams{ID: uuid.MustParse(monitors[0].ID), OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get monitor: %v", err)
+		}
+		if still.Status != db.MonitorStatusPaused {
+			t.Fatalf("want monitor to remain paused after the blocked resume, got %q", still.Status)
 		}
 	})
 }

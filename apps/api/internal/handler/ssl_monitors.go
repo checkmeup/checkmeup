@@ -20,20 +20,20 @@ import (
 // ─── response types ──────────────────────────────────────────────────────────
 
 type sslMonitorResponse struct {
-	ID                    string   `json:"id"`
-	Name                  string   `json:"name"`
-	Hostname              string   `json:"hostname"`
-	Status                string   `json:"status"`
-	AlertsEnabled         bool     `json:"alertsEnabled"`
-	AlertAfterNFailures   int32    `json:"alertAfterNFailures"`
-	MaxAlertsPerIncident  int32    `json:"maxAlertsPerIncident"`
-	ExpiresAt             *string  `json:"expiresAt"`
-	Issuer                *string  `json:"issuer"`
-	ErrorMsg              *string  `json:"errorMsg"`
-	DaysUntilExpiry       *int     `json:"daysUntilExpiry"`
-	LastCheckedAt         *string  `json:"lastCheckedAt"`
-	CreatedAt             string   `json:"createdAt"`
-	ChannelIDs            []string `json:"channelIds,omitempty"`
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	Hostname             string   `json:"hostname"`
+	Status               string   `json:"status"`
+	AlertsEnabled        bool     `json:"alertsEnabled"`
+	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
+	ExpiresAt            *string  `json:"expiresAt"`
+	Issuer               *string  `json:"issuer"`
+	ErrorMsg             *string  `json:"errorMsg"`
+	DaysUntilExpiry      *int     `json:"daysUntilExpiry"`
+	LastCheckedAt        *string  `json:"lastCheckedAt"`
+	CreatedAt            string   `json:"createdAt"`
+	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -300,6 +300,10 @@ func (h *MonitorHandler) PauseSSLMonitor(w http.ResponseWriter, r *http.Request)
 func (h *MonitorHandler) ResumeSSLMonitor(w http.ResponseWriter, r *http.Request) {
 	orgID, monitorID, ok := sslMonitorIDs(w, r)
 	if !ok {
+		return
+	}
+	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
+		respondResumeLimitErr(w, err)
 		return
 	}
 

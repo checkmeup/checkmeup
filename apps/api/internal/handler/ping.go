@@ -18,6 +18,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 	"github.com/checkmeup/checkmeup/internal/worker"
 )
@@ -37,10 +38,11 @@ type PingHandler struct {
 	mailer  *email.Sender
 	wh      *webhook.Client
 	sl      *slack.Client
+	sm      *twilio.Client
 }
 
-func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client) *PingHandler {
-	return &PingHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh, sl: sl}
+func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client, sm *twilio.Client) *PingHandler {
+	return &PingHandler{queries: db.New(pool), tg: tg, mailer: mailer, wh: wh, sl: sl, sm: sm}
 }
 
 // ReceivePing handles GET /ping/{token}
@@ -106,8 +108,9 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 					Timestamp:        now.UTC().Format(time.RFC3339),
 				},
 				Slack: &slackRecovery,
+				SMS:   worker.TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s", monitor.Name, downtime)),
 			}
-			n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, Logger: slog.Default()}
+			n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
 			worker.DispatchAlert(r.Context(), n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)
 		}
 	}

@@ -12,6 +12,77 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const consumeSMSCredit = `-- name: ConsumeSMSCredit :one
+UPDATE orgs
+SET
+    sms_credits_used_this_month = CASE
+        WHEN sms_credits_reset_at <= CURRENT_DATE THEN $2::int
+        ELSE sms_credits_used_this_month + $2::int
+    END,
+    sms_credits_reset_at = CASE
+        WHEN sms_credits_reset_at <= CURRENT_DATE THEN (date_trunc('month', NOW()) + interval '1 month')::date
+        ELSE sms_credits_reset_at
+    END,
+    updated_at = NOW()
+WHERE id = $1
+    AND (CASE WHEN sms_credits_reset_at <= CURRENT_DATE THEN 0 ELSE sms_credits_used_this_month END) + $2::int <= $3::int
+RETURNING sms_credits_used_this_month
+`
+
+type ConsumeSMSCreditParams struct {
+	ID          uuid.UUID `json:"id"`
+	CreditCost  int32     `json:"credit_cost"`
+	CreditLimit int32     `json:"credit_limit"`
+}
+
+// Atomically applies the lazy monthly reset (ADR-032/US-1907) and consumes
+// credit_cost credits (1 in this pass — no destination weighting yet, see
+// ADR-032's "Implementation note"; a future per-destination cost band would
+// just pass a computed cost here instead of a hardcoded 1), in the same
+// round trip, only if doing so wouldn't exceed the caller-supplied plan
+// limit — the WHERE clause re-evaluates the same would-be-reset CASE as the
+// SET clause, so a stale pre-reset count can never wrongly block a send. No
+// rows are returned/updated when the org is out of credit; the caller
+// (worker.go's sendSMSAlert) treats pgx.ErrNoRows as "exhausted, skip this
+// send" rather than a hard error.
+func (q *Queries) ConsumeSMSCredit(ctx context.Context, arg ConsumeSMSCreditParams) (int32, error) {
+	row := q.db.QueryRow(ctx, consumeSMSCredit, arg.ID, arg.CreditCost, arg.CreditLimit)
+	var sms_credits_used_this_month int32
+	err := row.Scan(&sms_credits_used_this_month)
+	return sms_credits_used_this_month, err
+}
+
+const countActiveMonitorsForOrg = `-- name: CountActiveMonitorsForOrg :one
+SELECT
+    (SELECT COUNT(*) FROM cron_monitors WHERE cron_monitors.org_id = $1 AND cron_monitors.status != 'paused')::int +
+    (SELECT COUNT(*) FROM uptime_monitors WHERE uptime_monitors.org_id = $1 AND uptime_monitors.status != 'paused')::int +
+    (SELECT COUNT(*) FROM ssl_monitors WHERE ssl_monitors.org_id = $1 AND ssl_monitors.status != 'paused')::int +
+    (SELECT COUNT(*) FROM domain_monitors WHERE domain_monitors.org_id = $1 AND domain_monitors.status != 'paused')::int +
+    (SELECT COUNT(*) FROM port_monitors WHERE port_monitors.org_id = $1 AND port_monitors.status != 'paused')::int AS total
+`
+
+// Same shape as CountOrgMonitors, but excludes paused monitors — used to
+// gate resuming a paused monitor against the plan limit (a resume doesn't
+// create anything new, so the check is "how many active would this leave",
+// not the CountOrgMonitors total that create-blocking uses).
+func (q *Queries) CountActiveMonitorsForOrg(ctx context.Context, orgID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countActiveMonitorsForOrg, orgID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countEnabledNotificationChannelsForOrg = `-- name: CountEnabledNotificationChannelsForOrg :one
+SELECT COUNT(*)::int AS total FROM notification_channels WHERE org_id = $1 AND enabled = true
+`
+
+func (q *Queries) CountEnabledNotificationChannelsForOrg(ctx context.Context, orgID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countEnabledNotificationChannelsForOrg, orgID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
 const countOrgMonitors = `-- name: CountOrgMonitors :one
 SELECT
     (SELECT COUNT(*) FROM cron_monitors WHERE cron_monitors.org_id = $1)::int +
@@ -66,7 +137,9 @@ SELECT
         (SELECT COUNT(*) FROM port_monitors WHERE org_id = o.id)::int
     ) AS monitor_count,
     (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count,
-    (SELECT COUNT(*) FROM notification_channels WHERE org_id = o.id)::int AS notification_channel_count
+    (SELECT COUNT(*) FROM notification_channels WHERE org_id = o.id)::int AS notification_channel_count,
+    o.sms_credits_used_this_month,
+    o.sms_credits_reset_at
 FROM orgs o
 WHERE o.id = $1
 `
@@ -81,6 +154,8 @@ type GetOrgBillingInfoRow struct {
 	MonitorCount             int32              `json:"monitor_count"`
 	StatusPageCount          int32              `json:"status_page_count"`
 	NotificationChannelCount int32              `json:"notification_channel_count"`
+	SmsCreditsUsedThisMonth  int32              `json:"sms_credits_used_this_month"`
+	SmsCreditsResetAt        pgtype.Date        `json:"sms_credits_reset_at"`
 }
 
 func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBillingInfoRow, error) {
@@ -96,6 +171,8 @@ func (q *Queries) GetOrgBillingInfo(ctx context.Context, id uuid.UUID) (GetOrgBi
 		&i.MonitorCount,
 		&i.StatusPageCount,
 		&i.NotificationChannelCount,
+		&i.SmsCreditsUsedThisMonth,
+		&i.SmsCreditsResetAt,
 	)
 	return i, err
 }
@@ -109,6 +186,82 @@ func (q *Queries) GetOrgPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
 	var plan Plan
 	err := row.Scan(&plan)
 	return plan, err
+}
+
+const listActiveMonitorsForOrg = `-- name: ListActiveMonitorsForOrg :many
+SELECT cron_monitors.id, 'cron'::text AS monitor_type, cron_monitors.created_at FROM cron_monitors WHERE cron_monitors.org_id = $1 AND cron_monitors.status != 'paused'
+UNION ALL
+SELECT uptime_monitors.id, 'uptime'::text, uptime_monitors.created_at FROM uptime_monitors WHERE uptime_monitors.org_id = $1 AND uptime_monitors.status != 'paused'
+UNION ALL
+SELECT ssl_monitors.id, 'ssl'::text, ssl_monitors.created_at FROM ssl_monitors WHERE ssl_monitors.org_id = $1 AND ssl_monitors.status != 'paused'
+UNION ALL
+SELECT domain_monitors.id, 'domain'::text, domain_monitors.created_at FROM domain_monitors WHERE domain_monitors.org_id = $1 AND domain_monitors.status != 'paused'
+UNION ALL
+SELECT port_monitors.id, 'port'::text, port_monitors.created_at FROM port_monitors WHERE port_monitors.org_id = $1 AND port_monitors.status != 'paused'
+ORDER BY created_at DESC
+`
+
+type ListActiveMonitorsForOrgRow struct {
+	ID          uuid.UUID          `json:"id"`
+	MonitorType string             `json:"monitor_type"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Every non-paused monitor across all 5 types, newest first — used by
+// billing.EnforceMonitorLimit (ADR-019) to decide which of an org's active
+// monitors to auto-pause after a downgrade, oldest-stays-active.
+func (q *Queries) ListActiveMonitorsForOrg(ctx context.Context, orgID uuid.UUID) ([]ListActiveMonitorsForOrgRow, error) {
+	rows, err := q.db.Query(ctx, listActiveMonitorsForOrg, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListActiveMonitorsForOrgRow{}
+	for rows.Next() {
+		var i ListActiveMonitorsForOrgRow
+		if err := rows.Scan(&i.ID, &i.MonitorType, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setNotificationChannelEnabled = `-- name: SetNotificationChannelEnabled :one
+UPDATE notification_channels SET enabled = $3, updated_at = NOW()
+WHERE id = $1 AND org_id = $2
+RETURNING id, org_id, type, name, config, enabled, created_at, updated_at, last_delivery_status, last_delivery_detail, last_delivery_at
+`
+
+type SetNotificationChannelEnabledParams struct {
+	ID      uuid.UUID `json:"id"`
+	OrgID   uuid.UUID `json:"org_id"`
+	Enabled bool      `json:"enabled"`
+}
+
+// Flips enabled without touching config — used by billing.EnforceNotificationChannelLimit
+// to auto-disable channels on downgrade, and simpler than routing through
+// UpdateNotificationChannel's full config-replace path when config isn't changing.
+func (q *Queries) SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannel, error) {
+	row := q.db.QueryRow(ctx, setNotificationChannelEnabled, arg.ID, arg.OrgID, arg.Enabled)
+	var i NotificationChannel
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Type,
+		&i.Name,
+		&i.Config,
+		&i.Enabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastDeliveryStatus,
+		&i.LastDeliveryDetail,
+		&i.LastDeliveryAt,
+	)
+	return i, err
 }
 
 const updateOrgPlan = `-- name: UpdateOrgPlan :exec

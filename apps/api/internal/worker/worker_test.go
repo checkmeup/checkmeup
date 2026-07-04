@@ -23,6 +23,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -44,6 +46,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
@@ -88,6 +91,18 @@ func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 
 // testNotificationChannel creates an enabled channel for orgID. Caller still
 // needs attachNotificationChannel to wire it to a specific monitor.
+// upgradeOrgPlan bumps a test org to plan — sms credit consumption (ADR-032)
+// is 0 on the default Hobby plan, so tests exercising the actual Twilio send
+// path (rather than credit exhaustion itself) need a paid plan first.
+func upgradeOrgPlan(t *testing.T, queries *db.Queries, orgID uuid.UUID, plan db.Plan) {
+	t.Helper()
+	if err := queries.UpdateOrgPlan(context.Background(), db.UpdateOrgPlanParams{
+		ID: orgID, Plan: plan, BillingCycle: "monthly", SubscriptionStatus: "active",
+	}); err != nil {
+		t.Fatalf("upgrade org plan: %v", err)
+	}
+}
+
 func testNotificationChannel(t *testing.T, queries *db.Queries, orgID uuid.UUID, channelType db.NotificationChannelType, config map[string]string) db.NotificationChannel {
 	t.Helper()
 	configBytes, err := json.Marshal(config)
@@ -651,8 +666,9 @@ func TestDispatchAlert(t *testing.T) {
 	// not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	sl := slack.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	sm := twilio.NewClient("", "", "", "") // not configured: Send always errors, no network call
 	logger := testLogger()
-	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, Logger: logger}
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, Logger: logger}
 	msg := AlertMessage{Telegram: "down", EmailSubject: "down", EmailHTML: "<p>down</p>"}
 
 	t.Run("no channel attached and no org user falls back to nothing", func(t *testing.T) {
@@ -680,7 +696,7 @@ func TestDispatchAlert(t *testing.T) {
 
 		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg)
 		if sent {
-			t.Fatal("want telegram-only delivery to fail with no bot token configured, and no fallback since a channel is attached")
+			t.Fatal("want telegram-only delivery to fail with no bot token configured, and the email fallback to also report unsent since this org has no user")
 		}
 	})
 
@@ -866,6 +882,179 @@ func TestDispatchAlert(t *testing.T) {
 			t.Fatal("want no delivery when the channel has no configured URL")
 		}
 	})
+
+	t.Run("sms channel without an SMS string on the alert does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		// msg has no SMS field set — same guard as the webhook/slack cases above.
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, msg)
+		if sent {
+			t.Fatal("want no delivery when the message carries no SMS text")
+		}
+	})
+
+	t.Run("sms channel attempts a send and records failure when Twilio isn't configured", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		upgradeOrgPlan(t, queries, org.ID, db.PlanSolo) // Hobby has 0 sms credits — would fail on quota before ever reaching Twilio
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN"}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
+		if sent {
+			t.Fatal("want no delivery with Twilio unconfigured in this test")
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryStatus.String != "failed" {
+			t.Fatalf("want last_delivery_status failed, got %q", updated.LastDeliveryStatus.String)
+		}
+		if updated.LastDeliveryDetail.String != "timeout / connection error" {
+			t.Fatalf("want the delivery to fail at the Twilio call itself (not quota), got detail %q", updated.LastDeliveryDetail.String)
+		}
+	})
+
+	t.Run("sms channel on the Hobby plan is skipped for quota exhaustion without ever reaching Twilio", func(t *testing.T) {
+		org := testOrg(t, queries, pool) // default plan: Hobby, 0 sms credits (ADR-032)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN"}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
+		if sent {
+			t.Fatal("want no delivery on a 0-credit plan")
+		}
+
+		updated, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if updated.LastDeliveryDetail.String != "sms credit quota exhausted" {
+			t.Fatalf("want detail \"sms credit quota exhausted\", got %q", updated.LastDeliveryDetail.String)
+		}
+	})
+
+	t.Run("sms send within the monthly quota consumes exactly one credit", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		upgradeOrgPlan(t, queries, org.ID, db.PlanSolo) // 10 credits/month
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN"}
+		DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
+
+		info, err := queries.GetOrgBillingInfo(context.Background(), org.ID)
+		if err != nil {
+			t.Fatalf("get billing info: %v", err)
+		}
+		if info.SmsCreditsUsedThisMonth != 1 {
+			t.Fatalf("want 1 credit consumed, got %d", info.SmsCreditsUsedThisMonth)
+		}
+	})
+
+	t.Run("sms channel with no configured phone number does not count as delivered", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN"}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
+		if sent {
+			t.Fatal("want no delivery when the channel has no configured phone number")
+		}
+	})
+
+	t.Run("every attached channel failing falls back to org user email (generalized ADR-032 fallback)", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		testUser(t, queries, org.ID)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN", EmailSubject: "down", EmailHTML: "<p>down</p>"}
+		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
+		if !sent {
+			t.Fatal("want the email fallback to count as delivered when the only attached channel (sms) fails")
+		}
+	})
+}
+
+func TestConsumeSMSCredit(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+
+	t.Run("blocks once the plan limit is reached, without going negative or over", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		limit := int32(3)
+		for i := range limit {
+			if _, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: limit}); err != nil {
+				t.Fatalf("credit %d: want success, got %v", i+1, err)
+			}
+		}
+		if _, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: limit}); !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("want pgx.ErrNoRows once the limit is reached, got %v", err)
+		}
+
+		info, err := queries.GetOrgBillingInfo(context.Background(), org.ID)
+		if err != nil {
+			t.Fatalf("get billing info: %v", err)
+		}
+		if info.SmsCreditsUsedThisMonth != limit {
+			t.Fatalf("want used stuck at %d, got %d", limit, info.SmsCreditsUsedThisMonth)
+		}
+	})
+
+	t.Run("a limit of 0 blocks every send (Hobby plan)", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		if _, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: 0}); !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("want pgx.ErrNoRows for a 0 credit limit, got %v", err)
+		}
+	})
+
+	t.Run("lazily resets once the reset date has passed", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		limit := int32(2)
+		for range limit {
+			if _, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: limit}); err != nil {
+				t.Fatalf("want success while under the limit, got %v", err)
+			}
+		}
+		if _, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: limit}); !errors.Is(err, pgx.ErrNoRows) {
+			t.Fatalf("want the limit reached before the reset, got %v", err)
+		}
+
+		// Simulate the reset date having passed (no dedicated query for
+		// this — it's not something production code ever sets directly).
+		if _, err := pool.Exec(context.Background(), "UPDATE orgs SET sms_credits_reset_at = CURRENT_DATE - 1 WHERE id = $1", org.ID); err != nil {
+			t.Fatalf("force reset date: %v", err)
+		}
+
+		used, err := queries.ConsumeSMSCredit(context.Background(), db.ConsumeSMSCreditParams{ID: org.ID, CreditCost: 1, CreditLimit: limit})
+		if err != nil {
+			t.Fatalf("want success after the reset date passes, got %v", err)
+		}
+		if used != 1 {
+			t.Fatalf("want usage reset to 1 (this send), got %d", used)
+		}
+
+		info, err := queries.GetOrgBillingInfo(context.Background(), org.ID)
+		if err != nil {
+			t.Fatalf("get billing info: %v", err)
+		}
+		if !info.SmsCreditsResetAt.Valid || !info.SmsCreditsResetAt.Time.After(time.Now()) {
+			t.Fatalf("want a fresh future reset date, got %+v", info.SmsCreditsResetAt)
+		}
+	})
 }
 
 func TestFormatDuration(t *testing.T) {
@@ -885,6 +1074,35 @@ func TestFormatDuration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTruncateSMS(t *testing.T) {
+	t.Run("short message passes through unchanged", func(t *testing.T) {
+		if got := TruncateSMS("checkmeup: X is DOWN"); got != "checkmeup: X is DOWN" {
+			t.Fatalf("want unchanged, got %q", got)
+		}
+	})
+
+	t.Run("message over 160 chars is truncated with an ellipsis", func(t *testing.T) {
+		long := strings.Repeat("a", 200)
+		got := TruncateSMS(long)
+		if len([]rune(got)) != smsSegmentLimit {
+			t.Fatalf("want length %d, got %d", smsSegmentLimit, len([]rune(got)))
+		}
+		if !strings.HasSuffix(got, "…") {
+			t.Fatalf("want truncated message to end with an ellipsis, got %q", got)
+		}
+	})
+
+	t.Run("multi-byte characters are cut by rune, not by byte", func(t *testing.T) {
+		long := strings.Repeat("é", 200) // é is 2 bytes in UTF-8, 1 rune
+		got := TruncateSMS(long)
+		for _, r := range got {
+			if r != 'é' && r != '…' {
+				t.Fatalf("want only é or the ellipsis rune, got a mangled rune %q in %q", r, got)
+			}
+		}
+	})
 }
 
 // ─── checkOverdue (cron) ───────────────────────────────────────────────────

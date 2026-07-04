@@ -514,6 +514,10 @@ func (h *MonitorHandler) ResumePortMonitor(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
+	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
+		respondResumeLimitErr(w, err)
+		return
+	}
 
 	monitor, err := h.queries.ResumePortMonitor(r.Context(), db.ResumePortMonitorParams{
 		ID: monitorID, OrgID: orgID,
