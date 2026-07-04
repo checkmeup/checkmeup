@@ -126,20 +126,20 @@ const post = computed(() => getPost(route.params.slug as string))
 
           <div
             v-else-if="block.type === 'table'"
-            class="rounded-xl border overflow-x-auto"
+            class="rounded-xl border"
             style="border-color: var(--border)"
           >
             <div
-              class="grid min-w-max"
+              class="grid"
               :style="{
-                gridTemplateColumns: `minmax(140px, 1.4fr) repeat(${block.headers.length - 1}, minmax(90px, 1fr))`,
+                gridTemplateColumns: `minmax(0, 1.3fr) repeat(${block.headers.length - 1}, minmax(0, 1fr))`,
               }"
             >
               <div class="contents">
                 <div
                   v-for="(h, hi) in block.headers"
                   :key="h"
-                  class="px-4 py-3 text-xs font-semibold border-b"
+                  class="px-2 py-3 text-xs font-semibold border-b break-words"
                   :class="hi === 0 ? 'text-left' : 'text-center'"
                   style="
                     border-color: var(--border);
@@ -154,7 +154,7 @@ const post = computed(() => getPost(route.params.slug as string))
                 <div
                   v-for="(cell, ci) in row"
                   :key="ci"
-                  class="px-4 py-3 text-xs border-b last:border-b-0"
+                  class="px-2 py-3 text-xs border-b last:border-b-0 break-words"
                   :class="ci === 0 ? 'text-left' : 'text-center font-medium'"
                   :style="{
                     borderColor: 'var(--border)',
