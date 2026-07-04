@@ -4,26 +4,6 @@ Security audit findings — unbounded operations a user or attacker could abuse 
 
 ---
 
-## HIGH — Unbounded goroutine spawning in worker
-
-**Files:** `apps/api/internal/worker/worker.go` lines 378-385, 711-717, 912-918
-
-All three check loops (uptime, SSL, domain) spawn one goroutine per monitor with no pool limit:
-
-```go
-for _, m := range monitors {
-    wg.Add(1)
-    go func() { defer wg.Done(); checkOneUptimeMonitor(...) }()
-}
-wg.Wait()
-```
-
-An Enterprise-plan user with 1000 uptime monitors all firing at the same tick spawns 1000 goroutines simultaneously, each making an outbound HTTP connection.
-
-**Fix:** use a semaphore or bounded worker pool (e.g., 50 concurrent).
-
----
-
 ## HIGH — Incident list queries have no LIMIT
 
 **Files:** `apps/api/queries/monitors.sql:90`, `apps/api/queries/uptime.sql:107`
@@ -71,6 +51,7 @@ Auth endpoints (`/sign-in`, `/sign-up`, `/forgot-password`) and suggestions are 
 
 ## Things that are fine
 
+- All five check loops (cron overdue, uptime, SSL, domain, port) bounded via a 50-goroutine semaphore (`checkConcurrency`, `worker.go:33`) ✓ — fixed 2026-07-04, cron's `checkOverdue` was the last one still processing sequentially
 - Monitor creation is plan-limited (10–1000 per plan) ✓
 - Cron pings and uptime check reads are paginated ✓
 - Request body capped at 64 KB globally ✓
@@ -81,8 +62,7 @@ Auth endpoints (`/sign-in`, `/sign-up`, `/forgot-password`) and suggestions are 
 
 ## Priority order
 
-1. Goroutine pool cap (worker concurrency)
-2. Incident query LIMIT
-3. Uptime check retention/cleanup
-4. Status page rate limit
-5. Global authenticated-route rate limit
+1. Incident query LIMIT
+2. Uptime check retention/cleanup
+3. Status page rate limit
+4. Global authenticated-route rate limit

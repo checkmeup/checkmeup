@@ -420,9 +420,19 @@ func checkOverdue(ctx context.Context, n Notifiers) {
 		return
 	}
 
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, checkConcurrency)
 	for _, m := range monitors {
-		processOverdueMonitor(ctx, n, m)
+		m := m
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			processOverdueMonitor(ctx, n, m)
+		}()
 	}
+	wg.Wait()
 }
 
 func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
