@@ -124,6 +124,55 @@ const post = computed(() => getPost(route.params.slug as string))
             </figcaption>
           </figure>
 
+          <div
+            v-else-if="block.type === 'table'"
+            class="rounded-xl border overflow-x-auto"
+            style="border-color: var(--border)"
+          >
+            <div
+              class="grid min-w-max"
+              :style="{
+                gridTemplateColumns: `minmax(140px, 1.4fr) repeat(${block.headers.length - 1}, minmax(90px, 1fr))`,
+              }"
+            >
+              <div
+                class="contents"
+              >
+                <div
+                  v-for="(h, hi) in block.headers"
+                  :key="h"
+                  class="px-4 py-3 text-xs font-semibold border-b"
+                  :class="hi === 0 ? 'text-left' : 'text-center'"
+                  style="border-color: var(--border); background-color: var(--surface); color: var(--text-strong)"
+                >
+                  {{ h }}
+                </div>
+              </div>
+              <template v-for="(row, ri) in block.rows" :key="ri">
+                <div
+                  v-for="(cell, ci) in row"
+                  :key="ci"
+                  class="px-4 py-3 text-xs border-b last:border-b-0"
+                  :class="ci === 0 ? 'text-left' : 'text-center font-medium'"
+                  :style="{
+                    borderColor: 'var(--border)',
+                    backgroundColor: ri % 2 === 0 ? 'var(--bg)' : 'var(--surface)',
+                    color:
+                      ci === 0
+                        ? 'var(--text-dim)'
+                        : cell === '—'
+                          ? 'var(--text-muted)'
+                          : cell === '✓'
+                            ? 'var(--color-green-500)'
+                            : 'var(--text-strong)',
+                  }"
+                >
+                  {{ cell }}
+                </div>
+              </template>
+            </div>
+          </div>
+
           <blockquote
             v-else-if="block.type === 'blockquote'"
             class="border-l-2 pl-5 py-1 text-sm leading-relaxed italic"

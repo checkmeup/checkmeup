@@ -8,6 +8,7 @@ export type ContentBlock =
   | { type: 'divider' }
   | { type: 'signature'; text: string }
   | { type: 'image'; src: string; alt: string; caption?: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
 
 export interface BlogPost {
   slug: string
