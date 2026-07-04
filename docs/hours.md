@@ -68,3 +68,9 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-03 | Fri | Security review (EP-26) + design-gap documentation (ADR-028, backlog) | 1 h   |
 | 2026-07-03 | Fri | Cron ping metadata in dashboard UI (execution log chips, truncation) | 1 h   |
 | 2026-07-03 | Fri | v1.18 release notes                                       | 1 h   |
+| 2026-07-04 | Sat | Competitor comparison blog post (table content blocks)    | 2 h   |
+| 2026-07-04 | Sat | Docs: resolved SMS/2FA/team-invite blockers, postponed Teams alerts | 2 h   |
+| 2026-07-04 | Sat | EP-19 (SMS alerts via Twilio) + plan-downgrade limits: API, worker, migrations, web app, docs | 7 h   |
+| 2026-07-04 | Sat | Blog fix (responsive comparison tables) + v1.19 release notes | 1 h   |
+| 2026-07-04 | Sat | Community engagement copy (Reddit r/SaaS, r/selfhosted threads) + feature verification | 2 h   |
+| 2026-07-04 | Sat | EP-34/EP-35 stories (zombie/overlap detection) + roadmap prioritization | 1 h   |
