@@ -24,7 +24,6 @@ Ordered by how easy the blocker is to clear — internal decisions first, extern
 - [EP-31](stories/ep-31-assertion-checks.md) US-3105 — Multi-step (chained) API checks — **5 h**. US-3101–3104 shipped in v1.9; this is the request-chaining follow-on — story flags it as a good candidate for its own epic during grooming
 - [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts — **4 h**.
 
-- Activate billing — all code is done (inline upgrade prompt on 402, Billing page checkout buttons with monthly/annual toggle, Paddle.js checkout overlay). What's left is account setup in the Paddle dashboard, which only the account holder can do — see [`docs/billing-setup.md`](billing-setup.md) for the exact checklist. Trigger: first 402 hit in production, or a user asks about a paid plan.
 - [EP-24](stories/ep-24-incident-management.md) — Incident management — **5.5 h**. Blocked on the manual-incident schema decision in [decision backlog](decisions/backlog.md) — internal schema design.
 - [EP-34](stories/ep-34-zombie-job-detection.md) — Zombie (stuck) job detection — **5 h**. Blocked on the start/completion ping design decision in [decision backlog](decisions/backlog.md) — internal schema design.
 - [EP-35](stories/ep-35-overlap-detection.md) — Overlap detection — **3.5 h**. Same decision as EP-34, plus depends on EP-34's start-ping endpoint shipping first.
