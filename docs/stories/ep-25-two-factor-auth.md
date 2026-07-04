@@ -2,7 +2,7 @@
 
 TOTP-based 2FA (Google Authenticator-style) for sign-in ([EP-01](ep-01-auth.md)), independent of password reset — resetting a forgotten password ([US-0105](ep-01-auth.md)) does not bypass 2FA; the second factor is still required afterward.
 
-**Needs an encryption decision before implementation** (add to [decision backlog](../decisions/backlog.md)): the TOTP secret must be stored reversibly (the server needs the original value to compute the current valid code), unlike everything else in this schema today — `password_hash` and `refresh_tokens.token_hash` are one-way hashes (`apps/api/migrations/001_initial.sql`). This is the first reversible-encryption-at-rest requirement in the codebase and needs a real choice (e.g. `pgcrypto` vs. application-level encryption with a key from env/secrets), not an assumption.
+Encryption approach decided in [ADR-030](../decisions/030-totp-secret-encryption.md): application-level AES-256-GCM in Go, keyed by a new `TOTP_ENCRYPTION_KEY` env var — not `pgcrypto`, not a KMS.
 
 ---
 

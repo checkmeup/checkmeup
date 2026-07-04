@@ -4,6 +4,8 @@ A seventh alert channel, built the same way as [Slack](ep-17-slack-alerts.md): a
 
 Also builds on the multi-channel model in [EP-28](ep-28-notification-channels.md) ([ADR-023](../decisions/023-notification-channels.md)) — "off at the org level" below should read "channel disabled or not attached to that monitor" once EP-28 lands.
 
+**Postponed** (2026-07-04): building and testing the Power Automate workflow above requires a Microsoft 365 **work or school (business)** account — a personal Microsoft account can't create or receive these workflows. No separate payment or subscription is needed to call the API itself once a qualifying tenant exists (these calls are unmetered), but the tenant itself doesn't exist yet. Picking this back up needs a founder-side setup step first — e.g. enrolling in the free Microsoft 365 Developer Program for a test tenant — before US-1801 can even be manually verified, let alone shipped.
+
 ---
 
 ### US-1801: Connect a Teams channel

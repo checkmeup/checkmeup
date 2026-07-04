@@ -2,7 +2,7 @@
 
 Today an org has exactly one user, created together at sign-up ([EP-01](ep-01-auth.md)) — there's no way to add a second person. This epic adds inviting teammates into the same org with a restricted role, matching "Multi-user organizations — invite teammates, shared monitors" already promised on the blog's roadmap.
 
-**Needs a design decision before implementation** (add to [decision backlog](../decisions/backlog.md) / write an ADR): `users.email` is globally unique today (`apps/api/migrations/001_initial.sql`), not unique-per-org, and there's no `org_members` table — a user belongs to exactly one org via `users.org_id`. Inviting an email that's already registered under a *different* org can't just work by relaxing a constraint; it needs an explicit decision (reject the invite, or support one user across multiple orgs — a bigger schema change).
+Invite-conflict handling decided in [ADR-031](../decisions/031-team-invite-conflict.md): reject the invite when the email already belongs to a user in any org — no multi-org-per-user support. `users.email` stays globally unique and a user still belongs to exactly one org via `users.org_id` (`apps/api/migrations/001_initial.sql`); no `org_members` table.
 
 ---
 
