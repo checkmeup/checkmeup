@@ -10,7 +10,7 @@ Pricing/cost-control model decided in [ADR-032](../decisions/032-sms-credit-quot
 
 **Shipped 2026-07-04.** US-1901–US-1908 are all live. One simplification vs. the original design: US-1906's destination-weighted cost bands weren't built — credits are a flat 1-per-send today, since the weighting needs a hand-built per-country pricing table (real data entry, not code) that was deliberately deferred. See ADR-032's "Implementation note" for the full rationale; the storage shape and consumption path were built so weighting can be added later without a redesign. Everything else (opt-in flow, delivery-failure logging, shared alert cap, monthly reset, exhaustion → email fallback) matches the acceptance criteria below as written.
 
-Founder-side Twilio account setup: done except US/Canada Toll-Free/10DLC sender registration, deliberately postponed until the first US-based paid customer (real lead time, no cost to defer). Non-US/Canada destinations use an alphanumeric sender (`CHECKMEUP`), live today. Full checklist: [`docs/twilio-setup.md`](../twilio-setup.md).
+Founder-side Twilio account setup: done except US/Canada Toll-Free/10DLC sender registration, deliberately postponed until the first US-based paid customer (real lead time, no cost to defer). Non-US/Canada destinations use an alphanumeric sender (`CHECKMEUP`), live today. Full checklist: [`docs/reference/twilio-setup.md`](../reference/twilio-setup.md).
 
 ---
 

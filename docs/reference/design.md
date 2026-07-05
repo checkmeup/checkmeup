@@ -1,3 +1,11 @@
+---
+title: Design System
+type: reference
+status: active
+updated: 2026-07-05
+tags: [design, tokens, colors, logo]
+---
+
 # Design system
 
 ## Logo assets
@@ -54,7 +62,7 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--text` | `#F2F5F3` | Body text |
 | `--text-strong` | `#F2F5F3` | Headings, emphasis — same value as `--text` in this palette |
 
-**Neutrals — light** (`:root[data-theme='light']` override, see [EP-10](stories/ep-10-theme.md))
+**Neutrals — light** (`:root[data-theme='light']` override, see [EP-10](../stories/ep-10-theme.md))
 | Token | Value | Use |
 |---|---|---|
 | `--bg` | `#FBFDFC` | Page background |
@@ -92,7 +100,7 @@ accent** below is the one exception: it resolves to a different green step per t
 |---|---|---|---|
 | `--nav-bg` | `rgba(10,15,13,0.88)` | `rgba(251,253,252,0.88)` | Sticky nav background under `backdrop-filter: blur(...)` |
 
-**CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." box; see [EP-10](stories/ep-10-theme.md))
+**CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." box; see [EP-10](../stories/ep-10-theme.md))
 
 A flat `--accent-wash-dim` fill with a `--cta-border` outline, same both themes — no
 separate CTA-only text tokens needed, since heading/body just use the normal
@@ -103,7 +111,7 @@ separate CTA-only text tokens needed, since heading/body just use the normal
 | `--cta-border` | `rgba(29,158,117,0.25)` | Box border |
 
 This replaces the earlier dark-gradient-in-dark-mode / light-mint-in-light-mode treatment
-(see `reports/2026-06.md`, EP-10 entry, for why a flat `--bg`/`--surface` fill didn't work
+(see `../reports/2026-06.md`, EP-10 entry, for why a flat `--bg`/`--surface` fill didn't work
 there) — the flat wash reads fine in both themes without a per-theme gradient swap.
 
 ## Typography

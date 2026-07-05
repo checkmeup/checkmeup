@@ -1,6 +1,6 @@
 # EP-31: Assertion-based API checks
 
-Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)) with structured pass/fail assertions beyond a body substring match: a JSON response field's value, a response-time threshold treated as a first-class failure condition (not just informational), and — as a larger follow-on — a short chain of dependent requests. This is Cronitor's headline differentiator over checkmeup today (see `docs/bucket-list.md`); building it on EP-11's existing check-evaluation pipeline avoids introducing a new monitor type.
+Extends the uptime monitor's keyword check ([EP-11](ep-11-keyword-monitoring.md)) with structured pass/fail assertions beyond a body substring match: a JSON response field's value, a response-time threshold treated as a first-class failure condition (not just informational), and — as a larger follow-on — a short chain of dependent requests. This is Cronitor's headline differentiator over checkmeup today (see `docs/proposals/bucket-list.md`); building it on EP-11's existing check-evaluation pipeline avoids introducing a new monitor type.
 
 ---
 

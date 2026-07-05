@@ -1,6 +1,14 @@
+---
+title: Activating Billing (Paddle)
+type: reference
+status: active
+updated: 2026-07-05
+tags: [billing, paddle, ops]
+---
+
 # Activating billing (Paddle)
 
-All the code is ready (EP-07, EP-27, [ADR-026](decisions/026-billing-paddle-mor.md)) — checkout creation, the webhook handler, plan-limit enforcement, the inline upgrade prompt, and the Billing page's upgrade buttons all work today. What's left is account setup in the Paddle dashboard, which only the account holder can do (business/tax identity — see [ADR-026](decisions/026-billing-paddle-mor.md)).
+All the code is ready (EP-07, EP-27, [ADR-026](../decisions/026-billing-paddle-mor.md)) — checkout creation, the webhook handler, plan-limit enforcement, the inline upgrade prompt, and the Billing page's upgrade buttons all work today. What's left is account setup in the Paddle dashboard, which only the account holder can do (business/tax identity — see [ADR-026](../decisions/026-billing-paddle-mor.md)).
 
 ## Checklist
 
@@ -14,7 +22,7 @@ All the code is ready (EP-07, EP-27, [ADR-026](decisions/026-billing-paddle-mor.
    | Startup | $29/mo | $290/yr |
    | Enterprise | $99/mo | $990/yr |
 
-   Annual prices are exactly 10× monthly (2 months free) — keep them that way unless the pricing model changes (see [ADR-019](decisions/019-plan-limits.md), [EP-27](stories/ep-27-annual-billing.md)). Quantity: min 1, max 1 (not a per-seat product). Custom data per price: `plan`/`cycle` (e.g. `plan: solo`, `cycle: monthly`) — not required by the code, but makes every webhook self-describing.
+   Annual prices are exactly 10× monthly (2 months free) — keep them that way unless the pricing model changes (see [ADR-019](../decisions/019-plan-limits.md), [EP-27](../stories/ep-27-annual-billing.md)). Quantity: min 1, max 1 (not a per-seat product). Custom data per price: `plan`/`cycle` (e.g. `plan: solo`, `cycle: monthly`) — not required by the code, but makes every webhook self-describing.
 4. **Set the default payment link** to `https://checkmeup.net/billing` (Checkout > Checkout settings) — this is the URL Paddle Checkout is approved to run from. Submit `checkmeup.net` for domain approval if not already done (the same domain-verification gate that prompted the Terms/Privacy/Refund Policy overhaul — see the v1.14 release notes).
 5. **Create an API key** (Authentication > API keys) — non-expiring, scopes: `Transactions` (read + write), `Customer portal sessions` (write), and `Subscriptions` (read + write — needed for in-app plan downgrades/cancellations, which call Paddle's subscription update/cancel APIs directly). This becomes `PADDLE_API_KEY`.
 6. **Create a client-side token** (Authentication > Client-side tokens) — this is public, safe to expose in the browser. Becomes `VITE_PADDLE_CLIENT_TOKEN` on the frontend.

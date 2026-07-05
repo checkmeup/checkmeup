@@ -1,6 +1,6 @@
 # EP-33: Port (TCP) monitoring
 
-A port monitor opens a raw TCP connection to a host:port on a fixed interval — no HTTP request, no response body. Same up/down/alert shape as the uptime monitor ([EP-03](ep-03-uptime-monitor.md)), different transport: this covers non-HTTP services (mail servers, databases, custom daemons) that a URL-based check can't reach. Identified as a gap vs. UptimeRobot in `docs/bucket-list.md`'s "New monitor types" section.
+A port monitor opens a raw TCP connection to a host:port on a fixed interval — no HTTP request, no response body. Same up/down/alert shape as the uptime monitor ([EP-03](ep-03-uptime-monitor.md)), different transport: this covers non-HTTP services (mail servers, databases, custom daemons) that a URL-based check can't reach. Identified as a gap vs. UptimeRobot in `docs/proposals/bucket-list.md`'s "New monitor types" section.
 
 Each monitor has an **expected state** of either "open" (default — alert if the port stops accepting connections) or "closed" (alert if the port unexpectedly *starts* accepting connections). The closed mode is a security check: confirming a port that should be firewalled off (e.g. a database bound to a public interface, an admin panel, a debug port) actually stays unreachable, and catching the moment it doesn't — a misconfiguration or exposure, not an uptime concern.
 

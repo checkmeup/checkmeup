@@ -1,3 +1,11 @@
+---
+title: DoS / Overload Vulnerability Audit
+type: reference
+status: active
+updated: 2026-07-05
+tags: [security, dos, audit]
+---
+
 # DoS / Overload Vulnerabilities
 
 Security audit findings — unbounded operations a user or attacker could abuse to overload the system.

@@ -40,7 +40,7 @@ make migrate-create name=foo  # create a new goose migration file
 | `APP_URL` | optional | frontend origin (default `http://localhost:5173`) |
 | `BASE_URL` | optional | backend origin (default `http://localhost:8080`) |
 | `TELEGRAM_BOT_TOKEN` | optional | enables Telegram alerts |
-| `TWILIO_ACCOUNT_SID` | optional | enables SMS alerts ([EP-19](docs/stories/ep-19-sms-alerts.md)) — see [`docs/twilio-setup.md`](docs/twilio-setup.md) |
+| `TWILIO_ACCOUNT_SID` | optional | enables SMS alerts ([EP-19](docs/stories/ep-19-sms-alerts.md)) — see [`docs/reference/twilio-setup.md`](docs/reference/twilio-setup.md) |
 | `TWILIO_API_KEY_SID` | optional | scoped API Key SID (not the primary Account SID) |
 | `TWILIO_API_KEY_SECRET` | optional | scoped API Key secret — never the primary Account Auth Token |
 | `TWILIO_MESSAGING_SERVICE_SID` | optional | Messaging Service SID SMS is sent from |
@@ -55,11 +55,11 @@ make migrate-create name=foo  # create a new goose migration file
 | `PADDLE_ENTERPRISE_ANNUAL_PRICE_ID` | billing | price ID for Enterprise plan (annual) |
 | `CODACY_API_TOKEN` | CI only | account-level Codacy token |
 
-> All `PADDLE_*` vars are unset by default — see [`docs/billing-setup.md`](docs/billing-setup.md) for the Paddle dashboard checklist to activate billing. The frontend also needs `VITE_PADDLE_CLIENT_TOKEN` (public, safe to expose) in `apps/web/.env` for Paddle.js — see [`apps/web/.env.example`](apps/web/.env.example).
+> All `PADDLE_*` vars are unset by default — see [`docs/reference/billing-setup.md`](docs/reference/billing-setup.md) for the Paddle dashboard checklist to activate billing. The frontend also needs `VITE_PADDLE_CLIENT_TOKEN` (public, safe to expose) in `apps/web/.env` for Paddle.js — see [`apps/web/.env.example`](apps/web/.env.example).
 
 > `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
 
-Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)).
+Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)). Docs navigation: [`docs/INDEX.md`](docs/INDEX.md) — living how-to in [`docs/reference/`](docs/reference/), architectural snapshots in [`docs/knowledge/`](docs/knowledge/), feature gap analysis in [`docs/proposals/`](docs/proposals/), technical investigations in [`docs/investigations/`](docs/investigations/).
 
 **Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log (`Date | Day | Epic/Story | Hours`). When asked to log/update hours for a day, check `git log --since/--until` for that day's commits (exclude stash artifacts — `git log --all` surfaces `refs/stash` entries as fake commits titled "On <branch>:"/"index on <branch>:"/"untracked files on <branch>:"), group related commits into one line per logical task, and estimate effort from diff size and complexity — minimum 1h per task/line, combine small related commits rather than one line per commit. Non-commit work in the same session (launch/marketing copy, doc corrections, etc.) gets its own line too. Roll the new daily total into that month's `docs/reports/YYYY-MM.md` Notes section.
 
@@ -72,7 +72,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 - **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged)
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
-- **Colors/logo:** never hardcode hex values — use tokens from [`docs/design.md`](docs/design.md)
+- **Colors/logo:** never hardcode hex values — use tokens from [`docs/reference/design.md`](docs/reference/design.md)
 - **Theme:** the app supports light/dark via `data-theme` on `<html>` — design tokens (`--bg`, `--text`, etc.) already flip per theme, so styling with tokens is theme-safe by default; hardcoding a token's current value isn't (see [EP-10](docs/stories/ep-10-theme.md))
 
 ---

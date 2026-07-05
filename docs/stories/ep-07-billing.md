@@ -52,4 +52,4 @@ Plan limits:
 - [x] On successful payment, LemonSqueezy webhook updates the org's plan in DB
 - [x] New limits applied immediately after webhook received
 - [x] Cancellation: plan stays active until `ends_at`, then reverts to Hobby
-- [x] Failed payment: user stays on LemonSqueezy's hosted checkout page natively, can retry — nothing for us to configure. Success redirect is now explicit in code (`product_options.redirect_url` → `/billing?upgraded=true`) rather than relying on a LemonSqueezy dashboard default — see [`docs/billing-setup.md`](../billing-setup.md)
+- [x] Failed payment: user stays on LemonSqueezy's hosted checkout page natively, can retry — nothing for us to configure. Success redirect is now explicit in code (`product_options.redirect_url` → `/billing?upgraded=true`) rather than relying on a LemonSqueezy dashboard default — see [`docs/reference/billing-setup.md`](../reference/billing-setup.md)

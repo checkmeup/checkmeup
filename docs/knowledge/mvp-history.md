@@ -1,6 +1,15 @@
+---
+title: MVP Build History
+type: knowledge
+status: current
+updated: 2026-07-05
+tags: [architecture, history, planning]
+scope: full project
+---
+
 # MVP history
 
-Frozen record of how the MVP was actually built. See [roadmap.md](roadmap.md) for current Now / Next / Later work, and [reports/](reports/) for what's shipped since.
+Frozen record of how the MVP was actually built. See [roadmap.md](../roadmap.md) for current Now / Next / Later work, and [reports/](../reports/) for what's shipped since.
 
 **Work schedule (Israel)** — the basis for the phase hour budgets below (~28–30 h/week):
 - Sun–Thu: 3–4 h/day (~3.5 h avg)
@@ -31,7 +40,7 @@ Close all open questions before writing any feature code. A bad foundation compo
 
 ### Goals
 
-- [x] Resolve [decision backlog](decisions/backlog.md) — ADRs 001–011 written (worker model, multi-tenancy, auth, sqlc, infra, status pages, API versioning, error format, logging, testing, Chi)
+- [x] Resolve [decision backlog](../decisions/backlog.md) — ADRs 001–011 written (worker model, multi-tenancy, auth, sqlc, infra, status pages, API versioning, error format, logging, testing, Chi)
 - [x] Backend scaffold — Go module, Chi router, DB connection pool, `GET /health`, CORS middleware, JWT auth middleware, request logging, first goose migration (users + orgs + refresh_tokens)
 - [x] Frontend scaffold — Vue 3 + Vite, Pinia, Vue Router, TanStack Query, Radix Vue, base layout, auth guard, design tokens
 - [x] Local dev — `docker-compose.yml` for PostgreSQL so `make dev` starts the full stack
@@ -47,7 +56,7 @@ Close all open questions before writing any feature code. A bad foundation compo
 
 **Sun Jun 21 → Sat Jun 27 · ~28 h**
 
-[EP-01](stories/ep-01-auth.md) — 6 stories
+[EP-01](../stories/ep-01-auth.md) — 6 stories
 
 Nothing else starts until auth is solid. Invest time here — a shaky auth layer causes pain in every phase that follows.
 
@@ -61,9 +70,9 @@ Nothing else starts until auth is solid. Invest time here — a shaky auth layer
 - [x] Protected route guard in Vue Router + auth Pinia store
 - [x] Dashboard shell (empty) behind auth
 
-> **US-0105 (password reset)** implemented with Resend ([ADR-012](decisions/012-email-resend.md)). Requires `RESEND_API_KEY` + `APP_URL` in env.
+> **US-0105 (password reset)** implemented with Resend ([ADR-012](../decisions/012-email-resend.md)). Requires `RESEND_API_KEY` + `APP_URL` in env.
 
-> **US-0106 (abuse protection)** added 2026-06-15: `go-chi/httprate` rate limiting on sign-up, sign-in, forgot-password (see [ADR-013](decisions/013-rate-limiting.md)).
+> **US-0106 (abuse protection)** added 2026-06-15: `go-chi/httprate` rate limiting on sign-up, sign-in, forgot-password (see [ADR-013](../decisions/013-rate-limiting.md)).
 
 ### Deliverable
 
@@ -75,9 +84,9 @@ Full auth loop working: register → dashboard → refresh → sign out → redi
 
 **Jun 14–15 · ~4 h (completed ahead of schedule)**
 
-[EP-02](stories/ep-02-cron-monitor.md) — 8 stories
-[EP-05](stories/ep-05-telegram-alerts.md) — 4 stories
-[EP-08](stories/ep-08-security-hardening.md) — 4 stories
+[EP-02](../stories/ep-02-cron-monitor.md) — 8 stories
+[EP-05](../stories/ep-05-telegram-alerts.md) — 4 stories
+[EP-08](../stories/ep-08-security-hardening.md) — 4 stories
 
 - [x] DB schema — monitors, pings, incidents (migration 003)
 - [x] US-0501 Connect Telegram — org settings page, chat ID input, test message button; bot webhook so `/start` replies with chat ID
@@ -97,7 +106,7 @@ Point a real cron job at checkmeup. Watch pings arrive. Get a Telegram message w
 
 ### Security hardening — Jun 15
 
-- [x] US-0106 Rate limiting — `go-chi/httprate` on sign-up, sign-in, forgot-password ([ADR-013](decisions/013-rate-limiting.md))
+- [x] US-0106 Rate limiting — `go-chi/httprate` on sign-up, sign-in, forgot-password ([ADR-013](../decisions/013-rate-limiting.md))
 - [x] US-0801 Rate limit `GET /ping/{token}` — 60 req/min per token (prevents DB flooding)
 - [x] US-0802 Rate limit Telegram endpoints — webhook 60 req/min, test-message 5 req/min per IP
 - [x] US-0803 Global 64 KB request body cap — `http.MaxBytesReader` middleware (prevents OOM on 4 GB server)
@@ -110,7 +119,7 @@ Point a real cron job at checkmeup. Watch pings arrive. Get a Telegram message w
 
 **Jun 15 · ~3 h (completed ahead of schedule)**
 
-[EP-03](stories/ep-03-uptime-monitor.md) — 6 stories
+[EP-03](../stories/ep-03-uptime-monitor.md) — 6 stories
 
 Reused patterns from Phase 2 (DB shape, worker model, alert wiring). Completed same day as Phase 4 & 5.
 
@@ -130,7 +139,7 @@ Reused patterns from Phase 2 (DB shape, worker model, alert wiring). Completed s
 
 **Jun 15 · ~3 h (completed ahead of schedule)**
 
-[EP-04](stories/ep-04-ssl-monitor.md) — 5 stories
+[EP-04](../stories/ep-04-ssl-monitor.md) — 5 stories
 
 Simplest monitor type — daily checks, no interval config, fixed alert thresholds at 30/14/7 days.
 
@@ -151,7 +160,7 @@ All three monitor types live. Cron, uptime, and SSL are all running and alerting
 
 **Mon Jun 15 · ~4 h (completed ahead of schedule)**
 
-[EP-06](stories/ep-06-status-page.md) — 5 stories
+[EP-06](../stories/ep-06-status-page.md) — 5 stories
 
 - [x] DB schema — status_pages, status_page_monitors (migration 008)
 - [x] ADR-017 — public page served via Go html/template (no JS required)
@@ -171,11 +180,11 @@ A live public `/status/:slug` page that anyone can visit and bookmark.
 
 **Jun 15–16 · ~4 h (completed ahead of schedule)**
 
-[EP-07](stories/ep-07-billing.md) — 3 stories + cross-cutting polish
+[EP-07](../stories/ep-07-billing.md) — 3 stories + cross-cutting polish
 
 LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for polish — launch on a clean product.
 
-**Plan limits** (revised Jun 2026 after competitor review — see [ADR-019](decisions/019-plan-limits.md)):
+**Plan limits** (revised Jun 2026 after competitor review — see [ADR-019](../decisions/019-plan-limits.md)):
 
 | | Hobby | Solo ($9) | Startup ($29) | Enterprise ($99) |
 |---|---|---|---|---|
@@ -209,7 +218,7 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 
 ## Hours: estimated vs. logged
 
-The phase/estimate practice ended with the MVP — post-MVP work has no hour budgets (see [ADR-022](decisions/022-post-mvp-docs-organization.md)). Phase 7 (maintenance windows, the first post-MVP feature, see [reports/2026-06.md](reports/2026-06.md)) is included here since it was the last phase planned this way.
+The phase/estimate practice ended with the MVP — post-MVP work has no hour budgets (see [ADR-022](../decisions/022-post-mvp-docs-organization.md)). Phase 7 (maintenance windows, the first post-MVP feature, see [reports/2026-06.md](../reports/2026-06.md)) is included here since it was the last phase planned this way.
 
 | Phase                        | Estimated | Logged   | Delta      |
 | ----------------------------- | --------- | -------- | ---------- |
@@ -223,7 +232,7 @@ The phase/estimate practice ended with the MVP — post-MVP work has no hour bud
 | 7 — Maintenance windows       | 25 h      | 5 h      | 0 h        |
 | **Total**                     | **259 h** | **29 h** | **-230 h** |
 
-Per-day log (now using epic/story references): [hours.md](hours.md).
+Per-day log (now using epic/story references): [hours.md](../hours.md).
 
 ---
 

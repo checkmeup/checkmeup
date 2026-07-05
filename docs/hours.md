@@ -1,6 +1,6 @@
 # Work hours
 
-Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Estimated-vs-logged totals for the MVP build are archived in [mvp-history.md](mvp-history.md) — post-MVP work has no hour estimates ([ADR-022](decisions/022-post-mvp-docs-organization.md)).
+Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Estimated-vs-logged totals for the MVP build are archived in [knowledge/mvp-history.md](knowledge/mvp-history.md) — post-MVP work has no hour estimates ([ADR-022](decisions/022-post-mvp-docs-organization.md)).
 
 ## Log
 

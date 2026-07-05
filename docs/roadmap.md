@@ -2,7 +2,7 @@
 
 **🚀 MVP launched Jun 16 2026 — 9 weeks ahead of the original Aug 14 target.**
 
-Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases — see [ADR-022](decisions/022-post-mvp-docs-organization.md) for why. The dated phase plan used to build the MVP itself is archived in [mvp-history.md](mvp-history.md).
+Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases — see [ADR-022](decisions/022-post-mvp-docs-organization.md) for why. The dated phase plan used to build the MVP itself is archived in [knowledge/mvp-history.md](knowledge/mvp-history.md).
 
 ---
 
@@ -30,4 +30,4 @@ Ordered by how easy the blocker is to clear — internal decisions first, extern
 - [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts — **3.5 h**. Postponed: needs a Microsoft 365 work/school (business) account to build and test against, which doesn't exist yet — no cost to the API itself, just a founder-side tenant setup step (e.g. the free Microsoft 365 Developer Program) before work can resume.
 - [EP-15](stories/ep-15-whatsapp-alerts.md) — WhatsApp alerts — **4 h**. Blocked on the provider decision in [decision backlog](decisions/backlog.md) — external: provider choice, cost, Meta template approval lead time.
 - [EP-16](stories/ep-16-signal-alerts.md) — Signal alerts — **5 h**. Blocked on a go/no-go decision in [decision backlog](decisions/backlog.md) — least certain to proceed at all; no official API, self-hosting `signal-cli` would be a real infra/operational commitment.
-- [EP-32](stories/ep-32-multi-region-checking.md) — Multi-region checking — **9 h**. Blocked on the multi-region infra decision in [decision backlog](decisions/backlog.md) — the current single-Hetzner-VPS model has no compute outside one region; highest user-trust value of the `bucket-list.md` items (kills false positives from checkmeup's own network) but also the most expensive to unblock.
+- [EP-32](stories/ep-32-multi-region-checking.md) — Multi-region checking — **9 h**. Blocked on the multi-region infra decision in [decision backlog](decisions/backlog.md) — the current single-Hetzner-VPS model has no compute outside one region; highest user-trust value of the `proposals/bucket-list.md` items (kills false positives from checkmeup's own network) but also the most expensive to unblock.

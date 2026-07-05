@@ -1,3 +1,11 @@
+---
+title: Deployment Guide
+type: reference
+status: active
+updated: 2026-07-05
+tags: [ops, deployment, kamal, hetzner]
+---
+
 # Deployment Guide
 
 Kamal 2 on Hetzner CX23 · kamal-proxy SSL · GHCR image registry

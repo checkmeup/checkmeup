@@ -1,6 +1,6 @@
 # EP-30: Public status badges
 
-A small embeddable status image, generated per status page ([EP-06](ep-06-status-page.md)) and per monitor on that page, for dropping into a README, footer, or docs site. Cheap to build (server-rendered SVG, no new infra) and doubles as free marketing — the badge links back to the public status page (see `docs/bucket-list.md`).
+A small embeddable status image, generated per status page ([EP-06](ep-06-status-page.md)) and per monitor on that page, for dropping into a README, footer, or docs site. Cheap to build (server-rendered SVG, no new infra) and doubles as free marketing — the badge links back to the public status page (see `docs/proposals/bucket-list.md`).
 
 **Shipped 2026-06-23**, full epic (4/4). Badges are hand-rendered SVG (no external badge service), keyed to the same operational/degraded/outage wording as the page banner. `ADR-013` extended to rate-limit the two new public routes by IP at 300/min.
 

@@ -1,3 +1,11 @@
+---
+title: Tech Debt
+type: reference
+status: active
+updated: 2026-07-05
+tags: [architecture, maintainability, backend]
+---
+
 # Tech debt
 
 Known architecture/code smells that aren't worth an ADR or an immediate fix, but shouldn't be forgotten. Add an entry when you spot something during other work rather than stopping to fix it; remove an entry once it's addressed (reference the commit/PR in the removal, not here — `git log` is the record of what was fixed and when).
@@ -14,7 +22,7 @@ Known architecture/code smells that aren't worth an ADR or an immediate fix, but
 - **No shared HTTP client/dialer across checks** — a fresh `http.Client{Timeout: 10*time.Second}` (`worker.go:651`), `net.Dialer` (`worker.go:1008`), and raw `net.DialTimeout` (`worker.go:1373`) are constructed per check instead of reused, losing keep-alive/connection pooling and adding socket/FD churn that grows with monitor count.
   → Share one `http.Client`/`Transport` (with a sane `MaxIdleConnsPerHost`) across checks of the same type.
 
-- **ADR-001 describes a different worker model than what's implemented** — [ADR-001](decisions/001-worker-model.md) describes goroutine-per-monitor, each with its own `time.Ticker`. The actual code is a single shared 30s poll tick (`worker.go:54`) that queries for due monitors and dispatches a bounded semaphore of goroutines per check type — a materially different scaling profile (poll-tick degrades gracefully by delaying checks under load; goroutine-per-monitor would instead accumulate long-lived goroutines). Caught during the 2026-07-04 capacity-planning discussion.
+- **ADR-001 describes a different worker model than what's implemented** — [ADR-001](../decisions/001-worker-model.md) describes goroutine-per-monitor, each with its own `time.Ticker`. The actual code is a single shared 30s poll tick (`worker.go:54`) that queries for due monitors and dispatches a bounded semaphore of goroutines per check type — a materially different scaling profile (poll-tick degrades gracefully by delaying checks under load; goroutine-per-monitor would instead accumulate long-lived goroutines). Caught during the 2026-07-04 capacity-planning discussion.
   → Either update ADR-001's text to match the as-built poll-tick model, or treat this as a deliberate pivot worth its own "Updated" note.
 
 - **`orgIDFrom` helper ownership is unclear** — defined in `internal/handler/monitors.go:88-93` but used repo-wide (`settings.go`, `status_pages.go`, `uptime_monitors.go`, `ssl_monitors.go`, `billing.go`). `suggestions.go:41-49` reimplements the same `uuid.Parse(claims.Subject/.OrgID)` pattern inline instead of reusing it.
