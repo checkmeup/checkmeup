@@ -86,7 +86,7 @@ describe('HomeView', () => {
   it('marks the Startup plan as popular', () => {
     const wrapper = mountHome()
 
-    expect(wrapper.text()).toContain('Popular')
+    expect(wrapper.text()).toContain('Most popular')
   })
 
   it('renders the full pricing details link', () => {

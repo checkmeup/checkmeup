@@ -6,54 +6,74 @@
   --color-green-500: #1d9e75;
   --color-green-700: #0f6e56;
   --color-green-900: #08392e;
+
+  /* IBM Plex Mono for every `font-mono` usage (timestamps, ping URLs, uptime
+     stats) — loaded via Google Fonts link tags in index.html. */
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-raised: #1e2530;
-  --border: #2d3748;
-  --text-muted: #718096;
-  --text-dim: #a0aec0;
-  --text: #e2e8f0;
-  --text-strong: #ffffff;
+  --bg: #0a0f0d;
+  --surface: #101512;
+  --surface-raised: #1a221d;
+  --border: rgba(255, 255, 255, 8%);
+  --text-muted: rgba(242, 245, 243, 28%);
+  --text-dim: rgba(242, 245, 243, 55%);
+  --text: #f2f5f3;
+  --text-strong: #f2f5f3;
   --status-up: #1d9e75;
   --status-degraded: #f59e0b;
   --status-down: #ef4444;
+  --status-down-wash: rgba(239, 68, 68, 10%);
   --status-paused: #94a3b8;
+
+  /* Translucent card fill — feature/testimonial/pricing cards, sits directly
+     on --bg rather than using the more opaque --surface (reserved for chrome:
+     nav-adjacent bars, the hero product-screenshot mockup). */
+  --card: rgba(255, 255, 255, 3.5%);
+
+  /* Semantic accent — resolves to a different green step per theme (see
+     docs/design.md); the raw --color-green-* scale itself never changes. */
   --accent: var(--color-green-500);
+  /* Brighter accent for headline emphasis text on dark backgrounds only —
+     falls back to --accent-deep in light mode, where a bright mint has no
+     contrast against white. Not part of the 5-step brand scale. */
+  --accent-emphasis: #6ee7b7;
+  --accent-deep: var(--color-green-700);
+  /* Accent tint washes — icon badges, pills, progress-track backgrounds. */
+  --accent-wash: rgba(29, 158, 117, 13%);
+  --accent-wash-dim: rgba(29, 158, 117, 6.5%);
+  /* Translucent nav background under backdrop-blur. */
+  --nav-bg: rgba(10, 15, 13, 88%);
 
   /* Text/icon color on top of --accent or a brand-green background (buttons,
-     selected-state checkmarks). No light-theme override needed — brand
-     greens don't change per-theme (docs/design.md), so white stays readable
-     on them in both themes. */
+     selected-state checkmarks). No light-theme override needed — white stays
+     readable on every accent step used. */
   --on-accent: #fff;
 
-  /* CTA banner gradient (HomeView, PricingView, AboutView) — dark and heavy by
-     design in dark mode; overridden to a light, airy wash below for light mode. */
-  --cta-gradient-start: var(--color-green-900);
-  --cta-gradient-end: var(--color-green-700);
-  --cta-border: var(--color-green-700);
-  --cta-text: #fff;
-  --cta-text-dim: rgba(255, 255, 255, 80%);
+  /* CTA banner (HomeView, PricingView, AboutView) — flat accent wash with a
+     tinted border; same value both themes since it reads fine on either. */
+  --cta-border: rgba(29, 158, 117, 25%);
 }
 
-/* Light theme — brand greens and status colors stay the same (docs/design.md),
-   only the neutrals invert. Applied via data-theme set on <html> (see lib/theme.ts). */
+/* Light theme — only the neutrals and the semantic accent step invert; the
+   raw --color-green-* / --status-* hex values stay fixed. Applied via
+   data-theme set on <html> (see lib/theme.ts). */
 :root[data-theme='light'] {
-  --bg: #f8fafc;
-  --surface: #fff;
-  --surface-raised: #f1f5f9;
-  --border: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-dim: #475569;
-  --text: #1e293b;
-  --text-strong: #0f172a;
-  --cta-gradient-start: var(--color-green-100);
-  --cta-gradient-end: var(--surface);
-  --cta-border: var(--color-green-300);
-  --cta-text: var(--text-strong);
-  --cta-text-dim: var(--text-dim);
+  --bg: #fbfdfc;
+  --surface: #f2f6f4;
+  --surface-raised: #e7ede9;
+  --border: rgba(0, 0, 0, 8%);
+  --text-muted: rgba(11, 15, 12, 45%);
+  --text-dim: rgba(11, 15, 12, 70%);
+  --text: #0d1512;
+  --text-strong: #0d1512;
+  --card: rgba(0, 0, 0, 3%);
+  --accent: var(--color-green-700);
+  --accent-emphasis: var(--color-green-700);
+  --accent-wash: rgba(15, 110, 86, 10%);
+  --accent-wash-dim: rgba(15, 110, 86, 5%);
+  --nav-bg: rgba(251, 253, 252, 88%);
 }
 
 @layer base {
@@ -67,6 +87,7 @@
     background-color: var(--bg);
     color: var(--text);
     font-family:
+      'Inter',
       ui-sans-serif,
       system-ui,
       -apple-system,

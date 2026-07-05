@@ -427,20 +427,20 @@ const featureRows: TableRow[] = [
       <div
         class="rounded-2xl text-center px-8 py-14 border"
         style="
-          background: linear-gradient(135deg, var(--cta-gradient-start) 0%, var(--cta-gradient-end) 100%);
+          background-color: var(--accent-wash-dim);
           border-color: var(--cta-border);
         "
       >
-        <h2 class="text-2xl sm:text-3xl font-bold mb-3" style="color: var(--cta-text)">
+        <h2 class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight" style="color: var(--text-strong)">
           Start monitoring in 60 seconds.
         </h2>
-        <p class="mb-8 text-base" style="color: var(--cta-text-dim)">
+        <p class="mb-8 text-base" style="color: var(--text-dim)">
           Free plan included. No credit card required.
         </p>
         <RouterLink
           to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: var(--on-accent)"
+          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-opacity hover:opacity-90"
+          style="background-color: var(--accent); color: var(--on-accent)"
         >
           Create free account →
         </RouterLink>

@@ -36,10 +36,10 @@ const values = [
     <!-- Hero -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
       <div
-        class="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-6 border"
-        style="background-color: var(--surface); border-color: var(--border); color: var(--color-green-300)"
+        class="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full mb-6"
+        style="border: 1px solid var(--border); background-color: var(--card); color: var(--text-dim)"
       >
-        <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--color-green-500)"></span>
+        <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--accent)"></span>
         Independent · Bootstrapped · Built in the open
       </div>
 
@@ -258,18 +258,18 @@ const values = [
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
       <div
         class="rounded-2xl text-center px-8 py-14 border"
-        style="background: linear-gradient(135deg, var(--cta-gradient-start) 0%, var(--cta-gradient-end) 100%); border-color: var(--cta-border)"
+        style="background-color: var(--accent-wash-dim); border-color: var(--cta-border)"
       >
-        <h2 class="text-2xl sm:text-3xl font-bold mb-3" style="color: var(--cta-text)">
+        <h2 class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight" style="color: var(--text-strong)">
           Try it. It's free.
         </h2>
-        <p class="mb-8 text-base" style="color: var(--cta-text-dim)">
+        <p class="mb-8 text-base" style="color: var(--text-dim)">
           10 monitors, no credit card, no expiry date on the free plan.
         </p>
         <RouterLink
           to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-colors"
-          style="background-color: var(--color-green-500); color: var(--on-accent)"
+          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-opacity hover:opacity-90"
+          style="background-color: var(--accent); color: var(--on-accent)"
         >
           Create free account →
         </RouterLink>
