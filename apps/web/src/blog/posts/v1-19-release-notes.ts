@@ -6,7 +6,7 @@ export const post: BlogPost = {
   date: 'July 4, 2026',
   readTime: '5 min read',
   excerpt:
-    "checkmeup can text you now — an eighth alert channel via Twilio, with a monthly credit quota so a flapping monitor can't turn into a surprise bill. And a smaller but overdue fix: downgrading your plan used to leave every over-limit monitor running forever. Now it actually enforces the new limit, oldest-first.",
+    "checkmeup can text you now — an eighth alert channel via Twilio, with a monthly credit quota so a flapping monitor can't turn into a surprise bill. And a smaller but overdue fix: downgrading your plan used to leave every over-limit monitor running forever. Now it actually enforces the new limit — pausing the newest monitors first and keeping your oldest ones active.",
   content: [
     {
       type: 'p',
