@@ -56,10 +56,33 @@ type publicPageData struct {
 	Title        string
 	Description  string
 	LogoURL      string
+	Initials     string
 	Overall      string
 	OverallColor string
 	Monitors     []publicMonitorRow
 	UpdatedAt    string
+}
+
+// initials derives a 1-2 letter fallback badge from a status page's title
+// (e.g. "Acme Corp" -> "AC"), shown when the org hasn't uploaded a custom
+// logo — mirrors the avatar-badge pattern in the CheckMeUp Design mockup.
+func initials(title string) string {
+	fields := strings.Fields(title)
+	out := ""
+	for _, f := range fields {
+		r := []rune(f)
+		if len(r) == 0 {
+			continue
+		}
+		out += strings.ToUpper(string(r[0]))
+		if len(out) >= 2 {
+			break
+		}
+	}
+	if out == "" {
+		return "?"
+	}
+	return out
 }
 
 // ─── ServeHTTP ───────────────────────────────────────────────────────────────
@@ -85,6 +108,7 @@ func (h *StatusPublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Title:        page.Title,
 		Description:  page.Description,
 		LogoURL:      page.LogoUrl,
+		Initials:     initials(page.Title),
 		Overall:      overall,
 		OverallColor: overallColor,
 		Monitors:     rows,
@@ -485,34 +509,59 @@ const statusPageHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} — Status</title>
 {{if .LogoURL}}<link rel="icon" href="{{safeURL .LogoURL}}">{{else}}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{{end}}
+<script src="/status-theme.js"></script>
 <style>
+/* Mirrors apps/web/src/style.css — keep both in sync if the token set changes. */
+:root{
+  --bg:#0a0f0d;--surface:#101512;--surface-raised:#1a221d;--border:rgb(255 255 255 / 8%);
+  --text-muted:rgb(242 245 243 / 28%);--text-dim:rgb(242 245 243 / 55%);--text:#f2f5f3;--text-strong:#f2f5f3;
+  --status-up:#1d9e75;--status-degraded:#f59e0b;--status-down:#ef4444;--status-paused:#94a3b8;
+  --card:rgb(255 255 255 / 3.5%);--accent:#1d9e75;--accent-wash:rgb(29 158 117 / 13%);--on-accent:#fff;
+}
+:root[data-theme='light']{
+  --bg:#fbfdfc;--surface:#f2f6f4;--surface-raised:#e7ede9;--border:rgb(0 0 0 / 8%);
+  --text-muted:rgb(11 15 12 / 45%);--text-dim:rgb(11 15 12 / 70%);--text:#0d1512;--text-strong:#0d1512;
+  --card:rgb(0 0 0 / 3%);--accent:#0f6e56;--accent-wash:rgb(15 110 86 / 10%);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh}
-.page{max-width:740px;margin:0 auto;padding:48px 20px 80px}
-.logo{display:block;max-height:40px;margin-bottom:16px}
-h1{font-size:1.5rem;font-weight:700;color:#0f172a}
-.subtitle{margin-top:6px;font-size:.875rem;color:#64748b}
-.banner{margin-top:28px;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;font-weight:600;font-size:.9375rem}
-.dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
-.monitors{margin-top:32px;display:flex;flex-direction:column;gap:12px}
-.monitor{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px}
-.monitor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.monitor-name{font-weight:600;font-size:.9375rem;color:#0f172a}
-.chip{font-size:.6875rem;font-weight:700;padding:3px 8px;border-radius:9999px;color:#fff;letter-spacing:.02em;text-transform:uppercase}
-.bar{display:flex;gap:2px}
-.seg{height:28px;flex:1;border-radius:2px;cursor:default}
-.bar-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:.6875rem;color:#94a3b8}
-.ssl-info{margin-top:4px;margin-bottom:8px;font-size:.8125rem;color:#64748b}
-.footer{margin-top:48px;text-align:center;font-size:.8125rem;color:#94a3b8}
-.footer a{color:#94a3b8;text-decoration:none}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.page{max-width:720px;margin:0 auto;padding:40px 20px 64px}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}
+.head-left{display:flex;align-items:center;gap:12px}
+.logo{display:block;max-height:38px;width:auto;border-radius:10px}
+.avatar{width:38px;height:38px;border-radius:10px;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)}
+.subtitle{margin-top:3px;font-size:13px;color:var(--text-muted)}
+.theme-toggle{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-raised);color:var(--text-dim);font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.banner{border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;margin-bottom:22px}
+.dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.monitors{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
+.monitor{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.monitor-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.monitor-name{font-weight:600;font-size:14px;color:var(--text-strong)}
+.chip{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;color:#fff;letter-spacing:.03em;text-transform:uppercase;flex-shrink:0}
+.bar{display:flex;gap:1.5px}
+.seg{height:24px;flex:1;border-radius:1px;cursor:default}
+.bar-labels{display:flex;justify-content:space-between;margin-top:5px;font-size:10.5px;color:var(--text-muted)}
+.monitor-note{margin:0 0 10px;font-size:12px;color:var(--text-muted)}
+.footer{margin-top:36px;padding-top:22px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-muted)}
+.footer p+p{margin-top:6px}
+.footer a{color:var(--text-muted);text-decoration:none}
 .footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="page">
-  {{if .LogoURL}}<img class="logo" src="{{safeURL .LogoURL}}" alt="">{{end}}
-  <h1>{{.Title}}</h1>
-  {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}
+  <div class="head">
+    <div class="head-left">
+      {{if .LogoURL}}<img class="logo" src="{{safeURL .LogoURL}}" alt="">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
+      <div>
+        <h1>{{.Title}}</h1>
+        {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}
+      </div>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme"></button>
+  </div>
 
   <div class="banner" style="background:{{.OverallColor}}18;border:1px solid {{.OverallColor}}44">
     <span class="dot" style="background:{{.OverallColor}}"></span>
@@ -527,13 +576,13 @@ h1{font-size:1.5rem;font-weight:700;color:#0f172a}
         <span class="chip" style="background:{{.StatusColor}}">{{.StatusLabel}}</span>
       </div>
       {{if and (eq .Type "ssl") .ExpiresAt}}
-      <div class="ssl-info">Certificate expires {{.ExpiresAt}} ({{.DaysLeft}} days)</div>
+      <p class="monitor-note">Certificate expires {{.ExpiresAt}} ({{.DaysLeft}} days)</p>
       {{end}}
       {{if and (eq .Type "domain") .ExpiresAt}}
-      <div class="ssl-info">Domain expires {{.ExpiresAt}} ({{.DaysLeft}} days)</div>
+      <p class="monitor-note">Domain expires {{.ExpiresAt}} ({{.DaysLeft}} days)</p>
       {{end}}
       {{if .MaintenanceMessage}}
-      <div class="ssl-info">{{.MaintenanceMessage}}</div>
+      <p class="monitor-note">{{.MaintenanceMessage}}</p>
       {{end}}
       <div class="bar">
         {{range .Bar}}<div class="seg" style="background:{{.Color}}" title="{{.Label}}"></div>{{end}}
@@ -542,14 +591,14 @@ h1{font-size:1.5rem;font-weight:700;color:#0f172a}
     </div>
     {{end}}
     {{if not .Monitors}}
-    <p style="color:#94a3b8;font-size:.875rem;text-align:center;padding:32px 0">No monitors on this page yet.</p>
+    <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
     {{end}}
   </div>
 
   <div class="footer">
     <p>Last updated {{.UpdatedAt}}</p>
-    <p style="margin-top:6px">Powered by <a href="https://checkmeup.net">checkmeup</a></p>
-    <p style="margin-top:6px"><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
+    <p>Powered by <a href="https://checkmeup.net">checkmeup</a></p>
+    <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
   </div>
 </div>
 </body>
