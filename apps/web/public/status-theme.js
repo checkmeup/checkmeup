@@ -18,16 +18,12 @@
     var btn = document.getElementById('theme-toggle')
     if (!btn) return
 
-    function render() {
-      btn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀' : '☾'
-    }
-
-    render()
+    // Icon swap is pure CSS ([data-theme] selectors on .icon-sun/.icon-moon
+    // in status_public.go) — this only needs to flip the attribute.
     btn.addEventListener('click', function () {
       var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
       document.documentElement.dataset.theme = next
       localStorage.setItem(STORAGE_KEY, next)
-      render()
     })
   })
 })()
