@@ -92,7 +92,7 @@ function fmtDate(iso: string | null) {
 <template>
   <AppLayout>
     <div class="p-8 max-w-2xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center gap-3 mb-6 flex-wrap">
         <button
           class="text-sm transition-colors"
           style="color: var(--text-muted)"
@@ -103,6 +103,14 @@ function fmtDate(iso: string | null) {
         <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">
           {{ monitor?.name ?? 'Domain Monitor' }}
         </h1>
+        <span
+          v-if="monitor"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+          :style="{ backgroundColor: 'var(--surface-raised)', color: statusColors[monitor.status] ?? 'var(--text-muted)' }"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusColors[monitor.status] }"></span>
+          {{ statusLabel(monitor.status) }}
+        </span>
       </div>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
@@ -116,14 +124,7 @@ function fmtDate(iso: string | null) {
         >
           <div class="flex items-start justify-between gap-4 mb-4">
             <div>
-              <span
-                class="inline-flex items-center gap-1.5 text-sm font-medium"
-                :style="{ color: statusColors[monitor.status] ?? 'var(--text-muted)' }"
-              >
-                <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: statusColors[monitor.status] }"></span>
-                {{ statusLabel(monitor.status) }}
-              </span>
-              <p class="font-mono text-sm mt-1" style="color: var(--text-dim)">{{ monitor.domain }}</p>
+              <p class="font-mono text-sm" style="color: var(--text-dim)">{{ monitor.domain }}</p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               <Button

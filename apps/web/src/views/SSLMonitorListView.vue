@@ -118,12 +118,12 @@ function relativeTime(iso: string | null) {
         <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Name</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Hostname</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Status</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Expires</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Last checked</th>
+              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Name</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Hostname</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Status</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Expires</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Last checked</th>
               </tr>
             </thead>
             <tbody>

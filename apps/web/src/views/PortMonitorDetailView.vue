@@ -117,7 +117,7 @@ const chart = computed(() => {
 <template>
   <AppLayout>
     <div class="p-8 max-w-4xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center gap-3 mb-6 flex-wrap">
         <button
           class="text-sm transition-colors"
           style="color: var(--text-muted)"
@@ -128,6 +128,14 @@ const chart = computed(() => {
         <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">
           {{ detail?.monitor.name ?? 'Monitor' }}
         </h1>
+        <span
+          v-if="detail"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+          :style="{ backgroundColor: 'var(--surface-raised)', color: statusColors[detail.monitor.status] ?? 'var(--text-muted)' }"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusColors[detail.monitor.status] }"></span>
+          {{ detail.monitor.status.charAt(0).toUpperCase() + detail.monitor.status.slice(1) }}
+        </span>
       </div>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
@@ -140,15 +148,6 @@ const chart = computed(() => {
           style="background-color: var(--surface); border-color: var(--border)"
         >
           <div class="space-y-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span
-                class="inline-flex items-center gap-1.5 text-sm font-medium"
-                :style="{ color: statusColors[detail.monitor.status] ?? 'var(--text-muted)' }"
-              >
-                <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: statusColors[detail.monitor.status] }"></span>
-                {{ detail.monitor.status.charAt(0).toUpperCase() + detail.monitor.status.slice(1) }}
-              </span>
-            </div>
             <p class="font-mono text-xs break-all" style="color: var(--text-dim)">
               {{ detail.monitor.host }}:{{ detail.monitor.port }}
             </p>

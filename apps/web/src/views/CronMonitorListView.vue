@@ -114,20 +114,20 @@ function relativeTime(iso: string | null) {
         >
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">
                   Name
                 </th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">
                   Status
                 </th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">
                   Schedule
                 </th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">
                   Last ping
                 </th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">
                   Next expected
                 </th>
               </tr>
