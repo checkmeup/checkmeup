@@ -102,74 +102,92 @@ function fmtExpiry(daysUntilExpiry: number | null): string {
   return `${daysUntilExpiry}d`
 }
 
+function buildRow(
+  type: MonitorType,
+  id: string,
+  name: string,
+  target: string,
+  status: string,
+  metricLabel: string,
+  metricValue: string,
+  lastChecked: string,
+): Row {
+  return { key: `${type}:${id}`, type, id, name, target, status, metricLabel, metricValue, lastChecked }
+}
+
 const cronRows = computed<Row[]>(() =>
-  (cronData.value ?? []).map((m: CronMonitor) => ({
-    key: `cron:${m.id}`,
-    type: 'cron' as const,
-    id: m.id,
-    name: m.name,
-    target: m.schedule,
-    status: m.status,
-    metricLabel: 'Next ping',
-    metricValue: relativeTime(m.nextPingAt),
-    lastChecked: relativeTime(m.lastPingAt),
-  })),
+  (cronData.value ?? []).map((m: CronMonitor) =>
+    buildRow(
+      'cron',
+      m.id,
+      m.name,
+      m.schedule,
+      m.status,
+      'Next ping',
+      relativeTime(m.nextPingAt),
+      relativeTime(m.lastPingAt),
+    ),
+  ),
 )
 
 const uptimeRows = computed<Row[]>(() =>
-  (uptimeData.value ?? []).map((m: UptimeMonitor) => ({
-    key: `uptime:${m.id}`,
-    type: 'uptime' as const,
-    id: m.id,
-    name: m.name,
-    target: m.url,
-    status: m.status,
-    metricLabel: 'Uptime 24h',
-    metricValue: fmtPct(m.uptime24h),
-    lastChecked: relativeTime(m.lastCheckedAt),
-  })),
+  (uptimeData.value ?? []).map((m: UptimeMonitor) =>
+    buildRow(
+      'uptime',
+      m.id,
+      m.name,
+      m.url,
+      m.status,
+      'Uptime 24h',
+      fmtPct(m.uptime24h),
+      relativeTime(m.lastCheckedAt),
+    ),
+  ),
 )
 
 const sslRows = computed<Row[]>(() =>
-  (sslData.value ?? []).map((m: SSLMonitor) => ({
-    key: `ssl:${m.id}`,
-    type: 'ssl' as const,
-    id: m.id,
-    name: m.name,
-    target: m.hostname,
-    status: m.status,
-    metricLabel: 'Expires in',
-    metricValue: fmtExpiry(m.daysUntilExpiry),
-    lastChecked: relativeTime(m.lastCheckedAt),
-  })),
+  (sslData.value ?? []).map((m: SSLMonitor) =>
+    buildRow(
+      'ssl',
+      m.id,
+      m.name,
+      m.hostname,
+      m.status,
+      'Expires in',
+      fmtExpiry(m.daysUntilExpiry),
+      relativeTime(m.lastCheckedAt),
+    ),
+  ),
 )
 
 const domainRows = computed<Row[]>(() =>
-  (domainData.value ?? []).map((m: DomainMonitor) => ({
-    key: `domain:${m.id}`,
-    type: 'domain' as const,
-    id: m.id,
-    name: m.name,
-    target: m.domain,
-    status: m.status,
-    metricLabel: 'Expires in',
-    metricValue: fmtExpiry(m.daysUntilExpiry),
-    lastChecked: relativeTime(m.lastCheckedAt),
-  })),
+  (domainData.value ?? []).map((m: DomainMonitor) =>
+    buildRow(
+      'domain',
+      m.id,
+      m.name,
+      m.domain,
+      m.status,
+      'Expires in',
+      fmtExpiry(m.daysUntilExpiry),
+      relativeTime(m.lastCheckedAt),
+    ),
+  ),
 )
 
 const portRows = computed<Row[]>(() =>
-  (portData.value ?? []).map((m: PortMonitor) => ({
-    key: `port:${m.id}`,
-    type: 'port' as const,
-    id: m.id,
-    name: m.name,
-    target: `${m.host}:${m.port}`,
-    status: m.status,
-    metricLabel: 'Uptime 24h',
-    metricValue: fmtPct(m.uptime24h),
-    lastChecked: relativeTime(m.lastCheckedAt),
-  })),
+  (portData.value ?? []).map((m: PortMonitor) =>
+    buildRow(
+      'port',
+      m.id,
+      m.name,
+      `${m.host}:${m.port}`,
+      m.status,
+      'Uptime 24h',
+      fmtPct(m.uptime24h),
+      relativeTime(m.lastCheckedAt),
+    ),
+  ),
 )
 
 const allRows = computed<Row[]>(() => [

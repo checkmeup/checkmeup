@@ -26,8 +26,6 @@ const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
 const domainData = ref<unknown[] | null>(null)
 const portData = ref<unknown[] | null>(null)
-const statusPageData = ref<unknown[] | null>(null)
-const channelData = ref<unknown[] | null>(null)
 
 vi.mock('@/composables/useCronMonitors', () => ({
   useCronMonitors: () => ({ data: cronData }),
@@ -44,12 +42,6 @@ vi.mock('@/composables/useDomainMonitors', () => ({
 vi.mock('@/composables/usePortMonitors', () => ({
   usePortMonitors: () => ({ data: portData }),
 }))
-vi.mock('@/composables/useStatusPages', () => ({
-  useStatusPages: () => ({ data: statusPageData }),
-}))
-vi.mock('@/composables/useNotificationChannels', () => ({
-  useNotificationChannels: () => ({ data: channelData }),
-}))
 
 const billingData = ref<{ smsCreditsUsed: number; smsCreditsLimit: number } | null>(null)
 
@@ -57,8 +49,65 @@ vi.mock('@/composables/useBilling', () => ({
   useBilling: () => ({ data: billingData }),
 }))
 
-function findCard(wrapper: ReturnType<typeof mount>, label: string) {
-  return wrapper.findAll('.rounded-xl.border').find((c) => c.text().includes(label))
+function uptimeMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'u1',
+    name: 'checkmeup.net',
+    url: 'https://checkmeup.net',
+    status: 'up',
+    uptime24h: 99.9,
+    lastCheckedAt: '2026-07-06T12:00:00Z',
+    ...overrides,
+  }
+}
+
+function sslMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 's1',
+    name: 'checkmeup.net',
+    hostname: 'checkmeup.net',
+    status: 'up',
+    daysUntilExpiry: 84,
+    lastCheckedAt: '2026-07-06T12:00:00Z',
+    ...overrides,
+  }
+}
+
+function domainMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'd1',
+    name: 'checkmeup.net',
+    domain: 'checkmeup.net',
+    status: 'up',
+    daysUntilExpiry: 200,
+    lastCheckedAt: '2026-07-06T12:00:00Z',
+    ...overrides,
+  }
+}
+
+function cronMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'c1',
+    name: 'Nightly Backup',
+    schedule: '0 2 * * *',
+    status: 'up',
+    nextPingAt: null,
+    lastPingAt: null,
+    ...overrides,
+  }
+}
+
+function portMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'p1',
+    name: 'db-primary',
+    host: '10.0.4.12',
+    port: 5432,
+    status: 'up',
+    uptime24h: 100,
+    lastCheckedAt: '2026-07-06T12:00:00Z',
+    ...overrides,
+  }
 }
 
 beforeEach(() => {
@@ -68,8 +117,6 @@ beforeEach(() => {
   sslData.value = null
   domainData.value = null
   portData.value = null
-  statusPageData.value = null
-  channelData.value = null
   billingData.value = null
 })
 
@@ -92,122 +139,138 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('Welcome back.')
   })
 
-  it('shows a dash placeholder for counts that have not resolved yet', () => {
+  it('shows the empty state when there are no monitors of any type', () => {
     const wrapper = mount(DashboardView)
 
-    const cronCard = findCard(wrapper, 'Cron monitors')!
-    expect(cronCard.text()).toContain('—')
+    expect(wrapper.text()).toContain('No monitors yet')
+    expect(wrapper.text()).toContain('0/ 0')
   })
 
-  it('renders independent counts for each monitor type and status pages', () => {
-    cronData.value = [{ id: 'c1' }, { id: 'c2' }]
-    uptimeData.value = [{ id: 'u1' }]
-    sslData.value = []
-    domainData.value = [{ id: 'd1' }, { id: 'd2' }, { id: 'd3' }]
-    portData.value = [{ id: 'p1' }, { id: 'p2' }]
-    statusPageData.value = [{ id: 'sp1' }]
+  it('computes the healthy/total hero stat across monitor types', () => {
+    uptimeData.value = [
+      uptimeMonitor({ status: 'up' }),
+      uptimeMonitor({ id: 'u2', status: 'down' }),
+    ]
+    cronData.value = [cronMonitor({ status: 'up' })]
     const wrapper = mount(DashboardView)
 
-    expect(findCard(wrapper, 'Cron monitors')!.text()).toContain('2')
-    expect(findCard(wrapper, 'Uptime monitors')!.text()).toContain('1')
-    expect(findCard(wrapper, 'SSL monitors')!.text()).toContain('0')
-    expect(findCard(wrapper, 'Domain monitors')!.text()).toContain('3')
-    expect(findCard(wrapper, 'Port monitors')!.text()).toContain('2')
-    expect(findCard(wrapper, 'Status pages')!.text()).toContain('1')
+    expect(wrapper.text()).toContain('2/ 3')
+    expect(wrapper.text()).toContain('66.7% healthy')
   })
 
-  it('shows a dash for a card whose query has not resolved while others have', () => {
-    cronData.value = [{ id: 'c1' }]
-    uptimeData.value = null
-    const wrapper = mount(DashboardView)
-
-    expect(findCard(wrapper, 'Cron monitors')!.text()).toContain('1')
-    expect(findCard(wrapper, 'Uptime monitors')!.text()).toContain('—')
-  })
-
-  it('navigates to the cron monitors list when its card is clicked', async () => {
-    const wrapper = mount(DashboardView)
-
-    await findCard(wrapper, 'Cron monitors')!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'cron-monitors' })
-  })
-
-  it('navigates to the cron monitor create view from the card button without bubbling to the card click', async () => {
-    const wrapper = mount(DashboardView)
-
-    const button = findCard(wrapper, 'Cron monitors')!
-      .findAll('button')
-      .find((b) => b.text() === 'Add cron monitor')
-    await button!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'cron-monitor-create' })
-  })
-
-  it('navigates to the status pages list when its card is clicked', async () => {
-    const wrapper = mount(DashboardView)
-
-    await findCard(wrapper, 'Status pages')!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'status-pages' })
-  })
-
-  it('navigates to the status page create view from the card button', async () => {
-    const wrapper = mount(DashboardView)
-
-    const button = findCard(wrapper, 'Status pages')!
-      .findAll('button')
-      .find((b) => b.text() === 'Create status page')
-    await button!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'status-page-create' })
-  })
-
-  it('shows a dash for sms sent while billing info has not resolved', () => {
-    const wrapper = mount(DashboardView)
-
-    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('—')
-  })
-
-  it('shows the count of sms credits used this month', () => {
+  it('shows SMS credits used/limit when the plan has a limit', () => {
     billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
     const wrapper = mount(DashboardView)
 
-    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('3')
+    expect(wrapper.text()).toContain('3')
+    expect(wrapper.text()).toContain('/ 10')
   })
 
-  it('shows 0 for sms sent on a 0-credit plan (Hobby)', () => {
-    billingData.value = { smsCreditsUsed: 0, smsCreditsLimit: 0 }
+  it('shows "Not available on your plan" for SMS credits on a 0-limit plan (Hobby)', () => {
+    billingData.value = { smsCreditsUsed: 10, smsCreditsLimit: 0 }
     const wrapper = mount(DashboardView)
 
-    expect(findCard(wrapper, 'SMS sent')!.text()).toContain('0')
+    expect(wrapper.text()).toContain('Not available on your plan')
+    expect(wrapper.text()).not.toContain('10 / 0')
   })
 
-  it('navigates to billing when the sms sent card is clicked', async () => {
-    billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
+  it('surfaces a down monitor in the needs-attention banner', () => {
+    uptimeData.value = [uptimeMonitor({ status: 'down', name: 'api.acmecorp.com' })]
     const wrapper = mount(DashboardView)
 
-    await findCard(wrapper, 'SMS sent')!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'billing' })
+    expect(wrapper.text()).toContain('Needs attention')
+    expect(wrapper.text()).toContain('api.acmecorp.com is down')
   })
 
-  it('navigates to billing from the sms sent card button', async () => {
-    billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
+  it('surfaces an expiring-soon SSL monitor in the needs-attention banner', () => {
+    sslData.value = [
+      sslMonitor({ status: 'expiring_soon', daysUntilExpiry: 6, name: 'client-shop.com' }),
+    ]
     const wrapper = mount(DashboardView)
 
-    const button = findCard(wrapper, 'SMS sent')!
-      .findAll('button')
-      .find((b) => b.text() === 'View billing')
-    await button!.trigger('click')
-
-    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'billing' })
+    expect(wrapper.text()).toContain('client-shop.com')
+    expect(wrapper.text()).toContain('Renew')
   })
 
-  it('renders the getting started checklist', () => {
+  it('shows no attention banner when every monitor is healthy', () => {
+    uptimeData.value = [uptimeMonitor({ status: 'up' })]
     const wrapper = mount(DashboardView)
 
-    expect(wrapper.text()).toContain('Getting started')
-    expect(wrapper.text()).toContain('Add a monitor — cron, uptime, SSL, domain expiry, or port')
+    // "Needs attention" also labels the always-present hero stat card, so
+    // absence of the banner is asserted via its distinguishing content
+    // (an item's action link) rather than that shared heading text.
+    expect(wrapper.text()).not.toContain('Investigate →')
+    expect(wrapper.text()).toContain('All clear')
+  })
+
+  it('renders a row per monitor across all types with its type badge', () => {
+    uptimeData.value = [uptimeMonitor()]
+    cronData.value = [cronMonitor()]
+    sslData.value = [sslMonitor()]
+    domainData.value = [domainMonitor()]
+    portData.value = [portMonitor()]
+    const wrapper = mount(DashboardView)
+
+    expect(wrapper.text()).toContain('checkmeup.net')
+    expect(wrapper.text()).toContain('Nightly Backup')
+    expect(wrapper.text()).toContain('db-primary')
+    expect(wrapper.findAll('tbody tr').length).toBe(5)
+  })
+
+  it('filters the monitors table when a type chip is clicked', async () => {
+    uptimeData.value = [uptimeMonitor({ name: 'uptime-one' })]
+    cronData.value = [cronMonitor({ name: 'cron-one' })]
+    const wrapper = mount(DashboardView)
+
+    expect(wrapper.text()).toContain('uptime-one')
+    expect(wrapper.text()).toContain('cron-one')
+
+    const chips = wrapper.findAll('button').filter((b) => b.text().startsWith('Cron'))
+    await chips[0]!.trigger('click')
+
+    expect(wrapper.text()).toContain('cron-one')
+    expect(wrapper.text()).not.toContain('uptime-one')
+  })
+
+  it('navigates to a monitor detail route when its table row is clicked', async () => {
+    uptimeData.value = [uptimeMonitor({ id: 'u42', name: 'checkmeup.net' })]
+    const wrapper = mount(DashboardView)
+
+    const row = wrapper.findAll('tbody tr').find((r) => r.text().includes('checkmeup.net'))
+    await row!.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith({
+      name: 'uptime-monitor-detail',
+      params: { id: 'u42' },
+    })
+  })
+
+  it('opens the add-monitor menu and navigates to the chosen monitor type', async () => {
+    const wrapper = mount(DashboardView)
+
+    const addButton = wrapper.findAll('button').find((b) => b.text().includes('Add monitor'))
+    await addButton!.trigger('click')
+
+    const option = wrapper.findAll('div').find((d) => d.text().trim() === 'Uptime monitor')
+    await option!.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'uptime-monitor-create' })
+  })
+
+  it('prompts to add an SSL/domain monitor when neither type exists yet', () => {
+    const wrapper = mount(DashboardView)
+
+    expect(wrapper.text()).toContain('Add an SSL or domain monitor')
+  })
+
+  it('lists upcoming expirations sorted soonest-first', () => {
+    sslData.value = [sslMonitor({ name: 'far-out', daysUntilExpiry: 300 })]
+    domainData.value = [domainMonitor({ name: 'soon', daysUntilExpiry: 5 })]
+    const wrapper = mount(DashboardView)
+
+    // Both names also appear in the (unsorted) monitors table above the
+    // panel, so scope the ordering check to the panel's own text.
+    const panelText = wrapper.text().split('Upcoming expirations')[1]!
+    expect(panelText.indexOf('soon')).toBeLessThan(panelText.indexOf('far-out'))
   })
 })
