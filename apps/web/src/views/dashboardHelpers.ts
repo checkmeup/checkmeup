@@ -60,12 +60,12 @@ export function relativeTime(iso: string | null): string {
 }
 
 export function fmtPct(v: number | null): string {
-  if (v === null || v === undefined) return '—'
+  if (v === null) return '—'
   return `${v.toFixed(2)}%`
 }
 
 export function fmtExpiry(daysUntilExpiry: number | null): string {
-  if (daysUntilExpiry === null || daysUntilExpiry === undefined) return '—'
+  if (daysUntilExpiry === null) return '—'
   if (daysUntilExpiry < 0) return 'Expired'
   return `${daysUntilExpiry}d`
 }
