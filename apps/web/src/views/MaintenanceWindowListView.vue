@@ -122,12 +122,12 @@ async function endNow(w: MaintenanceWindow) {
         <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Title</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Status</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Starts</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Ends</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Monitors</th>
+              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Title</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Status</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Starts</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Ends</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Monitors</th>
                 <th class="px-4 py-3"></th>
               </tr>
             </thead>
@@ -135,7 +135,7 @@ async function endNow(w: MaintenanceWindow) {
               <tr
                 v-for="w in windows"
                 :key="w.id"
-                class="cursor-pointer transition-colors"
+                class="cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
                 style="background-color: var(--surface); border-bottom: 1px solid var(--border)"
                 @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
               >
