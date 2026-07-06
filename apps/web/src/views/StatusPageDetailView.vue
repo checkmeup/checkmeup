@@ -275,7 +275,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
         <p v-if="actionError" class="text-sm mb-4" style="color: var(--status-down)">{{ actionError }}</p>
 
         <!-- Monitor management -->
-        <div class="grid grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Available monitors -->
           <div
             class="rounded-xl border"

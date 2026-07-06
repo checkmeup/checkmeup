@@ -73,17 +73,17 @@ function load() {
         <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Title</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Slug</th>
-                <th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted)">Public URL</th>
+              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Title</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Slug</th>
+                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Public URL</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="p in pages"
                 :key="p.id"
-                class="cursor-pointer transition-colors"
+                class="cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
                 style="background-color: var(--surface); border-bottom: 1px solid var(--border)"
                 @click="router.push({ name: 'status-page-detail', params: { id: p.id } })"
               >
