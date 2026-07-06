@@ -74,3 +74,11 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-04 | Sat | Blog fix (responsive comparison tables) + v1.19 release notes | 1 h   |
 | 2026-07-04 | Sat | Community engagement copy (Reddit r/SaaS, r/selfhosted threads) + feature verification | 2 h   |
 | 2026-07-04 | Sat | EP-34/EP-35 stories (zombie/overlap detection) + roadmap prioritization | 1 h   |
+| 2026-07-05 | Sun | Docs reorg (reference/knowledge/proposals/investigations) + README link fixes | 2 h   |
+| 2026-07-05 | Sun | PricingView styles + color palette redesign (HomeView rewrite)   | 3 h   |
+| 2026-07-05 | Sun | Codacy Stylelint fixes (style.css)                                | 1 h   |
+| 2026-07-06 | Mon | Dashboard redesign (hero stats, attention banner, unified monitor table) | 3 h   |
+| 2026-07-06 | Mon | Dashboard test updates, row-building dedupe, CodeQL/ESLint fixes | 2 h   |
+| 2026-07-06 | Mon | Public status page redesign (dark/light theme) + toggle icon fix + local dev proxy fix | 2 h   |
+| 2026-07-06 | Mon | Settings notification-channel redesign + Status Pages Admin/Monitors/Maintenance visual polish (v1.22) | 5 h   |
+| 2026-07-06 | Mon | v1.19 blog fix (ambiguous excerpt) + v1.20-v1.22 release notes + hours/report logging | 2 h   |
