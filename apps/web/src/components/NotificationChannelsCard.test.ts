@@ -83,6 +83,21 @@ function mountCard() {
   return mount(NotificationChannelsCard)
 }
 
+async function selectChannelType(wrapper: ReturnType<typeof mount>, label: string) {
+  const option = wrapper
+    .findAll('[data-testid="channel-type-option"]')
+    .find((b) => b.text() === label)
+  await option?.trigger('click')
+}
+
+function selectedChannelType(wrapper: ReturnType<typeof mount>) {
+  return wrapper.find('[data-testid="channel-type-option"][aria-pressed="true"]').text()
+}
+
+function channelTypeOptionLabels(wrapper: ReturnType<typeof mount>) {
+  return wrapper.findAll('[data-testid="channel-type-option"]').map((b) => b.text())
+}
+
 beforeEach(() => {
   channelsData.value = []
   channelsPending.value = false
@@ -158,9 +173,7 @@ describe('NotificationChannelsCard', () => {
 
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
 
-    expect((wrapper.find('select#channel-type').element as HTMLSelectElement).value).toBe(
-      'telegram',
-    )
+    expect(selectedChannelType(wrapper)).toBe('Telegram')
     expect((wrapper.find('#channel-name').element as HTMLInputElement).value).toBe('')
     expect((wrapper.find('#channel-value').element as HTMLInputElement).value).toBe('')
   })
@@ -171,7 +184,7 @@ describe('NotificationChannelsCard', () => {
 
     await findButtonByText(wrapper, 'Edit')?.trigger('click')
 
-    expect((wrapper.find('select#channel-type').element as HTMLSelectElement).value).toBe('webhook')
+    expect(selectedChannelType(wrapper)).toBe('Webhook')
     expect((wrapper.find('#channel-name').element as HTMLInputElement).value).toBe('Ops webhook')
     expect((wrapper.find('#channel-value').element as HTMLInputElement).value).toBe(
       'https://example.com/hooks/checkmeup',
@@ -204,7 +217,7 @@ describe('NotificationChannelsCard', () => {
   it('rejects a webhook URL that does not start with https://', async () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('webhook')
+    await selectChannelType(wrapper, 'Webhook')
     await wrapper.find('#channel-name').setValue('Ops webhook')
     await wrapper.find('#channel-value').setValue('http://example.com/hook')
 
@@ -217,7 +230,7 @@ describe('NotificationChannelsCard', () => {
   it('rejects a Slack URL that is not an Incoming Webhook URL', async () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('slack')
+    await selectChannelType(wrapper, 'Slack')
     await wrapper.find('#channel-name').setValue('Ops Slack')
     await wrapper.find('#channel-value').setValue('https://example.com/not-slack')
 
@@ -371,7 +384,7 @@ describe('NotificationChannelsCard', () => {
   it('rejects a phone number that is not E.164', async () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('sms')
+    await selectChannelType(wrapper, 'SMS')
     await wrapper.find('#channel-name').setValue('Ops SMS')
     await wrapper.find('#channel-value').setValue('0501234567')
     await wrapper.find('input[type="checkbox"]').setValue(true)
@@ -385,7 +398,7 @@ describe('NotificationChannelsCard', () => {
   it('disables save and test until the sms consent checkbox is checked', async () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('sms')
+    await selectChannelType(wrapper, 'SMS')
     await wrapper.find('#channel-name').setValue('Ops SMS')
     await wrapper.find('#channel-value').setValue('+15005550006')
 
@@ -402,7 +415,7 @@ describe('NotificationChannelsCard', () => {
     createMock.mockResolvedValueOnce({ ...smsChannel })
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('sms')
+    await selectChannelType(wrapper, 'SMS')
     await wrapper.find('#channel-name').setValue('Ops SMS')
     await wrapper.find('#channel-value').setValue('+15005550006')
     await wrapper.find('input[type="checkbox"]').setValue(true)
@@ -428,7 +441,7 @@ describe('NotificationChannelsCard', () => {
     )
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
-    await wrapper.find('select#channel-type').setValue('sms')
+    await selectChannelType(wrapper, 'SMS')
     await wrapper.find('#channel-name').setValue('Ops SMS')
     await wrapper.find('#channel-value').setValue('+15005550006')
     await wrapper.find('input[type="checkbox"]').setValue(true)
@@ -445,8 +458,7 @@ describe('NotificationChannelsCard', () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
 
-    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
-    expect(options).not.toContain('sms')
+    expect(channelTypeOptionLabels(wrapper)).not.toContain('SMS')
     expect(wrapper.text()).toContain('SMS alerts require a paid plan')
   })
 
@@ -455,8 +467,7 @@ describe('NotificationChannelsCard', () => {
     const wrapper = mountCard()
     await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
 
-    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
-    expect(options).toContain('sms')
+    expect(channelTypeOptionLabels(wrapper)).toContain('SMS')
   })
 
   it('still shows sms as an option when editing an existing sms channel on the Hobby plan (e.g. after a downgrade)', async () => {
@@ -466,9 +477,8 @@ describe('NotificationChannelsCard', () => {
 
     await findButtonByText(wrapper, 'Edit')?.trigger('click')
 
-    const options = wrapper.findAll('select#channel-type option').map((o) => o.element.value)
-    expect(options).toContain('sms')
-    expect((wrapper.find('select#channel-type').element as HTMLSelectElement).value).toBe('sms')
+    expect(channelTypeOptionLabels(wrapper)).toContain('SMS')
+    expect(selectedChannelType(wrapper)).toBe('SMS')
   })
 
   it('shows consent-on-file instead of a checkbox when editing an already-consented sms channel', async () => {

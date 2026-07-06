@@ -26,6 +26,14 @@ const typeLabel: Record<NotificationChannelType, string> = {
   slack: 'Slack',
   sms: 'SMS',
 }
+const typeIconPath: Record<NotificationChannelType, string> = {
+  telegram: 'M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z',
+  email: 'M4 4h16v16H4z M22 6l-10 7L2 6',
+  webhook:
+    'M10 13a5 5 0 0 0 7.07 0l1.93-1.93a5 5 0 0 0-7.07-7.07L10.5 5.5 M14 11a5 5 0 0 0-7.07 0L5 12.93a5 5 0 0 0 7.07 7.07L13.5 18.5',
+  slack: 'M4 9h16 M4 15h16 M9 4v16 M15 4v16',
+  sms: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+}
 const configKey: Record<NotificationChannelType, string> = {
   telegram: 'chatId',
   email: 'email',
@@ -79,6 +87,12 @@ const smsConsentOnFile = computed(
 // disabled while editing) if an existing channel is already sms — e.g. an
 // org that created one on a paid plan and later downgraded.
 const hobbyPlanNoSms = computed(() => billingInfo.value?.plan === 'hobby' && type.value !== 'sms')
+
+const channelTypeOptions = computed(() =>
+  (Object.keys(typeLabel) as NotificationChannelType[])
+    .filter((t) => t !== 'sms' || !hobbyPlanNoSms.value)
+    .map((t) => ({ value: t, label: typeLabel[t], iconPath: typeIconPath[t] })),
+)
 
 watch(value, () => {
   if (type.value === 'sms' && !smsConsentOnFile.value) {
@@ -329,9 +343,17 @@ async function toggleEnabled(c: NotificationChannel) {
           :title="c.enabled ? 'Disable channel' : 'Enable channel'"
           @change="toggleEnabled(c)"
         />
+        <div
+          class="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0"
+          style="background-color: var(--surface-raised); color: var(--text-dim)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path :d="typeIconPath[c.type]" />
+          </svg>
+        </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm truncate" style="color: var(--text)">{{ c.name }}</p>
-          <p class="text-xs truncate" style="color: var(--text-muted)">
+          <p class="text-xs truncate font-mono" style="color: var(--text-muted)">
             {{ typeLabel[c.type] }} · {{ c.config[configKey[c.type]] }}
           </p>
           <p
@@ -363,20 +385,32 @@ async function toggleEnabled(c: NotificationChannel) {
       style="border-color: var(--border); background-color: var(--surface-raised)"
     >
       <div>
-        <Label for="channel-type">Type</Label>
-        <select
-          id="channel-type"
-          v-model="type"
-          class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          style="background-color: var(--surface); border-color: var(--border); color: var(--text)"
-          :disabled="!!editingId"
+        <Label>Type</Label>
+        <div
+          class="mt-1 grid gap-2"
+          style="grid-template-columns: repeat(auto-fill, minmax(104px, 1fr))"
         >
-          <option value="telegram">Telegram</option>
-          <option value="email">Email</option>
-          <option value="webhook">Webhook</option>
-          <option value="slack">Slack</option>
-          <option v-if="!hobbyPlanNoSms" value="sms">SMS</option>
-        </select>
+          <button
+            v-for="t in channelTypeOptions"
+            :key="t.value"
+            type="button"
+            data-testid="channel-type-option"
+            :aria-pressed="type === t.value"
+            class="flex flex-col items-center gap-1.5 rounded-lg border px-1.5 py-3 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            :style="{
+              borderColor: type === t.value ? 'var(--accent)' : 'var(--border)',
+              backgroundColor: type === t.value ? 'var(--accent-wash)' : 'var(--surface)',
+              color: type === t.value ? 'var(--accent)' : 'var(--text-dim)',
+            }"
+            :disabled="!!editingId"
+            @click="type = t.value"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path :d="t.iconPath" />
+            </svg>
+            {{ t.label }}
+          </button>
+        </div>
         <p v-if="hobbyPlanNoSms" class="mt-1 text-xs" style="color: var(--text-muted)">
           SMS alerts require a paid plan —
           <RouterLink to="/billing" class="underline" style="color: var(--color-green-500)"
