@@ -233,10 +233,10 @@ describe('DashboardView', () => {
   })
 
   it('navigates to a monitor detail route when its table row is clicked', async () => {
-    uptimeData.value = [uptimeMonitor({ id: 'u42', name: 'checkmeup.net' })]
+    uptimeData.value = [uptimeMonitor({ id: 'u42', name: 'Primary Website Uptime' })]
     const wrapper = mount(DashboardView)
 
-    const row = wrapper.findAll('tbody tr').find((r) => r.text().includes('checkmeup.net'))
+    const row = wrapper.findAll('tbody tr').find((r) => r.text().includes('Primary Website Uptime'))
     await row!.trigger('click')
 
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
