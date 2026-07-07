@@ -61,6 +61,8 @@ make migrate-create name=foo  # create a new goose migration file
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)). Docs navigation: [`docs/INDEX.md`](docs/INDEX.md) — living how-to in [`docs/reference/`](docs/reference/), architectural snapshots in [`docs/knowledge/`](docs/knowledge/), feature gap analysis in [`docs/proposals/`](docs/proposals/), technical investigations in [`docs/investigations/`](docs/investigations/).
 
+Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, hours logging, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`.
+
 **Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log (`Date | Day | Epic/Story | Hours`). When asked to log/update hours for a day, check `git log --since/--until` for that day's commits (exclude stash artifacts — `git log --all` surfaces `refs/stash` entries as fake commits titled "On <branch>:"/"index on <branch>:"/"untracked files on <branch>:"), group related commits into one line per logical task, and estimate effort from diff size and complexity — minimum 1h per task/line, combine small related commits rather than one line per commit. Non-commit work in the same session (launch/marketing copy, doc corrections, etc.) gets its own line too. Roll the new daily total into that month's `docs/reports/YYYY-MM.md` Notes section.
 
 ---
@@ -105,6 +107,9 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - **Opengrep cookies in `*_test.go`** — ignore, synthetic request cookies in tests intentionally lack HttpOnly/Secure
 - **Trivy on `go.mod`** — real; upgrade the flagged dependency or pin a patched version
 - **Opengrep/ESLint in production code** — investigate before dismissing
+- **Bandit subprocess findings (B603/B404) on `.claude/skills/**/*.py`** — usually fine if the script only ever invokes a literal argv list (never `shell=True`, no externally-supplied input); suppress with `# nosec <code>` **on the exact flagged line**, not a comment above it, plus a one-line rationale
+- **Prospector docstring D212/D213 on `.py` files** — these two rules are mutually exclusive (one wants the summary on line 1, the other on line 2); don't chase them back and forth — use a single-line module docstring instead, which sidesteps the multi-line-summary rule pair entirely
+- **Lizard/Prospector complexity on `.py` files** — same threshold philosophy as Go handlers; split into small single-purpose functions rather than suppressing
 
 ---
 
