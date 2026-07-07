@@ -22,7 +22,7 @@ RUN apt-get update \
     && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends \
        nodejs=24.16.0-1nodesource1 gh ruby-full build-essential ruby-dev \
-       docker-ce-cli docker-buildx-plugin \
+       docker-ce-cli docker-buildx-plugin pipx \
     && GOARCH=$(dpkg --print-architecture) \
     && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C /usr/local -xz \
     && apt-get clean \
@@ -39,7 +39,7 @@ WORKDIR /home/dev
 ENV GOPATH="/home/dev/go"
 ENV BUN_INSTALL="/home/dev/.bun"
 ENV GEM_HOME="/home/dev/.gems"
-ENV PATH="${GOPATH}/bin:${BUN_INSTALL}/bin:${GEM_HOME}/bin:${PATH}"
+ENV PATH="${GOPATH}/bin:${BUN_INSTALL}/bin:${GEM_HOME}/bin:/home/dev/.local/bin:${PATH}"
 
 # Bun
 RUN curl -fsSL https://bun.sh/install | bash \
@@ -49,7 +49,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
 
 # JS global tools
-RUN bun install -g @anthropic-ai/claude-code turbo \
+RUN bun install -g @anthropic-ai/claude-code turbo markdownlint-cli2 markdown-link-check \
     && turbo telemetry disable
 
 # Ruby tools
@@ -61,3 +61,11 @@ RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI
     && go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest \
     && go install github.com/pressly/goose/v3/cmd/goose@latest \
     && go install github.com/jandelgado/gcov2lcov@latest
+
+# Python tools — same tool names Codacy runs in CI (bandit, prospector,
+# lizard), so skills/agents can run them locally before pushing instead of
+# round-tripping through a CI failure to find out. pipx keeps each in its
+# own venv, avoiding Debian's externally-managed-environment pip restriction.
+RUN pipx install bandit==1.9.4 \
+    && pipx install prospector==1.19.0 \
+    && pipx install lizard==1.23.0
