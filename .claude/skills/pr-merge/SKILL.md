@@ -41,7 +41,12 @@ git log --oneline -1 <branch>
 
 If `<branch>` already contains `origin/main`'s tip (i.e. it was branched
 from current main and has no new commits from main to absorb), skip
-straight to step 4 — a rebase would be a no-op.
+straight to step 4 — a rebase would be a no-op. GitHub's PR page shows
+`mergeStateStatus: BEHIND` (and a UI banner: "This branch is out-of-date
+with the base branch") for exactly this case — that banner's "Update
+branch" button creates a **merge commit**, which this repo doesn't want
+(see the "no merge commits" convention above). Treat that banner as the
+trigger for this step's rebase, never the button.
 
 **3. Rebase onto main if needed.**
 
@@ -50,9 +55,33 @@ git checkout <branch>
 git rebase origin/main
 ```
 
-- On conflicts: stop, report the conflicting files, and let the user
-  decide how to resolve — don't guess at intent.
-- On success, since rebase rewrites commits, update the PR branch:
+- On real conflicts: stop, report the conflicting files, and let the
+  user decide how to resolve — don't guess at intent.
+- If it instead fails with `error: Your local changes to the following
+  files would be overwritten by merge` on files you never touched by
+  hand, and this repeats on retry (including with
+  `git -c core.hooksPath=/dev/null rebase origin/main`, which rules out
+  a `pre-commit`/lint-staged interaction) — that's not a real conflict,
+  it's an environment/git quirk (observed with multiple small commits
+  touching the same lines, executable-bit files involved). Don't fight
+  it; squash onto the new base instead, which sidesteps the buggy
+  multi-commit replay entirely:
+
+  ```bash
+  git branch backup/<branch>-presquash   # safety net, delete once confirmed fine
+  git reset --soft origin/main
+  git status   # any file that only exists on origin/main now shows as "deleted" — restore those:
+  git restore --source=origin/main --staged --worktree -- <those files>
+  git commit -m "..."                    # one clean commit with everything <branch> was adding
+  ```
+
+  This is squashing your own feature branch's commits, not the PR merge
+  itself (still a plain `git merge --ff-only` in step 4) — the "no
+  squash" convention is about the merge method into `main`, not about
+  how many commits a branch carries getting there.
+
+- On success (rebase or squash-reset both rewrite commits), update the
+  PR branch:
 
 ```bash
 git push --force-with-lease origin <branch>
