@@ -82,3 +82,9 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-06 | Mon | Public status page redesign (dark/light theme) + toggle icon fix + local dev proxy fix | 2 h   |
 | 2026-07-06 | Mon | Settings notification-channel redesign + Status Pages Admin/Monitors/Maintenance visual polish (v1.22) | 5 h   |
 | 2026-07-06 | Mon | v1.19 blog fix (ambiguous excerpt) + v1.20-v1.22 release notes + hours/report logging | 2 h   |
+| 2026-07-07 | Tue | README tagline + doc table update (Slack/SMS alerts)      | 1 h   |
+| 2026-07-07 | Tue | Fix: CSP blocking Google Fonts (style-src/font-src)        | 1 h   |
+| 2026-07-07 | Tue | Add Claude Code skills suite (pr-merge, codacy-triage, design-token-check, log-hours, monthly-report, new-adr/migration/story, release-notes, run-checkmeup, secrets-scan, rate-limit-audit, org-id-audit, adr-compliance-check) | 2 h   |
+| 2026-07-07 | Tue | Docs: rebase fallback for git rebase quirk (PR #45) + CodeQL retrigger | 1 h   |
+| 2026-07-07 | Tue | Wire markdownlint-cli2 + markdown-link-check into make lint | 1 h   |
+| 2026-07-07 | Tue | Extend Codacy triage guide (Bandit/Prospector/Lizard), point at .claude/skills/, log DDoS/WAF backlog item; enable pylint in Codacy analysis | 1 h   |
