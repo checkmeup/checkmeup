@@ -32,6 +32,7 @@ Redesigned July 2026 ("Redesign v2") to a lower-contrast, near-black/near-white 
 scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-style palette.
 
 **Brand greens** (fixed hex, both themes — the raw scale never changes)
+
 | Token | Hex |
 |---|---|
 | `--green-100` | `#D3F5E9` |
@@ -41,6 +42,7 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--green-900` | `#08392E` |
 
 **Status colors** (semantic — never rebrand these)
+
 | Token | Hex | Meaning |
 |---|---|---|
 | `--status-up` | `#1D9E75` | Up / healthy |
@@ -50,6 +52,7 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--status-paused` | `#94A3B8` | Paused / maintenance |
 
 **Neutrals — dark** (default; bare `:root` in `style.css`)
+
 | Token | Value | Use |
 |---|---|---|
 | `--bg` | `#0A0F0D` | Page background |
@@ -63,6 +66,7 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--text-strong` | `#F2F5F3` | Headings, emphasis — same value as `--text` in this palette |
 
 **Neutrals — light** (`:root[data-theme='light']` override, see [EP-10](../stories/ep-10-theme.md))
+
 | Token | Value | Use |
 |---|---|---|
 | `--bg` | `#FBFDFC` | Page background |
@@ -86,6 +90,7 @@ The brand-green scale and status colors above are fixed hex in both themes. The 
 accent** below is the one exception: it resolves to a different green step per theme.
 
 **Accent**
+
 | Token | Dark | Light | Use |
 |---|---|---|---|
 | `--accent` | `--color-green-500` | `--color-green-700` | Buttons, links, selected/active state (checkboxes, progress bars) — darker in light mode for contrast against a near-white background |
@@ -96,6 +101,7 @@ accent** below is the one exception: it resolves to a different green step per t
 | `--on-accent` | `#FFFFFF` | `#FFFFFF` | Text/icon color on top of `--accent` — no override needed, white reads on every accent step used |
 
 **Nav**
+
 | Token | Dark | Light | Use |
 |---|---|---|---|
 | `--nav-bg` | `rgba(10,15,13,0.88)` | `rgba(251,253,252,0.88)` | Sticky nav background under `backdrop-filter: blur(...)` |

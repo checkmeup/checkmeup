@@ -54,7 +54,7 @@ pattern) rather than re-explaining the decision in the story itself.
 **4. Register in `docs/stories/backlog.md`**, adding a row to the Epics
 table:
 
-```
+```text
 | [EP-NN](ep-NN-slug.md) | <Epic name> | 0/N |
 ```
 

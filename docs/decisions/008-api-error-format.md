@@ -6,6 +6,7 @@
 ## Context
 
 Options considered:
+
 - Plain string: `{"error": "something went wrong"}`
 - With machine-readable code: `{"error": "message", "code": "snake_case_code"}`
 - RFC 7807 Problem Details: `{"type": "...", "title": "...", "status": 400, "detail": "..."}`

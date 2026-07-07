@@ -10,6 +10,7 @@
 checkmeup needs a billing system for its subscription plans (Hobby $0 / Solo $9 / Startup $29 / Enterprise $79, later raised to $99 — see [ADR-019](019-plan-limits.md)). The founder is an Israeli resident operating as a self-employed individual (עוסק פטור) without a registered company.
 
 Key constraints:
+
 - Must handle global tax collection and remittance automatically (VAT, GST, US sales tax) — no capacity to manage multi-country tax compliance manually
 - Self-serve setup — no sales calls or enterprise contracts
 - Minimal ongoing accounting overhead outside Israel

@@ -6,6 +6,7 @@
 ## Context
 
 Options considered:
+
 - No versioning — break freely while pre-1.0
 - URL prefix: `/api/v1/`
 - `Accept` header versioning: `Accept: application/vnd.checkmeup.v1+json`

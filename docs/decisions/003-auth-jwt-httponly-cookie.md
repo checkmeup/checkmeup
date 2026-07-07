@@ -20,6 +20,7 @@ Short-lived JWT in an httpOnly cookie for request auth. Refresh tokens stored in
 **Cookie name:** `access_token` (access JWT), `refresh_token` (refresh token)
 
 **Cookie attributes (both cookies):**
+
 - `HttpOnly` — not readable by JavaScript
 - `SameSite=Strict` — provides CSRF protection for same-origin flows; no separate CSRF token needed
 - `Secure` — HTTPS only in production; omitted in development
@@ -27,9 +28,11 @@ Short-lived JWT in an httpOnly cookie for request auth. Refresh tokens stored in
 - `Max-Age` — access cookie: 15 min; refresh cookie: 7 days (matches `JWT_REFRESH_TTL`)
 
 **JWT claims (`access_token`):**
+
 ```json
 { "sub": "<user UUID>", "org": "<org UUID>", "exp": <unix timestamp> }
 ```
+
 `sub` is the standard JWT subject (user ID). `org` is a custom claim for the org ID. Both are UUIDs.
 
 **Signing algorithm:** HS256 (HMAC-SHA256) using `JWT_SECRET` from env.

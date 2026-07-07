@@ -10,6 +10,7 @@ update:
 
 lint: install
 	bunx turbo run lint
+	bunx markdownlint-cli2 "**/*.md" "#node_modules" "#apps/web/node_modules" "#apps/web/dist" "#apps/web/coverage" "#LICENSE.md" "#.github/instructions"
 
 test: lint
 	rm -rf coverage

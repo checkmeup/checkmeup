@@ -54,6 +54,7 @@ make deploy cmd=deploy
 ```
 
 Kamal will:
+
 1. Clone the repo at HEAD into a temp dir
 2. Build the Docker image locally (arm64 native, cross-compiles Go to amd64)
 3. Push the image to GHCR tagged with the git SHA
@@ -132,6 +133,7 @@ CX23 includes **20 TB/month** outbound. At MVP scale this is effectively unlimit
 ### Hidden cost: build time
 
 Every `kamal deploy` builds the Docker image on your **local machine** (devcontainer). The build takes 1–3 minutes. This is CPU and energy on your Mac, not a monetary cost, but worth knowing — especially since:
+
 - Go dependency layer is cached between deploys (only rebuilt when `go.mod` changes)
 - Bun dependency layer is cached between deploys (only rebuilt when `package.json` changes)
 - Source changes only rebuild the final compile/bundle step (~30s)
@@ -152,6 +154,7 @@ POSTGRES_PASSWORD=<strong random password>
 ```
 
 **Tip — avoid URL encoding headaches:** generate passwords without special characters:
+
 ```bash
 openssl rand -hex 32   # produces only [0-9a-f], safe in URLs
 ```
@@ -201,7 +204,7 @@ container happening to start first.
 
 ## Architecture on the server
 
-```
+```text
 Internet
     │
     ▼
@@ -275,7 +278,8 @@ content) causes Kamal to pass an empty `-p` flag to `docker login`, which fails.
 | `DATABASE_URL` | `.env` only | Update if host/port/user/password changes |
 
 `.kamal/secrets` re-exports from the shell environment — it never contains literal values:
-```
+
+```bash
 KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
 DATABASE_URL=$DATABASE_URL
 JWT_SECRET=$JWT_SECRET
@@ -283,6 +287,7 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 ```
 
 Verify nothing sensitive is tracked:
+
 ```bash
 git check-ignore -v .env .kamal/secrets   # both should appear as gitignored
 git log --all -- .env .kamal/secrets      # should be empty (no history)

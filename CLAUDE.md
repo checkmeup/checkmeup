@@ -100,6 +100,7 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 ```
 
 **Triage guide:**
+
 - **TSQLLint** — always ignore, SQL Server rules applied to PostgreSQL migrations
 - **Opengrep cookies in `*_test.go`** — ignore, synthetic request cookies in tests intentionally lack HttpOnly/Secure
 - **Trivy on `go.mod`** — real; upgrade the flagged dependency or pin a patched version

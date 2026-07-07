@@ -16,6 +16,7 @@ Widening the target to "small businesses" was too broad on its own — non-techn
 Primary target customer: **freelance web devs / solo agency operators who build and maintain multiple client sites for local small businesses.**
 
 Not targeting for now:
+
 - **Non-technical small businesses directly** — wouldn't self-serve configure monitors; would need a done-for-you wrapper, out of scope.
 - **Formal multi-person agencies** — reachable, but a credible pitch needs the not-yet-shipped white-label features (custom domain, gated "Powered by" footer); revisit once those ship.
 

@@ -7,7 +7,7 @@
 
 EP-20 started a Viber notification channel using the Viber Bot API. During implementation it was discovered that on **5 February 2024**, Viber switched Viber bots to a commercial-only model: new bots can only be created under commercial terms, requiring a business agreement with Viber/Rakuten.
 
-Reference: https://help.viber.com/hc/en-us/articles/15247629658525-Bot-commercial-model
+Reference: <https://help.viber.com/hc/en-us/articles/15247629658525-Bot-commercial-model>
 
 This means there is no self-serve path for checkmeup to obtain a bot token, and we cannot offer the feature to users without a commercial Viber partnership.
 

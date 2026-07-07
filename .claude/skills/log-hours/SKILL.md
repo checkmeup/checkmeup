@@ -36,7 +36,7 @@ directly without a commit — each gets its own line.
 **5. Append to `docs/hours.md`'s Log table**, matching the exact existing
 row format:
 
-```
+```text
 | Date       | Day | Epic/Story                                      | Hours |
 | ---------- | --- | ----------------------------------------------- | ----- |
 | YYYY-MM-DD | Mon | <task description, matching commit's own wording style> | N h   |
@@ -50,7 +50,7 @@ Stylelint fixes (style.css)").
 section** — update both the month's total and the cumulative
 since-project-start total:
 
-```
+```text
 **Total effort this month: N h**. Day-by-day breakdown in [hours.md](../hours.md) — not duplicated here.
 
 **Cumulative total since project start: N h** across N logged days — average N.NN h/day.

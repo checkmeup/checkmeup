@@ -41,6 +41,7 @@ All the code is ready (EP-07, EP-27, [ADR-026](../decisions/026-billing-paddle-m
    | `4000 0566 5566 5556` | Success, Visa debit |
    | `4000 0000 0000 0002` | Declined |
    | `4000 0027 6000 3184` | Succeeds once, then declines on a later charge — useful for testing renewal/dunning failures |
+
 10. **Switch to Live mode** in the Paddle dashboard once step 9 passes, before announcing paid plans publicly. Live mode needs its own API key/client-side token/price IDs — re-check every env var in step 8 still matches after switching, don't assume sandbox and live share IDs.
 
 ## Local dev (sandbox) vs. production (live)

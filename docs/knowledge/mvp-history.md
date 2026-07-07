@@ -12,6 +12,7 @@ scope: full project
 Frozen record of how the MVP was actually built. See [roadmap.md](../roadmap.md) for current Now / Next / Later work, and [reports/](../reports/) for what's shipped since.
 
 **Work schedule (Israel)** — the basis for the phase hour budgets below (~28–30 h/week):
+
 - Sun–Thu: 3–4 h/day (~3.5 h avg)
 - Fri–Sat: 5–6 h/day (~5.5 h avg)
 - **Weekly capacity: ~28–30 h/week**
