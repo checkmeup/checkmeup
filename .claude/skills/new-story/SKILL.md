@@ -47,8 +47,8 @@ multi-channel model in [EP-28](ep-28-notification-channels.md)".
 ```
 
 Repeat the `US-NNNN` block per story. Link to the deciding ADR inline
-where a design choice needs one (see `ep-19-sms-alerts.md`'s "Provider and
-opt-in flow decided in [ADR-029](../decisions/029-sms-alerts-twilio.md)"
+where a design choice needs one (see `ep-19-sms-alerts.md`'s
+`` "Provider and opt-in flow decided in [ADR-029](../decisions/029-sms-alerts-twilio.md)" ``
 pattern) rather than re-explaining the decision in the story itself.
 
 **4. Register in `docs/stories/backlog.md`**, adding a row to the Epics

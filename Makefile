@@ -11,6 +11,8 @@ update:
 lint: install
 	bunx turbo run lint
 	bunx markdownlint-cli2 "**/*.md" "#node_modules" "#apps/web/node_modules" "#apps/web/dist" "#apps/web/coverage" "#LICENSE.md" "#.github/instructions"
+	find . -name "*.md" -not -path "./node_modules/*" -not -path "./apps/web/node_modules/*" -not -path "./apps/web/dist/*" -not -path "./apps/web/coverage/*" -not -path "./.github/instructions/*" -print0 \
+		| xargs -0 -n1 bunx markdown-link-check -q -c .markdown-link-check.json
 
 test: lint
 	rm -rf coverage
