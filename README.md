@@ -4,7 +4,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/6354d576310e41ab86a9fdd8572366b6)](https://app.codacy.com/gh/checkmeup/checkmeup/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
-Cron, uptime, SSL, domain expiry, and port (TCP) monitors with Telegram alerts and white-label status pages.
+Cron, uptime, SSL, domain expiry, and port (TCP) monitors with Telegram, Slack and SMS alerts and white-label status pages.
 
 ## Stack
 
@@ -27,19 +27,19 @@ make build  # production build
 
 ## Documentation
 
-| Doc                                                | What's there                                          |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| [docs/INDEX.md](docs/INDEX.md)                     | Docs navigation cache — folder roles, load order        |
-| [docs/roadmap.md](docs/roadmap.md)                 | Current priorities — Now / Next / Later               |
-| [docs/stories/backlog.md](docs/stories/backlog.md) | Epics and user stories                                |
-| [docs/decisions/](docs/decisions/)                 | Architecture decision records (ADRs)                  |
-| [docs/reference/design.md](docs/reference/design.md) | Design tokens — colors, logo usage                     |
-| [docs/reference/deploy.md](docs/reference/deploy.md) | Deployment guide                                       |
-| [docs/reference/billing-setup.md](docs/reference/billing-setup.md) | Paddle activation checklist                             |
-| [docs/reports/](docs/reports/)                     | Monthly snapshots — what shipped, ADRs added            |
-| [docs/incidents/](docs/incidents/)                 | Production incident write-ups (one file per incident)  |
-| [docs/knowledge/mvp-history.md](docs/knowledge/mvp-history.md) | How the MVP was built (archived, frozen record)       |
-| [CLAUDE.md](CLAUDE.md)                             | Conventions and guardrails for contributors            |
+| Doc                                                                | What's there                                          |
+| ------------------------------------------------------------------ | ----------------------------------------------------- |
+| [docs/INDEX.md](docs/INDEX.md)                                     | Docs navigation cache — folder roles, load order      |
+| [docs/roadmap.md](docs/roadmap.md)                                 | Current priorities — Now / Next / Later               |
+| [docs/stories/backlog.md](docs/stories/backlog.md)                 | Epics and user stories                                |
+| [docs/decisions/](docs/decisions/)                                 | Architecture decision records (ADRs)                  |
+| [docs/reference/design.md](docs/reference/design.md)               | Design tokens — colors, logo usage                    |
+| [docs/reference/deploy.md](docs/reference/deploy.md)               | Deployment guide                                      |
+| [docs/reference/billing-setup.md](docs/reference/billing-setup.md) | Paddle activation checklist                           |
+| [docs/reports/](docs/reports/)                                     | Monthly snapshots — what shipped, ADRs added          |
+| [docs/incidents/](docs/incidents/)                                 | Production incident write-ups (one file per incident) |
+| [docs/knowledge/mvp-history.md](docs/knowledge/mvp-history.md)     | How the MVP was built (archived, frozen record)       |
+| [CLAUDE.md](CLAUDE.md)                                             | Conventions and guardrails for contributors           |
 
 ## License
 
