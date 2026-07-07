@@ -1,0 +1,102 @@
+---
+name: pr-merge
+description: Merge an open GitHub PR into main once CI passes, following this repo's rebase-only fast-forward convention (no gh pr merge, no squash, no merge commits). Use when asked to "merge PR #N", "merge this PR", or "merge it once CI passes".
+---
+
+# PR merge
+
+Merges to `main` in this repo go through PR, but the actual merge is done
+with plain git — `gh pr merge` does **not** work here (the GitHub PAT in
+use lacks merge permission on the repo), and merge commits/squash are
+disallowed so `main`'s log stays a straight line. See CLAUDE.md's
+"Merging to `main`" convention.
+
+Never commit or merge directly onto a local `main` that hasn't been
+pushed — always end by pushing the fast-forwarded `main` to `origin`.
+
+## Steps
+
+Takes a PR number or URL as input. Below, `<N>` is the PR number and
+`<branch>` is its head branch (get both from `gh pr view`).
+
+**1. Resolve the PR and check CI.**
+
+```bash
+gh pr view <N> --json number,headRefName,state,url
+gh pr checks <N>
+```
+
+- If `state` is already `MERGED`, stop and say so.
+- If any check is `fail`, stop and report which one — do not merge.
+- If checks are still `pending`, report that back and ask whether to wait
+  rather than polling in a loop.
+
+**2. Sync and check whether the branch needs rebasing onto `main`.**
+
+```bash
+git fetch origin
+git log --oneline -1 origin/main
+git log --oneline -1 <branch>
+```
+
+If `<branch>` already contains `origin/main`'s tip (i.e. it was branched
+from current main and has no new commits from main to absorb), skip
+straight to step 4 — a rebase would be a no-op.
+
+**3. Rebase onto main if needed.**
+
+```bash
+git checkout <branch>
+git rebase origin/main
+```
+
+- On conflicts: stop, report the conflicting files, and let the user
+  decide how to resolve — don't guess at intent.
+- On success, since rebase rewrites commits, update the PR branch:
+
+```bash
+git push --force-with-lease origin <branch>
+```
+
+Then re-check CI on the rebased commit before continuing (step 1).
+
+**4. Fast-forward `main` and push.**
+
+```bash
+git checkout main
+git merge --ff-only origin/main
+git merge --ff-only <branch>
+git push origin main
+```
+
+If either `merge --ff-only` refuses (non-fast-forward), stop — that means
+`main` or the branch moved unexpectedly since step 2. Re-fetch and
+re-evaluate rather than forcing.
+
+**5. Verify.**
+
+```bash
+gh pr view <N> --json state,mergeCommit
+```
+
+Confirm `state` is `MERGED`.
+
+## After merging
+
+Merging to `main` does **not** deploy. This repo deploys via `make
+deploy` (Kamal, targets the real production server) — that command is
+human-operator-only; never run it yourself. If the change is
+user-visible, mention that it still needs a deploy to take effect on
+`checkmeup.net`.
+
+## Cleanup (optional)
+
+The remote branch can be deleted after a successful merge if the user
+wants:
+
+```bash
+git push origin --delete <branch>
+git branch -d <branch>
+```
+
+Only do this if asked — leaving merged branches around is harmless.
