@@ -351,11 +351,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // every custom-logo status page instead of failing loudly.
 const contentSecurityPolicy = "default-src 'self'; " +
 	"script-src 'self' https://www.googletagmanager.com https://cdn.paddle.com; " +
-	"style-src 'self' 'unsafe-inline'; " +
+	"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
 	"img-src 'self' data: https:; " +
 	"connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.paddle.com; " +
 	"frame-src https://*.paddle.com; " +
-	"font-src 'self'; " +
+	"font-src 'self' https://fonts.gstatic.com; " +
 	"object-src 'none'; " +
 	"base-uri 'self'; " +
 	"form-action 'self'; " +
