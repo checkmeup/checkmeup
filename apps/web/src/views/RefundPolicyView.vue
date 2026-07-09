@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'Refund Policy — checkmeup',
+  description: "checkmeup's refund policy for paid plans.",
+  path: '/refund',
+})
 
 const effectiveDate = '2026-07-01'
 </script>

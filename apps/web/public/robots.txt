@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /monitors
+Disallow: /status-pages
+Disallow: /maintenance
+Disallow: /billing
+Disallow: /settings
+Disallow: /accept-terms
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://checkmeup.net/sitemap.xml

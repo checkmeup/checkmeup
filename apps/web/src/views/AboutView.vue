@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'About — checkmeup',
+  description: 'Who builds checkmeup, the stack it runs on, and the values behind it.',
+  path: '/about',
+})
 
 const stack = [
   { label: 'Backend', value: 'Go · Chi · sqlc · goose' },

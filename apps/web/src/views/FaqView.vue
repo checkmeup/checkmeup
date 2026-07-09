@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { faqCategories } from '@/faq/faqs'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'FAQ — checkmeup',
+  description:
+    'Answers on getting started, billing, monitors and alerts, status pages, and privacy for checkmeup.',
+  path: '/faq',
+})
 </script>
 
 <template>

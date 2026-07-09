@@ -2,6 +2,13 @@
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { posts } from '@/blog/posts'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'Blog — checkmeup',
+  description: 'Building notes, release changelogs, and the occasional opinion from checkmeup.',
+  path: '/blog',
+})
 
 const sortedPosts = [...posts].reverse()
 </script>

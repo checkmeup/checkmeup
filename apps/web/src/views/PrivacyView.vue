@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'Privacy Policy — checkmeup',
+  description: "checkmeup's privacy policy and subprocessor list.",
+  path: '/privacy',
+})
 
 const effectiveDate = '2026-06-17'
 

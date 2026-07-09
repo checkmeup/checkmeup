@@ -23,6 +23,9 @@ bun.lockb
 # Build output
 dist/
 
+# Generated at build time by apps/web/scripts/generate-sitemap.mjs
+apps/web/public/sitemap.xml
+
 # Go
 apps/api/bin/
 apps/api/tmp/

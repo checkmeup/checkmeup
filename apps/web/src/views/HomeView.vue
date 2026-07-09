@@ -4,12 +4,20 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import FeatureCard from '@/components/FeatureCard.vue'
 import { useTheme } from '@/lib/theme'
+import { useSeo } from '@/composables/useSeo'
 import logoDark from '@/assets/logo-dark.svg'
 import logoLight from '@/assets/logo-light.svg'
 import { statusRows, plans, customers, testimonials } from '@/content/home'
 
 const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
+
+useSeo({
+  title: 'checkmeup — monitoring for freelancers & client sites',
+  description:
+    'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
+  path: '/',
+})
 </script>
 
 <template>

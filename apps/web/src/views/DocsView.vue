@@ -16,6 +16,14 @@ import DocsAppearance from '@/components/docs/DocsAppearance.vue'
 import DocsPlans from '@/components/docs/DocsPlans.vue'
 import DocsApi from '@/components/docs/DocsApi.vue'
 import DocsHelp from '@/components/docs/DocsHelp.vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'Docs — checkmeup',
+  description:
+    'How to set up cron, uptime, SSL, domain, and port monitors, alerts, status pages, and the public API on checkmeup.',
+  path: '/docs',
+})
 
 const sections = [
   { id: 'getting-started', label: 'Getting started' },

@@ -3,9 +3,16 @@ import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { getPost } from '@/blog/posts'
+import { useSeo } from '@/composables/useSeo'
 
 const route = useRoute()
 const post = computed(() => getPost(route.params.slug as string))
+
+useSeo({
+  title: () => (post.value ? `${post.value.title} — checkmeup blog` : 'Post not found — checkmeup'),
+  description: () => post.value?.excerpt ?? 'This blog post could not be found.',
+  path: () => route.fullPath,
+})
 </script>
 
 <template>

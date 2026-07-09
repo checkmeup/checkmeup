@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: 'Terms of Service — checkmeup',
+  description: "checkmeup's terms of service.",
+  path: '/terms',
+})
 
 const effectiveDate = '2026-06-17'
 </script>
