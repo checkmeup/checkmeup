@@ -46,7 +46,7 @@ def run_lizard_csv(paths: list[str]) -> list[list[str]]:
 
 def go_function_complexity(rows: list[list[str]]) -> list[tuple[str, str, str, int]]:
     findings = []
-    for nloc, ccn, _token, _param, _length, _loc, file, func_name, *_rest in rows:
+    for nloc, ccn, _, _param, _length, _loc, file, func_name, *_rest in rows:
         if file in KNOWN_EXCEPTIONS or int(ccn) <= GO_FUNC_CCN_THRESHOLD:
             continue
         start = _loc.split("@")[1].split("-")[0]
@@ -56,7 +56,7 @@ def go_function_complexity(rows: list[list[str]]) -> list[tuple[str, str, str, i
 
 def go_file_size(rows: list[list[str]]) -> list[tuple[str, int]]:
     totals: dict[str, int] = defaultdict(int)
-    for nloc, _ccn, _token, _param, _length, _loc, file, *_rest in rows:
+    for nloc, _ccn, _, _param, _length, _loc, file, *_rest in rows:
         totals[file] += int(nloc)
     return [(f, n) for f, n in totals.items() if n > GO_FILE_NLOC_THRESHOLD and f not in KNOWN_EXCEPTIONS]
 
