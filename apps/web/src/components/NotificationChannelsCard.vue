@@ -1,117 +1,27 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import Label from '@/components/ui/Label.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
+import NotificationChannelForm from '@/components/NotificationChannelForm.vue'
 import { ApiError } from '@/api/client'
-import {
-  notificationChannelsApi,
-  type NotificationChannel,
-  type NotificationChannelType,
-} from '@/api/notificationChannels'
+import { notificationChannelsApi, type NotificationChannel } from '@/api/notificationChannels'
 import { useNotificationChannels } from '@/composables/useNotificationChannels'
 import { useBilling } from '@/composables/useBilling'
+import {
+  useNotificationChannelForm,
+  typeLabel,
+  typeIconPath,
+  configKey,
+} from '@/composables/useNotificationChannelForm'
 
 const { data, isPending: loading, refetch } = useNotificationChannels()
 const channels = computed(() => data.value ?? [])
 
 const { data: billingInfo } = useBilling()
 
-const typeLabel: Record<NotificationChannelType, string> = {
-  telegram: 'Telegram',
-  email: 'Email',
-  webhook: 'Webhook',
-  slack: 'Slack',
-  sms: 'SMS',
-}
-const typeIconPath: Record<NotificationChannelType, string> = {
-  telegram: 'M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z',
-  email: 'M4 4h16v16H4z M22 6l-10 7L2 6',
-  webhook:
-    'M10 13a5 5 0 0 0 7.07 0l1.93-1.93a5 5 0 0 0-7.07-7.07L10.5 5.5 M14 11a5 5 0 0 0-7.07 0L5 12.93a5 5 0 0 0 7.07 7.07L13.5 18.5',
-  slack: 'M4 9h16 M4 15h16 M9 4v16 M15 4v16',
-  sms: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
-}
-const configKey: Record<NotificationChannelType, string> = {
-  telegram: 'chatId',
-  email: 'email',
-  webhook: 'url',
-  slack: 'url',
-  sms: 'phone_number',
-}
-const valueLabel: Record<NotificationChannelType, string> = {
-  telegram: 'Chat ID',
-  email: 'Email address',
-  webhook: 'Webhook URL',
-  slack: 'Incoming Webhook URL',
-  sms: 'Phone number',
-}
-const valuePlaceholder: Record<NotificationChannelType, string> = {
-  telegram: '-1001234567890',
-  email: 'alerts@yourteam.com',
-  webhook: 'https://example.com/hooks/checkmeup',
-  slack: 'https://hooks.slack.com/services/...',
-  sms: '+14155551234',
-}
+const form = reactive(useNotificationChannelForm({ billingInfo, refetch }))
 
-const showForm = ref(false)
-const editingId = ref<string | null>(null)
-const type = ref<NotificationChannelType>('telegram')
-const name = ref('')
-const value = ref('')
-const enabled = ref(true)
-// Only populated when editing an existing webhook channel — the secret
-// doesn't exist until the channel is first saved (US-1401).
-const secret = ref('')
-// TCPA-style opt-in checkbox (US-1901, ADR-029) — required before any sms
-// channel can be saved or tested. Pre-checked when editing an existing
-// channel that already has consent on file (consentAt below).
-const smsConsent = ref(false)
-const consentAt = ref('')
-const consentedPhone = ref('')
-// True once the phone number has been edited away from the one consent_at
-// applies to — a changed number is a new recipient, so it needs fresh
-// consent (ADR-029), same rule the backend enforces in
-// resolveUpdatedChannelConfig.
-const smsConsentOnFile = computed(
-  () => !!consentAt.value && value.value.trim() === consentedPhone.value,
-)
-// Editing the number away from the one consent is on file for un-checks the
-// box — a changed number needs a fresh, conscious opt-in, not a carried-over
-// checkmark from the previous number.
-// SMS is a paid-plan-only channel (server-enforced in Create/TestNotificationChannel);
-// hide it from the picker on Hobby rather than letting the user pick it and
-// hit a 402 on save. Still shown (but disabled, since the type select is
-// disabled while editing) if an existing channel is already sms — e.g. an
-// org that created one on a paid plan and later downgraded.
-const hobbyPlanNoSms = computed(() => billingInfo.value?.plan === 'hobby' && type.value !== 'sms')
-
-const channelTypeOptions = computed(() =>
-  (Object.keys(typeLabel) as NotificationChannelType[])
-    .filter((t) => t !== 'sms' || !hobbyPlanNoSms.value)
-    .map((t) => ({ value: t, label: typeLabel[t], iconPath: typeIconPath[t] })),
-)
-
-watch(value, () => {
-  if (type.value === 'sms' && !smsConsentOnFile.value) {
-    smsConsent.value = false
-  }
-})
-
-const saving = ref(false)
-const testing = ref(false)
 const deletingId = ref('')
-const regeneratingSecret = ref(false)
-const regenerateError = ref('')
-const formError = ref('')
-const testSuccess = ref(false)
-const testError = ref('')
-// Set when the API rejects an sms save/test with plan_limit_reached (Hobby
-// plan — interim guard ahead of ADR-032's credit quotas), same pattern as
-// the monitor/status-page create views' plan-limit handling.
-const limitReached = ref(false)
 
 // relativeTime mirrors the small per-view helper used elsewhere (e.g.
 // CronMonitorListView.vue) rather than a new shared util, matching this
@@ -133,152 +43,6 @@ function deliverySummary(c: NotificationChannel) {
     Boolean,
   )
   return `Last delivery: ${parts.join(', ')}`
-}
-
-function startAdd() {
-  editingId.value = null
-  type.value = 'telegram'
-  name.value = ''
-  value.value = ''
-  secret.value = ''
-  smsConsent.value = false
-  consentAt.value = ''
-  consentedPhone.value = ''
-  enabled.value = true
-  formError.value = ''
-  testSuccess.value = false
-  testError.value = ''
-  regenerateError.value = ''
-  limitReached.value = false
-  showForm.value = true
-}
-
-function startEdit(c: NotificationChannel) {
-  editingId.value = c.id
-  type.value = c.type
-  name.value = c.name
-  secret.value = c.type === 'webhook' ? (c.config.secret ?? '') : ''
-  // Set before `value` so the watcher below (which reacts to `value`
-  // changing) sees the matching consentedPhone already in place and doesn't
-  // mistake this initial population for the user editing the number.
-  consentAt.value = c.type === 'sms' ? (c.config.consent_at ?? '') : ''
-  consentedPhone.value = c.type === 'sms' ? (c.config.phone_number ?? '') : ''
-  smsConsent.value = !!consentAt.value
-  value.value = c.config[configKey[c.type]] ?? ''
-  enabled.value = c.enabled
-  formError.value = ''
-  testSuccess.value = false
-  testError.value = ''
-  regenerateError.value = ''
-  limitReached.value = false
-  showForm.value = true
-}
-
-async function regenerateSecret() {
-  if (!editingId.value) return
-  regeneratingSecret.value = true
-  regenerateError.value = ''
-  try {
-    const updated = await notificationChannelsApi.regenerateWebhookSecret(editingId.value)
-    secret.value = updated.config.secret ?? ''
-    await refetch()
-  } catch (e: unknown) {
-    regenerateError.value = e instanceof Error ? e.message : 'Failed to regenerate secret'
-  } finally {
-    regeneratingSecret.value = false
-  }
-}
-
-function cancelForm() {
-  showForm.value = false
-  editingId.value = null
-}
-
-function buildConfig(): Record<string, string> {
-  const config: Record<string, string> = { [configKey[type.value]]: value.value.trim() }
-  if (type.value === 'sms') {
-    config.consent = smsConsent.value ? 'true' : 'false'
-  }
-  return config
-}
-
-async function test() {
-  testing.value = true
-  testError.value = ''
-  testSuccess.value = false
-  limitReached.value = false
-  try {
-    await notificationChannelsApi.test({ type: type.value, config: buildConfig() })
-    testSuccess.value = true
-  } catch (e: unknown) {
-    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-      limitReached.value = true
-      testError.value = e.message
-    } else {
-      testError.value = e instanceof Error ? e.message : 'Failed to send test message'
-    }
-  } finally {
-    testing.value = false
-  }
-}
-
-async function save() {
-  formError.value = ''
-  limitReached.value = false
-  if (!name.value.trim()) {
-    formError.value = 'Name is required'
-    return
-  }
-  if (!value.value.trim()) {
-    formError.value = `${valueLabel[type.value]} is required`
-    return
-  }
-  if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
-    formError.value = 'Webhook URL must start with https://'
-    return
-  }
-  if (type.value === 'slack' && !value.value.trim().startsWith('https://hooks.slack.com/')) {
-    formError.value = 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
-    return
-  }
-  if (type.value === 'sms') {
-    if (!/^\+[1-9]\d{1,14}$/.test(value.value.trim())) {
-      formError.value = 'Phone number must be in E.164 format (e.g. +14155551234)'
-      return
-    }
-    if (!smsConsent.value) {
-      formError.value = 'You must agree to receive SMS alerts at this number before saving'
-      return
-    }
-  }
-  saving.value = true
-  try {
-    if (editingId.value) {
-      await notificationChannelsApi.update(editingId.value, {
-        type: type.value,
-        name: name.value.trim(),
-        config: buildConfig(),
-        enabled: enabled.value,
-      })
-    } else {
-      await notificationChannelsApi.create({
-        type: type.value,
-        name: name.value.trim(),
-        config: buildConfig(),
-      })
-    }
-    await refetch()
-    cancelForm()
-  } catch (e: unknown) {
-    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-      limitReached.value = true
-      formError.value = e.message
-    } else {
-      formError.value = e instanceof Error ? e.message : 'Failed to save channel'
-    }
-  } finally {
-    saving.value = false
-  }
 }
 
 async function remove(c: NotificationChannel) {
@@ -366,7 +130,7 @@ async function toggleEnabled(c: NotificationChannel) {
             {{ deliverySummary(c) }}
           </p>
         </div>
-        <Button variant="secondary" size="sm" @click="startEdit(c)">Edit</Button>
+        <Button variant="secondary" size="sm" @click="form.startEdit(c)">Edit</Button>
         <Button variant="secondary" size="sm" :disabled="deletingId === c.id" @click="remove(c)">
           {{ deletingId === c.id ? 'Removing…' : 'Remove' }}
         </Button>
@@ -377,194 +141,8 @@ async function toggleEnabled(c: NotificationChannel) {
     <UpgradePrompt v-if="toggleLimitReached" class="mb-5" :message="toggleError" />
     <p v-else-if="toggleError" class="text-sm mb-5" style="color: var(--status-down)">{{ toggleError }}</p>
 
-    <Button v-if="!showForm" variant="secondary" @click="startAdd">+ Add channel</Button>
+    <Button v-if="!form.showForm" variant="secondary" @click="form.startAdd">+ Add channel</Button>
 
-    <div
-      v-else
-      class="rounded-lg border p-4 space-y-4"
-      style="border-color: var(--border); background-color: var(--surface-raised)"
-    >
-      <div>
-        <Label>Type</Label>
-        <div
-          class="mt-1 grid gap-2"
-          style="grid-template-columns: repeat(auto-fill, minmax(104px, 1fr))"
-        >
-          <button
-            v-for="t in channelTypeOptions"
-            :key="t.value"
-            type="button"
-            data-testid="channel-type-option"
-            :aria-pressed="type === t.value"
-            class="flex flex-col items-center gap-1.5 rounded-lg border px-1.5 py-3 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none"
-            :style="{
-              borderColor: type === t.value ? 'var(--accent)' : 'var(--border)',
-              backgroundColor: type === t.value ? 'var(--accent-wash)' : 'var(--surface)',
-              color: type === t.value ? 'var(--accent)' : 'var(--text-dim)',
-            }"
-            :disabled="!!editingId"
-            @click="type = t.value"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path :d="t.iconPath" />
-            </svg>
-            {{ t.label }}
-          </button>
-        </div>
-        <p v-if="hobbyPlanNoSms" class="mt-1 text-xs" style="color: var(--text-muted)">
-          SMS alerts require a paid plan —
-          <RouterLink to="/billing" class="underline" style="color: var(--color-green-500)"
-            >view plans</RouterLink
-          >.
-        </p>
-      </div>
-
-      <ol
-        v-if="type === 'telegram'"
-        class="text-sm space-y-2 list-decimal list-inside"
-        style="color: var(--text-dim)"
-      >
-        <li>
-          Open
-          <a
-            href="https://t.me/checkmeupnet_bot"
-            target="_blank"
-            rel="noopener"
-            class="underline"
-            style="color: var(--color-green-500)"
-            >@checkmeupnet_bot</a
-          >
-          in Telegram and send
-          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
-            >/start</code
-          >
-          — the bot will reply with your Chat ID
-        </li>
-        <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
-      </ol>
-
-      <p v-else-if="type === 'webhook'" class="text-sm" style="color: var(--text-dim)">
-        checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
-        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
-          >X-Checkmeup-Signature</code
-        >. Must be
-        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
-          >https://</code
-        >.
-      </p>
-
-      <ol
-        v-else-if="type === 'slack'"
-        class="text-sm space-y-2 list-decimal list-inside"
-        style="color: var(--text-dim)"
-      >
-        <li>
-          In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create a new webhook for
-          your target channel
-        </li>
-        <li>
-          Copy the <strong>Webhook URL</strong> (starts with
-          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
-            >https://hooks.slack.com/services/</code
-          >) and paste it below
-        </li>
-        <li>Click <strong>Send test message</strong> to verify the connection before saving</li>
-      </ol>
-
-      <p v-else-if="type === 'sms'" class="text-sm" style="color: var(--text-dim)">
-        checkmeup will text down/recovery alerts to this number. Real per-message cost applies once
-        Twilio account setup is complete.
-      </p>
-
-      <div>
-        <Label for="channel-name">Name</Label>
-        <Input id="channel-name" v-model="name" placeholder="e.g. Ops Telegram" class="mt-1" />
-      </div>
-
-      <div>
-        <Label for="channel-value">{{ valueLabel[type] }}</Label>
-        <Input
-          id="channel-value"
-          v-model="value"
-          :type="type === 'email' ? 'email' : type === 'webhook' ? 'url' : 'text'"
-          :placeholder="valuePlaceholder[type]"
-          class="mt-1"
-        />
-      </div>
-
-      <div v-if="type === 'sms'">
-        <p v-if="smsConsentOnFile" class="text-xs" style="color: var(--text-muted)">
-          Consent given on {{ new Date(consentAt).toLocaleString() }}.
-        </p>
-        <label v-else class="flex items-start gap-2 text-sm" style="color: var(--text-dim)">
-          <input v-model="smsConsent" type="checkbox" class="mt-0.5" />
-          <span>I agree to receive automated SMS alerts from checkmeup at this number.</span>
-        </label>
-      </div>
-
-      <div v-if="type === 'webhook' && editingId" class="space-y-2">
-        <Label for="channel-secret">Signing secret</Label>
-        <div class="flex items-center gap-3">
-          <Input
-            id="channel-secret"
-            :model-value="secret"
-            disabled
-            class="mt-1 font-mono text-xs"
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            :disabled="regeneratingSecret"
-            @click="regenerateSecret"
-          >
-            {{ regeneratingSecret ? 'Regenerating…' : 'Regenerate' }}
-          </Button>
-        </div>
-        <p class="text-xs" style="color: var(--text-muted)">
-          Verify a request by computing HMAC-SHA256 of the raw request body using this secret as the
-          key, hex-encoding it, and comparing it to the
-          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
-            >X-Checkmeup-Signature</code
-          >
-          header. Regenerating invalidates the signature for future sends only — already-delivered
-          requests aren't affected.
-        </p>
-        <p v-if="regenerateError" class="text-xs" style="color: var(--status-down)">
-          {{ regenerateError }}
-        </p>
-      </div>
-      <p v-else-if="type === 'webhook'" class="text-xs" style="color: var(--text-muted)">
-        A signing secret is generated automatically once you save this channel.
-      </p>
-
-      <div class="flex items-center gap-3">
-        <Button
-          variant="secondary"
-          :disabled="!value.trim() || testing || (type === 'sms' && !smsConsent)"
-          @click="test"
-        >
-          {{
-            testing
-              ? 'Sending…'
-              : type === 'webhook'
-                ? 'Send test webhook'
-                : type === 'sms'
-                  ? 'Send test SMS'
-                  : 'Send test message'
-          }}
-        </Button>
-        <Button :disabled="saving || (type === 'sms' && !smsConsent)" @click="save">
-          {{ saving ? 'Saving…' : editingId ? 'Save changes' : 'Add channel' }}
-        </Button>
-        <Button variant="secondary" type="button" @click="cancelForm">Cancel</Button>
-      </div>
-
-      <p v-if="testSuccess" class="text-sm" style="color: var(--status-up)">
-        {{ type === 'webhook' ? 'Test webhook sent!' : type === 'sms' ? 'Test SMS sent!' : 'Test message sent!' }}
-      </p>
-      <UpgradePrompt v-if="limitReached" :message="testError || formError" />
-      <p v-else-if="testError" class="text-sm" style="color: var(--status-down)">{{ testError }}</p>
-      <p v-else-if="formError" class="text-sm" style="color: var(--status-down)">{{ formError }}</p>
-    </div>
+    <NotificationChannelForm v-else :form="form" />
   </div>
 </template>
