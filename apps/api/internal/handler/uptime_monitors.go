@@ -195,6 +195,74 @@ func validateKeyword(raw string) error {
 	return nil
 }
 
+// validateUptimeMonitorRequest validates and normalizes the fields shared by
+// create and update requests, responding with the first validation failure
+// and returning false — same "respond internally, return ok" idiom as
+// uptimeMonitorIDs above.
+func validateUptimeMonitorRequest(w http.ResponseWriter, name *string, url string, keyword *string, jsonAssertions *[]JsonAssertion, maxResponseTimeMs *int32) bool {
+	*name = strings.TrimSpace(*name)
+	if *name == "" {
+		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+		return false
+	}
+	if err := validateURL(url); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return false
+	}
+	*keyword = strings.TrimSpace(*keyword)
+	if err := validateKeyword(*keyword); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return false
+	}
+	if *jsonAssertions == nil {
+		*jsonAssertions = []JsonAssertion{}
+	}
+	if err := validateJsonAssertions(*jsonAssertions); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return false
+	}
+	if maxResponseTimeMs != nil && *maxResponseTimeMs <= 0 {
+		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
+		return false
+	}
+	return true
+}
+
+// clampUptimeMonitorInterval applies the org's plan-aware interval clamp,
+// responding with a plan_limit_reached error and returning false if the
+// requested interval is below the plan's minimum.
+func (h *MonitorHandler) clampUptimeMonitorInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, plan db.Plan, requestedIntervalMins int32) (int32, bool) {
+	clampedInterval, err := billing.ClampInterval(plan, int(requestedIntervalMins))
+	if err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return 0, false
+	}
+	return int32(clampedInterval), true
+}
+
+// checkUptimeMonitorCreateLimits checks whether orgID can create another
+// uptime monitor under its plan and returns the plan-clamped interval.
+// Responds and returns false on any failure (query error or plan limit hit).
+func (h *MonitorHandler) checkUptimeMonitorCreateLimits(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, requestedIntervalMins int32) (int32, bool) {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return 0, false
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return 0, false
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return 0, false
+	}
+	return h.clampUptimeMonitorInterval(w, r, orgID, plan, requestedIntervalMins)
+}
+
 func parseKeywordMode(raw string) db.KeywordMode {
 	if raw == string(db.KeywordModeNotContains) {
 		return db.KeywordModeNotContains
@@ -257,53 +325,14 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs) {
 		return
 	}
-	if err := validateURL(req.URL); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+	clampedInterval, ok := h.checkUptimeMonitorCreateLimits(w, r, orgID, req.IntervalMins)
+	if !ok {
 		return
 	}
-	req.Keyword = strings.TrimSpace(req.Keyword)
-	if err := validateKeyword(req.Keyword); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	if req.JsonAssertions == nil {
-		req.JsonAssertions = []JsonAssertion{}
-	}
-	if err := validateJsonAssertions(req.JsonAssertions); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	if req.MaxResponseTimeMs != nil && *req.MaxResponseTimeMs <= 0 {
-		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
-		return
-	}
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	req.IntervalMins = int32(clampedInterval)
+	req.IntervalMins = clampedInterval
 
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
@@ -486,29 +515,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
-		return
-	}
-	if err := validateURL(req.URL); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	req.Keyword = strings.TrimSpace(req.Keyword)
-	if err := validateKeyword(req.Keyword); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	if req.JsonAssertions == nil {
-		req.JsonAssertions = []JsonAssertion{}
-	}
-	if err := validateJsonAssertions(req.JsonAssertions); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	if req.MaxResponseTimeMs != nil && *req.MaxResponseTimeMs <= 0 {
-		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
+	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs) {
 		return
 	}
 
@@ -521,13 +528,11 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 	// org's plan minimum is rejected, not silently floored to a fixed value
 	// that could be either too strict (Hobby's 5-min minimum) or too loose
 	// (denying a paid plan's 1-min minimum).
-	clampedInterval, err := billing.ClampInterval(plan, int(req.IntervalMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+	clampedInterval, ok := h.clampUptimeMonitorInterval(w, r, orgID, plan, req.IntervalMins)
+	if !ok {
 		return
 	}
-	req.IntervalMins = int32(clampedInterval)
+	req.IntervalMins = clampedInterval
 
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
