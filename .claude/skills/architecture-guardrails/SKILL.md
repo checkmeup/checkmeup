@@ -117,3 +117,21 @@ coupling, or naming — only complexity and size.
 For daily/periodic cadence rather than ad hoc, run this via the `loop`
 skill or the `schedule` skill's cron routines — this skill itself
 doesn't schedule anything.
+
+## Known limitation: Lizard's JS/TS function-length metric is unreliable
+
+Confirmed by bisection on a real `.ts` composable file: Lizard's parser
+can lose brace-depth tracking partway through a file and misattribute a
+function's line span all the way through to whichever function is
+defined *last* before a trailing `return {...}` statement — inflating
+that function's reported length by 3-4x (one real case: a genuinely
+~24-line function reported as 87 "lines of code"). Root cause not fully
+pinned down (bisected past template-literal interpolation, typed catch
+clauses, and a `{1,14}`-style regex quantifier without finding the exact
+trigger) — treat any Lizard `nloc-medium`/length finding on a `.ts`/`.vue`
+file as needing visual confirmation of the function's real size before
+acting on it, the same way `go_function_complexity`'s CCN numbers don't
+need this caveat (Lizard's Go parsing hasn't shown this issue). A
+practical workaround if a real finding turns out to be Lizard-measurement
+noise: reorder so a short, simple function sits last in the file,
+right before `return`.
