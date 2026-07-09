@@ -1,6 +1,5 @@
 import { computed, ref, watch } from 'vue'
 import { ApiError } from '@/api/client'
-import type { BillingInfo } from '@/api/billing'
 import {
   notificationChannelsApi,
   type NotificationChannel,
@@ -53,7 +52,7 @@ export const valuePlaceholder: Record<NotificationChannelType, string> = {
 // split out from the component so the list-management half (toggle/remove)
 // isn't tangled up with this form's much larger surface area.
 export function useNotificationChannelForm(opts: {
-  billingInfo: { value: BillingInfo | undefined }
+  billingInfo: { value: { plan: string } | undefined }
   refetch: () => Promise<unknown>
 }) {
   const { billingInfo, refetch } = opts
