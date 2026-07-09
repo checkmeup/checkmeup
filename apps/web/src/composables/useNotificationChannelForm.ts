@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ApiError } from '@/api/client'
 import type { BillingInfo } from '@/api/billing'
 import {
@@ -6,6 +6,11 @@ import {
   type NotificationChannel,
   type NotificationChannelType,
 } from '@/api/notificationChannels'
+
+// E.164 phone number pattern (US-1901): a leading +, no leading zero, up to
+// 15 digits total — mirrors the backend's e164Pattern in
+// apps/api/internal/handler/notification_channels.go.
+const E164_PATTERN = /^\+[1-9]\d{1,14}$/
 
 export const typeLabel: Record<NotificationChannelType, string> = {
   telegram: 'Telegram',
@@ -48,7 +53,7 @@ export const valuePlaceholder: Record<NotificationChannelType, string> = {
 // split out from the component so the list-management half (toggle/remove)
 // isn't tangled up with this form's much larger surface area.
 export function useNotificationChannelForm(opts: {
-  billingInfo: Ref<BillingInfo | undefined>
+  billingInfo: { value: BillingInfo | undefined }
   refetch: () => Promise<unknown>
 }) {
   const { billingInfo, refetch } = opts
@@ -85,6 +90,9 @@ export function useNotificationChannelForm(opts: {
   const channelTypeOptions = computed(() =>
     (Object.keys(typeLabel) as NotificationChannelType[])
       .filter((t) => t !== 'sms' || !hobbyPlanNoSms.value)
+      // t only ever ranges over the fixed NotificationChannelType keys of
+      // typeLabel/typeIconPath above, never external input.
+      // eslint-disable-next-line security/detect-object-injection
       .map((t) => ({ value: t, label: typeLabel[t], iconPath: typeIconPath[t] })),
   )
 
@@ -176,6 +184,75 @@ export function useNotificationChannelForm(opts: {
     return config
   }
 
+  // Returns the first validation failure message, or '' if the form is
+  // valid to submit. Split out of save() so that function stays focused
+  // on the actual persist call.
+  function validateSaveInput(): string {
+    if (!name.value.trim()) {
+      return 'Name is required'
+    }
+    if (!value.value.trim()) {
+      return `${valueLabel[type.value]} is required`
+    }
+    if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
+      return 'Webhook URL must start with https://'
+    }
+    if (type.value === 'slack' && !value.value.trim().startsWith('https://hooks.slack.com/')) {
+      return 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
+    }
+    if (type.value === 'sms') {
+      if (!E164_PATTERN.test(value.value.trim())) {
+        return 'Phone number must be in E.164 format (e.g. +14155551234)'
+      }
+      if (!smsConsent.value) {
+        return 'You must agree to receive SMS alerts at this number before saving'
+      }
+    }
+    return ''
+  }
+
+  async function persistChannel() {
+    if (editingId.value) {
+      await notificationChannelsApi.update(editingId.value, {
+        type: type.value,
+        name: name.value.trim(),
+        config: buildConfig(),
+        enabled: enabled.value,
+      })
+    } else {
+      await notificationChannelsApi.create({
+        type: type.value,
+        name: name.value.trim(),
+        config: buildConfig(),
+      })
+    }
+  }
+
+  async function save() {
+    formError.value = ''
+    limitReached.value = false
+    const validationError = validateSaveInput()
+    if (validationError) {
+      formError.value = validationError
+      return
+    }
+    saving.value = true
+    try {
+      await persistChannel()
+      await refetch()
+      cancelForm()
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+        limitReached.value = true
+        formError.value = e.message
+      } else {
+        formError.value = e instanceof Error ? e.message : 'Failed to save channel'
+      }
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function test() {
     testing.value = true
     testError.value = ''
@@ -193,65 +270,6 @@ export function useNotificationChannelForm(opts: {
       }
     } finally {
       testing.value = false
-    }
-  }
-
-  async function save() {
-    formError.value = ''
-    limitReached.value = false
-    if (!name.value.trim()) {
-      formError.value = 'Name is required'
-      return
-    }
-    if (!value.value.trim()) {
-      formError.value = `${valueLabel[type.value]} is required`
-      return
-    }
-    if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
-      formError.value = 'Webhook URL must start with https://'
-      return
-    }
-    if (type.value === 'slack' && !value.value.trim().startsWith('https://hooks.slack.com/')) {
-      formError.value = 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
-      return
-    }
-    if (type.value === 'sms') {
-      if (!/^\+[1-9]\d{1,14}$/.test(value.value.trim())) {
-        formError.value = 'Phone number must be in E.164 format (e.g. +14155551234)'
-        return
-      }
-      if (!smsConsent.value) {
-        formError.value = 'You must agree to receive SMS alerts at this number before saving'
-        return
-      }
-    }
-    saving.value = true
-    try {
-      if (editingId.value) {
-        await notificationChannelsApi.update(editingId.value, {
-          type: type.value,
-          name: name.value.trim(),
-          config: buildConfig(),
-          enabled: enabled.value,
-        })
-      } else {
-        await notificationChannelsApi.create({
-          type: type.value,
-          name: name.value.trim(),
-          config: buildConfig(),
-        })
-      }
-      await refetch()
-      cancelForm()
-    } catch (e: unknown) {
-      if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-        limitReached.value = true
-        formError.value = e.message
-      } else {
-        formError.value = e instanceof Error ? e.message : 'Failed to save channel'
-      }
-    } finally {
-      saving.value = false
     }
   }
 
