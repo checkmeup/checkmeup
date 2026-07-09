@@ -522,51 +522,62 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-
-	if req.Type == "sms" {
-		orgID, err := orgIDFrom(r)
-		if err != nil {
-			respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-			return
-		}
-		// Same guard as CreateNotificationChannel — without this, a
-		// zero-credit-plan org could rack up real Twilio spend via test
-		// sends alone, without ever being able to save/use an sms channel.
-		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-		if err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-		if billing.GetLimits(plan).SMSCredits <= 0 {
-			respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
-			return
-		}
-		if h.smsTestLimiter.RespondOnLimit(w, r, orgID.String()) {
-			return
-		}
-		if h.smsTestHourlyLimiter.RespondOnLimit(w, r, orgID.String()) {
-			return
-		}
-		if h.smsTestDailyLimiter.RespondOnLimit(w, r, orgID.String()) {
-			return
-		}
+	if req.Type == "sms" && !h.checkSMSTestAllowed(w, r) {
+		return
 	}
+	if !h.sendTestNotification(w, req.Type, req.Config) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
-	switch req.Type {
+// checkSMSTestAllowed gates SMS test-sends behind plan credits and rate
+// limits — same guard as CreateNotificationChannel. Without this, a
+// zero-credit-plan org could rack up real Twilio spend via test sends alone,
+// without ever being able to save/use an sms channel. Responds and returns
+// false if the send should be blocked.
+func (h *NotificationChannelHandler) checkSMSTestAllowed(w http.ResponseWriter, r *http.Request) bool {
+	orgID, err := orgIDFrom(r)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+		return false
+	}
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if billing.GetLimits(plan).SMSCredits <= 0 {
+		respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
+		return false
+	}
+	if h.smsTestLimiter.RespondOnLimit(w, r, orgID.String()) {
+		return false
+	}
+	if h.smsTestHourlyLimiter.RespondOnLimit(w, r, orgID.String()) {
+		return false
+	}
+	return !h.smsTestDailyLimiter.RespondOnLimit(w, r, orgID.String())
+}
+
+// sendTestNotification dispatches a test message for the given channel type,
+// responding with a type-specific error and returning false on failure.
+func (h *NotificationChannelHandler) sendTestNotification(w http.ResponseWriter, channelType string, config map[string]any) bool {
+	switch channelType {
 	case "telegram":
-		chatID, _ := req.Config["chatId"].(string)
+		chatID, _ := config["chatId"].(string)
 		if err := h.tg.SendMessage(strings.TrimSpace(chatID), "✅ checkmeup is connected! You'll receive alerts here."); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "telegram_error")
-			return
+			return false
 		}
 	case "email":
-		addr, _ := req.Config["email"].(string)
+		addr, _ := config["email"].(string)
 		if err := h.mailer.SendTestAlertEmail(strings.TrimSpace(addr)); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "email_error")
-			return
+			return false
 		}
 	case "webhook":
-		url, _ := req.Config["url"].(string)
+		url, _ := config["url"].(string)
 		// The real signing secret doesn't exist until the channel is saved
 		// (US-1401) — sign with a throwaway one so the request shape on the
 		// wire matches a real send, even though there's nothing yet for the
@@ -574,7 +585,7 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		secret, err := webhook.GenerateSecret()
 		if err != nil {
 			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
+			return false
 		}
 		event := webhook.Event{
 			EventType:   "test",
@@ -583,22 +594,22 @@ func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWrit
 		}
 		if _, err := h.wh.Send(strings.TrimSpace(url), secret, event); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "webhook_error")
-			return
+			return false
 		}
 	case "slack":
-		url, _ := req.Config["url"].(string)
+		url, _ := config["url"].(string)
 		if _, err := h.sl.Send(strings.TrimSpace(url), slack.TestMessage()); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "slack_error")
-			return
+			return false
 		}
 	case "sms":
-		phone, _ := req.Config["phone_number"].(string)
+		phone, _ := config["phone_number"].(string)
 		if _, err := h.sm.Send(strings.TrimSpace(phone), "checkmeup: this is a test SMS alert. You're all set!"); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "sms_error")
-			return
+			return false
 		}
 	}
-	w.WriteHeader(http.StatusNoContent)
+	return true
 }
 
 func notificationChannelIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
