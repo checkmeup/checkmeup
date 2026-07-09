@@ -27,7 +27,10 @@ those are `refs/stash` artifacts, not real commits.
 **3. Group commits into logical tasks, not one line per commit.** Small
 related commits (a fix-up, a lint pass, a follow-up typo fix on the same
 feature) collapse into one line. Estimate effort from diff size and
-complexity — minimum 1h per task/line.
+complexity — minimum 1h per task/line, **whole numbers only** (no
+"1.5 h" — round each line to the nearest hour; if that makes the day
+feel off, redistribute across that day's other lines rather than
+introducing a decimal on any single row).
 
 **4. Include non-commit work from the same session** if mentioned in
 conversation — copywriting, launch/marketing text, doc corrections made
@@ -57,7 +60,10 @@ since-project-start total:
 ```
 
 Recompute both totals from `docs/hours.md` rather than just adding —
-cheapest way to catch a prior arithmetic slip.
+cheapest way to catch a prior arithmetic slip. Unlike the per-row Hours
+column, these rolled-up totals and the average-per-day figure are
+derived arithmetic and may come out as a decimal (e.g. "9.55 h/day") —
+that's expected, not a violation of the whole-numbers-only rule above.
 
 ## Notes
 

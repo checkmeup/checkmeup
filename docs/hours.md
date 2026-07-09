@@ -88,3 +88,8 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-07 | Tue | Docs: rebase fallback for git rebase quirk (PR #45) + CodeQL retrigger | 1 h   |
 | 2026-07-07 | Tue | Wire markdownlint-cli2 + markdown-link-check into make lint | 1 h   |
 | 2026-07-07 | Tue | Extend Codacy triage guide (Bandit/Prospector/Lizard), point at .claude/skills/, log DDoS/WAF backlog item; enable pylint in Codacy analysis | 1 h   |
+| 2026-07-09 | Thu | Add architecture-guardrails skill (Go/Vue complexity+size audit) | 2 h   |
+| 2026-07-09 | Thu | Fix Go handler complexity (uptime/notification-channel handlers) + split worker.go by monitor type | 1 h   |
+| 2026-07-09 | Thu | Decompose HomeView/DashboardView/DocsView/NotificationChannelsCard.vue (SRP refactor + form composable extraction) | 3 h   |
+| 2026-07-09 | Thu | PR cleanup: stray merge-commit rebuilds, CodeQL false-positive triage (lgtm suppression + Lizard parser quirk), Codacy ESLint/type fixes, sequential PR realignment with main | 3 h   |
+| 2026-07-09 | Thu | Short version display (git describe → vX.Y.Z) in dashboard sidebar + footer | 1 h   |
