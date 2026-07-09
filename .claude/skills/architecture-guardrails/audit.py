@@ -73,7 +73,11 @@ def vue_file_size(directory: Path, threshold: int, exclude_dirs: tuple = ()) -> 
 
 
 def print_section(title: str, findings: list, fmt) -> bool:
-    print(f"## {title}")
+    # CodeQL py/clear-text-logging-sensitive-data false positive: title is
+    # always one of the 4 hardcoded audit-section descriptions built in
+    # report() below (e.g. "Go function complexity (CCN > 15)") — never
+    # derived from user input, a secret, or any external source.
+    print(f"## {title}")  # lgtm[py/clear-text-logging-sensitive-data]
     if not findings:
         print("  none")
         print()
