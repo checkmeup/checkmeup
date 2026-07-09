@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Flag Go functions/files and Vue files exceeding this repo's size and
-complexity thresholds — objective proxies for SRP violations (a function
-or component quietly taking on more than one job)."""
-# Two checks, both against real gaps in this repo's current size
-# distribution when this audit was authored, not arbitrary round numbers:
+"""Flag Go/Vue functions and files exceeding this repo's size/complexity thresholds."""
+# Objective proxies for SRP violations (a function or component quietly
+# taking on more than one job). Two checks, both against real gaps in this
+# repo's current size distribution when this audit was authored, not
+# arbitrary round numbers:
 #
 #  1. Go function cyclomatic complexity > 15 (lizard's own conventional
 #     default) in apps/api/internal/handler and .../worker — the two
@@ -46,7 +46,7 @@ def run_lizard_csv(paths: list[str]) -> list[list[str]]:
 
 def go_function_complexity(rows: list[list[str]]) -> list[tuple[str, str, str, int]]:
     findings = []
-    for nloc, ccn, _, _param, _length, _loc, file, func_name, *_rest in rows:
+    for _nloc, ccn, _, _param, _length, _loc, file, func_name, *_rest in rows:
         if file in KNOWN_EXCEPTIONS or int(ccn) <= GO_FUNC_CCN_THRESHOLD:
             continue
         start = _loc.split("@")[1].split("-")[0]
