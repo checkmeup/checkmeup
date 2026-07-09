@@ -3,6 +3,10 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
+import DashboardStatCards from '@/components/DashboardStatCards.vue'
+import AttentionPanel from '@/components/AttentionPanel.vue'
+import MonitorsTable from '@/components/MonitorsTable.vue'
+import UpcomingExpirationsCard from '@/components/UpcomingExpirationsCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCronMonitors } from '@/composables/useCronMonitors'
 import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
@@ -22,8 +26,6 @@ import {
   type Row,
   typeLabel,
   detailRouteName,
-  statusColors,
-  statusLabels,
   relativeTime,
   fmtPct,
   fmtExpiry,
@@ -381,365 +383,36 @@ function goToCreate(routeName: string) {
         </div>
       </div>
 
-      <!-- HERO STATS -->
-      <div class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 mb-7">
-        <div
-          class="rounded-2xl border p-[22px]"
-          style="background-color: var(--surface); border-color: var(--border)"
-        >
-          <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
-            Monitors healthy
-          </div>
-          <div class="flex items-baseline gap-1.5 mb-3">
-            <span
-              class="font-mono text-[28px] font-semibold"
-              style="color: var(--text-strong); letter-spacing: -0.02em"
-              >{{ healthyMonitors }}</span
-            >
-            <span class="text-[15px]" style="color: var(--text-muted)">/ {{ totalMonitors }}</span>
-          </div>
-          <div class="h-1.5 rounded overflow-hidden" style="background-color: var(--accent-wash)">
-            <div
-              class="h-full rounded"
-              :style="{ backgroundColor: 'var(--accent)', width: `${healthyPct}%` }"
-            ></div>
-          </div>
-          <div class="text-xs mt-2" style="color: var(--text-muted)">
-            {{ healthyPct.toFixed(1) }}% healthy
-          </div>
-        </div>
+      <DashboardStatCards
+        :healthy-monitors="healthyMonitors"
+        :total-monitors="totalMonitors"
+        :healthy-pct="healthyPct"
+        :avg-uptime-str="avgUptimeStr"
+        :uptime-samples-count="uptimeSamples.length"
+        :attention-color="attentionColor"
+        :attention-count="attentionItems.length"
+        :attention-note="attentionNote"
+        :sms-used="smsUsed"
+        :sms-total="smsTotal"
+        :sms-pct="smsPct"
+      />
 
-        <div
-          class="rounded-2xl border p-[22px]"
-          style="background-color: var(--surface); border-color: var(--border)"
-        >
-          <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
-            Avg uptime (24h)
-          </div>
-          <div
-            class="font-mono text-[28px] font-semibold"
-            style="color: var(--text-strong); letter-spacing: -0.02em"
-          >
-            {{ avgUptimeStr }}
-          </div>
-          <div class="text-xs mt-3" style="color: var(--text-muted)">
-            across {{ uptimeSamples.length }} uptime/port monitor{{
-              uptimeSamples.length === 1 ? '' : 's'
-            }}
-          </div>
-        </div>
-
-        <div
-          class="rounded-2xl border p-[22px]"
-          style="background-color: var(--surface); border-color: var(--border)"
-        >
-          <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
-            Needs attention
-          </div>
-          <div
-            class="font-mono text-[28px] font-semibold"
-            :style="{ color: attentionColor, letterSpacing: '-0.02em' }"
-          >
-            {{ attentionItems.length }}
-          </div>
-          <div class="text-xs mt-3 truncate" style="color: var(--text-muted)">
-            {{ attentionNote }}
-          </div>
-        </div>
-
-        <div
-          class="rounded-2xl border p-[22px]"
-          style="background-color: var(--surface); border-color: var(--border)"
-        >
-          <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
-            SMS credits used
-          </div>
-          <template v-if="smsTotal > 0">
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span
-                class="font-mono text-[28px] font-semibold"
-                style="color: var(--text-strong); letter-spacing: -0.02em"
-                >{{ smsUsed }}</span
-              >
-              <span class="text-[15px]" style="color: var(--text-muted)">/ {{ smsTotal }}</span>
-            </div>
-            <div
-              class="h-1.5 rounded overflow-hidden"
-              style="background-color: var(--surface-raised)"
-            >
-              <div
-                class="h-full rounded"
-                :style="{ backgroundColor: 'var(--accent)', width: `${smsPct}%` }"
-              ></div>
-            </div>
-            <div class="text-xs mt-2" style="color: var(--text-muted)">this billing cycle</div>
-          </template>
-          <div v-else class="font-mono text-[15px] font-normal" style="color: var(--text-muted)">
-            Not available on your plan
-          </div>
-        </div>
-      </div>
-
-      <!-- NEEDS ATTENTION -->
-      <div v-if="attentionItems.length > 0" class="mb-7">
-        <div
-          class="text-[13px] font-semibold mb-3 flex items-center gap-2"
-          style="color: var(--text-strong)"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--status-degraded)"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-            />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          Needs attention
-        </div>
-        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
-          <div
-            v-for="item in attentionItems"
-            :key="item.key"
-            class="rounded-xl border p-4 flex flex-col gap-2 cursor-pointer"
-            :style="{
-              borderColor: `color-mix(in srgb, ${item.color} 30%, transparent)`,
-              backgroundColor: item.wash,
-            }"
-            @click="router.push({ name: item.routeName, params: { id: item.id } })"
-          >
-            <div class="text-[13.5px] font-semibold" style="color: var(--text-strong)">
-              {{ item.title }}
-            </div>
-            <div class="text-xs leading-relaxed font-mono" style="color: var(--text-dim)">
-              {{ item.detail }}
-            </div>
-            <span class="text-xs font-semibold mt-0.5" :style="{ color: item.color }"
-              >{{ item.actionLabel }} →</span
-            >
-          </div>
-        </div>
-      </div>
+      <AttentionPanel :items="attentionItems" />
 
       <!-- MAIN GRID -->
       <div class="flex gap-5 flex-wrap items-start">
-        <!-- MONITORS TABLE -->
-        <div
-          class="flex-1 min-w-0 rounded-2xl border overflow-hidden"
-          style="background-color: var(--surface); border-color: var(--border); flex-basis: 560px"
-        >
-          <div
-            class="flex items-center justify-between gap-3 px-5 py-4 border-b flex-wrap"
-            style="border-color: var(--border)"
-          >
-            <span class="text-sm font-semibold" style="color: var(--text-strong)">Monitors</span>
-            <div class="flex gap-1.5 flex-wrap">
-              <button
-                v-for="chip in chips"
-                :key="chip.id"
-                class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                :style="{
-                  borderColor: filter === chip.id ? 'var(--accent)' : 'var(--border)',
-                  backgroundColor: filter === chip.id ? 'var(--accent-wash)' : 'transparent',
-                  color: filter === chip.id ? 'var(--accent)' : 'var(--text-dim)',
-                }"
-                @click="filter = chip.id as 'all' | MonitorType"
-              >
-                {{ chip.label }} <span class="opacity-60">{{ chip.count }}</span>
-              </button>
-            </div>
-          </div>
+        <MonitorsTable
+          :chips="chips"
+          :filter="filter"
+          :has-any-monitors="hasAnyMonitors"
+          :filtered-rows="filteredRows"
+          @update:filter="filter = $event"
+        />
 
-          <div v-if="!hasAnyMonitors" class="p-10 text-center">
-            <p class="text-sm mb-4" style="color: var(--text-muted)">
-              No monitors yet. Add a cron, uptime, SSL, domain, or port monitor to get started.
-            </p>
-            <Button @click="router.push({ name: 'uptime-monitor-create' })"
-              >Add your first monitor</Button
-            >
-          </div>
-
-          <template v-else>
-            <!-- Mobile cards -->
-            <div class="md:hidden">
-              <div
-                v-for="m in filteredRows"
-                :key="m.key"
-                class="p-4 border-b cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
-                style="border-color: var(--border)"
-                @click="router.push({ name: detailRouteName[m.type], params: { id: m.id } })"
-              >
-                <div class="flex items-center justify-between mb-1.5">
-                  <span class="font-medium text-sm truncate" style="color: var(--text-strong)">{{
-                    m.name
-                  }}</span>
-                  <span
-                    class="inline-flex items-center gap-1.5 text-xs font-medium flex-shrink-0"
-                    :style="{ color: statusColors[m.status] }"
-                  >
-                    <span
-                      class="w-1.5 h-1.5 rounded-full"
-                      :style="{ backgroundColor: statusColors[m.status] }"
-                    ></span>
-                    {{ statusLabels[m.status] ?? m.status }}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-mono truncate" style="color: var(--text-muted)">{{
-                    m.target
-                  }}</span>
-                  <span class="font-mono flex-shrink-0" style="color: var(--text-dim)">{{
-                    m.metricValue
-                  }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Desktop table -->
-            <div class="hidden md:block overflow-x-auto">
-              <table class="w-full text-sm" style="min-width: 640px">
-                <thead>
-                  <tr style="background-color: var(--surface-raised)">
-                    <th class="w-6"></th>
-                    <th
-                      class="text-left px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                      style="color: var(--text-muted)"
-                    >
-                      Monitor
-                    </th>
-                    <th
-                      class="text-left px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                      style="color: var(--text-muted)"
-                    >
-                      Metric
-                    </th>
-                    <th
-                      class="text-right px-5 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                      style="color: var(--text-muted)"
-                    >
-                      Last checked
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="m in filteredRows"
-                    :key="m.key"
-                    class="cursor-pointer transition-colors border-b hover:bg-[var(--surface-raised)]"
-                    style="border-color: var(--border)"
-                    @click="router.push({ name: detailRouteName[m.type], params: { id: m.id } })"
-                  >
-                    <td class="pl-5">
-                      <span
-                        class="inline-block w-[9px] h-[9px] rounded-full"
-                        :style="{ backgroundColor: statusColors[m.status] }"
-                      ></span>
-                    </td>
-                    <td class="px-3 py-3 min-w-0">
-                      <div class="flex items-center gap-1.5">
-                        <span class="font-semibold truncate" style="color: var(--text-strong)">{{
-                          m.name
-                        }}</span>
-                        <span
-                          class="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-                          style="background-color: var(--surface-raised); color: var(--text-dim)"
-                        >
-                          {{ typeLabel[m.type] }}
-                        </span>
-                      </div>
-                      <div
-                        class="font-mono text-[11.5px] truncate mt-0.5"
-                        style="color: var(--text-muted)"
-                      >
-                        {{ m.target }}
-                      </div>
-                    </td>
-                    <td class="px-3 py-3">
-                      <div class="text-[11.5px] mb-0.5" style="color: var(--text-muted)">
-                        {{ m.metricLabel }}
-                      </div>
-                      <div
-                        class="font-mono text-[13.5px] font-semibold"
-                        :style="{
-                          color: ['down', 'error', 'expired', 'expiring_soon'].includes(m.status)
-                            ? statusColors[m.status]
-                            : 'var(--text-strong)',
-                        }"
-                      >
-                        {{ m.metricValue }}
-                      </div>
-                    </td>
-                    <td
-                      class="px-5 py-3 font-mono text-[11.5px] text-right"
-                      style="color: var(--text-muted)"
-                    >
-                      {{ m.lastChecked }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div
-                v-if="filteredRows.length === 0"
-                class="p-8 text-center text-sm"
-                style="color: var(--text-muted)"
-              >
-                No monitors match this filter.
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- UPCOMING EXPIRATIONS -->
-        <div
-          class="rounded-2xl border p-5"
-          style="
-            flex: 1 1 320px;
-            min-width: 300px;
-            background-color: var(--surface);
-            border-color: var(--border);
-          "
-        >
-          <div class="text-sm font-semibold mb-4" style="color: var(--text-strong)">
-            Upcoming expirations
-          </div>
-
-          <p v-if="!hasSslOrDomainMonitors" class="text-xs" style="color: var(--text-muted)">
-            Add an SSL or domain monitor to track certificate and registration expirations here.
-          </p>
-          <p v-else-if="expiryRows.length === 0" class="text-xs" style="color: var(--text-muted)">
-            No expiry data yet — checks run shortly after a monitor is created.
-          </p>
-          <div v-else class="flex flex-col gap-3">
-            <div
-              v-for="row in expiryRows"
-              :key="row.key"
-              class="flex items-center justify-between gap-3 cursor-pointer"
-              @click="router.push({ name: detailRouteName[row.type], params: { id: row.id } })"
-            >
-              <div class="min-w-0">
-                <div class="text-[13px] font-medium truncate" style="color: var(--text-strong)">
-                  {{ row.name }}
-                </div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">
-                  {{ typeLabel[row.type] }}
-                </div>
-              </div>
-              <div
-                class="font-mono text-xs font-semibold flex-shrink-0"
-                :style="{ color: row.color }"
-              >
-                {{ row.daysUntilExpiry < 0 ? 'Expired' : `${row.daysUntilExpiry}d` }}
-              </div>
-            </div>
-          </div>
-        </div>
+        <UpcomingExpirationsCard
+          :has-ssl-or-domain-monitors="hasSslOrDomainMonitors"
+          :expiry-rows="expiryRows"
+        />
       </div>
     </div>
   </AppLayout>
