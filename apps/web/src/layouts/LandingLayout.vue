@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useTheme } from '@/lib/theme'
+import { appVersion } from '@/lib/version'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import logoDark from '@/assets/logo-dark.svg'
 import logoLight from '@/assets/logo-light.svg'
@@ -152,7 +153,9 @@ const mobileMenuOpen = ref(false)
           </div>
         </div>
         <div class="pt-5 border-t" style="border-color: var(--border)">
-          <span class="text-xs" style="color: var(--text-muted)">© 2026 checkmeup.net</span>
+          <span class="text-xs" style="color: var(--text-muted)"
+            >© 2026 checkmeup.net · {{ appVersion }}</span
+          >
         </div>
       </div>
     </footer>

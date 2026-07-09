@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
 import { useTheme } from '@/lib/theme'
+import { appVersion } from '@/lib/version'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import logoDark from '@/assets/logo-dark.svg'
 import logoLight from '@/assets/logo-light.svg'
@@ -14,7 +15,6 @@ const auth = useAuthStore()
 const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 const sidebarOpen = ref(false)
-const appVersion = import.meta.env.VITE_APP_VERSION ?? 'dev'
 
 watch(
   () => route.path,
