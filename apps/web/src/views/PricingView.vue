@@ -6,7 +6,7 @@ import { findFaqCategory } from '@/faq/faqs'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Pricing — checkmeup',
+  title: 'Pricing — Checkmeup',
   description:
     'Hobby $0, Solo $9, Startup $29, Enterprise $99 — cron, uptime, SSL, domain, and port monitoring plans for freelancers and agencies.',
   path: '/pricing',

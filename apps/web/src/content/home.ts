@@ -115,7 +115,7 @@ export const testimonials = [
     role: 'Backend Engineer',
     avatar: 'img/avatar1.png',
     quote:
-      'My nightly backup job silently failed for two weeks before I set up checkmeup. Now I get a Telegram ping within minutes if anything misses its window.',
+      'My nightly backup job silently failed for two weeks before I set up Checkmeup. Now I get a Telegram ping within minutes if anything misses its window.',
   },
   {
     name: 'Marcus T.',

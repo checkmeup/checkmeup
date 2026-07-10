@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "This release started from an unglamorous place: checking checkmeup's site against a payment processor's domain-verification checklist. That surfaced two real gaps — the Terms never named who actually operates checkmeup, and the refund policy was buried as one sentence instead of its own document. Pulling that thread turned into a full legal read-through, which found a few more things worth fixing while the page was open.",
+      text: "This release started from an unglamorous place: checking Checkmeup's site against a payment processor's domain-verification checklist. That surfaced two real gaps — the Terms never named who actually operates Checkmeup, and the refund policy was buried as one sentence instead of its own document. Pulling that thread turned into a full legal read-through, which found a few more things worth fixing while the page was open.",
     },
     {
       type: 'h3',
@@ -18,7 +18,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'The Terms grew from 12 sections to 15. checkmeup now explicitly states who\'s behind it: Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel — previously the Terms only ever said "we"/"us". New sections: Eligibility (you must be of legal age and have authority to bind your organization), Indemnification (you\'re responsible for claims arising from your own misuse — most relevantly, monitoring a system you don\'t have the right to monitor, which the Acceptable Use section already prohibited but had no teeth behind), and a proper Governing Law and Disputes section: any dispute goes exclusively to Israeli courts, no mandatory arbitration. A closing Miscellaneous section adds the standard boilerplate that was missing entirely — entire agreement, severability, no waiver, assignment on a sale or merger.',
+      text: 'The Terms grew from 12 sections to 15. Checkmeup now explicitly states who\'s behind it: Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel — previously the Terms only ever said "we"/"us". New sections: Eligibility (you must be of legal age and have authority to bind your organization), Indemnification (you\'re responsible for claims arising from your own misuse — most relevantly, monitoring a system you don\'t have the right to monitor, which the Acceptable Use section already prohibited but had no teeth behind), and a proper Governing Law and Disputes section: any dispute goes exclusively to Israeli courts, no mandatory arbitration. A closing Miscellaneous section adds the standard boilerplate that was missing entirely — entire agreement, severability, no waiver, assignment on a sale or merger.',
     },
     {
       type: 'h3',

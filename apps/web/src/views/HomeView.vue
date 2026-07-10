@@ -13,7 +13,7 @@ const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 
 useSeo({
-  title: 'checkmeup — monitoring for freelancers & client sites',
+  title: 'Checkmeup — monitoring for freelancers & client sites',
   description:
     'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
   path: '/',
@@ -52,7 +52,7 @@ useSeo({
           <div class="text-center sm:text-left">
             <span class="text-sm font-semibold" style="color: var(--text-strong)">200+</span>
             <span class="text-sm ml-1" style="color: var(--text-dim)"
-              >freelancers monitoring client sites with checkmeup</span
+              >freelancers monitoring client sites with Checkmeup</span
             >
           </div>
         </div>
@@ -292,7 +292,7 @@ useSeo({
             class="flex items-center px-4 py-3 border-b"
             style="border-color: var(--border); background-color: var(--surface)"
           >
-            <img :src="logo" alt="checkmeup" class="h-[15px] w-auto" />
+            <img :src="logo" alt="Checkmeup" class="h-[15px] w-auto" />
           </div>
           <div
             class="px-4 py-2.5 border-b"

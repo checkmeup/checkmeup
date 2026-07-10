@@ -108,7 +108,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 					Timestamp:        now.UTC().Format(time.RFC3339),
 				},
 				Slack: &slackRecovery,
-				SMS:   worker.TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s", monitor.Name, downtime)),
+				SMS:   worker.TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s", monitor.Name, downtime)),
 			}
 			n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
 			worker.DispatchAlert(r.Context(), n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)

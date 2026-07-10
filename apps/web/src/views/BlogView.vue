@@ -5,8 +5,8 @@ import { posts } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Blog — checkmeup',
-  description: 'Building notes, release changelogs, and the occasional opinion from checkmeup.',
+  title: 'Blog — Checkmeup',
+  description: 'Building notes, release changelogs, and the occasional opinion from Checkmeup.',
   path: '/blog',
 })
 

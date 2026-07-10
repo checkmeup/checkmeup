@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "v1.8 introduced domain expiry monitoring and closed the gap between what checkmeup tracks and what status pages could show. This release ships two features flagged in the v1.8 post as 'next up': public status badges and assertion-based uptime checks. Neither adds a new monitor type — both deepen what the existing four types can do.",
+      text: "v1.8 introduced domain expiry monitoring and closed the gap between what Checkmeup tracks and what status pages could show. This release ships two features flagged in the v1.8 post as 'next up': public status badges and assertion-based uptime checks. Neither adds a new monitor type — both deepen what the existing four types can do.",
     },
     {
       type: 'h3',

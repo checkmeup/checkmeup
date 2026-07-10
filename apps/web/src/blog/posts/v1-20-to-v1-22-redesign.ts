@@ -30,11 +30,11 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "checkmeup's public /status/:slug pages hadn't been touched visually since the MVP. This release gives them a token-driven header with a logo (or an initials avatar if you haven't uploaded one), a theme toggle that shares the same localStorage key as the rest of the app so light/dark stays consistent if someone bounces between your dashboard and your public page, a redesigned overall-status banner, and restyled monitor cards.",
+      text: "Checkmeup's public /status/:slug pages hadn't been touched visually since the MVP. This release gives them a token-driven header with a logo (or an initials avatar if you haven't uploaded one), a theme toggle that shares the same localStorage key as the rest of the app so light/dark stays consistent if someone bounces between your dashboard and your public page, a redesigned overall-status banner, and restyled monitor cards.",
     },
     {
       type: 'p',
-      text: "One thing from the original mockup didn't make it: an active-incident timeline with a running history of past incidents. That needs a manual incident-authoring feature — writing a note, timestamping updates as you investigate — that checkmeup doesn't have yet. What ships today is still fully automatic: down and resolved timestamps per monitor, no editorializing required, just not a full incident log with commentary.",
+      text: "One thing from the original mockup didn't make it: an active-incident timeline with a running history of past incidents. That needs a manual incident-authoring feature — writing a note, timestamping updates as you investigate — that Checkmeup doesn't have yet. What ships today is still fully automatic: down and resolved timestamps per monitor, no editorializing required, just not a full incident log with commentary.",
     },
     {
       type: 'p',

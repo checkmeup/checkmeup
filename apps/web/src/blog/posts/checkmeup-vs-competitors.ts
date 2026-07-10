@@ -6,11 +6,11 @@ export const post: BlogPost = {
   date: 'July 4, 2026',
   readTime: '6 min read',
   excerpt:
-    "Three tools get named in every 'what should I use to monitor my cron jobs' thread: Healthchecks.io, UptimeRobot, and Cronitor. Here's a feature-by-feature, dollar-by-dollar look at where checkmeup fits — and where it honestly doesn't win yet.",
+    "Three tools get named in every 'what should I use to monitor my cron jobs' thread: Healthchecks.io, UptimeRobot, and Cronitor. Here's a feature-by-feature, dollar-by-dollar look at where Checkmeup fits — and where it honestly doesn't win yet.",
   content: [
     {
       type: 'p',
-      text: "These are the three products I researched most carefully before writing a line of checkmeup's code, and they're the three that show up in almost every 'what do you use to monitor cron jobs / uptime' thread. Each one is good at what it was built for. This post is the comparison I wish existed when I was deciding what gap was actually still open — feature matrix, pricing at the tier people actually buy, and an honest list of what checkmeup doesn't do yet.",
+      text: "These are the three products I researched most carefully before writing a line of Checkmeup's code, and they're the three that show up in almost every 'what do you use to monitor cron jobs / uptime' thread. Each one is good at what it was built for. This post is the comparison I wish existed when I was deciding what gap was actually still open — feature matrix, pricing at the tier people actually buy, and an honest list of what Checkmeup doesn't do yet.",
     },
     {
       type: 'h2',
@@ -55,7 +55,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Healthchecks.io not doing uptime/SSL/domain/port isn't a knock on it — it's a deliberate, disciplined choice by a tool that's excellent at one job. The gap is real either way: if you run cron jobs and also want to know when a cert or a domain is about to expire, Healthchecks.io alone won't cover it. UptimeRobot and Cronitor both stretch across more monitor types, but neither bundles all five that checkmeup does, and (see below) neither does it at a flat price once you're past the free tier.",
+      text: "Healthchecks.io not doing uptime/SSL/domain/port isn't a knock on it — it's a deliberate, disciplined choice by a tool that's excellent at one job. The gap is real either way: if you run cron jobs and also want to know when a cert or a domain is about to expire, Healthchecks.io alone won't cover it. UptimeRobot and Cronitor both stretch across more monitor types, but neither bundles all five that Checkmeup does, and (see below) neither does it at a flat price once you're past the free tier.",
     },
     {
       type: 'h2',
@@ -95,11 +95,11 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Cronitor's per-monitor pricing is the one worth doing the arithmetic on. At $2/monitor/month with no bundled allowance, watching the same 30 things checkmeup's Solo plan covers for $9/month would run about $60/month on Cronitor — before branded status pages, which cost extra on top of that. That's not a criticism of Cronitor's product; the assertion-based checks it offers are genuinely more powerful than a simple uptime ping. It's a pricing-model difference: pay-per-monitor scales your bill with your infrastructure's growth, flat tiers don't.",
+      text: "Cronitor's per-monitor pricing is the one worth doing the arithmetic on. At $2/monitor/month with no bundled allowance, watching the same 30 things Checkmeup's Solo plan covers for $9/month would run about $60/month on Cronitor — before branded status pages, which cost extra on top of that. That's not a criticism of Cronitor's product; the assertion-based checks it offers are genuinely more powerful than a simple uptime ping. It's a pricing-model difference: pay-per-monitor scales your bill with your infrastructure's growth, flat tiers don't.",
     },
     {
       type: 'h2',
-      text: 'Where checkmeup wins',
+      text: 'Where Checkmeup wins',
     },
     {
       type: 'ul',
@@ -130,7 +130,7 @@ export const post: BlogPost = {
     },
     {
       type: 'blockquote',
-      text: "If you only run cron jobs and never touch a status page, Healthchecks.io is a mature, purpose-built tool and a perfectly good choice. If you only need uptime pings, UptimeRobot's free tier is hard to argue with. If you want deep per-check assertions and don't mind per-monitor billing, Cronitor. checkmeup exists for the specific case those three don't cover well together: cron, uptime, SSL, domain, and port monitoring, plus a white-label status page, at one flat price that doesn't grow per monitor.",
+      text: "If you only run cron jobs and never touch a status page, Healthchecks.io is a mature, purpose-built tool and a perfectly good choice. If you only need uptime pings, UptimeRobot's free tier is hard to argue with. If you want deep per-check assertions and don't mind per-monitor billing, Cronitor. Checkmeup exists for the specific case those three don't cover well together: cron, uptime, SSL, domain, and port monitoring, plus a white-label status page, at one flat price that doesn't grow per monitor.",
     },
     {
       type: 'signature',

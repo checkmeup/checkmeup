@@ -7,7 +7,7 @@
       first monitor.
     </p>
     <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-      checkmeup watches five kinds of things: scheduled jobs that should run on a cadence
+      Checkmeup watches five kinds of things: scheduled jobs that should run on a cadence
       (cron monitors), URLs that should always respond (uptime monitors), TLS certificates
       that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that
       shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity for

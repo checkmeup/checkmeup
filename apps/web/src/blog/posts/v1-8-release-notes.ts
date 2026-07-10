@@ -6,7 +6,7 @@ export const post: BlogPost = {
   date: 'June 23, 2026',
   readTime: '3 min read',
   excerpt:
-    'A fourth monitor type alongside cron, uptime, and SSL: domain registration expiry. checkmeup already told you when a certificate was about to lapse — now it tells you when the domain underneath it is about to disappear entirely, which is rarer but a lot worse when it happens.',
+    'A fourth monitor type alongside cron, uptime, and SSL: domain registration expiry. Checkmeup already told you when a certificate was about to lapse — now it tells you when the domain underneath it is about to disappear entirely, which is rarer but a lot worse when it happens.',
   content: [
     {
       type: 'p',
@@ -30,7 +30,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Registration data comes from RDAP (RFC 9082/9083) — the structured-JSON successor to WHOIS — via rdap.org\'s public bootstrap redirector, which resolves the right authoritative RDAP server per TLD without checkmeup having to maintain its own IANA bootstrap mapping. Each domain is checked once a day, same cadence as SSL. A lookup failure — registry timeout, an unsupported TLD, a response with no expiration date — is recorded as an error state, never reported as "expired" when the real status is simply unknown.',
+      text: 'Registration data comes from RDAP (RFC 9082/9083) — the structured-JSON successor to WHOIS — via rdap.org\'s public bootstrap redirector, which resolves the right authoritative RDAP server per TLD without Checkmeup having to maintain its own IANA bootstrap mapping. Each domain is checked once a day, same cadence as SSL. A lookup failure — registry timeout, an unsupported TLD, a response with no expiration date — is recorded as an error state, never reported as "expired" when the real status is simply unknown.',
     },
     {
       type: 'h3',

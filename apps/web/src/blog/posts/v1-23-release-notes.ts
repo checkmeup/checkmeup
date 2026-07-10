@@ -2,11 +2,11 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'v1-23-release-notes',
-  title: "v1.23: Turning the Audit on checkmeup's Own Codebase",
+  title: "v1.23: Turning the Audit on Checkmeup's Own Codebase",
   date: 'July 9, 2026',
   readTime: '4 min read',
   excerpt:
-    "This release is small on the surface — you'll now see a version number in the dashboard sidebar and the site footer. Most of the week actually went somewhere you won't see directly: an audit of checkmeup's own codebase that found six real maintainability problems, and fixed all of them.",
+    "This release is small on the surface — you'll now see a version number in the dashboard sidebar and the site footer. Most of the week actually went somewhere you won't see directly: an audit of Checkmeup's own codebase that found six real maintainability problems, and fixed all of them.",
   content: [
     {
       type: 'p',
@@ -18,7 +18,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "The dashboard sidebar and the site footer now show which version of checkmeup you're looking at. Small, but genuinely useful — if something looks off and you want to report it, or you're just curious whether a fix has actually reached production yet, it's right there instead of a mystery.",
+      text: "The dashboard sidebar and the site footer now show which version of Checkmeup you're looking at. Small, but genuinely useful — if something looks off and you want to report it, or you're just curious whether a fix has actually reached production yet, it's right there instead of a mystery.",
     },
     {
       type: 'h3',
@@ -26,7 +26,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "The bigger piece of this week was building a small internal tool that audits checkmeup's own source for a specific smell: a function or a file quietly taking on more than one job. Not a style linter — those already run — but something that flags a Go function branching in fifteen different directions, or a Vue page that's grown to over a thousand lines because six unrelated features all live in the same file.",
+      text: "The bigger piece of this week was building a small internal tool that audits Checkmeup's own source for a specific smell: a function or a file quietly taking on more than one job. Not a style linter — those already run — but something that flags a Go function branching in fifteen different directions, or a Vue page that's grown to over a thousand lines because six unrelated features all live in the same file.",
     },
     {
       type: 'p',
@@ -38,7 +38,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "None of it changes what checkmeup does. Every one of these was verified behavior-for-behavior against the existing test suite before merging — the point isn't new functionality, it's that the next feature that touches any of these files starts from something smaller and easier to reason about, instead of one more thing bolted onto an already-overloaded file.",
+      text: "None of it changes what Checkmeup does. Every one of these was verified behavior-for-behavior against the existing test suite before merging — the point isn't new functionality, it's that the next feature that touches any of these files starts from something smaller and easier to reason about, instead of one more thing bolted onto an already-overloaded file.",
     },
     {
       type: 'h2',
@@ -57,7 +57,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Next up is back to feature work — the decision backlog has a few things queued (zombie-job and overlap detection for cron monitors among them). Full commit history and the architecture decisions behind checkmeup are public on GitHub, including the audit tool from this release, if you want to see exactly what it flags and why.',
+      text: 'Next up is back to feature work — the decision backlog has a few things queued (zombie-job and overlap detection for cron monitors among them). Full commit history and the architecture decisions behind Checkmeup are public on GitHub, including the audit tool from this release, if you want to see exactly what it flags and why.',
     },
     { type: 'signature', text: '— Andrew' },
   ],

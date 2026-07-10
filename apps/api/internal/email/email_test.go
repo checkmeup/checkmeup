@@ -84,7 +84,7 @@ func TestSendPasswordReset(t *testing.T) {
 	if len(req.To) != 1 || req.To[0] != "user@example.com" {
 		t.Fatalf("want To [user@example.com], got %v", req.To)
 	}
-	if req.Subject != "Reset your checkmeup password" {
+	if req.Subject != "Reset your Checkmeup password" {
 		t.Fatalf("unexpected subject: %q", req.Subject)
 	}
 	if !strings.Contains(req.Html, "https://checkmeup.net/reset/abc123") {
@@ -115,7 +115,7 @@ func TestSendTestAlertEmail(t *testing.T) {
 	}
 
 	req := (*requests)[0]
-	if req.Subject != "checkmeup: test alert" {
+	if req.Subject != "Checkmeup: test alert" {
 		t.Fatalf("unexpected subject: %q", req.Subject)
 	}
 	if !strings.Contains(req.Html, "connected") {
@@ -136,7 +136,7 @@ func TestSendFeatureSuggestion(t *testing.T) {
 	if len(req.To) != 1 || req.To[0] != founderAddress {
 		t.Fatalf("want To [%s], got %v", founderAddress, req.To)
 	}
-	if req.Subject != "checkmeup: new feature suggestion" {
+	if req.Subject != "Checkmeup: new feature suggestion" {
 		t.Fatalf("unexpected subject: %q", req.Subject)
 	}
 	if strings.Contains(req.Html, "<b>bold</b>") {

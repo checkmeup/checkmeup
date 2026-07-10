@@ -2,11 +2,11 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'pomodoro-and-checkmeup',
-  title: 'The Cube on My Desk: Pomodoro and Building checkmeup',
+  title: 'The Cube on My Desk: Pomodoro and Building Checkmeup',
   date: 'June 18, 2026',
   readTime: '3 min read',
   excerpt:
-    "A small black cube sits next to my keyboard and ticks down in 25-minute blocks. Here's what the Pomodoro Technique is, and how it shaped the pace checkmeup got built at.",
+    "A small black cube sits next to my keyboard and ticks down in 25-minute blocks. Here's what the Pomodoro Technique is, and how it shaped the pace Checkmeup got built at.",
   content: [
     {
       type: 'p',
@@ -32,7 +32,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h2',
-      text: 'How it shaped checkmeup',
+      text: 'How it shaped Checkmeup',
     },
     {
       type: 'p',

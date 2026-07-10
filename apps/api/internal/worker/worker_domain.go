@@ -154,7 +154,7 @@ func domainThresholdAlert(m db.DomainMonitor, daysLeft int, expiresAt time.Time,
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "domain", subject)),
-		SMS:   TruncateSMS("checkmeup: " + subject),
+		SMS:   TruncateSMS("Checkmeup: " + subject),
 	}
 }
 

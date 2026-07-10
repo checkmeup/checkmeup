@@ -4,7 +4,7 @@
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Read a monitor's current status from scripts, CI pipelines, or your own dashboard —
       useful for a build step that should surface its result somewhere else, or a status
-      display that isn't checkmeup itself (think a physical LED, an internal ops dashboard).
+      display that isn't Checkmeup itself (think a physical LED, an internal ops dashboard).
       Generate a key in
       <strong style="color: var(--text-strong)">Settings → API keys</strong> — the raw key is
       shown once, so copy it immediately — then send it as an

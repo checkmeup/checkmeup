@@ -4,8 +4,8 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'About — checkmeup',
-  description: 'Who builds checkmeup, the stack it runs on, and the values behind it.',
+  title: 'About — Checkmeup',
+  description: 'Who builds Checkmeup, the stack it runs on, and the values behind it.',
   path: '/about',
 })
 
@@ -58,7 +58,7 @@ const values = [
         Every developer has been there. A cron job silently fails for three days. A certificate expires over a holiday weekend. A site goes down and you find out from a client, not from your own tooling.
       </p>
       <p class="text-lg leading-relaxed" style="color: var(--text-dim)">
-        checkmeup started as the tool I wished existed — simple, reliable, and built the way developers actually want to use software.
+        Checkmeup started as the tool I wished existed — simple, reliable, and built the way developers actually want to use software.
       </p>
     </section>
 
@@ -127,10 +127,10 @@ const values = [
             25+ years writing software — from enterprise video platforms processing 23 billion events a day, to voting systems handling 30 million concurrent connections, to building and leading remote engineering teams across two continents.
           </p>
           <p class="text-sm leading-relaxed mb-3" style="color: var(--text-dim)">
-            After spending years in the high-scale world — AWS, Kubernetes, microservices, the whole catalogue — I kept coming back to the same observation: the boring, reliable tools are the ones that actually stay running. checkmeup is built on that principle. Go backend, PostgreSQL, a handful of Hetzner servers. No distributed systems unless the problem actually demands it.
+            After spending years in the high-scale world — AWS, Kubernetes, microservices, the whole catalogue — I kept coming back to the same observation: the boring, reliable tools are the ones that actually stay running. Checkmeup is built on that principle. Go backend, PostgreSQL, a handful of Hetzner servers. No distributed systems unless the problem actually demands it.
           </p>
           <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-            I'm based in Israel. checkmeup is independent and bootstrapped — no VC, no growth hacking, no hockey-stick pressure. Just a developer building a tool that should exist.
+            I'm based in Israel. Checkmeup is independent and bootstrapped — no VC, no growth hacking, no hockey-stick pressure. Just a developer building a tool that should exist.
           </p>
         </div>
       </div>
@@ -191,7 +191,7 @@ const values = [
       <p class="text-xs mt-3" style="color: var(--text-muted)">
         The code itself is source-available under the
         <a href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">Business Source License</a>
-        — free to read, self-host, and modify; the one restriction is reselling checkmeup itself as a competing hosted monitoring service. It converts to Apache 2.0 in 2030.
+        — free to read, self-host, and modify; the one restriction is reselling Checkmeup itself as a competing hosted monitoring service. It converts to Apache 2.0 in 2030.
       </p>
     </section>
 

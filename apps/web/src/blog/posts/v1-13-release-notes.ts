@@ -6,7 +6,7 @@ export const post: BlogPost = {
   date: 'July 1, 2026',
   readTime: '3 min read',
   excerpt:
-    "Two unrelated changes landed together: the homepage got a redesign — live product mockups instead of static screenshots, a proper status-page card, a cleaned-up footer — and checkmeup's license changed from MIT to the Business Source License.",
+    "Two unrelated changes landed together: the homepage got a redesign — live product mockups instead of static screenshots, a proper status-page card, a cleaned-up footer — and Checkmeup's license changed from MIT to the Business Source License.",
   content: [
     {
       type: 'p',
@@ -30,7 +30,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "checkmeup's code was MIT-licensed. It's now BUSL 1.1 (Business Source License), the same model MariaDB, Sentry, and CockroachDB use. In practice, almost nothing changes for almost everyone: you can still read the code, self-host it, modify it, and use it in production for your own monitoring — including monitoring your clients' systems. The one thing BUSL restricts is reselling checkmeup itself, unmodified or modified, as a competing hosted monitoring service. On July 1, 2030, the license automatically converts to Apache License 2.0 and the restriction disappears entirely.",
+      text: "Checkmeup's code was MIT-licensed. It's now BUSL 1.1 (Business Source License), the same model MariaDB, Sentry, and CockroachDB use. In practice, almost nothing changes for almost everyone: you can still read the code, self-host it, modify it, and use it in production for your own monitoring — including monitoring your clients' systems. The one thing BUSL restricts is reselling Checkmeup itself, unmodified or modified, as a competing hosted monitoring service. On July 1, 2030, the license automatically converts to Apache License 2.0 and the restriction disappears entirely.",
     },
     {
       type: 'p',

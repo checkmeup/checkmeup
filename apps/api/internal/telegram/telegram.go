@@ -84,7 +84,7 @@ func (c *Client) HandleUpdate(update WebhookUpdate) {
 	}
 	chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
 	text := fmt.Sprintf(
-		"Your Chat ID is:\n\n<code>%s</code>\n\nPaste this into <b>checkmeup → Settings → Telegram</b> to receive monitoring alerts.",
+		"Your Chat ID is:\n\n<code>%s</code>\n\nPaste this into <b>Checkmeup → Settings → Telegram</b> to receive monitoring alerts.",
 		chatID,
 	)
 	_ = c.SendMessage(chatID, text)

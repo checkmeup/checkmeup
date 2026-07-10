@@ -566,7 +566,7 @@ func (h *NotificationChannelHandler) sendTestNotification(w http.ResponseWriter,
 	switch channelType {
 	case "telegram":
 		chatID, _ := config["chatId"].(string)
-		if err := h.tg.SendMessage(strings.TrimSpace(chatID), "✅ checkmeup is connected! You'll receive alerts here."); err != nil {
+		if err := h.tg.SendMessage(strings.TrimSpace(chatID), "✅ Checkmeup is connected! You'll receive alerts here."); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "telegram_error")
 			return false
 		}
@@ -604,7 +604,7 @@ func (h *NotificationChannelHandler) sendTestNotification(w http.ResponseWriter,
 		}
 	case "sms":
 		phone, _ := config["phone_number"].(string)
-		if _, err := h.sm.Send(strings.TrimSpace(phone), "checkmeup: this is a test SMS alert. You're all set!"); err != nil {
+		if _, err := h.sm.Send(strings.TrimSpace(phone), "Checkmeup: this is a test SMS alert. You're all set!"); err != nil {
 			respond.Error(w, http.StatusBadGateway, err.Error(), "sms_error")
 			return false
 		}

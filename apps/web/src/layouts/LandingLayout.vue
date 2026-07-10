@@ -26,7 +26,7 @@ const mobileMenuOpen = ref(false)
     >
       <div class="max-w-[1100px] mx-auto px-4 sm:px-7 flex items-center gap-6 h-14">
         <RouterLink to="/" class="flex-shrink-0">
-          <img :src="logo" alt="checkmeup" class="h-[22px]" />
+          <img :src="logo" alt="Checkmeup" class="h-[22px]" />
         </RouterLink>
 
         <nav class="hidden md:flex items-center gap-0.5 text-sm" style="color: var(--text-muted)">
@@ -128,7 +128,7 @@ const mobileMenuOpen = ref(false)
       <div class="max-w-[1100px] mx-auto px-4 sm:px-6 py-10 sm:py-11">
         <div class="flex flex-col sm:flex-row gap-10 sm:gap-12 items-start mb-9">
           <div class="flex-shrink-0 sm:min-w-[190px]">
-            <img :src="logoGrey" alt="checkmeup" class="h-6 mb-2" />
+            <img :src="logoGrey" alt="Checkmeup" class="h-6 mb-2" />
             <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
               Cron, uptime, SSL, domain, and port monitoring for freelancers and solo devs.
             </p>

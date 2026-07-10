@@ -19,9 +19,9 @@ import DocsHelp from '@/components/docs/DocsHelp.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Docs — checkmeup',
+  title: 'Docs — Checkmeup',
   description:
-    'How to set up cron, uptime, SSL, domain, and port monitors, alerts, status pages, and the public API on checkmeup.',
+    'How to set up cron, uptime, SSL, domain, and port monitors, alerts, status pages, and the public API on Checkmeup.',
   path: '/docs',
 })
 
@@ -56,7 +56,7 @@ const sections = [
         Documentation
       </h1>
       <p class="text-lg max-w-2xl" style="color: var(--text-dim)">
-        Everything checkmeup does today, in plain language — how to set up a monitor, what triggers
+        Everything Checkmeup does today, in plain language — how to set up a monitor, what triggers
         an alert, and what each plan actually includes.
       </p>
     </section>

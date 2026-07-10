@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "v1.4 doesn't add anything you can click on. It's a testing pass over the Go backend — the part of checkmeup that handles auth, billing, and your monitor data — and it's worth a post because of what it found, not what it adds.",
+      text: "v1.4 doesn't add anything you can click on. It's a testing pass over the Go backend — the part of Checkmeup that handles auth, billing, and your monitor data — and it's worth a post because of what it found, not what it adds.",
     },
     {
       type: 'h3',
@@ -47,7 +47,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "checkmeup is a one-person product handling other people's monitoring and billing data, so a pass like this is exactly the unglamorous work that keeps it trustworthy. I'd rather post about it plainly than only ever talk about new features.",
+      text: "Checkmeup is a one-person product handling other people's monitoring and billing data, so a pass like this is exactly the unglamorous work that keeps it trustworthy. I'd rather post about it plainly than only ever talk about new features.",
     },
     {
       type: 'h2',

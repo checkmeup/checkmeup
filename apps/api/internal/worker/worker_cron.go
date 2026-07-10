@@ -96,6 +96,6 @@ func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "cron", reason)),
-		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, reason)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, reason)),
 	}
 }

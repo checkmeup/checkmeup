@@ -6,7 +6,7 @@ export const post: BlogPost = {
   date: 'July 4, 2026',
   readTime: '5 min read',
   excerpt:
-    "checkmeup can text you now — an eighth alert channel via Twilio, with a monthly credit quota so a flapping monitor can't turn into a surprise bill. And a smaller but overdue fix: downgrading your plan used to leave every over-limit monitor running forever. Now it actually enforces the new limit — pausing the newest monitors first and keeping your oldest ones active.",
+    "Checkmeup can text you now — an eighth alert channel via Twilio, with a monthly credit quota so a flapping monitor can't turn into a surprise bill. And a smaller but overdue fix: downgrading your plan used to leave every over-limit monitor running forever. Now it actually enforces the new limit — pausing the newest monitors first and keeping your oldest ones active.",
   content: [
     {
       type: 'p',
@@ -18,11 +18,11 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'Telegram, email, Slack, and webhooks are all free to send — checkmeup eats the cost of an API call either way. SMS is the first channel where that\'s not true: every message has a real, variable, per-destination cost through Twilio. That changes the design question from "how do we send a text" to "how do we stop a flapping monitor from generating a bill nobody agreed to."',
+      text: 'Telegram, email, Slack, and webhooks are all free to send — Checkmeup eats the cost of an API call either way. SMS is the first channel where that\'s not true: every message has a real, variable, per-destination cost through Twilio. That changes the design question from "how do we send a text" to "how do we stop a flapping monitor from generating a bill nobody agreed to."',
     },
     {
       type: 'p',
-      text: 'The answer is the same one checkmeup already uses for monitors and status pages: a flat quota bundled into the plan price, not metered pass-through billing. Solo gets 10 SMS credits a month, Startup 30, Enterprise 100 — Hobby gets none, same as every competitor I looked at gates SMS to paid plans. Run out mid-month and that one channel just goes quiet for the rest of it — every other channel attached to the monitor still fires normally, and if SMS was the only one you had configured, the alert falls back to your account email instead of silently disappearing. A monitor going down should never fail to tell you just because one channel ran dry.',
+      text: 'The answer is the same one Checkmeup already uses for monitors and status pages: a flat quota bundled into the plan price, not metered pass-through billing. Solo gets 10 SMS credits a month, Startup 30, Enterprise 100 — Hobby gets none, same as every competitor I looked at gates SMS to paid plans. Run out mid-month and that one channel just goes quiet for the rest of it — every other channel attached to the monitor still fires normally, and if SMS was the only one you had configured, the alert falls back to your account email instead of silently disappearing. A monitor going down should never fail to tell you just because one channel ran dry.',
     },
     {
       type: 'p',
@@ -38,7 +38,7 @@ export const post: BlogPost = {
     },
     {
       type: 'h3',
-      text: "Downgrading used to be a promise checkmeup didn't keep",
+      text: "Downgrading used to be a promise Checkmeup didn't keep",
     },
     {
       type: 'p',

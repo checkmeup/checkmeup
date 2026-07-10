@@ -2,15 +2,15 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'v1-24-to-v1-25-seo-foundations',
-  title: 'v1.24–v1.25: Teaching Search Engines checkmeup Exists',
+  title: 'v1.24–v1.25: Teaching Search Engines Checkmeup Exists',
   date: 'July 10, 2026',
   readTime: '5 min read',
   excerpt:
-    "checkmeup is a single-page app, which meant every route — the homepage, pricing, every blog post — served the exact same page title and description to search engines. These two releases fix that: real per-page metadata, a sitemap, a robots.txt, and FAQ rich-result markup, plus one honest gap that's still open.",
+    "Checkmeup is a single-page app, which meant every route — the homepage, pricing, every blog post — served the exact same page title and description to search engines. These two releases fix that: real per-page metadata, a sitemap, a robots.txt, and FAQ rich-result markup, plus one honest gap that's still open.",
   content: [
     {
       type: 'p',
-      text: "Building the product came first, understandably. Nobody had gone back and checked whether checkmeup could actually be found by the people searching for it. Turns out the answer was mostly no: it's a client-rendered Vue app with no server-side rendering, and every single route — the homepage, /pricing, /docs, twenty-five blog posts — was serving the identical static page title and meta description baked into index.html. A search engine looking at a blog post about SSL monitoring and the homepage saw the same generic tag. No sitemap existed either, so there was no map handed to crawlers of what pages even exist beyond whatever they stumbled onto by following links.",
+      text: "Building the product came first, understandably. Nobody had gone back and checked whether Checkmeup could actually be found by the people searching for it. Turns out the answer was mostly no: it's a client-rendered Vue app with no server-side rendering, and every single route — the homepage, /pricing, /docs, twenty-five blog posts — was serving the identical static page title and meta description baked into index.html. A search engine looking at a blog post about SSL monitoring and the homepage saw the same generic tag. No sitemap existed either, so there was no map handed to crawlers of what pages even exist beyond whatever they stumbled onto by following links.",
     },
     {
       type: 'h3',
@@ -61,7 +61,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Next up on this thread is content, not more technical plumbing: the blog is almost entirely release notes, which are useful to existing users but don't target anyone actually searching for a cron or uptime monitoring tool. Full commit history and the architecture decisions behind checkmeup are public on GitHub if you want the details behind any of this.",
+      text: "Next up on this thread is content, not more technical plumbing: the blog is almost entirely release notes, which are useful to existing users but don't target anyone actually searching for a cron or uptime monitoring tool. Full commit history and the architecture decisions behind Checkmeup are public on GitHub if you want the details behind any of this.",
     },
     { type: 'signature', text: '— Andrew' },
   ],

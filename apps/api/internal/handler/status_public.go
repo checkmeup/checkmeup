@@ -615,7 +615,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 
   <div class="footer">
     <p>Last updated {{.UpdatedAt}}</p>
-    <p>Powered by <a href="https://checkmeup.net">checkmeup</a></p>
+    <p>Powered by <a href="https://checkmeup.net">Checkmeup</a></p>
     <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
   </div>
 </div>

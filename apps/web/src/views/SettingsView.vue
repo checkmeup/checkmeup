@@ -53,7 +53,7 @@ function formatDate(iso: string | null): string {
       >
         <h2 class="font-medium mb-1" style="color: var(--text-strong)">Appearance</h2>
         <p class="text-sm mb-5" style="color: var(--text-muted)">
-          Choose how checkmeup looks on this device.
+          Choose how Checkmeup looks on this device.
         </p>
 
         <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
@@ -126,7 +126,7 @@ function formatDate(iso: string | null): string {
               id="suggestion"
               v-model="suggestionText"
               rows="4"
-              placeholder="What should checkmeup do better?"
+              placeholder="What should Checkmeup do better?"
               class="mt-1 flex w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
               style="
                 border-color: var(--border);

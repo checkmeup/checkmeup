@@ -5,9 +5,9 @@ import { faqCategories } from '@/faq/faqs'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'FAQ — checkmeup',
+  title: 'FAQ — Checkmeup',
   description:
-    'Answers on getting started, billing, monitors and alerts, status pages, and privacy for checkmeup.',
+    'Answers on getting started, billing, monitors and alerts, status pages, and privacy for Checkmeup.',
   path: '/faq',
 })
 

@@ -9,7 +9,7 @@ import (
 	"github.com/resend/resend-go/v2"
 )
 
-const fromAddress = "checkmeup <noreply@checkmeup.net>"
+const fromAddress = "Checkmeup <noreply@checkmeup.net>"
 const founderAddress = "andrew@checkmeup.net"
 
 type Sender struct {
@@ -33,7 +33,7 @@ func (s *Sender) SendPasswordReset(to, resetURL string) error {
 	}
 
 	html := fmt.Sprintf(`
-<p>You requested a password reset for your checkmeup account.</p>
+<p>You requested a password reset for your Checkmeup account.</p>
 <p><a href="%s">Reset your password</a></p>
 <p>This link expires in 1 hour. If you did not request this, ignore this email.</p>
 `, resetURL)
@@ -41,7 +41,7 @@ func (s *Sender) SendPasswordReset(to, resetURL string) error {
 	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
 		From:    fromAddress,
 		To:      []string{to},
-		Subject: "Reset your checkmeup password",
+		Subject: "Reset your Checkmeup password",
 		Html:    html,
 	})
 	return err
@@ -65,7 +65,7 @@ func (s *Sender) SendAlertEmail(to, subject, html string) error {
 
 // SendTestAlertEmail verifies deliverability before a user saves an alert email address.
 func (s *Sender) SendTestAlertEmail(to string) error {
-	return s.SendAlertEmail(to, "checkmeup: test alert", "<p>✅ checkmeup is connected! You'll receive alerts here.</p>")
+	return s.SendAlertEmail(to, "Checkmeup: test alert", "<p>✅ Checkmeup is connected! You'll receive alerts here.</p>")
 }
 
 func (s *Sender) SendFeatureSuggestion(fromEmail, text string) error {
@@ -83,7 +83,7 @@ func (s *Sender) SendFeatureSuggestion(fromEmail, text string) error {
 	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
 		From:    fromAddress,
 		To:      []string{founderAddress},
-		Subject: "checkmeup: new feature suggestion",
+		Subject: "Checkmeup: new feature suggestion",
 		Html:    body,
 	})
 	return err

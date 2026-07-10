@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "Uptime monitoring only covers services that speak HTTP. A mail server on port 25, a database exposed on 5432, or any custom daemon listening on a raw socket has never had a home in checkmeup — you'd have to run your own connectivity check or fall back to pinging a health endpoint that may not exist. Port monitors close that gap: a raw TCP connect to a host and port, no HTTP request, no response body, on the same interval/status/incident/alert model as every other monitor type.",
+      text: "Uptime monitoring only covers services that speak HTTP. A mail server on port 25, a database exposed on 5432, or any custom daemon listening on a raw socket has never had a home in Checkmeup — you'd have to run your own connectivity check or fall back to pinging a health endpoint that may not exist. Port monitors close that gap: a raw TCP connect to a host and port, no HTTP request, no response body, on the same interval/status/incident/alert model as every other monitor type.",
     },
     {
       type: 'h3',

@@ -11,7 +11,7 @@ const route = useRoute()
 const post = computed(() => getPost(route.params.slug as string))
 
 useSeo({
-  title: () => (post.value ? `${post.value.title} — checkmeup blog` : 'Post not found — checkmeup'),
+  title: () => (post.value ? `${post.value.title} — Checkmeup blog` : 'Post not found — Checkmeup'),
   description: () => post.value?.excerpt ?? 'This blog post could not be found.',
   path: () => route.fullPath,
 })
@@ -38,7 +38,7 @@ const articleSchema = computed(() => {
     author: { '@type': 'Person', name: 'Andrew Molyuk', url: 'https://checkmeup.net/about' },
     publisher: {
       '@type': 'Organization',
-      name: 'checkmeup',
+      name: 'Checkmeup',
       logo: { '@type': 'ImageObject', url: 'https://checkmeup.net/img/checkmeup-og.png' },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': `https://checkmeup.net/blog/${post.value.slug}` },
@@ -292,7 +292,7 @@ useHead({
             class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
             style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
-            Try checkmeup free →
+            Try Checkmeup free →
           </RouterLink>
         </div>
       </div>

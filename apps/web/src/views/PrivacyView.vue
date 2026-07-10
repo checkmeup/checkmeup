@@ -3,8 +3,8 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Privacy Policy — checkmeup',
-  description: "checkmeup's privacy policy and subprocessor list.",
+  title: 'Privacy Policy — Checkmeup',
+  description: "Checkmeup's privacy policy and subprocessor list.",
   path: '/privacy',
 })
 
@@ -33,7 +33,7 @@ const subprocessors = [
             This policy covers checkmeup.net and the public status pages it serves at
             <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)">checkmeup.net/status/*</code>
             (together, "the Service"). It explains what we collect, why, and who we share it with. The data
-            controller is Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel, operating checkmeup
+            controller is Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel, operating Checkmeup
             ("we", "us").
           </p>
         </section>

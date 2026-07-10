@@ -18,7 +18,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Create a Slack Incoming Webhook in your workspace (any channel, any app), copy the URL, and paste it into Settings → Notification channels. checkmeup validates the URL against the `hooks.slack.com` pattern and sends a test message so you can confirm it's wired up correctly before saving. You can add multiple Slack webhooks — one per channel, team, or severity tier — each is its own channel record.",
+      text: "Create a Slack Incoming Webhook in your workspace (any channel, any app), copy the URL, and paste it into Settings → Notification channels. Checkmeup validates the URL against the `hooks.slack.com` pattern and sends a test message so you can confirm it's wired up correctly before saving. You can add multiple Slack webhooks — one per channel, team, or severity tier — each is its own channel record.",
     },
     {
       type: 'h3',
@@ -26,7 +26,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Down alerts arrive as Block Kit messages: monitor name, type, failure reason, and timestamp — readable in Slack without opening checkmeup. Recovery alerts add the downtime duration so the thread tells the whole story. Both use the same fire-and-forget delivery as the generic webhook channel: a non-2xx response (a removed or rotated webhook, for example) is logged in Settings, never blocks the check loop, and isn't retried automatically.",
+      text: "Down alerts arrive as Block Kit messages: monitor name, type, failure reason, and timestamp — readable in Slack without opening Checkmeup. Recovery alerts add the downtime duration so the thread tells the whole story. Both use the same fire-and-forget delivery as the generic webhook channel: a non-2xx response (a removed or rotated webhook, for example) is logged in Settings, never blocks the check loop, and isn't retried automatically.",
     },
     {
       type: 'h3',
@@ -42,7 +42,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "Slack webhooks can be deleted or their URLs rotated. When a delivery fails (non-2xx or timeout), checkmeup logs the error against the channel in Settings so you can spot a broken webhook and update it. The worker's check loop is never blocked waiting on a Slack response.",
+      text: "Slack webhooks can be deleted or their URLs rotated. When a delivery fails (non-2xx or timeout), Checkmeup logs the error against the channel in Settings so you can spot a broken webhook and update it. The worker's check loop is never blocked waiting on a Slack response.",
     },
     {
       type: 'h2',

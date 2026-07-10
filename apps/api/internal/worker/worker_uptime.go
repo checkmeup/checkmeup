@@ -107,7 +107,7 @@ func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage 
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.RecoveryMessage(m.Name, "uptime", downtime)),
-		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s downtime", m.Name, downtime)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s downtime", m.Name, downtime)),
 	}
 }
 
@@ -164,7 +164,7 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "uptime", failureReason)),
-		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
 	}
 }
 

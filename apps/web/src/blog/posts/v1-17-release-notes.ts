@@ -6,11 +6,11 @@ export const post: BlogPost = {
   date: 'July 3, 2026',
   readTime: '3 min read',
   excerpt:
-    'checkmeup.net has had zero visibility into its own landing page and signup funnel since launch. This release adds Google Analytics 4 behind a Google Tag Manager container — but nothing loads, and nothing tracks, until a visitor actually clicks Accept. Also: a Paddle webhook race that could leave a Hobby org stuck with no way to see upgrade options.',
+    'Checkmeup.net has had zero visibility into its own landing page and signup funnel since launch. This release adds Google Analytics 4 behind a Google Tag Manager container — but nothing loads, and nothing tracks, until a visitor actually clicks Accept. Also: a Paddle webhook race that could leave a Hobby org stuck with no way to see upgrade options.',
   content: [
     {
       type: 'p',
-      text: 'Every release note on this blog so far has been written blind to how many people actually read it. checkmeup.net had no analytics at all — no idea how visitors find the landing page, where they drop off before signing up, or which docs pages get traffic. v1.17 fixes that with Google Analytics 4, delivered through a Google Tag Manager container rather than a raw gtag.js snippet, so tags can be added or changed later from the GTM dashboard without another frontend deploy.',
+      text: 'Every release note on this blog so far has been written blind to how many people actually read it. Checkmeup.net had no analytics at all — no idea how visitors find the landing page, where they drop off before signing up, or which docs pages get traffic. v1.17 fixes that with Google Analytics 4, delivered through a Google Tag Manager container rather than a raw gtag.js snippet, so tags can be added or changed later from the GTM dashboard without another frontend deploy.',
     },
     {
       type: 'h3',

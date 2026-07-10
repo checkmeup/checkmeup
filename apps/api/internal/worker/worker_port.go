@@ -100,7 +100,7 @@ func buildPortRecoveryAlert(m db.PortMonitor, downtime string) AlertMessage {
 			Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.RecoveryMessage(m.Name, "port", downtime)),
-		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s recovered after %s downtime", m.Name, downtime)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s downtime", m.Name, downtime)),
 	}
 }
 
@@ -164,7 +164,7 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 				Timestamp:   time.Now().UTC().Format(time.RFC3339),
 			},
 			Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
-			SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s", subject)),
+			SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s", subject)),
 		}
 	}
 	return AlertMessage{
@@ -181,7 +181,7 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
-		SMS:   TruncateSMS(fmt.Sprintf("checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
 	}
 }
 

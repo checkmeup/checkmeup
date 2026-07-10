@@ -18,7 +18,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "checkmeup was dark-only at launch. Now there's a light theme too — toggle it from Settings or the quick switch in the app shell. It applies instantly, remembers your choice on this device, and defaults to your OS-level light/dark preference the first time you show up.",
+      text: "Checkmeup was dark-only at launch. Now there's a light theme too — toggle it from Settings or the quick switch in the app shell. It applies instantly, remembers your choice on this device, and defaults to your OS-level light/dark preference the first time you show up.",
     },
     {
       type: 'h3',

@@ -2,7 +2,7 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'three-days-to-mvp',
-  title: 'Three Days to MVP: How We Built checkmeup',
+  title: 'Three Days to MVP: How We Built Checkmeup',
   date: 'June 16, 2026',
   readTime: '3 min read',
   excerpt:
@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "This was supposed to be a weekend project. It became three very focused days. By the end of June 16, checkmeup was live with cron monitoring, uptime checks, SSL expiry alerts, status pages, billing, and a mobile UI. Here's the honest account of how that happened.",
+      text: "This was supposed to be a weekend project. It became three very focused days. By the end of June 16, Checkmeup was live with cron monitoring, uptime checks, SSL expiry alerts, status pages, billing, and a mobile UI. Here's the honest account of how that happened.",
     },
     {
       type: 'h2',
@@ -75,7 +75,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'The last morning was mobile UI, cleanup, and the landing page. By the time this post was published, checkmeup was live. Total time logged: ~20 hours.',
+      text: 'The last morning was mobile UI, cleanup, and the landing page. By the time this post was published, Checkmeup was live. Total time logged: ~20 hours.',
     },
     {
       type: 'h2',

@@ -79,7 +79,7 @@ defineProps<{
       <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
     </ol>
     <p v-else-if="form.type === 'webhook'" class="text-sm" style="color: var(--text-dim)">
-      checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
+      Checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
       <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
         >X-Checkmeup-Signature</code
       >. Must be
@@ -105,7 +105,7 @@ defineProps<{
       <li>Click <strong>Send test message</strong> to verify the connection before saving</li>
     </ol>
     <p v-else-if="form.type === 'sms'" class="text-sm" style="color: var(--text-dim)">
-      checkmeup will text down/recovery alerts to this number. Real per-message cost applies once
+      Checkmeup will text down/recovery alerts to this number. Real per-message cost applies once
       Twilio account setup is complete.
     </p>
     <div>
@@ -128,7 +128,7 @@ defineProps<{
       </p>
       <label v-else class="flex items-start gap-2 text-sm" style="color: var(--text-dim)">
         <input v-model="form.smsConsent" type="checkbox" class="mt-0.5" />
-        <span>I agree to receive automated SMS alerts from checkmeup at this number.</span>
+        <span>I agree to receive automated SMS alerts from Checkmeup at this number.</span>
       </label>
     </div>
     <div v-if="form.type === 'webhook' && form.editingId" class="space-y-2">

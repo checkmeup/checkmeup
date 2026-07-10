@@ -65,8 +65,8 @@ func RecoveryMessage(monitorName, monitorType, downtime string) Message {
 // (US-1701) before a channel is saved.
 func TestMessage() Message {
 	return Message{
-		Text:   "✅ checkmeup is connected! You'll receive alerts here.",
-		Blocks: []block{sectionBlock("✅ *checkmeup is connected!* You'll receive alerts here.")},
+		Text:   "✅ Checkmeup is connected! You'll receive alerts here.",
+		Blocks: []block{sectionBlock("✅ *Checkmeup is connected!* You'll receive alerts here.")},
 	}
 }
 

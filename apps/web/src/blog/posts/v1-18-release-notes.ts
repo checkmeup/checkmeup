@@ -2,7 +2,7 @@ import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
   slug: 'v1-18-release-notes',
-  title: "v1.18: A Public API, So checkmeup Isn't the Only Place Status Lives",
+  title: "v1.18: A Public API, So Checkmeup Isn't the Only Place Status Lives",
   date: 'July 3, 2026',
   readTime: '4 min read',
   excerpt:
@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: "checkmeup has always assumed the only consumer of a monitor's status is a human looking at the dashboard. That assumption broke the moment a third-party integration came up as a real request rather than a hypothetical: someone wants their CI pipeline to report a build's outcome somewhere checkmeup can see it, and someone else wants a physical LED on a desk to turn red the moment a job stops checking in. Neither of those is a browser with a session cookie, so v1.18's actual work wasn't the status endpoint itself — it was deciding how a non-browser client gets to authenticate at all.",
+      text: "Checkmeup has always assumed the only consumer of a monitor's status is a human looking at the dashboard. That assumption broke the moment a third-party integration came up as a real request rather than a hypothetical: someone wants their CI pipeline to report a build's outcome somewhere Checkmeup can see it, and someone else wants a physical LED on a desk to turn red the moment a job stops checking in. Neither of those is a browser with a session cookie, so v1.18's actual work wasn't the status endpoint itself — it was deciding how a non-browser client gets to authenticate at all.",
     },
     {
       type: 'h3',
@@ -39,7 +39,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "The second half of this release is narrower but was the actual trigger for wanting a public API at all: a cron ping can now carry arbitrary query-string data. Add ?build=142&state=success to the existing ping URL and it's stored with that ping — capped at 20 key/value pairs, 64 characters per key, 256 per value, silently truncated past that rather than failing the ping, since a monitoring check-in has to succeed no matter what garbage gets thrown at it. Only the most recent ping's data is kept per monitor; it's a snapshot, not a log. It shows up two places: in the dashboard's existing execution log, next to the ping it came from, and in the public API's cron status response as lastPingMetadata — which is the piece that actually closes the loop for a CI pipeline or a status LED asking \"what happened last time?\" without needing to log into checkmeup at all.",
+      text: "The second half of this release is narrower but was the actual trigger for wanting a public API at all: a cron ping can now carry arbitrary query-string data. Add ?build=142&state=success to the existing ping URL and it's stored with that ping — capped at 20 key/value pairs, 64 characters per key, 256 per value, silently truncated past that rather than failing the ping, since a monitoring check-in has to succeed no matter what garbage gets thrown at it. Only the most recent ping's data is kept per monitor; it's a snapshot, not a log. It shows up two places: in the dashboard's existing execution log, next to the ping it came from, and in the public API's cron status response as lastPingMetadata — which is the piece that actually closes the loop for a CI pipeline or a status LED asking \"what happened last time?\" without needing to log into Checkmeup at all.",
     },
     {
       type: 'h2',

@@ -14,7 +14,7 @@ const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
       <!-- Logo -->
       <div class="flex justify-center">
         <RouterLink to="/">
-          <img :src="logo" alt="checkmeup" class="h-8" />
+          <img :src="logo" alt="Checkmeup" class="h-8" />
         </RouterLink>
       </div>
 

@@ -147,7 +147,7 @@ func sslThresholdAlert(m db.SslMonitor, daysLeft int, expiresAt time.Time, alert
 			Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		},
 		Slack: slackMsg(slack.DownMessage(m.Name, "ssl", subject)),
-		SMS:   TruncateSMS("checkmeup: " + subject),
+		SMS:   TruncateSMS("Checkmeup: " + subject),
 	}
 }
 

@@ -8,7 +8,7 @@ import { useSeo } from '@/composables/useSeo'
 const route = useRoute()
 
 useSeo({
-  title: 'Page not found — checkmeup',
+  title: 'Page not found — Checkmeup',
   description: "The page you're looking for doesn't exist or may have moved.",
   path: () => route.fullPath,
 })

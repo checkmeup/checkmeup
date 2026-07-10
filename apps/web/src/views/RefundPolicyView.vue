@@ -3,8 +3,8 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Refund Policy — checkmeup',
-  description: "checkmeup's refund policy for paid plans.",
+  title: 'Refund Policy — Checkmeup',
+  description: "Checkmeup's refund policy for paid plans.",
   path: '/refund',
 })
 
@@ -23,7 +23,7 @@ const effectiveDate = '2026-07-01'
         <section>
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. Scope</h2>
           <p>
-            This policy covers charges for checkmeup's paid plans (Solo, Startup, Enterprise), billed and
+            This policy covers charges for Checkmeup's paid plans (Solo, Startup, Enterprise), billed and
             processed by Paddle, our merchant of record. The Hobby plan is free and has no charges to
             refund.
           </p>

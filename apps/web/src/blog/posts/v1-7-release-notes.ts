@@ -10,7 +10,7 @@ export const post: BlogPost = {
   content: [
     {
       type: 'p',
-      text: 'v1.6 introduced notification channels — the ability to attach more than one Telegram chat or email address to a monitor instead of one fixed pair per org. Webhooks are the first new channel type built on top of that model, and the reason the model needed to exist before this could: a generic outbound webhook is what lets checkmeup plug into Slack, PagerDuty, or anything else you run, without checkmeup building a bespoke integration for each one.',
+      text: 'v1.6 introduced notification channels — the ability to attach more than one Telegram chat or email address to a monitor instead of one fixed pair per org. Webhooks are the first new channel type built on top of that model, and the reason the model needed to exist before this could: a generic outbound webhook is what lets Checkmeup plug into Slack, PagerDuty, or anything else you run, without Checkmeup building a bespoke integration for each one.',
     },
     {
       type: 'h3',
@@ -22,15 +22,15 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: 'A down or recovery event fires a POST within one check cycle of the transition, same timing guarantee as Telegram and email. The JSON body carries the event type, monitor name and type (cron/uptime/SSL), the failure reason on a down event, and downtime duration on recovery — enough to drive an automation without an extra API call back to checkmeup.',
+      text: 'A down or recovery event fires a POST within one check cycle of the transition, same timing guarantee as Telegram and email. The JSON body carries the event type, monitor name and type (cron/uptime/SSL), the failure reason on a down event, and downtime duration on recovery — enough to drive an automation without an extra API call back to Checkmeup.',
     },
     {
       type: 'h3',
-      text: "Verifying it's really checkmeup",
+      text: "Verifying it's really Checkmeup",
     },
     {
       type: 'p',
-      text: "Every webhook request carries an X-Checkmeup-Signature header — an HMAC-SHA256 of the raw request body, signed with a secret generated automatically the first time you save the webhook. Settings shows that secret along with a short snippet for verifying the signature on your end, so whatever's receiving the webhook can confirm it actually came from checkmeup before acting on it. Regenerating the secret only affects future sends — it won't retroactively invalidate anything already delivered.",
+      text: "Every webhook request carries an X-Checkmeup-Signature header — an HMAC-SHA256 of the raw request body, signed with a secret generated automatically the first time you save the webhook. Settings shows that secret along with a short snippet for verifying the signature on your end, so whatever's receiving the webhook can confirm it actually came from Checkmeup before acting on it. Regenerating the secret only affects future sends — it won't retroactively invalidate anything already delivered.",
     },
     {
       type: 'h3',
@@ -46,7 +46,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "A webhook URL is the one place in checkmeup where a user hands the server an arbitrary destination and asks it to make a request. Left unchecked, that's a standard SSRF vector — someone could point a webhook at internal infrastructure, like a cloud metadata endpoint, and have checkmeup's own server fetch it on their behalf. Outbound webhook requests now refuse to connect to loopback, private, link-local, unspecified, or multicast addresses, checked on the actual resolved IP at connect time rather than on the URL up front — so a hostname that resolves differently between validation and connect can't slip past the check. Redirects aren't followed either, closing off a 3xx response retargeting the request after the original URL passed muster.",
+      text: "A webhook URL is the one place in Checkmeup where a user hands the server an arbitrary destination and asks it to make a request. Left unchecked, that's a standard SSRF vector — someone could point a webhook at internal infrastructure, like a cloud metadata endpoint, and have Checkmeup's own server fetch it on their behalf. Outbound webhook requests now refuse to connect to loopback, private, link-local, unspecified, or multicast addresses, checked on the actual resolved IP at connect time rather than on the URL up front — so a hostname that resolves differently between validation and connect can't slip past the check. Redirects aren't followed either, closing off a 3xx response retargeting the request after the original URL passed muster.",
     },
     {
       type: 'h3',

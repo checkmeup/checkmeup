@@ -6,11 +6,11 @@ export const post: BlogPost = {
   date: 'June 16, 2026',
   readTime: '2 min read',
   excerpt:
-    "checkmeup v1.0 is live. Here's the complete changelog, what we deliberately left out, and a foggy look at the road ahead.",
+    "Checkmeup v1.0 is live. Here's the complete changelog, what we deliberately left out, and a foggy look at the road ahead.",
   content: [
     {
       type: 'p',
-      text: 'checkmeup v1.0 shipped on June 16, 2026. This is the changelog.',
+      text: 'Checkmeup v1.0 shipped on June 16, 2026. This is the changelog.',
     },
     {
       type: 'h2',
@@ -92,7 +92,7 @@ export const post: BlogPost = {
     },
     {
       type: 'p',
-      text: "If one of those is blocking you from using checkmeup, email andrew@checkmeup.net and say so. That's how the roadmap gets prioritized.",
+      text: "If one of those is blocking you from using Checkmeup, email andrew@checkmeup.net and say so. That's how the roadmap gets prioritized.",
     },
     {
       type: 'h2',
