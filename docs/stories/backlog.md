@@ -36,6 +36,7 @@
 | [EP-28](ep-28-notification-channels.md) | Notification channels         | 4/5***        |
 | [EP-29](ep-29-domain-expiry-monitoring.md) | Domain expiry monitoring   | 3/5**         |
 | [EP-30](ep-30-status-badges.md)       | Public status badges            | 4/4           |
+| [EP-36](ep-36-blog-prerendering.md)   | Blog prerendering for social previews | 0/1     |
 
 `x/y` = stories done vs. total stories in the epic (a story counts as done once every acceptance criterion is checked). \* EP-10: US-1002's "public status page" criterion was redefined, not deferred — see the epic file for why. \*\* EP-29: US-2902 and US-2903 each shipped with one AC intentionally not built (WHOIS fallback, registry-hold-status alert) — see the epic file's shipped note. \*\*\* EP-28: US-2804's legacy-column-drop AC is deliberately deferred to a later migration, after the cutover has proven stable in production — see the epic file. \*\*\*\* EP-19: US-1906 shipped with its destination-weighted cost-band AC not built (flat 1-credit-per-send instead — needs a hand-built per-country pricing table, deferred as a data-entry task) — see the epic file's implementation note.
 
