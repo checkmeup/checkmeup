@@ -36,6 +36,7 @@ describe('DocsView', () => {
       '#port',
       '#telegram',
       '#email',
+      '#webhook',
       '#slack',
       '#sms',
       '#status-pages',

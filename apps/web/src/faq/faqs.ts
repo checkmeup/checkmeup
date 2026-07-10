@@ -46,7 +46,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Can I pay annually instead of monthly?',
-        a: 'Yes — every paid plan can be billed annually for two months free versus paying monthly. Toggle it in Settings → Billing, or when picking a plan on the pricing page.',
+        a: 'Yes — every paid plan offers an annual option at two months free versus paying monthly. Toggle it in Settings → Billing, or when picking a plan on the pricing page.',
       },
       {
         q: 'What happens if I exceed my monitor limit?',
