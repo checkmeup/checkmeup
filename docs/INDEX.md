@@ -82,6 +82,8 @@ Do not move files — lifecycle is metadata, not filesystem position.
 | Doc | Status | Hook |
 | --- | --- | --- |
 | [mvp-history.md](knowledge/mvp-history.md) | current | Frozen record of the MVP build: phases, hours, decisions |
+| [worker-architecture.md](knowledge/worker-architecture.md) | current | As-built poll-tick/semaphore worker model (corrects ADR-001) |
+| [notification-channels.md](knowledge/notification-channels.md) | current | Five alert channels, shared delivery/SSRF plumbing, dispatch fallback |
 
 ## investigations/ — technical root cause analyses
 

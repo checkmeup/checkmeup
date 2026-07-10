@@ -21,3 +21,7 @@ Each active monitor gets its own goroutine with a `time.Ticker`. Cron monitors w
 - **Simpler code:** no queue producer/consumer abstraction, just goroutines
 - **Scaling ceiling:** goroutine-per-monitor works fine up to tens of thousands of monitors on a single node; beyond that, a queue-based model would be needed
 - **Statefulness:** the API process is stateful — horizontal scaling requires a coordination layer (etcd, Postgres advisory locks, or migrating to a queue) if we ever need multiple API instances running monitors
+
+## Update (2026-07-10)
+
+The as-built worker is **not** goroutine-per-monitor with a per-monitor `time.Ticker`, despite the Decision text above. It's a single shared 30 s poll tick that queries for due monitors each round and fans out a bounded semaphore of goroutines per check type (`checkConcurrency = 50`) — a materially different scaling profile (poll-tick degrades gracefully by delaying checks under load; the originally-decided model would instead accumulate long-lived goroutines). Still no Redis/external queue, so the core decision (Postgres-only state, no queue) holds. Caught during the 2026-07-04 capacity-planning discussion, tracked in `docs/reference/tech-debts.md`. Left as an addendum rather than rewritten, per `decisions/`'s append-only convention — see [knowledge/worker-architecture.md](../knowledge/worker-architecture.md) for the as-built model.
