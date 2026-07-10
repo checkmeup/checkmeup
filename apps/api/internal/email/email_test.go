@@ -60,9 +60,6 @@ func TestSender_DevModeSkipsSending(t *testing.T) {
 	if err := s.SendTestAlertEmail("user@example.com"); err != nil {
 		t.Fatalf("SendTestAlertEmail: want nil error in dev mode, got %v", err)
 	}
-	if err := s.SendFeatureSuggestion("user@example.com", "an idea"); err != nil {
-		t.Fatalf("SendFeatureSuggestion: want nil error in dev mode, got %v", err)
-	}
 }
 
 // ─── SendPasswordReset (local httptest.Server, no live network) ────────────
@@ -120,33 +117,6 @@ func TestSendTestAlertEmail(t *testing.T) {
 	}
 	if !strings.Contains(req.Html, "connected") {
 		t.Fatalf("want canned 'connected' copy, got %q", req.Html)
-	}
-}
-
-// ─── SendFeatureSuggestion (escapes user-supplied text) ─────────────────────
-
-func TestSendFeatureSuggestion(t *testing.T) {
-	s, requests := newTestSender(t, okHandler)
-
-	if err := s.SendFeatureSuggestion("user@example.com", "needs <b>bold</b>\nsecond line"); err != nil {
-		t.Fatalf("SendFeatureSuggestion: %v", err)
-	}
-
-	req := (*requests)[0]
-	if len(req.To) != 1 || req.To[0] != founderAddress {
-		t.Fatalf("want To [%s], got %v", founderAddress, req.To)
-	}
-	if req.Subject != "Checkmeup: new feature suggestion" {
-		t.Fatalf("unexpected subject: %q", req.Subject)
-	}
-	if strings.Contains(req.Html, "<b>bold</b>") {
-		t.Fatalf("want suggestion text HTML-escaped, got %q", req.Html)
-	}
-	if !strings.Contains(req.Html, "&lt;b&gt;bold&lt;/b&gt;") {
-		t.Fatalf("want escaped tags in html, got %q", req.Html)
-	}
-	if !strings.Contains(req.Html, "needs &lt;b&gt;bold&lt;/b&gt;<br>second line") {
-		t.Fatalf("want newline converted to <br>, got %q", req.Html)
 	}
 }
 

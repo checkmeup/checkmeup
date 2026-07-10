@@ -16,12 +16,12 @@ import (
 const maxSuggestionLength = 2000
 
 type SuggestionHandler struct {
-	queries *db.Queries
-	mailer  *email.Sender
+	queries  *db.Queries
+	notifier *email.FounderNotifier
 }
 
 func NewSuggestionHandler(cfg *config.Config, pool *pgxpool.Pool) *SuggestionHandler {
-	return &SuggestionHandler{queries: db.New(pool), mailer: email.NewSender(cfg.ResendAPIKey)}
+	return &SuggestionHandler{queries: db.New(pool), notifier: email.NewFounderNotifier(cfg.ResendAPIKey)}
 }
 
 type submitSuggestionRequest struct {
@@ -72,7 +72,7 @@ func (h *SuggestionHandler) SubmitSuggestion(w http.ResponseWriter, r *http.Requ
 	if user, err := h.queries.GetUserByID(r.Context(), userID); err == nil {
 		fromEmail = user.Email
 	}
-	_ = h.mailer.SendFeatureSuggestion(fromEmail, req.Text)
+	_ = h.notifier.SendFeatureSuggestion(fromEmail, req.Text)
 
 	w.WriteHeader(http.StatusNoContent)
 }
