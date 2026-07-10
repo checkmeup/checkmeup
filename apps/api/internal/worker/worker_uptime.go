@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
@@ -177,18 +178,25 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 // keyword search or JSON assertion, regardless of Content-Length (US-1102).
 const maxKeywordCheckBytes = 512 * 1024
 
-// uptimeCheckClient builds the *http.Client used for real monitor checks.
-// m.Url is user-supplied, so it dials through httpsafe.Dialer to block
-// loopback/private/link-local/cloud-metadata targets (SSRF); redirects are
-// still followed (this is a generic uptime checker, unlike the one-shot
-// Slack/webhook delivery clients), but each hop re-dials through the same
-// Control-equipped Dialer, so a redirect into a blocked range is caught too.
+// sharedUptimeClient is the *http.Client used for every real (non-test)
+// uptime check, built once and reused rather than per call — a fresh
+// http.Client/Transport per check loses keep-alive connection pooling and
+// adds socket/FD churn that grows with monitor count. m.Url is user-supplied,
+// so it dials through httpsafe.Dialer to block loopback/private/link-local/
+// cloud-metadata targets (SSRF); redirects are still followed (this is a
+// generic uptime checker, unlike the one-shot Slack/webhook delivery
+// clients), but each hop re-dials through the same Control-equipped Dialer,
+// so a redirect into a blocked range is caught too.
+var sharedUptimeClient = &http.Client{
+	Timeout: deliver.Timeout,
+	Transport: &http.Transport{
+		DialContext:         httpsafe.Dialer(deliver.Timeout).DialContext,
+		MaxIdleConnsPerHost: 4,
+	},
+}
+
 func uptimeCheckClient() *http.Client {
-	dialer := httpsafe.Dialer(10 * time.Second)
-	return &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: &http.Transport{DialContext: dialer.DialContext},
-	}
+	return sharedUptimeClient
 }
 
 // performHTTPCheck runs the monitor's HTTP check and evaluates all configured

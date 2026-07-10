@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
@@ -195,11 +196,15 @@ func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (
 	return subject, telegramMsg, emailHTML
 }
 
-// hostname is user-supplied, so the dial goes through httpsafe.Dialer to
-// block loopback/private/link-local/cloud-metadata targets (SSRF).
+// sharedSSLDialer is the *net.Dialer used for every SSL check, built once
+// rather than per call — net.Dialer holds no per-dial mutable state, so one
+// instance is safe to reuse across concurrent Dial calls. hostname is
+// user-supplied, so it goes through httpsafe.Dialer to block
+// loopback/private/link-local/cloud-metadata targets (SSRF).
+var sharedSSLDialer = httpsafe.Dialer(deliver.Timeout)
+
 func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysLeft int, err error) {
-	dialer := httpsafe.Dialer(10 * time.Second)
-	conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
+	conn, err := tls.DialWithDialer(sharedSSLDialer, "tcp", hostname+":443", &tls.Config{
 		ServerName: hostname,
 		MinVersion: tls.VersionTLS12,
 	})

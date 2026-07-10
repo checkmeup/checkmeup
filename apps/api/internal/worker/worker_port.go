@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
@@ -190,11 +191,15 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 	}
 }
 
-// portCheckDialer builds the *net.Dialer used for real monitor checks.
-// m.Host is user-supplied, so it goes through httpsafe.Dialer to block
-// loopback/private/link-local/cloud-metadata targets (SSRF).
+// sharedPortDialer is the *net.Dialer used for every real (non-test) port
+// check, built once rather than per call — net.Dialer holds no per-dial
+// mutable state, so one instance is safe to reuse across concurrent Dial
+// calls. m.Host is user-supplied, so it goes through httpsafe.Dialer to
+// block loopback/private/link-local/cloud-metadata targets (SSRF).
+var sharedPortDialer = httpsafe.Dialer(deliver.Timeout)
+
 func portCheckDialer() *net.Dialer {
-	return httpsafe.Dialer(10 * time.Second)
+	return sharedPortDialer
 }
 
 // performTCPCheck opens a raw TCP connection to the monitor's host:port —
