@@ -60,7 +60,8 @@ RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI
     && go install github.com/air-verse/air@latest \
     && go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest \
     && go install github.com/pressly/goose/v3/cmd/goose@latest \
-    && go install github.com/jandelgado/gcov2lcov@latest
+    && go install github.com/jandelgado/gcov2lcov@latest \
+    && go install golang.org/x/tools/gopls@latest
 
 # Python tools — same tool names Codacy runs in CI (bandit, prospector,
 # lizard), so skills/agents can run them locally before pushing instead of
