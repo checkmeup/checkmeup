@@ -20,7 +20,6 @@ import (
 	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
-	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
@@ -103,14 +102,6 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		r.NextPingAt = &t
 	}
 	return r
-}
-
-func orgIDFrom(r *http.Request) (uuid.UUID, error) {
-	claims := apimiddleware.ClaimsFrom(r.Context())
-	if claims == nil {
-		return uuid.UUID{}, errors.New("no claims")
-	}
-	return uuid.Parse(claims.OrgID)
 }
 
 // attachDefaultNotificationChannels attaches every enabled channel the org

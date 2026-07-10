@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -338,15 +337,9 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	claims := apimiddleware.ClaimsFrom(r.Context())
-	if claims == nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return
-	}
-
-	userID, err := uuid.Parse(claims.Subject)
+	userID, err := userIDFrom(r)
 	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "invalid token", "invalid_token")
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
 		return
 	}
 
@@ -366,15 +359,9 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 // AcceptTerms POST /api/v1/auth/accept-terms — records (re-)acceptance of the
 // current Terms of Service / Privacy Policy version for the signed-in user.
 func (h *AuthHandler) AcceptTerms(w http.ResponseWriter, r *http.Request) {
-	claims := apimiddleware.ClaimsFrom(r.Context())
-	if claims == nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return
-	}
-
-	userID, err := uuid.Parse(claims.Subject)
+	userID, err := userIDFrom(r)
 	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "invalid token", "invalid_token")
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
 		return
 	}
 

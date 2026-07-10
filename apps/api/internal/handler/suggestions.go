@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
-	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
 
@@ -33,19 +31,14 @@ type submitSuggestionRequest struct {
 // SubmitSuggestion POST /api/v1/suggestions — stores the suggestion and emails
 // the founder directly. No ticket statuses, no public board (EP-23).
 func (h *SuggestionHandler) SubmitSuggestion(w http.ResponseWriter, r *http.Request) {
-	claims := apimiddleware.ClaimsFrom(r.Context())
-	if claims == nil {
+	userID, err := userIDFrom(r)
+	if err != nil {
 		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
 		return
 	}
-	userID, err := uuid.Parse(claims.Subject)
+	orgID, err := orgIDFrom(r)
 	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "invalid token", "invalid_token")
-		return
-	}
-	orgID, err := uuid.Parse(claims.OrgID)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "invalid token", "invalid_token")
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
 		return
 	}
 

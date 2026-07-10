@@ -25,6 +25,14 @@ import (
 // version is set at build time via -ldflags "-X main.version=...".
 var version = "dev"
 
+// dbMaxConns caps the pool explicitly rather than falling back to pgx's
+// default (max(4, NumCPU), likely 4-8 on the current Hetzner CX23) — every
+// monitor check writes through this same pool alongside all live
+// dashboard/API/status-page traffic, and the 2026-07-04 capacity-planning
+// discussion flagged the default as the most likely actual ceiling on
+// monitor/customer capacity, ahead of the worker's own semaphore/timeout math.
+const dbMaxConns = 25
+
 func main() {
 	cfg := config.Load()
 	logger := newLogger(cfg)
@@ -32,7 +40,14 @@ func main() {
 
 	runMigrations(cfg, logger)
 
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("failed to parse database url", "err", err)
+		os.Exit(1)
+	}
+	poolConfig.MaxConns = dbMaxConns
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		logger.Error("failed to connect to database", "err", err)
 		os.Exit(1)
