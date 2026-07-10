@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
+
+	"github.com/checkmeup/checkmeup/internal/deliver"
 )
 
 type Client struct {
@@ -16,8 +17,8 @@ type Client struct {
 
 func NewClient(botToken string) *Client {
 	return &Client{
-		botToken: botToken,
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		botToken:   botToken,
+		httpClient: &http.Client{Timeout: deliver.Timeout},
 	}
 }
 
@@ -62,7 +63,7 @@ func (c *Client) SetWebhook(webhookURL, secret string) error {
 
 // WebhookUpdate is a minimal subset of the Telegram Update object.
 type WebhookUpdate struct {
-	UpdateID int              `json:"update_id"`
+	UpdateID int             `json:"update_id"`
 	Message  *WebhookMessage `json:"message"`
 }
 

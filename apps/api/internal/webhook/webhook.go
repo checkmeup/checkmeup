@@ -12,8 +12,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
 )
 
@@ -34,9 +34,9 @@ type Client struct {
 // them. See package httpsafe for the dial-time IP check and redirect
 // handling shared with the Slack channel.
 func NewClient() *Client {
-	dialer := httpsafe.Dialer(10 * time.Second)
+	dialer := httpsafe.Dialer(deliver.Timeout)
 	return &Client{httpClient: &http.Client{
-		Timeout:       10 * time.Second,
+		Timeout:       deliver.Timeout,
 		Transport:     &http.Transport{DialContext: dialer.DialContext},
 		CheckRedirect: httpsafe.RefuseRedirects,
 	}}
@@ -82,16 +82,9 @@ func (c *Client) Send(url, secret string, event Event) (statusCode int, err erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set(SignatureHeader, Sign(body, secret))
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("webhook request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return resp.StatusCode, fmt.Errorf("webhook endpoint returned HTTP %d", resp.StatusCode)
-	}
-	return resp.StatusCode, nil
+	return deliver.Do(c.httpClient, req, "webhook", func(resp *http.Response) error {
+		return fmt.Errorf("webhook endpoint returned HTTP %d", resp.StatusCode)
+	})
 }
 
 // Sign returns the hex-encoded HMAC-SHA256 signature of body using secret.

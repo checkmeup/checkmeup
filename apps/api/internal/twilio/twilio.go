@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
+
+	"github.com/checkmeup/checkmeup/internal/deliver"
 )
 
 const messagesPathFormat = "/2010-04-01/Accounts/%s/Messages.json"
@@ -35,7 +36,7 @@ func NewClient(accountSID, apiKeySID, apiKeySecret, messagingServiceSID string) 
 		apiKeySID:           apiKeySID,
 		apiKeySecret:        apiKeySecret,
 		messagingServiceSID: messagingServiceSID,
-		httpClient:          &http.Client{Timeout: 10 * time.Second},
+		httpClient:          &http.Client{Timeout: deliver.Timeout},
 		baseURL:             "https://api.twilio.com",
 	}
 }
@@ -69,19 +70,12 @@ func (c *Client) Send(to, body string) (statusCode int, err error) {
 	req.SetBasicAuth(c.apiKeySID, c.apiKeySecret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("twilio request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	return deliver.Do(c.httpClient, req, "twilio", func(resp *http.Response) error {
 		var eb errorBody
 		_ = json.NewDecoder(resp.Body).Decode(&eb)
 		if eb.Message != "" {
-			return resp.StatusCode, fmt.Errorf("twilio: %s", eb.Message)
+			return fmt.Errorf("twilio: %s", eb.Message)
 		}
-		return resp.StatusCode, fmt.Errorf("twilio returned HTTP %d", resp.StatusCode)
-	}
-	return resp.StatusCode, nil
+		return fmt.Errorf("twilio returned HTTP %d", resp.StatusCode)
+	})
 }
