@@ -282,6 +282,12 @@ export const router = createRouter({
       component: () => import('@/views/AcceptTermsView.vue'),
       meta: { requiresAuth: true },
     },
+    // Catch-all — must stay last so every named route above matches first.
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+    },
   ],
 })
 
