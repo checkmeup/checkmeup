@@ -75,6 +75,7 @@ Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR 
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
 - **Colors/logo:** never hardcode hex values — use tokens from [`docs/reference/design.md`](docs/reference/design.md)
+- **Naming/capitalization:** in prose, capitalize the organization/product name — "Checkmeup", not "checkmeup" (e.g. "Checkmeup started as the tool I wished existed"). The domain `checkmeup.net` stays lowercase mid-sentence, and only capitalizes to `Checkmeup.net` when it opens a sentence. Never capitalize `checkmeup` where it's a code identifier rather than prose — GitHub org/repo slugs (`github.com/checkmeup/checkmeup`), the npm scope (`@checkmeup/web`), storage/cache keys (`'checkmeup:billingPendingPlan'`), and file/asset names (`checkmeup-og.png`) all stay lowercase
 - **Theme:** the app supports light/dark via `data-theme` on `<html>` — design tokens (`--bg`, `--text`, etc.) already flip per theme, so styling with tokens is theme-safe by default; hardcoding a token's current value isn't (see [EP-10](docs/stories/ep-10-theme.md))
 
 ---
