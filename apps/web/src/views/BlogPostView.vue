@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
+import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { getPost } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
@@ -12,6 +13,12 @@ useSeo({
   title: () => (post.value ? `${post.value.title} — checkmeup blog` : 'Post not found — checkmeup'),
   description: () => post.value?.excerpt ?? 'This blog post could not be found.',
   path: () => route.fullPath,
+})
+
+// This route always serves HTTP 200 (client-rendered SPA), so an unknown
+// slug would otherwise let a thin "not found" page get indexed.
+useHead({
+  meta: [{ name: 'robots', content: () => (post.value ? 'index, follow' : 'noindex') }],
 })
 </script>
 

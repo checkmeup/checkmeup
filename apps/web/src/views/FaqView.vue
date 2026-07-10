@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import { faqCategories } from '@/faq/faqs'
 import { useSeo } from '@/composables/useSeo'
@@ -8,6 +9,26 @@ useSeo({
   description:
     'Answers on getting started, billing, monitors and alerts, status pages, and privacy for checkmeup.',
   path: '/faq',
+})
+
+// Makes these eligible for Google's expandable FAQ rich results.
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqCategories.flatMap((category) =>
+    category.entries.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
+  ),
+}
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(faqSchema) }],
 })
 </script>
 
