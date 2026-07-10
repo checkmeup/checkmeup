@@ -84,6 +84,8 @@ Do not move files — lifecycle is metadata, not filesystem position.
 | [mvp-history.md](knowledge/mvp-history.md) | current | Frozen record of the MVP build: phases, hours, decisions |
 | [worker-architecture.md](knowledge/worker-architecture.md) | current | As-built poll-tick/semaphore worker model (corrects ADR-001) |
 | [notification-channels.md](knowledge/notification-channels.md) | current | Five alert channels, shared delivery/SSRF plumbing, dispatch fallback |
+| [billing-plan-enforcement.md](knowledge/billing-plan-enforcement.md) | current | Plan-limit map, creation-time checks, downgrade enforcement, Paddle webhook |
+| [public-api-auth.md](knowledge/public-api-auth.md) | current | X-API-Key auth, key hashing, rate limiting, unshipped scope enforcement gap |
 
 ## investigations/ — technical root cause analyses
 
