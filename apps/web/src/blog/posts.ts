@@ -23,6 +23,7 @@ import { post as checkmeupVsCompetitors } from './posts/checkmeup-vs-competitors
 import { post as v119ReleaseNotes } from './posts/v1-19-release-notes'
 import { post as v120To122Redesign } from './posts/v1-20-to-v1-22-redesign'
 import { post as v123ReleaseNotes } from './posts/v1-23-release-notes'
+import { post as v124To125SeoFoundations } from './posts/v1-24-to-v1-25-seo-foundations'
 
 export type { ContentBlock, BlogPost } from './types'
 
@@ -52,6 +53,7 @@ export const posts = [
   v119ReleaseNotes,
   v120To122Redesign,
   v123ReleaseNotes,
+  v124To125SeoFoundations,
 ]
 
 export function getPost(slug: string) {
