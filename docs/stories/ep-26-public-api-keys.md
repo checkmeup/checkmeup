@@ -14,10 +14,10 @@ A programmatic API for scripts, CI pipelines, and third-party integrations — d
 
 **Acceptance criteria:**
 
-- [ ] Settings: "Create API key" action with an optional label
-- [ ] Key value shown once at creation, never retrievable again — only its hash is stored, same pattern already used for `password_hash`/`refresh_tokens.token_hash`
-- [ ] Multiple keys per org supported, each independently revocable
-- [ ] Key format includes a recognizable prefix (e.g. `cmu_live_...`) for easy identification in logs and secret scanners
+- [x] Settings: "Create API key" action with an optional label
+- [x] Key value shown once at creation, never retrievable again — only its hash is stored, same pattern already used for `password_hash`/`refresh_tokens.token_hash`
+- [x] Multiple keys per org supported, each independently revocable
+- [x] Key format includes a recognizable prefix (e.g. `cmu_live_...`) for easy identification in logs and secret scanners
 
 ---
 
@@ -29,9 +29,9 @@ A programmatic API for scripts, CI pipelines, and third-party integrations — d
 
 **Acceptance criteria:**
 
-- [ ] API key sent via a dedicated `X-API-Key` header (see the ADR-003 note above) — not `Authorization`
-- [ ] Valid key resolves to its owning org for every `org_id`-scoped query, same multi-tenancy rules as session auth ([ADR-002](../decisions/002-multi-tenancy.md))
-- [ ] Invalid or revoked key returns `401` in the existing error format ([ADR-008](../decisions/008-api-error-format.md))
+- [x] API key sent via a dedicated `X-API-Key` header (see the ADR-003 note above) — not `Authorization`
+- [x] Valid key resolves to its owning org for every `org_id`-scoped query, same multi-tenancy rules as session auth ([ADR-002](../decisions/002-multi-tenancy.md))
+- [x] Invalid or revoked key returns `401` in the existing error format ([ADR-008](../decisions/008-api-error-format.md))
 
 ---
 
@@ -57,9 +57,9 @@ A programmatic API for scripts, CI pipelines, and third-party integrations — d
 
 **Acceptance criteria:**
 
-- [ ] List shows: label, scope, created date, last-used date, masked key (e.g. `cmu_live_••••1234`)
-- [ ] Revoke takes effect immediately — the next request with that key returns `401`
-- [ ] Last-used timestamp updates asynchronously and never blocks the request it's attached to
+- [ ] List shows: label, scope, created date, last-used date, masked key (e.g. `cmu_live_••••1234`) — not built as specified: no scope column (US-2603 isn't built), and the key is shown as a bare prefix (`cmu_live_…`) rather than a `••••`-masked suffix. See [backlog.md](backlog.md)'s EP-26 footnote.
+- [x] Revoke takes effect immediately — the next request with that key returns `401`
+- [x] Last-used timestamp updates asynchronously and never blocks the request it's attached to
 
 ---
 
@@ -71,6 +71,6 @@ A programmatic API for scripts, CI pipelines, and third-party integrations — d
 
 **Acceptance criteria:**
 
-- [ ] Public API docs page listing available `/api/v1/` endpoints, request/response shapes, and the `X-API-Key` header
-- [ ] Per-key rate limit (e.g. 60 req/min), consistent with the existing rate-limiting pattern ([ADR-013](../decisions/013-rate-limiting.md))
-- [ ] Rate-limited responses return `429` with `Retry-After`, same as other rate-limited endpoints
+- [x] Public API docs page listing available `/api/v1/` endpoints, request/response shapes, and the `X-API-Key` header
+- [x] Per-key rate limit (e.g. 60 req/min), consistent with the existing rate-limiting pattern ([ADR-013](../decisions/013-rate-limiting.md))
+- [x] Rate-limited responses return `429` with `Retry-After`, same as other rate-limited endpoints

@@ -103,7 +103,7 @@ Do not move files — lifecycle is metadata, not filesystem position.
 
 See [stories/backlog.md](stories/backlog.md) for the full epic catalog.
 
-Active epics: EP-01 through EP-35 — see `stories/` directory.
+Active epics: EP-01 through EP-36 — see `stories/` directory.
 
 ## incidents/ — production incidents
 
