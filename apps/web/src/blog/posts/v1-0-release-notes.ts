@@ -1,7 +1,7 @@
 import type { BlogPost } from '../types'
 
 export const post: BlogPost = {
-  slug: 'v1-release-changelog',
+  slug: 'v1-0-release-notes',
   title: "v1.0 — First Release: What Shipped and What's Next",
   date: 'June 16, 2026',
   readTime: '2 min read',
