@@ -23,9 +23,7 @@ type StatusPublicHandler struct {
 }
 
 func NewStatusPublicHandler(pool *pgxpool.Pool) *StatusPublicHandler {
-	tmpl := template.Must(template.New("status").Funcs(template.FuncMap{
-		"safeURL": func(s string) template.URL { return template.URL(s) },
-	}).Parse(statusPageHTML))
+	tmpl := template.Must(template.New("status").Parse(statusPageHTML))
 	return &StatusPublicHandler{queries: db.New(pool), tmpl: tmpl}
 }
 
@@ -508,7 +506,7 @@ const statusPageHTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} — Status</title>
-{{if .LogoURL}}<link rel="icon" href="{{safeURL .LogoURL}}">{{else}}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{{end}}
+{{if .LogoURL}}<link rel="icon" href="{{.LogoURL}}">{{else}}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{{end}}
 <script src="/status-theme.js"></script>
 <style>
 /* Mirrors apps/web/src/style.css — keep both in sync if the token set changes. */
@@ -557,7 +555,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 <div class="page">
   <div class="head">
     <div class="head-left">
-      {{if .LogoURL}}<img class="logo" src="{{safeURL .LogoURL}}" alt="">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
+      {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
       <div>
         <h1>{{.Title}}</h1>
         {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}

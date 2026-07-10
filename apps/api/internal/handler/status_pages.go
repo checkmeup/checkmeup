@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -81,6 +82,21 @@ func toStatusPageMonitorResponse(m db.StatusPageMonitor) statusPageMonitorRespon
 func validateSlug(s string) error {
 	if !slugRe.MatchString(s) {
 		return errors.New("slug must be 3–48 lowercase letters, numbers, or hyphens (not starting/ending with a hyphen)")
+	}
+	return nil
+}
+
+// validateLogoURL rejects anything but an absolute http(s) URL, so the
+// public status page (status_public.go, unauthenticated) never has to
+// render an org-supplied javascript:/data: URI into a <link>/<img> tag.
+// An empty string (no logo) is valid.
+func validateLogoURL(s string) error {
+	if s == "" {
+		return nil
+	}
+	u, err := url.Parse(s)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return errors.New("logo URL must be an absolute http:// or https:// URL")
 	}
 	return nil
 }
@@ -178,6 +194,11 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
 		return
 	}
+	req.LogoURL = strings.TrimSpace(req.LogoURL)
+	if err := validateLogoURL(req.LogoURL); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
 
 	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
 	if err != nil {
@@ -200,7 +221,7 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 		Slug:        req.Slug,
 		Title:       req.Title,
 		Description: strings.TrimSpace(req.Description),
-		LogoUrl:     strings.TrimSpace(req.LogoURL),
+		LogoUrl:     req.LogoURL,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
@@ -266,12 +287,17 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
 		return
 	}
+	req.LogoURL = strings.TrimSpace(req.LogoURL)
+	if err := validateLogoURL(req.LogoURL); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
 	page, err := h.queries.UpdateStatusPage(r.Context(), db.UpdateStatusPageParams{
 		ID:          pageID,
 		OrgID:       orgID,
 		Title:       req.Title,
 		Description: strings.TrimSpace(req.Description),
-		LogoUrl:     strings.TrimSpace(req.LogoURL),
+		LogoUrl:     req.LogoURL,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

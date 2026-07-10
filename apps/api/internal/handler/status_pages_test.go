@@ -212,6 +212,8 @@ func TestCreateStatusPage(t *testing.T) {
 			{"slug with invalid characters", createStatusPageRequest{Slug: "abc_def!", Title: "x"}},
 			{"slug starting with hyphen", createStatusPageRequest{Slug: "-abcdef", Title: "x"}},
 			{"missing title", createStatusPageRequest{Slug: uniqueSlug(t)}},
+			{"javascript: logo URL", createStatusPageRequest{Slug: uniqueSlug(t), Title: "x", LogoURL: "javascript:alert(1)"}},
+			{"relative logo URL", createStatusPageRequest{Slug: uniqueSlug(t), Title: "x", LogoURL: "/evil"}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
