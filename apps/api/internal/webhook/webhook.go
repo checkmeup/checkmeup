@@ -10,12 +10,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"syscall"
 	"time"
+
+	"github.com/checkmeup/checkmeup/internal/httpsafe"
 )
 
 // SignatureHeader carries the hex-encoded HMAC-SHA256 signature of the raw
@@ -32,49 +31,15 @@ type Client struct {
 // restricted to the public internet, not just "https" — otherwise a
 // customer could point a webhook at internal infrastructure (e.g. a cloud
 // metadata endpoint) and have checkmeup's own server make the request for
-// them.
-//   - blockPrivateDial runs in net.Dialer.Control, which fires after DNS
-//     resolution but before the TCP handshake, on the actual address being
-//     connected to — so a hostname that resolves differently between
-//     validation and connect (DNS rebinding) can't bypass it the way a
-//     pre-flight URL/IP check could.
-//   - refuseRedirects stops a 3xx response from retargeting the request to
-//     a blocked address after the initial URL passed muster.
+// them. See package httpsafe for the dial-time IP check and redirect
+// handling shared with the Slack channel.
 func NewClient() *Client {
-	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: blockPrivateDial}
+	dialer := httpsafe.Dialer(10 * time.Second)
 	return &Client{httpClient: &http.Client{
 		Timeout:       10 * time.Second,
 		Transport:     &http.Transport{DialContext: dialer.DialContext},
-		CheckRedirect: refuseRedirects,
+		CheckRedirect: httpsafe.RefuseRedirects,
 	}}
-}
-
-// blockPrivateDial rejects connections to loopback, private, link-local
-// (which includes the 169.254.169.254 cloud-metadata address), unspecified,
-// and multicast addresses.
-func blockPrivateDial(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		host = address
-	}
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("webhook: refusing to dial non-IP address %q", host)
-	}
-	if isRestrictedIP(ip) {
-		return fmt.Errorf("webhook: refusing to dial restricted address %s", ip)
-	}
-	return nil
-}
-
-// isRestrictedIP reports whether ip falls outside the public internet.
-func isRestrictedIP(ip net.IP) bool {
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
-}
-
-func refuseRedirects(*http.Request, []*http.Request) error {
-	return errors.New("webhook: redirects are not followed")
 }
 
 // NewClientWithHTTPClient builds a Client around a caller-provided

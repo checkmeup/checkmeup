@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -40,7 +41,11 @@ func checkPortMonitors(ctx context.Context, n Notifiers) {
 }
 
 func checkOnePortMonitor(ctx context.Context, n Notifiers, m db.PortMonitor) {
-	responseTimeMs, isUp, failureReason := performTCPCheck(m)
+	dialer := n.TCPDialer
+	if dialer == nil {
+		dialer = portCheckDialer()
+	}
+	responseTimeMs, isUp, failureReason := performTCPCheck(m, dialer)
 	if !recordPortCheck(ctx, n, m, responseTimeMs, isUp, failureReason) {
 		return
 	}
@@ -185,14 +190,23 @@ func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
 	}
 }
 
+// portCheckDialer builds the *net.Dialer used for real monitor checks.
+// m.Host is user-supplied, so it goes through httpsafe.Dialer to block
+// loopback/private/link-local/cloud-metadata targets (SSRF).
+func portCheckDialer() *net.Dialer {
+	return httpsafe.Dialer(10 * time.Second)
+}
+
 // performTCPCheck opens a raw TCP connection to the monitor's host:port —
 // no data sent or received, no protocol handshake. The dial outcome is
 // interpreted against the monitor's expected state: an "open" monitor wants
 // a successful connect, a "closed" monitor wants the opposite (US-3302).
-func performTCPCheck(m db.PortMonitor) (responseTimeMs int64, isUp bool, failureReason string) {
+// dialer is injected so tests can pass an unguarded dialer to reach a local
+// listener — see portCheckDialer for the hardened dialer real checks use.
+func performTCPCheck(m db.PortMonitor, dialer *net.Dialer) (responseTimeMs int64, isUp bool, failureReason string) {
 	addr := net.JoinHostPort(m.Host, strconv.Itoa(int(m.Port)))
 	start := time.Now()
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	conn, err := dialer.Dial("tcp", addr)
 	elapsed := time.Since(start).Milliseconds()
 	connected := err == nil
 	if connected {

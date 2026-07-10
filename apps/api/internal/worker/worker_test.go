@@ -377,7 +377,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL})
+		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL}, &http.Client{Timeout: 10 * time.Second})
 		if code != 200 || !isUp || reason != "" {
 			t.Fatalf("want (200, up, \"\"), got (%d, %v, %q)", code, isUp, reason)
 		}
@@ -389,14 +389,14 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL})
+		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL}, &http.Client{Timeout: 10 * time.Second})
 		if code != 500 || isUp || reason != "HTTP 500" {
 			t.Fatalf("want (500, down, HTTP 500), got (%d, %v, %q)", code, isUp, reason)
 		}
 	})
 
 	t.Run("connection error is down with no status code", func(t *testing.T) {
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: "http://127.0.0.1:1"})
+		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: "http://127.0.0.1:1"}, &http.Client{Timeout: 10 * time.Second})
 		if code != 0 || isUp || reason != "timeout / connection error" {
 			t.Fatalf("want (0, down, timeout), got (%d, %v, %q)", code, isUp, reason)
 		}
@@ -410,7 +410,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want up with no failure reason, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -424,7 +424,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "Keyword not found" {
 			t.Fatalf("want down/Keyword not found, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -438,7 +438,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url: srv.URL, Keyword: pgtype.Text{String: "maintenance", Valid: true}, KeywordMode: db.KeywordModeNotContains,
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "Keyword found" {
 			t.Fatalf("want down/Keyword found, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -453,7 +453,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "HTTP 503" {
 			t.Fatalf("want the status code to win over the keyword, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -468,7 +468,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url:            srv.URL,
 			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want up with no failure reason, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -483,7 +483,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
 			Url:            srv.URL,
 			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
-		})
+		}, &http.Client{Timeout: 10 * time.Second})
 		if isUp || !strings.Contains(reason, "JSON assertion failed") {
 			t.Fatalf("want down with a JSON assertion failure reason, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -1214,7 +1214,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 	// dial — not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	logger := testLogger()
-	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger, HTTPClient: &http.Client{Timeout: 10 * time.Second}}
 
 	t.Run("escalates to down after two consecutive failures, then recovers", func(t *testing.T) {
 		var up atomic.Bool
@@ -1884,7 +1884,7 @@ func TestCheckPortMonitors(t *testing.T) {
 	mailer := email.NewSender("")
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	logger := testLogger()
-	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger, TCPDialer: &net.Dialer{Timeout: 10 * time.Second}}
 
 	t.Run("escalates to down after two consecutive failures, then recovers", func(t *testing.T) {
 		host, port := freeTCPPort(t) // nothing listening yet — first checks fail
@@ -2057,28 +2057,28 @@ func TestPerformTCPCheck(t *testing.T) {
 	_, closedPort := freeTCPPort(t)
 
 	t.Run("expected open + reachable port is up", func(t *testing.T) {
-		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateOpen})
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateOpen}, &net.Dialer{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want (up, \"\"), got (%v, %q)", isUp, reason)
 		}
 	})
 
 	t.Run("expected open + unreachable port is down", func(t *testing.T) {
-		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateOpen})
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateOpen}, &net.Dialer{Timeout: 10 * time.Second})
 		if isUp || reason != "connection refused / timeout" {
 			t.Fatalf("want (down, connection refused / timeout), got (%v, %q)", isUp, reason)
 		}
 	})
 
 	t.Run("expected closed + reachable port is down (unexpectedly open)", func(t *testing.T) {
-		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateClosed})
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: openPort, ExpectedState: db.PortExpectedStateClosed}, &net.Dialer{Timeout: 10 * time.Second})
 		if isUp || reason != "port is unexpectedly open" {
 			t.Fatalf("want (down, port is unexpectedly open), got (%v, %q)", isUp, reason)
 		}
 	})
 
 	t.Run("expected closed + unreachable port is up (matches expectation)", func(t *testing.T) {
-		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateClosed})
+		_, isUp, reason := performTCPCheck(db.PortMonitor{Host: host, Port: closedPort, ExpectedState: db.PortExpectedStateClosed}, &net.Dialer{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want (up, \"\"), got (%v, %q)", isUp, reason)
 		}

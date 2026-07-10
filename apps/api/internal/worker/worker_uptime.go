@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -43,7 +44,11 @@ func checkUptimeMonitors(ctx context.Context, n Notifiers) {
 }
 
 func checkOneUptimeMonitor(ctx context.Context, n Notifiers, m db.UptimeMonitor) {
-	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m)
+	client := n.HTTPClient
+	if client == nil {
+		client = uptimeCheckClient()
+	}
+	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m, client)
 	if !recordUptimeCheck(ctx, n, m, statusCode, responseTimeMs, isUp, failureReason) {
 		return
 	}
@@ -172,11 +177,27 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 // keyword search or JSON assertion, regardless of Content-Length (US-1102).
 const maxKeywordCheckBytes = 512 * 1024
 
+// uptimeCheckClient builds the *http.Client used for real monitor checks.
+// m.Url is user-supplied, so it dials through httpsafe.Dialer to block
+// loopback/private/link-local/cloud-metadata targets (SSRF); redirects are
+// still followed (this is a generic uptime checker, unlike the one-shot
+// Slack/webhook delivery clients), but each hop re-dials through the same
+// Control-equipped Dialer, so a redirect into a blocked range is caught too.
+func uptimeCheckClient() *http.Client {
+	dialer := httpsafe.Dialer(10 * time.Second)
+	return &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: &http.Transport{DialContext: dialer.DialContext},
+	}
+}
+
 // performHTTPCheck runs the monitor's HTTP check and evaluates all configured
 // assertions in order: status code → keyword → JSON assertions → response-time
 // threshold. The first failing condition is the recorded failure reason.
-func performHTTPCheck(m db.UptimeMonitor) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
-	client := &http.Client{Timeout: 10 * time.Second}
+// client is injected so tests can pass an unguarded client to reach a local
+// httptest server — see uptimeCheckClient for the hardened client real
+// checks use.
+func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
 	start := time.Now()
 	resp, err := client.Get(m.Url)
 	elapsed := time.Since(start).Milliseconds()

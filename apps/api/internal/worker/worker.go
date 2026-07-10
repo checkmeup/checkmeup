@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -39,6 +41,15 @@ type Notifiers struct {
 	SMS      *twilio.Client
 	RDAP     *rdap.Client
 	Logger   *slog.Logger
+
+	// HTTPClient and TCPDialer back the uptime and port checks respectively.
+	// A monitor's Host/URL is user-supplied, so leaving these nil (the
+	// production default) wires them through httpsafe.Dialer to block
+	// loopback/private/link-local/cloud-metadata targets (SSRF) — see
+	// uptimeCheckClient/portCheckDialer. Tests that need to reach a local
+	// httptest server set these explicitly to an unguarded client/dialer.
+	HTTPClient *http.Client
+	TCPDialer  *net.Dialer
 }
 
 // Run starts the background worker loops. Returns when ctx is cancelled.

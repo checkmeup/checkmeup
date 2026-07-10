@@ -7,12 +7,11 @@ package slack
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"syscall"
 	"time"
+
+	"github.com/checkmeup/checkmeup/internal/httpsafe"
 )
 
 // Message is the JSON body POSTed to a Slack Incoming Webhook URL.
@@ -70,50 +69,22 @@ func TestMessage() Message {
 	}
 }
 
-func isRestrictedIP(ip net.IP) bool {
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
-}
-
-// blockPrivateDial rejects connections to loopback, private, link-local
-// (which includes 169.254.169.254 cloud-metadata), unspecified, and multicast
-// addresses. Mirrors the same guard in the webhook package — Slack webhook
-// URLs are user-supplied, so the destination must be restricted to the public
-// internet even though the URL is validated against hooks.slack.com on save.
-func blockPrivateDial(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		host = address
-	}
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("slack: refusing to dial non-IP address %q", host)
-	}
-	if isRestrictedIP(ip) {
-		return fmt.Errorf("slack: refusing to dial restricted address %s", ip)
-	}
-	return nil
-}
-
-func refuseRedirects(*http.Request, []*http.Request) error {
-	return errors.New("slack: redirects are not followed")
-}
-
 // Client sends Slack messages via Incoming Webhooks.
 type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient builds a Client hardened against SSRF: blockPrivateDial fires
-// after DNS resolution (DNS-rebinding-safe) and refuseRedirects prevents a
-// 3xx chain from retargeting to a blocked address. Consistent with the
-// webhook channel client (US-1402 / EP-14).
+// NewClient builds a Client hardened against SSRF: Slack webhook URLs are
+// user-supplied, so the destination must be restricted to the public
+// internet even though the URL is validated against hooks.slack.com on save.
+// See package httpsafe for the dial-time IP check and redirect handling
+// shared with the generic webhook channel (US-1402 / EP-14).
 func NewClient() *Client {
-	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: blockPrivateDial}
+	dialer := httpsafe.Dialer(10 * time.Second)
 	return &Client{httpClient: &http.Client{
 		Timeout:       10 * time.Second,
 		Transport:     &http.Transport{DialContext: dialer.DialContext},
-		CheckRedirect: refuseRedirects,
+		CheckRedirect: httpsafe.RefuseRedirects,
 	}}
 }
 

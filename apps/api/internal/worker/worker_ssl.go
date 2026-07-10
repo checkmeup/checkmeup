@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/httpsafe"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
@@ -195,8 +195,10 @@ func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (
 	return subject, telegramMsg, emailHTML
 }
 
+// hostname is user-supplied, so the dial goes through httpsafe.Dialer to
+// block loopback/private/link-local/cloud-metadata targets (SSRF).
 func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysLeft int, err error) {
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	dialer := httpsafe.Dialer(10 * time.Second)
 	conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
 		ServerName: hostname,
 		MinVersion: tls.VersionTLS12,
