@@ -2,7 +2,7 @@
 title: DoS / Overload Vulnerability Audit
 type: reference
 status: active
-updated: 2026-07-05
+updated: 2026-07-10
 tags: [security, dos, audit]
 ---
 
@@ -11,6 +11,8 @@ tags: [security, dos, audit]
 Security audit findings — unbounded operations a user or attacker could abuse to overload the system.
 
 No open findings as of 2026-07-04 — the four below were all confirmed fixed in code while re-auditing this doc (it had drifted stale; each had already been patched in an earlier commit without this file being updated).
+
+The concrete, file/line-cited claims below are now re-checked mechanically by the `overload-audit` skill (`.claude/skills/overload-audit/`) instead of relying on the next person to notice drift by hand — run it periodically or after touching any of the cited files.
 
 ---
 
