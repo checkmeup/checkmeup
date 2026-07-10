@@ -5,48 +5,18 @@ import {
   type NotificationChannel,
   type NotificationChannelType,
 } from '@/api/notificationChannels'
+import {
+  buildChannelConfig,
+  configKey,
+  typeIconPath,
+  typeLabel,
+  validateChannelSaveInput,
+} from '@/lib/notificationChannelTypes'
 
-// E.164 phone number pattern (US-1901): a leading +, no leading zero, up to
-// 15 digits total — mirrors the backend's e164Pattern in
-// apps/api/internal/handler/notification_channels.go.
-const E164_PATTERN = /^\+[1-9]\d{1,14}$/
-
-export const typeLabel: Record<NotificationChannelType, string> = {
-  telegram: 'Telegram',
-  email: 'Email',
-  webhook: 'Webhook',
-  slack: 'Slack',
-  sms: 'SMS',
-}
-export const typeIconPath: Record<NotificationChannelType, string> = {
-  telegram: 'M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z',
-  email: 'M4 4h16v16H4z M22 6l-10 7L2 6',
-  webhook:
-    'M10 13a5 5 0 0 0 7.07 0l1.93-1.93a5 5 0 0 0-7.07-7.07L10.5 5.5 M14 11a5 5 0 0 0-7.07 0L5 12.93a5 5 0 0 0 7.07 7.07L13.5 18.5',
-  slack: 'M4 9h16 M4 15h16 M9 4v16 M15 4v16',
-  sms: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
-}
-export const configKey: Record<NotificationChannelType, string> = {
-  telegram: 'chatId',
-  email: 'email',
-  webhook: 'url',
-  slack: 'url',
-  sms: 'phone_number',
-}
-export const valueLabel: Record<NotificationChannelType, string> = {
-  telegram: 'Chat ID',
-  email: 'Email address',
-  webhook: 'Webhook URL',
-  slack: 'Incoming Webhook URL',
-  sms: 'Phone number',
-}
-export const valuePlaceholder: Record<NotificationChannelType, string> = {
-  telegram: '-1001234567890',
-  email: 'alerts@yourteam.com',
-  webhook: 'https://example.com/hooks/checkmeup',
-  slack: 'https://hooks.slack.com/services/...',
-  sms: '+14155551234',
-}
+// typeLabel/configKey/buildChannelConfig/validateChannelSaveInput/etc. live in
+// lib/notificationChannelTypes.ts, not here — they're static/pure and shared with
+// the channel list (NotificationChannelsCard.vue), which shouldn't have to
+// instantiate this form's reactive state just to render a label or icon.
 
 // Holds the add/edit form's state and actions for NotificationChannelsCard —
 // split out from the component so the list-management half (toggle/remove)
@@ -175,54 +145,20 @@ export function useNotificationChannelForm(opts: {
     }
   }
 
-  function buildConfig(): Record<string, string> {
-    const config: Record<string, string> = { [configKey[type.value]]: value.value.trim() }
-    if (type.value === 'sms') {
-      config.consent = smsConsent.value ? 'true' : 'false'
-    }
-    return config
-  }
-
-  // Returns the first validation failure message, or '' if the form is
-  // valid to submit. Split out of save() so that function stays focused
-  // on the actual persist call.
-  function validateSaveInput(): string {
-    if (!name.value.trim()) {
-      return 'Name is required'
-    }
-    if (!value.value.trim()) {
-      return `${valueLabel[type.value]} is required`
-    }
-    if (type.value === 'webhook' && !value.value.trim().startsWith('https://')) {
-      return 'Webhook URL must start with https://'
-    }
-    if (type.value === 'slack' && !value.value.trim().startsWith('https://hooks.slack.com/')) {
-      return 'Must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)'
-    }
-    if (type.value === 'sms') {
-      if (!E164_PATTERN.test(value.value.trim())) {
-        return 'Phone number must be in E.164 format (e.g. +14155551234)'
-      }
-      if (!smsConsent.value) {
-        return 'You must agree to receive SMS alerts at this number before saving'
-      }
-    }
-    return ''
-  }
-
   async function persistChannel() {
+    const config = buildChannelConfig(type.value, value.value, smsConsent.value)
     if (editingId.value) {
       await notificationChannelsApi.update(editingId.value, {
         type: type.value,
         name: name.value.trim(),
-        config: buildConfig(),
+        config,
         enabled: enabled.value,
       })
     } else {
       await notificationChannelsApi.create({
         type: type.value,
         name: name.value.trim(),
-        config: buildConfig(),
+        config,
       })
     }
   }
@@ -230,7 +166,12 @@ export function useNotificationChannelForm(opts: {
   async function save() {
     formError.value = ''
     limitReached.value = false
-    const validationError = validateSaveInput()
+    const validationError = validateChannelSaveInput(
+      type.value,
+      name.value,
+      value.value,
+      smsConsent.value,
+    )
     if (validationError) {
       formError.value = validationError
       return
@@ -258,7 +199,10 @@ export function useNotificationChannelForm(opts: {
     testSuccess.value = false
     limitReached.value = false
     try {
-      await notificationChannelsApi.test({ type: type.value, config: buildConfig() })
+      await notificationChannelsApi.test({
+        type: type.value,
+        config: buildChannelConfig(type.value, value.value, smsConsent.value),
+      })
       testSuccess.value = true
     } catch (e: unknown) {
       if (e instanceof ApiError && e.code === 'plan_limit_reached') {

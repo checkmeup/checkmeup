@@ -5,11 +5,8 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
-import {
-  valueLabel,
-  valuePlaceholder,
-  useNotificationChannelForm,
-} from '@/composables/useNotificationChannelForm'
+import { useNotificationChannelForm } from '@/composables/useNotificationChannelForm'
+import { valueLabel, valuePlaceholder } from '@/lib/notificationChannelTypes'
 
 defineProps<{
   form: UnwrapNestedRefs<ReturnType<typeof useNotificationChannelForm>>

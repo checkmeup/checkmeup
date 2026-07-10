@@ -7,12 +7,8 @@ import { ApiError } from '@/api/client'
 import { notificationChannelsApi, type NotificationChannel } from '@/api/notificationChannels'
 import { useNotificationChannels } from '@/composables/useNotificationChannels'
 import { useBilling } from '@/composables/useBilling'
-import {
-  useNotificationChannelForm,
-  typeLabel,
-  typeIconPath,
-  configKey,
-} from '@/composables/useNotificationChannelForm'
+import { useNotificationChannelForm } from '@/composables/useNotificationChannelForm'
+import { typeLabel, typeIconPath, configKey } from '@/lib/notificationChannelTypes'
 
 const { data, isPending: loading, refetch } = useNotificationChannels()
 const channels = computed(() => data.value ?? [])
