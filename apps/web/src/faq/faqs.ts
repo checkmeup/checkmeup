@@ -45,6 +45,10 @@ export const faqCategories: FaqCategory[] = [
         a: 'Yes — upgrade or downgrade at any time. Billing adjusts automatically on your next cycle.',
       },
       {
+        q: 'Can I pay annually instead of monthly?',
+        a: 'Yes — every paid plan can be billed annually for two months free versus paying monthly. Toggle it in Settings → Billing, or when picking a plan on the pricing page.',
+      },
+      {
         q: 'What happens if I exceed my monitor limit?',
         a: "You'll see an error when creating a new monitor and can choose to upgrade. Existing monitors keep running — we never pause them mid-cycle.",
       },
@@ -79,12 +83,20 @@ export const faqCategories: FaqCategory[] = [
         a: "Yes — every uptime monitor, on every plan including Hobby, supports an optional keyword check: require text to be present, or fail if it is. Useful for catching a maintenance page served with a 200 or an error embedded in a JSON response. We search the first 512 KB of the body; it's never stored, only the pass/fail reason.",
       },
       {
+        q: 'Can I assert on specific fields in a JSON response, or fail on a slow response?',
+        a: 'Yes — uptime monitors also support JSON field assertions (e.g. $.status equals ok, with equals/not equals/contains/greater-than/less-than comparators) and a max response-time threshold. All configured checks — status code, keyword, JSON assertions, response time — must pass for the monitor to be considered up.',
+      },
+      {
         q: 'Can I mute alerts for a noisy monitor?',
         a: 'Yes — each monitor has its own alert toggle. Muted monitors keep tracking status and history; only notifications are suppressed.',
       },
       {
         q: 'Can I pause checks during planned maintenance?',
         a: "Yes — schedule a maintenance window covering any combination of monitors. While it's active, those monitors aren't checked at all: no alerts, no incidents, and uptime stats stay untouched.",
+      },
+      {
+        q: "Can I read a monitor's status programmatically?",
+        a: 'Yes — generate an API key in Settings and call GET /api/v1/public/monitors/{type}/{id}/status with an X-API-Key header. Keys are read-only for now and rate-limited to 60 requests/minute.',
       },
     ],
   },
@@ -103,6 +115,10 @@ export const faqCategories: FaqCategory[] = [
       {
         q: 'What do visitors see during planned maintenance?',
         a: 'Covered monitors show "Under maintenance" with your optional message, instead of up/down — and it doesn\'t trigger the page\'s outage banner.',
+      },
+      {
+        q: 'Can I embed my status on my own site or README?',
+        a: "Yes — every status page has embeddable SVG status badges: one for the page's overall status, plus one per monitor on it. Copy the Markdown or HTML snippet from the status page's detail view.",
       },
     ],
   },

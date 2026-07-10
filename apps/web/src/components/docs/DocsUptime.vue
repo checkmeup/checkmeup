@@ -63,6 +63,37 @@
           pass/fail reason.
         </span>
       </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span>
+          <strong style="color: var(--text-strong)">JSON assertions</strong> — assert on one or
+          more fields in a JSON response, e.g.
+          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+            >$.status</code
+          >
+          equals
+          <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+            >ok</code
+          >. Each assertion is a path, a comparator (equals, not equals, contains, &gt;, &lt;),
+          and an expected value; add as many as you need — all of them must pass, same 512 KB
+          response-body limit as keyword monitoring. The failure reason (which assertion didn't
+          match) shows on the monitor's incident history.
+        </span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span>
+          <strong style="color: var(--text-strong)">Response time threshold</strong> — set a max
+          response time in milliseconds; a check that's otherwise healthy (200, keyword, and
+          JSON assertions all pass) still opens an incident if it's slower than that.
+        </span>
+      </li>
     </ul>
   </section>
 </template>

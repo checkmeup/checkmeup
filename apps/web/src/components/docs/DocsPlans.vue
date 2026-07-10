@@ -59,6 +59,11 @@ import { RouterLink } from 'vue-router'
       Keyword monitoring is available on every plan, including Hobby. See the full feature
       comparison for everything else that's the same across every plan.
     </p>
+    <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
+      Paid plans can also be billed <strong style="color: var(--text-strong)">annually</strong>
+      — two months free compared to paying monthly — toggle it in
+      <strong style="color: var(--text-strong)">Settings → Billing</strong>.
+    </p>
     <RouterLink
       to="/pricing"
       class="inline-flex items-center gap-1 mt-4 text-sm transition-colors"

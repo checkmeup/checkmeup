@@ -8,6 +8,7 @@ import DocsDomain from '@/components/docs/DocsDomain.vue'
 import DocsPort from '@/components/docs/DocsPort.vue'
 import DocsTelegram from '@/components/docs/DocsTelegram.vue'
 import DocsEmail from '@/components/docs/DocsEmail.vue'
+import DocsWebhook from '@/components/docs/DocsWebhook.vue'
 import DocsSlack from '@/components/docs/DocsSlack.vue'
 import DocsSms from '@/components/docs/DocsSms.vue'
 import DocsStatusPages from '@/components/docs/DocsStatusPages.vue'
@@ -34,6 +35,7 @@ const sections = [
   { id: 'port', label: 'Port (TCP) monitoring' },
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'email', label: 'Email alerts' },
+  { id: 'webhook', label: 'Webhook alerts' },
   { id: 'slack', label: 'Slack alerts' },
   { id: 'sms', label: 'SMS alerts' },
   { id: 'status-pages', label: 'Status pages' },
@@ -96,6 +98,8 @@ const sections = [
         <DocsTelegram />
 
         <DocsEmail />
+
+        <DocsWebhook />
 
         <DocsSlack />
 

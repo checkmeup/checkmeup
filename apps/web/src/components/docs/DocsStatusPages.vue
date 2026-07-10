@@ -9,10 +9,17 @@
       and add any of your monitors to it. Visitors see live status and incident history — no
       login required, nothing to install on their end.
     </p>
-    <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+    <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       There's no subdomain or DNS setup. Status pages live on the same domain by design, which
       means freelancers and agencies can share a clean link with clients in seconds instead
       of provisioning DNS for every account.
+    </p>
+    <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+      Every status page also has embeddable <strong style="color: var(--text-strong)"
+        >status badges</strong
+      > — an overall-status SVG for the page, plus one per monitor on it. Copy the Markdown or
+      HTML snippet from the status page's detail view (each links back to the public page) and
+      drop it in a README, wiki, or internal dashboard.
     </p>
   </section>
 </template>
