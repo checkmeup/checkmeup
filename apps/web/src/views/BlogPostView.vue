@@ -21,6 +21,37 @@ useSeo({
 useHead({
   meta: [{ name: 'robots', content: () => (post.value ? 'index, follow' : 'noindex') }],
 })
+
+// Makes matched posts eligible for richer search listings (author, publish
+// date). No entry at all for an unknown slug — same reasoning as the
+// noindex tag above, nothing to describe.
+const articleSchema = computed(() => {
+  if (!post.value) return null
+  const publishedAt = new Date(post.value.date).toISOString()
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.value.title,
+    description: post.value.excerpt,
+    datePublished: publishedAt,
+    dateModified: publishedAt,
+    author: { '@type': 'Person', name: 'Andrew Molyuk', url: 'https://checkmeup.net/about' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'checkmeup',
+      logo: { '@type': 'ImageObject', url: 'https://checkmeup.net/img/checkmeup-og.png' },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://checkmeup.net/blog/${post.value.slug}` },
+  }
+})
+
+useHead({
+  script: computed(() =>
+    articleSchema.value
+      ? [{ type: 'application/ld+json', innerHTML: JSON.stringify(articleSchema.value) }]
+      : [],
+  ),
+})
 </script>
 
 <template>
