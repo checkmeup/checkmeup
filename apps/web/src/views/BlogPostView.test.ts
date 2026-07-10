@@ -48,16 +48,17 @@ describe('BlogPostView', () => {
     routeParams.slug = 'this-slug-does-not-exist'
     const wrapper = mount(BlogPostView)
 
-    expect(wrapper.text()).toContain('Post not found.')
+    expect(wrapper.text()).toContain("doesn't exist, or it moved without telling anyone")
   })
 
-  it('links back to the blog list from the not-found state', () => {
+  it('links back to the blog list and homepage from the not-found state', () => {
     routeParams.slug = 'this-slug-does-not-exist'
     const wrapper = mount(BlogPostView)
 
-    const backLink = wrapper.findComponent({ name: 'RouterLink' })
-    expect(backLink.exists()).toBe(true)
-    expect(backLink.props('to')).toBe('/blog')
+    const links = wrapper.findAllComponents({ name: 'RouterLink' })
+    const targets = links.map((link) => link.props('to'))
+    expect(targets).toContain('/blog')
+    expect(targets).toContain('/')
   })
 
   it('does not render post content when the slug is not found', () => {

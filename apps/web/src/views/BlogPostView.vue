@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import NotFoundHero from '@/components/NotFoundHero.vue'
 import { getPost } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
@@ -25,10 +26,14 @@ useHead({
 <template>
   <LandingLayout>
     <!-- 404 -->
-    <div v-if="!post" class="max-w-3xl mx-auto px-4 sm:px-6 py-24 text-center">
-      <p class="text-lg mb-4" style="color: var(--text-dim)">Post not found.</p>
-      <RouterLink to="/blog" style="color: var(--color-green-500)">← Back to blog</RouterLink>
-    </div>
+    <NotFoundHero
+      v-if="!post"
+      badge="Post status: not found"
+      heading="This post doesn't exist, or it moved without telling anyone."
+      description="The post you're looking for isn't here — check the link, or head back to the blog for everything that's actually been published."
+      :primary-cta="{ label: 'Back to blog', to: '/blog' }"
+      :secondary-cta="{ label: 'Go to homepage', to: '/' }"
+    />
 
     <template v-else>
       <!-- Header -->
