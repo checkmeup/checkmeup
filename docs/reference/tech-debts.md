@@ -16,5 +16,5 @@ Known architecture/code smells that aren't worth an ADR or an immediate fix, but
 
 ### Maintainability
 
-- **Duplicated alert-message string building** across `checkOverdue` (`worker_cron.go`), `checkOneUptimeMonitor` (`worker_uptime.go`), `checkOneSSLMonitor` (`worker_ssl.go`) — near-identical `fmt.Sprintf` pairs (Telegram/email subject/HTML) repeated per monitor type. The SSL threshold-alert block (`worker_ssl.go`'s `sslExpiredMessages`/`sslExpiringSoonMessages`) is a near-duplicate of the domain one (`worker_domain.go`'s `domainExpiredMessages`/`domainExpiringSoonMessages`), differing only by field names (issuer vs registrar).
-  → Factor into a small templated helper shared across monitor types.
+- **`checkOverdue`/`buildUptimeDownAlert`/`buildPortDownAlert` each hand-build their own `AlertMessage`** (Telegram/EmailSubject/EmailHTML/Webhook/Slack/SMS, one `fmt.Sprintf` per field) — same shape as `expiredMessages`/`expiringSoonMessages` (`worker.go`, shared by SSL/domain since 2026-07-10) but with genuinely different reason text per type ("missed its ping" vs a check failure reason vs "port unexpectedly open"), not just a field-name swap.
+  → Leave as-is for now — forcing these into one shared template would either lose per-type phrasing or need as many parameters as the duplication saves. Revisit if a fourth near-identical case shows up.

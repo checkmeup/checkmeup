@@ -348,6 +348,42 @@ func dispatchFallbackEmail(ctx context.Context, n Notifiers, orgID uuid.UUID, ms
 	return sent
 }
 
+// expiryAlertSubject describes the per-monitor-type wording for
+// expiredMessages/expiringSoonMessages below, shared by the SSL and domain
+// checks — both follow the same 30/14/7-day threshold pattern
+// (sslCrossedThreshold) and only differ in what's being checked and which
+// field to display.
+type expiryAlertSubject struct {
+	Name       string // monitor name
+	Thing      string // "SSL certificate" / "domain registration"
+	FieldLabel string // "Host" / "Domain"
+	Target     string // the checked value: hostname / domain
+	Emoji      string // expiringSoonMessages' icon: "🔐" / "🌐" (expiredMessages always uses 🔴)
+}
+
+// expiredMessages builds the DOWN alert text for an expiry-threshold check
+// (SSL/domain) that has already lapsed, distinct from expiringSoonMessages'
+// "expires in N days" phrasing.
+func expiredMessages(s expiryAlertSubject, expiresStr string) (subject, telegramMsg, emailHTML string) {
+	subject = fmt.Sprintf("DOWN: %s %s expired", s.Name, s.Thing)
+	telegramMsg = fmt.Sprintf("🔴 <b>%s</b> %s has <b>expired</b>\n\n%s: <code>%s</code>\nExpired: %s",
+		s.Name, s.Thing, s.FieldLabel, s.Target, expiresStr)
+	emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> %s has <b>expired</b></p><p>%s: <code>%s</code><br>Expired: %s</p>",
+		s.Name, s.Thing, s.FieldLabel, s.Target, expiresStr)
+	return
+}
+
+// expiringSoonMessages builds the threshold-crossing alert text for an
+// expiry-threshold check (SSL/domain) still ahead of expiry.
+func expiringSoonMessages(s expiryAlertSubject, daysLeft int, expiresStr string) (subject, telegramMsg, emailHTML string) {
+	subject = fmt.Sprintf("%s %s expires in %d days", s.Name, s.Thing, daysLeft)
+	telegramMsg = fmt.Sprintf("%s <b>%s</b> %s expires in <b>%d days</b>\n\n%s: <code>%s</code>\nExpires: %s",
+		s.Emoji, s.Name, s.Thing, daysLeft, s.FieldLabel, s.Target, expiresStr)
+	emailHTML = fmt.Sprintf("<p>%s <b>%s</b> %s expires in <b>%d days</b></p><p>%s: <code>%s</code><br>Expires: %s</p>",
+		s.Emoji, s.Name, s.Thing, daysLeft, s.FieldLabel, s.Target, expiresStr)
+	return
+}
+
 // slackMsg returns a pointer to msg so it can be stored in AlertMessage.Slack
 // without requiring the caller to take the address of a slack.Message literal.
 func slackMsg(msg slack.Message) *slack.Message { return &msg }

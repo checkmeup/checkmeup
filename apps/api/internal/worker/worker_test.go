@@ -1837,6 +1837,21 @@ func TestDomainExpiredMessages(t *testing.T) {
 	}
 }
 
+func TestDomainExpiringSoonMessages(t *testing.T) {
+	m := db.DomainMonitor{Name: "Prod domain", Domain: "example.com"}
+	subject, telegramMsg, emailHTML := domainExpiringSoonMessages(m, 7, "2026-01-08")
+
+	if !strings.Contains(subject, "Prod domain") || !strings.Contains(subject, "7 days") {
+		t.Fatalf("want subject to name the monitor and say 7 days, got %q", subject)
+	}
+	if !strings.Contains(telegramMsg, "example.com") || !strings.Contains(telegramMsg, "7 days") {
+		t.Fatalf("want telegram message to include the domain and day count, got %q", telegramMsg)
+	}
+	if !strings.Contains(emailHTML, "2026-01-08") {
+		t.Fatalf("want email HTML to include the expiry date, got %q", emailHTML)
+	}
+}
+
 // ─── pruneOldPings ─────────────────────────────────────────────────────────
 
 func TestPruneOldPings(t *testing.T) {

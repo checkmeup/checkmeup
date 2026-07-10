@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -158,23 +157,14 @@ func domainThresholdAlert(m db.DomainMonitor, daysLeft int, expiresAt time.Time,
 	}
 }
 
-// domainExpiredMessages builds the alert text for a domain registration that
-// has already lapsed (daysLeft < 0), distinct from
-// domainExpiringSoonMessages' "expires in N days" phrasing.
+// domainExpiredMessages/domainExpiringSoonMessages delegate to the shared
+// expiredMessages/expiringSoonMessages (worker.go) — mirrored by
+// sslExpiredMessages/sslExpiringSoonMessages in worker_ssl.go, which only
+// differ in Thing/FieldLabel/Target/Emoji.
 func domainExpiredMessages(m db.DomainMonitor, expiresStr string) (subject, telegramMsg, emailHTML string) {
-	subject = fmt.Sprintf("DOWN: %s domain registration expired", m.Name)
-	telegramMsg = fmt.Sprintf("🔴 <b>%s</b> domain registration has <b>expired</b>\n\nDomain: <code>%s</code>\nExpired: %s",
-		m.Name, m.Domain, expiresStr)
-	emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> domain registration has <b>expired</b></p><p>Domain: <code>%s</code><br>Expired: %s</p>",
-		m.Name, m.Domain, expiresStr)
-	return subject, telegramMsg, emailHTML
+	return expiredMessages(expiryAlertSubject{Name: m.Name, Thing: "domain registration", FieldLabel: "Domain", Target: m.Domain}, expiresStr)
 }
 
 func domainExpiringSoonMessages(m db.DomainMonitor, daysLeft int, expiresStr string) (subject, telegramMsg, emailHTML string) {
-	subject = fmt.Sprintf("%s domain registration expires in %d days", m.Name, daysLeft)
-	telegramMsg = fmt.Sprintf("🌐 <b>%s</b> domain registration expires in <b>%d days</b>\n\nDomain: <code>%s</code>\nExpires: %s",
-		m.Name, daysLeft, m.Domain, expiresStr)
-	emailHTML = fmt.Sprintf("<p>🌐 <b>%s</b> domain registration expires in <b>%d days</b></p><p>Domain: <code>%s</code><br>Expires: %s</p>",
-		m.Name, daysLeft, m.Domain, expiresStr)
-	return subject, telegramMsg, emailHTML
+	return expiringSoonMessages(expiryAlertSubject{Name: m.Name, Thing: "domain registration", FieldLabel: "Domain", Target: m.Domain, Emoji: "🌐"}, daysLeft, expiresStr)
 }

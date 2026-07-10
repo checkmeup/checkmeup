@@ -175,25 +175,16 @@ func sslCrossedThreshold(daysLeft int, alerted30d, alerted14d, alerted7d *bool) 
 	}
 }
 
-// sslExpiredMessages builds the alert text for a certificate that has
-// already expired (daysLeft < 0), distinct from sslExpiringSoonMessages'
-// "expires in N days" phrasing.
+// sslExpiredMessages/sslExpiringSoonMessages delegate to the shared
+// expiredMessages/expiringSoonMessages (worker.go) — mirrored by
+// domainExpiredMessages/domainExpiringSoonMessages in worker_domain.go,
+// which only differ in Thing/FieldLabel/Target/Emoji.
 func sslExpiredMessages(m db.SslMonitor, expiresStr string) (subject, telegramMsg, emailHTML string) {
-	subject = fmt.Sprintf("DOWN: %s SSL certificate expired", m.Name)
-	telegramMsg = fmt.Sprintf("🔴 <b>%s</b> SSL certificate has <b>expired</b>\n\nHost: <code>%s</code>\nExpired: %s",
-		m.Name, m.Hostname, expiresStr)
-	emailHTML = fmt.Sprintf("<p>🔴 <b>%s</b> SSL certificate has <b>expired</b></p><p>Host: <code>%s</code><br>Expired: %s</p>",
-		m.Name, m.Hostname, expiresStr)
-	return subject, telegramMsg, emailHTML
+	return expiredMessages(expiryAlertSubject{Name: m.Name, Thing: "SSL certificate", FieldLabel: "Host", Target: m.Hostname}, expiresStr)
 }
 
 func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (subject, telegramMsg, emailHTML string) {
-	subject = fmt.Sprintf("%s SSL certificate expires in %d days", m.Name, daysLeft)
-	telegramMsg = fmt.Sprintf("🔐 <b>%s</b> SSL certificate expires in <b>%d days</b>\n\nHost: <code>%s</code>\nExpires: %s",
-		m.Name, daysLeft, m.Hostname, expiresStr)
-	emailHTML = fmt.Sprintf("<p>🔐 <b>%s</b> SSL certificate expires in <b>%d days</b></p><p>Host: <code>%s</code><br>Expires: %s</p>",
-		m.Name, daysLeft, m.Hostname, expiresStr)
-	return subject, telegramMsg, emailHTML
+	return expiringSoonMessages(expiryAlertSubject{Name: m.Name, Thing: "SSL certificate", FieldLabel: "Host", Target: m.Hostname, Emoji: "🔐"}, daysLeft, expiresStr)
 }
 
 // sharedSSLDialer is the *net.Dialer used for every SSL check, built once
