@@ -93,3 +93,11 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-09 | Thu | Decompose HomeView/DashboardView/DocsView/NotificationChannelsCard.vue (SRP refactor + form composable extraction) | 3 h   |
 | 2026-07-09 | Thu | PR cleanup: stray merge-commit rebuilds, CodeQL false-positive triage (lgtm suppression + Lizard parser quirk), Codacy ESLint/type fixes, sequential PR realignment with main | 3 h   |
 | 2026-07-09 | Thu | Short version display (git describe → vX.Y.Z) in dashboard sidebar + footer | 1 h   |
+| 2026-07-12 | Sun | ADR-034 + EP-24 Incident management, full epic (5/5): schema, backend CRUD + updates feed, frontend Incidents nav/views, public status page integration, US-2405 maintenance-overlap warning | 4 h   |
+| 2026-07-12 | Sun | Public status page incident design polish (match Design option 1a: severity-tinted cards, full update timeline, past-incidents summary) | 1 h   |
+| 2026-07-12 | Sun | Codacy fixes for PR #74: CreateIncident complexity split + backend/frontend test coverage for EP-24 | 2 h   |
+| 2026-07-12 | Sun | Status page spacing fix + ADR-035 hide-branding toggle (migration, plan-gated backend, downgrade enforcement, frontend checkbox) | 2 h   |
+| 2026-07-12 | Sun | Docs catch-up for EP-24/ADR-035 (internal + website) + v1.28 release notes + security/architecture/rate-limit audits | 2 h   |
+| 2026-07-12 | Sun | Incident-list LIMIT 200 fix (PR #76) + 90-day incident retention (ADR-015 revised) + 100-active-incident cap | 2 h   |
+| 2026-07-12 | Sun | ADR-036 flat safety caps (incident updates, maintenance windows, API keys) + N+1 query batching fix on public status page | 3 h   |
+| 2026-07-12 | Sun | v1.29 release notes blog post                                    | 1 h   |
