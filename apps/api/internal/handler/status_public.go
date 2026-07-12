@@ -263,12 +263,33 @@ func parseIncidentsPageParam(s string) int {
 // loadActiveIncidents fetches manually-declared incidents (EP-24) that are
 // still open and affect at least one monitor on this page, each with its
 // full update timeline (design: CheckMeUp Status Page.dc.html, option 1a —
-// the timeline shows every update, not just the latest one).
+// the timeline shows every update, not just the latest one). Update
+// timelines are fetched in one batched query for every incident on the
+// page, not one query per incident — a page with many active incidents
+// would otherwise issue that many separate round-trips on every
+// unauthenticated page load.
 func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.StatusPage) ([]publicIncidentRow, error) {
 	rows, err := h.queries.ListActiveStatusPageIncidentsForPage(ctx, page.ID)
 	if err != nil {
 		return nil, err
 	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]uuid.UUID, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ID
+	}
+	updates, err := h.queries.ListStatusPageIncidentUpdatesForIncidents(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	updatesByIncident := make(map[uuid.UUID][]db.StatusPageIncidentUpdate, len(rows))
+	for _, u := range updates {
+		updatesByIncident[u.IncidentID] = append(updatesByIncident[u.IncidentID], u)
+	}
+
 	result := make([]publicIncidentRow, 0, len(rows))
 	for _, r := range rows {
 		row := publicIncidentRow{
@@ -279,20 +300,19 @@ func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.S
 			Affected:      string(r.Affected),
 			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
 		}
-		if updates, err := h.queries.ListStatusPageIncidentUpdates(ctx, r.ID); err == nil {
-			row.Updates = make([]publicIncidentUpdateRow, len(updates))
-			for i, u := range updates {
-				row.Updates[i] = publicIncidentUpdateRow{
-					StatusLabel:  incidentStatusLabel(u.Status),
-					RelativeTime: relativeTime(u.CreatedAt.Time),
-					Message:      u.Message,
-					IsLast:       i == len(updates)-1,
-				}
+		incidentUpdates := updatesByIncident[r.ID]
+		row.Updates = make([]publicIncidentUpdateRow, len(incidentUpdates))
+		for i, u := range incidentUpdates {
+			row.Updates[i] = publicIncidentUpdateRow{
+				StatusLabel:  incidentStatusLabel(u.Status),
+				RelativeTime: relativeTime(u.CreatedAt.Time),
+				Message:      u.Message,
+				IsLast:       i == len(incidentUpdates)-1,
 			}
-			if len(updates) > 0 {
-				row.LatestUpdateMessage = updates[0].Message
-				row.LatestUpdateAt = updates[0].CreatedAt.Time.Format("2006-01-02 15:04 UTC")
-			}
+		}
+		if len(incidentUpdates) > 0 {
+			row.LatestUpdateMessage = incidentUpdates[0].Message
+			row.LatestUpdateAt = incidentUpdates[0].CreatedAt.Time.Format("2006-01-02 15:04 UTC")
 		}
 		result = append(result, row)
 	}

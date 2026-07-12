@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-12
 **Status:** Accepted
+**Revised:** 2026-07-12 — a follow-up re-audit of `status_public.go` found that the caps below, while each individually bounded, composed into an N+1 query pattern in `loadActiveIncidents`; batched into one query — see Consequences
 
 ---
 
@@ -35,3 +36,4 @@ The `100` number itself isn't derived from a capacity calculation the way [ADR-0
 - Closes the last of the unbounded-creation gaps found in this pass; `docs/reference/limits.md` and the `overload-audit` skill (`.claude/skills/overload-audit/audit.py`) both updated to track all four caps and list-query `LIMIT`s mechanically, so a future removal of any of them gets caught the same way a removed rate limit or check-loop semaphore would.
 - No plan differentiation anywhere in this ADR — Hobby and Enterprise get the identical 100. If a future need arises to scale one of these with plan tier (e.g. Enterprise wanting more than 100 maintenance windows), that's a new decision, not an extension of this one.
 - Maintenance windows now have a hard ceiling with no corresponding cleanup mechanism (unlike incidents, which pair their cap with 90-day retention on resolved ones). An org that hits 100 windows must delete an old one manually; there's no auto-expiry for ended windows. Acceptable for now since maintenance windows are typically short-lived scheduled events an org already manages by hand, but worth revisiting if this cap is ever actually reached in practice.
+- Individually-bounded pieces can still compose into an unbounded query pattern. `loadActiveIncidents` (`status_public.go`) previously issued one `ListStatusPageIncidentUpdates` call per active incident on a page — with the caps above, that's now a bounded-but-still-large worst case (up to 100 active incidents × 100 updates each = up to 10,000 rows across up to 101 round-trips, all on one unauthenticated page load). Fixed by adding `ListStatusPageIncidentUpdatesForIncidents` (`WHERE incident_id = ANY($1::uuid[])`) and batching all of a page's active-incident updates into a single query, grouped in Go — a page's public render is now always 2 queries for its incident data (one for the incidents, one for all their updates), regardless of how many active incidents apply. Total row count is unchanged (still bounded by the per-resource caps, not reduced by this fix); what changed is round-trip count, not data volume.

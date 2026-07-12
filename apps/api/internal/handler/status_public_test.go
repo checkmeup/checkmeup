@@ -129,6 +129,52 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 	})
 
+	t.Run("active incidents render their full update timeline, newest first, batched across incidents", func(t *testing.T) {
+		incidentH := NewIncidentHandler(pool)
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "API")
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Incident Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "uptime", MonitorID: mon.ID, DisplayName: "API", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		created := createIncident(t, incidentH, u.access, createIncidentRequest{
+			Title: "Elevated latency", Message: "Investigating reports", Severity: "major",
+			Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		})
+		followUp := doIncidentRequest(t, http.MethodPost, incidentH.PostIncidentUpdate, u.access, "/api/v1/incidents/"+created.ID+"/updates", map[string]string{"id": created.ID}, postUpdateRequest{
+			Message: "Found the cause", Status: "identified",
+		})
+		if followUp.Code != http.StatusCreated {
+			t.Fatalf("setup: want 201, got %d: %s", followUp.Code, followUp.Body.String())
+		}
+
+		w := doPublicStatusPage(publicH, slug)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, "Elevated latency") {
+			t.Fatal("want the incident title rendered")
+		}
+		if !strings.Contains(body, "Investigating reports") {
+			t.Fatal("want the initial update message rendered")
+		}
+		if !strings.Contains(body, "Found the cause") {
+			t.Fatal("want the follow-up update message rendered")
+		}
+		idxInitial := strings.Index(body, "Investigating reports")
+		idxFollowUp := strings.Index(body, "Found the cause")
+		if idxFollowUp > idxInitial {
+			t.Fatal("want the newest update (Found the cause) rendered before the older one (Investigating reports)")
+		}
+	})
+
 	t.Run("renders monitor statuses and aggregates overall status", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		cron := createCronMonitor(t, monitorH, u.access, "Cron job")

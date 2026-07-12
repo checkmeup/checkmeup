@@ -84,6 +84,15 @@ def check_named_limit_200_queries(findings):
                 findings.append(f"{rel}: {name} has no LIMIT 200 cap")
 
 
+def check_active_incidents_batched(findings):
+    text = (API / "internal" / "handler" / "status_public.go").read_text()
+    if "ListStatusPageIncidentUpdatesForIncidents" not in text:
+        findings.append(
+            "status_public.go: loadActiveIncidents no longer calls the batched "
+            "ListStatusPageIncidentUpdatesForIncidents — may have regressed to one query per incident (N+1)"
+        )
+
+
 # Each entry: (handler file, "const = N" snippet, "call-site" snippet) for a
 # flat, uniform-across-every-plan creation cap — the four added 2026-07-12
 # after ListStatusPageIncidentUpdates' missing LIMIT led to auditing every
@@ -149,6 +158,7 @@ CHECKS = [
     check_status_page_incident_limits,
     check_named_limit_200_queries,
     check_flat_caps,
+    check_active_incidents_batched,
     check_pruning_wired,
     check_status_page_rate_limit,
     check_blanket_org_limit,

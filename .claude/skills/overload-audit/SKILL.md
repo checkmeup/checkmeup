@@ -64,6 +64,11 @@ claims... still hold."
 - `pruneOldPings` (`worker.go`) still calls all four retention-cleanup
   queries (`DeleteOldCronPings`/`DeleteOldUptimeChecks`/`DeleteOldPortChecks`/
   `DeleteOldStatusPageIncidents`)
+- `loadActiveIncidents` (`status_public.go`) still fetches every active
+  incident's updates in one batched query
+  (`ListStatusPageIncidentUpdatesForIncidents`) rather than one query per
+  incident — an N+1 pattern that would otherwise scale a single public
+  page's DB round-trips with however many active incidents apply to it
 - The public status page + its two badge endpoints are still IP-rate-limited
   at 300/min (`server.go`)
 - The `RequireAuth` group still carries its blanket 300/min-per-org

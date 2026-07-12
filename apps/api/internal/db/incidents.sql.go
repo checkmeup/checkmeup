@@ -362,6 +362,41 @@ func (q *Queries) ListStatusPageIncidentUpdates(ctx context.Context, incidentID 
 	return items, nil
 }
 
+const listStatusPageIncidentUpdatesForIncidents = `-- name: ListStatusPageIncidentUpdatesForIncidents :many
+SELECT id, incident_id, message, status, created_at FROM status_page_incident_updates WHERE incident_id = ANY($1::uuid[]) ORDER BY incident_id, created_at DESC
+`
+
+// Batched form of ListStatusPageIncidentUpdates, for loadActiveIncidents
+// (status_public.go): one round-trip for every active incident on a page's
+// update timelines instead of one query per incident (N+1). No LIMIT here —
+// each incident_id group is already bounded to maxUpdatesPerIncident by
+// checkUpdateCap at write time, so a per-group cap would be redundant.
+func (q *Queries) ListStatusPageIncidentUpdatesForIncidents(ctx context.Context, dollar_1 []uuid.UUID) ([]StatusPageIncidentUpdate, error) {
+	rows, err := q.db.Query(ctx, listStatusPageIncidentUpdatesForIncidents, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StatusPageIncidentUpdate{}
+	for rows.Next() {
+		var i StatusPageIncidentUpdate
+		if err := rows.Scan(
+			&i.ID,
+			&i.IncidentID,
+			&i.Message,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStatusPageIncidents = `-- name: ListStatusPageIncidents :many
 SELECT spi.id, spi.org_id, spi.title, spi.severity, spi.status, spi.created_at, spi.updated_at, spi.resolved_at, COUNT(spim.id) AS monitor_count
 FROM status_page_incidents spi

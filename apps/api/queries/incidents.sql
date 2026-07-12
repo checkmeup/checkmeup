@@ -67,6 +67,14 @@ SELECT COUNT(*) FROM status_page_incident_updates WHERE incident_id = $1;
 -- name: ListStatusPageIncidentUpdates :many
 SELECT * FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 200;
 
+-- name: ListStatusPageIncidentUpdatesForIncidents :many
+-- Batched form of ListStatusPageIncidentUpdates, for loadActiveIncidents
+-- (status_public.go): one round-trip for every active incident on a page's
+-- update timelines instead of one query per incident (N+1). No LIMIT here —
+-- each incident_id group is already bounded to maxUpdatesPerIncident by
+-- checkUpdateCap at write time, so a per-group cap would be redundant.
+SELECT * FROM status_page_incident_updates WHERE incident_id = ANY($1::uuid[]) ORDER BY incident_id, created_at DESC;
+
 -- name: GetLatestStatusPageIncidentUpdate :one
 SELECT * FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1;
 
