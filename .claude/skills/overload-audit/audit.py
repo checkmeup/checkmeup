@@ -29,6 +29,8 @@ INCIDENT_QUERIES = {
 
 PRUNE_QUERIES = ["DeleteOldCronPings", "DeleteOldUptimeChecks", "DeleteOldPortChecks"]
 
+STATUS_PAGE_INCIDENT_QUERIES = ["ListStatusPageIncidents", "ListActiveStatusPageIncidentsForPage"]
+
 
 def check_bounded_concurrency(findings):
     missing = []
@@ -46,6 +48,20 @@ def check_incident_limits(findings):
         pattern = re.compile(rf"FROM {table}.*LIMIT 200", re.IGNORECASE)
         if not pattern.search(text):
             findings.append(f"{rel}: no LIMIT-200-capped list query found for {table}")
+
+
+def check_status_page_incident_limits(findings):
+    text = (API / "queries" / "incidents.sql").read_text()
+    # Each named query's body runs from its "-- name: X :many" header to the
+    # next "-- name:" (or EOF) — split on that header so a LIMIT 200 in one
+    # query can't be mistaken for coverage of a different one further up.
+    blocks = dict(re.findall(r"-- name: (\w+) :\w+\n(.*?)(?=\n-- name:|\Z)", text, re.DOTALL))
+    for name in STATUS_PAGE_INCIDENT_QUERIES:
+        body = blocks.get(name)
+        if body is None:
+            findings.append(f"queries/incidents.sql: query {name} not found")
+        elif "LIMIT 200" not in body:
+            findings.append(f"queries/incidents.sql: {name} has no LIMIT 200 cap")
 
 
 def check_pruning_wired(findings):
@@ -89,6 +105,7 @@ def check_monitor_plan_limits(findings):
 CHECKS = [
     check_bounded_concurrency,
     check_incident_limits,
+    check_status_page_incident_limits,
     check_pruning_wired,
     check_status_page_rate_limit,
     check_blanket_org_limit,

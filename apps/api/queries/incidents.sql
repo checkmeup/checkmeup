@@ -14,7 +14,8 @@ FROM status_page_incidents spi
 LEFT JOIN status_page_incident_monitors spim ON spim.incident_id = spi.id
 WHERE spi.org_id = $1
 GROUP BY spi.id
-ORDER BY spi.created_at DESC;
+ORDER BY spi.created_at DESC
+LIMIT 200;
 
 -- name: UpdateStatusPageIncidentTitle :one
 UPDATE status_page_incidents
@@ -72,7 +73,8 @@ JOIN status_page_incident_monitors spim ON spim.incident_id = spi.id
 JOIN status_page_monitors spm ON spm.monitor_type = spim.monitor_type AND spm.monitor_id = spim.monitor_id
 WHERE spm.page_id = $1 AND spi.status != 'resolved'
 GROUP BY spi.id, spi.title, spi.severity, spi.status, spi.created_at
-ORDER BY spi.created_at DESC;
+ORDER BY spi.created_at DESC
+LIMIT 200;
 
 -- name: ListResolvedStatusPageIncidentsForPage :many
 SELECT DISTINCT spi.id, spi.title, spi.severity, spi.status, spi.created_at, spi.resolved_at

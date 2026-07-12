@@ -176,6 +176,7 @@ JOIN status_page_monitors spm ON spm.monitor_type = spim.monitor_type AND spm.mo
 WHERE spm.page_id = $1 AND spi.status != 'resolved'
 GROUP BY spi.id, spi.title, spi.severity, spi.status, spi.created_at
 ORDER BY spi.created_at DESC
+LIMIT 200
 `
 
 type ListActiveStatusPageIncidentsForPageRow struct {
@@ -333,6 +334,7 @@ LEFT JOIN status_page_incident_monitors spim ON spim.incident_id = spi.id
 WHERE spi.org_id = $1
 GROUP BY spi.id
 ORDER BY spi.created_at DESC
+LIMIT 200
 `
 
 type ListStatusPageIncidentsRow struct {
