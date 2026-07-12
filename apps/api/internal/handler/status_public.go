@@ -791,7 +791,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 .timeline-status{font-size:12.5px;font-weight:600;color:var(--text-strong)}
 .timeline-time{font-weight:400;color:var(--text-muted);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px}
 .timeline-message{font-size:12.5px;color:var(--text-dim);margin-top:3px;line-height:1.5}
-.incidents-history{margin-top:8px;margin-bottom:8px}
+.incidents-history{margin-top:24px;margin-bottom:8px}
 .section-title{font-size:12.5px;font-weight:600;color:var(--text-dim);margin-bottom:10px}
 .history-row{padding:12px 0;border-top:1px solid var(--border)}
 .history-head{display:flex;align-items:center;gap:8px}
