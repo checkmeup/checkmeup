@@ -128,6 +128,10 @@ export const faqCategories: FaqCategory[] = [
         q: 'Can I remove the "Powered by Checkmeup" branding from my status page?',
         a: 'Yes, on Solo and above — each status page has a hide branding toggle in its edit settings that removes the "Powered by Checkmeup" line and FAQ/Terms/Privacy links from the public footer. It\'s set per page, not account-wide.',
       },
+      {
+        q: 'How long do resolved incidents stay visible?',
+        a: '90 days, the same window as check history, on every plan — no difference between Hobby and paid. A still-active incident is never removed on a timer, however old it gets; only resolved ones age out.',
+      },
     ],
   },
   {

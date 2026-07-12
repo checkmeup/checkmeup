@@ -1890,6 +1890,47 @@ func mustExecWorker(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 	}
 }
 
+func TestPruneOldStatusPageIncidents(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	org := testOrg(t, queries, pool)
+
+	mustExecWorker(t, pool,
+		"INSERT INTO status_page_incidents (org_id, title, severity, status, resolved_at) VALUES ($1, 'old resolved', 'minor', 'resolved', NOW() - INTERVAL '91 days')",
+		org.ID)
+	mustExecWorker(t, pool,
+		"INSERT INTO status_page_incidents (org_id, title, severity, status, resolved_at) VALUES ($1, 'recent resolved', 'minor', 'resolved', NOW() - INTERVAL '1 day')",
+		org.ID)
+	mustExecWorker(t, pool,
+		"INSERT INTO status_page_incidents (org_id, title, severity, status, created_at) VALUES ($1, 'old but still active', 'critical', 'investigating', NOW() - INTERVAL '200 days')",
+		org.ID)
+
+	pruneOldPings(context.Background(), queries, testLogger())
+
+	var remaining []string
+	rows, err := pool.Query(context.Background(), "SELECT title FROM status_page_incidents WHERE org_id = $1", org.ID)
+	if err != nil {
+		t.Fatalf("query remaining incidents: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var title string
+		if err := rows.Scan(&title); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		remaining = append(remaining, title)
+	}
+	want := map[string]bool{"recent resolved": true, "old but still active": true}
+	if len(remaining) != len(want) {
+		t.Fatalf("want %d incidents to survive, got %v", len(want), remaining)
+	}
+	for _, title := range remaining {
+		if !want[title] {
+			t.Fatalf("unexpected surviving incident %q, want only %v", title, want)
+		}
+	}
+}
+
 // ─── checkPortMonitors / checkOnePortMonitor ──────────────────────────────
 
 func TestCheckPortMonitors(t *testing.T) {

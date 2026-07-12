@@ -54,7 +54,7 @@ type Notifiers struct {
 
 // Run starts the background worker loops. Returns when ctx is cancelled.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
-//   - Every 24 h: ping retention cleanup (ADR-015)
+//   - Every 24 h: ping/check/incident retention cleanup (ADR-015)
 func Run(ctx context.Context, n Notifiers) {
 	ticker := time.NewTicker(30 * time.Second)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
@@ -449,6 +449,11 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 		logger.Error("worker: prune old port checks", "err", err)
 	} else {
 		logger.Info("worker: pruned port_checks older than 90 days")
+	}
+	if err := queries.DeleteOldStatusPageIncidents(ctx); err != nil {
+		logger.Error("worker: prune old status page incidents", "err", err)
+	} else {
+		logger.Info("worker: pruned resolved status_page_incidents older than 90 days")
 	}
 }
 

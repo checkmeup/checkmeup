@@ -56,6 +56,18 @@
           first, so the two don't collide by accident.</span
         >
       </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">90-day history</strong> — resolved
+          incidents stay in the public history for 90 days, the same window as check history,
+          on every plan. A still-active incident is never removed on a timer, no matter how
+          old.</span
+        >
+      </li>
     </ul>
   </section>
 </template>

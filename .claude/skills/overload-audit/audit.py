@@ -27,7 +27,7 @@ INCIDENT_QUERIES = {
     "queries/port.sql": "port_incidents",
 }
 
-PRUNE_QUERIES = ["DeleteOldCronPings", "DeleteOldUptimeChecks", "DeleteOldPortChecks"]
+PRUNE_QUERIES = ["DeleteOldCronPings", "DeleteOldUptimeChecks", "DeleteOldPortChecks", "DeleteOldStatusPageIncidents"]
 
 STATUS_PAGE_INCIDENT_QUERIES = ["ListStatusPageIncidents", "ListActiveStatusPageIncidentsForPage"]
 

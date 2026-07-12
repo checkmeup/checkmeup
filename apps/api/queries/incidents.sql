@@ -34,6 +34,13 @@ RETURNING *;
 -- name: DeleteStatusPageIncident :exec
 DELETE FROM status_page_incidents WHERE id = $1 AND org_id = $2;
 
+-- name: DeleteOldStatusPageIncidents :exec
+-- Only resolved incidents age out — an incident still active (however
+-- old) must stay visible on the status page, never silently vanish out
+-- from under it. Same 90-day window as uptime_checks/port_checks, applied
+-- uniformly across every plan (see ADR-015).
+DELETE FROM status_page_incidents WHERE status = 'resolved' AND resolved_at < NOW() - INTERVAL '90 days';
+
 -- ─── status_page_incident_monitors ───────────────────────────────────────────
 
 -- name: InsertStatusPageIncidentMonitor :one
