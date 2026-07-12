@@ -2,7 +2,7 @@
 
 Today, `cron_incidents` and `uptime_incidents` are created and resolved entirely automatically by the worker from up/down transitions ([ADR-016](../decisions/016-alert-debounce.md)) — there's no way for a user to narrate what's happening, post progress updates, or declare something affecting visitors that isn't a hard monitor-down (e.g. degraded performance). This epic adds manually-managed incidents, shown on the public status page ([EP-06](ep-06-status-page.md)) alongside the existing automatic up/down state.
 
-**Needs a schema decision before implementation** (add to [decision backlog](../decisions/backlog.md)): should manual incidents live in a new `status_page_incidents` table (decoupled from monitors and from the existing per-monitor-type `cron_incidents`/`uptime_incidents`), or extend the existing incident tables? A new, monitor-type-agnostic table is the more likely fit, since a manual incident can span multiple monitors of different types and isn't tied to a single check transition the way the automatic ones are.
+Manual incidents live in a new `status_page_incidents` table, decoupled from monitors and from the existing per-monitor-type `cron_incidents`/`uptime_incidents` — see [ADR-034](../decisions/034-manual-incident-schema.md) for the schema and rationale.
 
 ---
 
