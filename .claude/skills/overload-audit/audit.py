@@ -64,6 +64,14 @@ def check_status_page_incident_limits(findings):
             findings.append(f"queries/incidents.sql: {name} has no LIMIT 200 cap")
 
 
+def check_active_incident_cap(findings):
+    text = (API / "internal" / "handler" / "incidents.go").read_text()
+    if "maxActiveIncidents = 100" not in text:
+        findings.append("incidents.go: maxActiveIncidents constant is no longer 100")
+    if "checkActiveIncidentCap(ctx, w, orgID)" not in text:
+        findings.append("incidents.go: CreateIncident no longer calls checkActiveIncidentCap")
+
+
 def check_pruning_wired(findings):
     worker_go = (API / "internal" / "worker" / "worker.go").read_text()
     for name in PRUNE_QUERIES:
@@ -106,6 +114,7 @@ CHECKS = [
     check_bounded_concurrency,
     check_incident_limits,
     check_status_page_incident_limits,
+    check_active_incident_cap,
     check_pruning_wired,
     check_status_page_rate_limit,
     check_blanket_org_limit,

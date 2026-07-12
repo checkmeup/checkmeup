@@ -247,6 +247,31 @@ func (h *IncidentHandler) resolveIncidentMonitors(ctx context.Context, w http.Re
 	return monitors, true
 }
 
+// maxActiveIncidents caps how many non-resolved incidents an org can have
+// open at once, uniform across every plan (docs/reference/limits.md) — a
+// flat safety cap, not a plan-gated one, since resolving an incident (not
+// upgrading) is the only way past it.
+const maxActiveIncidents = 100
+
+// checkActiveIncidentCap rejects declaring a new incident once the org
+// already has maxActiveIncidents non-resolved ones. Complements the 90-day
+// retention on resolved incidents (ADR-015): that bounds long-term growth,
+// this bounds how many can pile up before any of them are ever resolved.
+func (h *IncidentHandler) checkActiveIncidentCap(ctx context.Context, w http.ResponseWriter, orgID uuid.UUID) bool {
+	count, err := h.queries.CountActiveStatusPageIncidents(ctx, orgID)
+	if err != nil {
+		respond.InternalError(w)
+		return false
+	}
+	if count >= maxActiveIncidents {
+		respond.Error(w, http.StatusConflict,
+			"too many active incidents — resolve some before declaring more",
+			"too_many_active_incidents")
+		return false
+	}
+	return true
+}
+
 // checkMaintenanceOverlap implements US-2405: warn (don't block) if a
 // selected monitor is already under active maintenance. Returns false —
 // having written a 409 response — only when overlap exists and the caller
@@ -323,6 +348,9 @@ func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request)
 	}
 
 	ctx := r.Context()
+	if !h.checkActiveIncidentCap(ctx, w, orgID) {
+		return
+	}
 	monitors, ok := h.resolveIncidentMonitors(ctx, w, orgID, req.Monitors)
 	if !ok {
 		return

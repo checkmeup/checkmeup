@@ -254,6 +254,35 @@ func TestCreateIncident(t *testing.T) {
 			t.Fatalf("want 201 once overlap is confirmed, got %d: %s", confirmed.Code, confirmed.Body.String())
 		}
 	})
+
+	t.Run("rejects declaring a 101st active incident, and resolving one frees a slot", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "x")
+		orgID := u.resp.OrgID
+		for i := 0; i < 100; i++ {
+			mustExec(t, pool, "INSERT INTO status_page_incidents (org_id, title, severity) VALUES ($1, 'seed', 'minor')", orgID)
+		}
+
+		req := createIncidentRequest{
+			Title: "101st", Message: "x", Severity: "minor",
+			Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		}
+		blocked := doAuthed(t, http.MethodPost, incidentH.CreateIncident, u.access, req)
+		if blocked.Code != http.StatusConflict {
+			t.Fatalf("want 409, got %d: %s", blocked.Code, blocked.Body.String())
+		}
+		body := decodeBody[map[string]string](t, blocked)
+		if body["code"] != "too_many_active_incidents" {
+			t.Fatalf("want code too_many_active_incidents, got %q", body["code"])
+		}
+
+		mustExec(t, pool, `UPDATE status_page_incidents SET status = 'resolved', resolved_at = NOW()
+			WHERE id = (SELECT id FROM status_page_incidents WHERE org_id = $1 AND title = 'seed' LIMIT 1)`, orgID)
+		allowed := doAuthed(t, http.MethodPost, incidentH.CreateIncident, u.access, req)
+		if allowed.Code != http.StatusCreated {
+			t.Fatalf("want 201 once a slot frees up, got %d: %s", allowed.Code, allowed.Body.String())
+		}
+	})
 }
 
 func TestGetIncident(t *testing.T) {

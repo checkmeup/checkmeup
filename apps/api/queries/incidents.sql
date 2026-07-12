@@ -8,6 +8,9 @@ RETURNING *;
 -- name: GetStatusPageIncident :one
 SELECT * FROM status_page_incidents WHERE id = $1 AND org_id = $2;
 
+-- name: CountActiveStatusPageIncidents :one
+SELECT COUNT(*) FROM status_page_incidents WHERE org_id = $1 AND status != 'resolved';
+
 -- name: ListStatusPageIncidents :many
 SELECT spi.*, COUNT(spim.id) AS monitor_count
 FROM status_page_incidents spi

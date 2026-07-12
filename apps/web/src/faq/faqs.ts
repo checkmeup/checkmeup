@@ -132,6 +132,10 @@ export const faqCategories: FaqCategory[] = [
         q: 'How long do resolved incidents stay visible?',
         a: '90 days, the same window as check history, on every plan — no difference between Hobby and paid. A still-active incident is never removed on a timer, however old it gets; only resolved ones age out.',
       },
+      {
+        q: 'Is there a limit on how many incidents I can have?',
+        a: "Up to 100 unresolved incidents at once, on every plan — resolve one to free up room for the next. It's a flat safety cap, not a plan allowance, so there's nothing to upgrade past it.",
+      },
     ],
   },
   {

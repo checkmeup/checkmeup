@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countActiveStatusPageIncidents = `-- name: CountActiveStatusPageIncidents :one
+SELECT COUNT(*) FROM status_page_incidents WHERE org_id = $1 AND status != 'resolved'
+`
+
+func (q *Queries) CountActiveStatusPageIncidents(ctx context.Context, orgID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveStatusPageIncidents, orgID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countResolvedStatusPageIncidentsForPage = `-- name: CountResolvedStatusPageIncidentsForPage :one
 SELECT COUNT(DISTINCT spi.id)
 FROM status_page_incidents spi
