@@ -40,6 +40,7 @@ describe('DocsView', () => {
       '#slack',
       '#sms',
       '#status-pages',
+      '#incidents',
       '#maintenance',
       '#appearance',
       '#plans',
@@ -61,6 +62,7 @@ describe('DocsView', () => {
     expect(wrapper.text()).toContain('Email alerts')
     expect(wrapper.text()).toContain('Slack alerts')
     expect(wrapper.text()).toContain('Status pages')
+    expect(wrapper.text()).toContain('Incident management')
     expect(wrapper.text()).toContain('Maintenance windows')
     expect(wrapper.text()).toContain('Appearance')
     expect(wrapper.text()).toContain('Plans & limits')

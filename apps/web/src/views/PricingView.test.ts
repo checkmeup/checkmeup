@@ -86,6 +86,7 @@ describe('PricingView', () => {
     expect(wrapper.text()).toContain('Full feature comparison')
     expect(wrapper.text()).toContain('Monitors (all types combined)')
     expect(wrapper.text()).toContain('Keyword monitoring')
+    expect(wrapper.text()).toContain('Incident management')
     expect(wrapper.text()).toContain('White-label status pages')
   })
 

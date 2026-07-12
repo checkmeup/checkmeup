@@ -14,12 +14,19 @@
       means freelancers and agencies can share a clean link with clients in seconds instead
       of provisioning DNS for every account.
     </p>
-    <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+    <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Every status page also has embeddable <strong style="color: var(--text-strong)"
         >status badges</strong
       > — an overall-status SVG for the page, plus one per monitor on it. Copy the Markdown or
       HTML snippet from the status page's detail view (each links back to the public page) and
       drop it in a README, wiki, or internal dashboard.
+    </p>
+    <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+      On Solo and above, each status page has a
+      <strong style="color: var(--text-strong)">hide branding</strong> toggle in its edit
+      settings that removes the "Powered by Checkmeup" line and FAQ/Terms/Privacy links from
+      the public footer — set per page, so you can leave it on for some pages and off for
+      others.
     </p>
   </section>
 </template>

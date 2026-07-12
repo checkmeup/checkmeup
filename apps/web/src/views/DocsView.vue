@@ -12,6 +12,7 @@ import DocsWebhook from '@/components/docs/DocsWebhook.vue'
 import DocsSlack from '@/components/docs/DocsSlack.vue'
 import DocsSms from '@/components/docs/DocsSms.vue'
 import DocsStatusPages from '@/components/docs/DocsStatusPages.vue'
+import DocsIncidents from '@/components/docs/DocsIncidents.vue'
 import DocsMaintenance from '@/components/docs/DocsMaintenance.vue'
 import DocsAppearance from '@/components/docs/DocsAppearance.vue'
 import DocsPlans from '@/components/docs/DocsPlans.vue'
@@ -39,6 +40,7 @@ const sections = [
   { id: 'slack', label: 'Slack alerts' },
   { id: 'sms', label: 'SMS alerts' },
   { id: 'status-pages', label: 'Status pages' },
+  { id: 'incidents', label: 'Incident management' },
   { id: 'maintenance', label: 'Maintenance windows' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'plans', label: 'Plans & limits' },
@@ -106,6 +108,8 @@ const sections = [
         <DocsSms />
 
         <DocsStatusPages />
+
+        <DocsIncidents />
 
         <DocsMaintenance />
 

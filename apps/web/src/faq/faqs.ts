@@ -120,6 +120,14 @@ export const faqCategories: FaqCategory[] = [
         q: 'Can I embed my status on my own site or README?',
         a: "Yes — every status page has embeddable SVG status badges: one for the page's overall status, plus one per monitor on it. Copy the Markdown or HTML snippet from the status page's detail view.",
       },
+      {
+        q: 'Can I narrate an outage or degradation myself, not just rely on monitor up/down?',
+        a: "Yes — declare an incident from the Incidents page with a title, message, severity, and affected monitors, then post progress updates as status moves from Investigating to Resolved. It shows above the monitor list on the public page and never changes a monitor's own up/down state or triggers alerts.",
+      },
+      {
+        q: 'Can I remove the "Powered by Checkmeup" branding from my status page?',
+        a: 'Yes, on Solo and above — each status page has a hide branding toggle in its edit settings that removes the "Powered by Checkmeup" line and FAQ/Terms/Privacy links from the public footer. It\'s set per page, not account-wide.',
+      },
     ],
   },
   {

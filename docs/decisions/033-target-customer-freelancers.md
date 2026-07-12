@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-04
 **Status:** Accepted
+**Note (2026-07-12):** [ADR-035](035-status-page-hide-branding.md) shipped the "Powered by" footer gate this ADR treated as not-yet-shipped/low-priority (see Consequences below) — the Context and Consequences sections read as historical rationale for that framing at the time, not current state.
 
 ---
 
@@ -18,7 +19,7 @@ Primary target customer: **freelance web devs / solo agency operators who build 
 Not targeting for now:
 
 - **Non-technical small businesses directly** — wouldn't self-serve configure monitors; would need a done-for-you wrapper, out of scope.
-- **Formal multi-person agencies** — reachable, but a credible pitch needs the not-yet-shipped white-label features (custom domain, gated "Powered by" footer); revisit once those ship.
+- **Formal multi-person agencies** — reachable, but a credible pitch needs the not-yet-shipped custom-domain white-label feature (the "Powered by" footer gate shipped 2026-07-12 — [ADR-035](035-status-page-hide-branding.md)); revisit once custom domains ship too.
 
 Secondary/parallel channel: broad developer self-monitoring audience (HN, Indie Hackers, r/webdev, r/selfhosted) for free-tier volume and product feedback — this competes directly with Healthchecks.io/Cronitor/UptimeRobot's actual customer base, so treated as top-of-funnel, not the primary paid-conversion path.
 
@@ -32,5 +33,5 @@ Secondary/parallel channel: broad developer self-monitoring audience (HN, Indie 
 ## Consequences
 
 - Outreach and landing-page copy should default to this ICP going forward: "give your clients a professional status page" framing, not "white-label."
-- The status page's unconditional "Powered by checkmeup" footer and lack of custom domain are acceptable for this segment (they don't expect enterprise-grade white-labeling) — no need to prioritize gating it until/unless formal agencies become the target.
+- At the time of this ADR, the status page's unconditional "Powered by checkmeup" footer and lack of custom domain were judged acceptable for this segment and not worth prioritizing — since revised: the footer is now gated to paid plans ([ADR-035](035-status-page-hide-branding.md)). Custom domain remains unshipped and still deferred.
 - Positioning/landing-page copy may eventually need to speak to this ICP specifically rather than a generic "developer monitoring" framing — not addressed by this ADR, a future copy pass.

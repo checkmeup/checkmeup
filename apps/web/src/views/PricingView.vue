@@ -110,6 +110,7 @@ const featureRows: TableRow[] = [
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Alerts (Telegram, email, Slack, webhook)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Incident management', values: ['✓', '✓', '✓', '✓'] },
   { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
 ]
 
