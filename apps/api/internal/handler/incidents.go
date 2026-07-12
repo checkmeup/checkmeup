@@ -194,48 +194,48 @@ func (h *IncidentHandler) ListIncidents(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, http.StatusOK, result)
 }
 
-// CreateIncident POST /api/v1/incidents
-func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return
-	}
-
-	var req createIncidentRequest
+// decodeAndValidateCreateIncidentRequest decodes the request body and
+// validates its required fields, writing an error response and returning
+// ok=false on the first failure.
+func decodeAndValidateCreateIncidentRequest(w http.ResponseWriter, r *http.Request) (req createIncidentRequest, title, message string, severity db.IncidentSeverity, ok bool) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
-		return
+		return req, "", "", "", false
 	}
 
-	title := strings.TrimSpace(req.Title)
+	title = strings.TrimSpace(req.Title)
 	if title == "" {
 		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
-		return
+		return req, "", "", "", false
 	}
-	message := strings.TrimSpace(req.Message)
+	message = strings.TrimSpace(req.Message)
 	if message == "" {
 		respond.Error(w, http.StatusBadRequest, "message is required", "bad_request")
-		return
+		return req, "", "", "", false
 	}
-	severity, ok := validSeverities[req.Severity]
+	severity, ok = validSeverities[req.Severity]
 	if !ok {
 		respond.Error(w, http.StatusBadRequest, "severity must be minor, major, or critical", "bad_request")
-		return
+		return req, "", "", "", false
 	}
 	if len(req.Monitors) == 0 {
 		respond.Error(w, http.StatusBadRequest, "at least one monitor is required", "bad_request")
-		return
+		return req, "", "", "", false
 	}
+	return req, title, message, severity, true
+}
 
-	ctx := r.Context()
+// resolveIncidentMonitors resolves and de-duplicates the incoming monitor
+// refs, writing an error response and returning ok=false on the first
+// unresolvable monitor.
+func (h *IncidentHandler) resolveIncidentMonitors(ctx context.Context, w http.ResponseWriter, orgID uuid.UUID, inputs []incidentMonitorInput) ([]resolvedMonitor, bool) {
 	seen := map[string]bool{}
 	var monitors []resolvedMonitor
-	for _, m := range req.Monitors {
-		id, name, rerr := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
-		if rerr != nil {
-			respond.Error(w, http.StatusBadRequest, rerr.Error(), "bad_request")
-			return
+	for _, m := range inputs {
+		id, name, err := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
+		if err != nil {
+			respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+			return nil, false
 		}
 		key := m.MonitorType + ":" + id.String()
 		if seen[key] {
@@ -244,36 +244,50 @@ func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request)
 		seen[key] = true
 		monitors = append(monitors, resolvedMonitor{monitorType: m.MonitorType, monitorID: id, name: name})
 	}
+	return monitors, true
+}
 
-	// US-2405: warn (don't block) if a selected monitor is already under active maintenance
-	if !req.ConfirmOverlap {
-		active, aerr := h.queries.GetActiveMaintenanceForOrg(ctx, orgID)
-		if aerr == nil {
-			activeSet := map[string]bool{}
-			for _, a := range active {
-				activeSet[a.MonitorType+":"+a.MonitorID.String()] = true
-			}
-			var overlapping []string
-			for _, m := range monitors {
-				if activeSet[m.monitorType+":"+m.monitorID.String()] {
-					overlapping = append(overlapping, m.name)
-				}
-			}
-			if len(overlapping) > 0 {
-				respond.Error(w, http.StatusConflict,
-					"already under active maintenance: "+strings.Join(overlapping, ", "),
-					"maintenance_overlap")
-				return
-			}
+// checkMaintenanceOverlap implements US-2405: warn (don't block) if a
+// selected monitor is already under active maintenance. Returns false —
+// having written a 409 response — only when overlap exists and the caller
+// hasn't already confirmed it.
+func (h *IncidentHandler) checkMaintenanceOverlap(ctx context.Context, w http.ResponseWriter, orgID uuid.UUID, monitors []resolvedMonitor, confirmed bool) bool {
+	if confirmed {
+		return true
+	}
+	active, err := h.queries.GetActiveMaintenanceForOrg(ctx, orgID)
+	if err != nil {
+		return true
+	}
+	activeSet := map[string]bool{}
+	for _, a := range active {
+		activeSet[a.MonitorType+":"+a.MonitorID.String()] = true
+	}
+	var overlapping []string
+	for _, m := range monitors {
+		if activeSet[m.monitorType+":"+m.monitorID.String()] {
+			overlapping = append(overlapping, m.name)
 		}
 	}
+	if len(overlapping) == 0 {
+		return true
+	}
+	respond.Error(w, http.StatusConflict,
+		"already under active maintenance: "+strings.Join(overlapping, ", "),
+		"maintenance_overlap")
+	return false
+}
 
+// createIncidentWithMonitors persists the incident, its monitor links, and
+// its first update, writing an error response and returning ok=false on the
+// first failure.
+func (h *IncidentHandler) createIncidentWithMonitors(ctx context.Context, w http.ResponseWriter, orgID uuid.UUID, title, message string, severity db.IncidentSeverity, monitors []resolvedMonitor) (db.StatusPageIncident, bool) {
 	incident, err := h.queries.CreateStatusPageIncident(ctx, db.CreateStatusPageIncidentParams{
 		OrgID: orgID, Title: title, Severity: severity,
 	})
 	if err != nil {
 		respond.InternalError(w)
-		return
+		return db.StatusPageIncident{}, false
 	}
 
 	for _, m := range monitors {
@@ -281,7 +295,7 @@ func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request)
 			IncidentID: incident.ID, MonitorType: m.monitorType, MonitorID: m.monitorID,
 		}); err != nil {
 			respond.InternalError(w)
-			return
+			return db.StatusPageIncident{}, false
 		}
 	}
 
@@ -289,6 +303,36 @@ func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request)
 		IncidentID: incident.ID, Message: message, Status: db.IncidentStatusInvestigating,
 	}); err != nil {
 		respond.InternalError(w)
+		return db.StatusPageIncident{}, false
+	}
+
+	return incident, true
+}
+
+// CreateIncident POST /api/v1/incidents
+func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request) {
+	orgID, err := orgIDFrom(r)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+		return
+	}
+
+	req, title, message, severity, ok := decodeAndValidateCreateIncidentRequest(w, r)
+	if !ok {
+		return
+	}
+
+	ctx := r.Context()
+	monitors, ok := h.resolveIncidentMonitors(ctx, w, orgID, req.Monitors)
+	if !ok {
+		return
+	}
+	if !h.checkMaintenanceOverlap(ctx, w, orgID, monitors, req.ConfirmOverlap) {
+		return
+	}
+
+	incident, ok := h.createIncidentWithMonitors(ctx, w, orgID, title, message, severity, monitors)
+	if !ok {
 		return
 	}
 
