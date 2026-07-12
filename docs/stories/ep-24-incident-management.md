@@ -14,10 +14,10 @@ Manual incidents live in a new `status_page_incidents` table, decoupled from mon
 
 **Acceptance criteria:**
 
-- [ ] Fields: title, initial message, affected monitors (multi-select, any type), severity (Minor / Major / Critical)
-- [ ] Initial status: Investigating
-- [ ] Independent of automatic monitor status — declaring an incident doesn't change a monitor's own up/down state
-- [ ] Visible immediately on the public status page (US-2403)
+- [x] Fields: title, initial message, affected monitors (multi-select, any type), severity (Minor / Major / Critical)
+- [x] Initial status: Investigating
+- [x] Independent of automatic monitor status — declaring an incident doesn't change a monitor's own up/down state
+- [x] Visible immediately on the public status page (US-2403)
 
 ---
 
@@ -29,9 +29,9 @@ Manual incidents live in a new `status_page_incidents` table, decoupled from mon
 
 **Acceptance criteria:**
 
-- [ ] Updates are append-only entries (timestamp + message), shown reverse-chronological under the incident
-- [ ] Status progresses with each update: Investigating → Identified → Monitoring → Resolved
-- [ ] Marking "Resolved" sets the incident's end time and removes it from the public page's active list
+- [x] Updates are append-only entries (timestamp + message), shown reverse-chronological under the incident
+- [x] Status progresses with each update: Investigating → Identified → Monitoring → Resolved
+- [x] Marking "Resolved" sets the incident's end time and removes it from the public page's active list
 
 ---
 
@@ -43,9 +43,9 @@ Manual incidents live in a new `status_page_incidents` table, decoupled from mon
 
 **Acceptance criteria:**
 
-- [ ] Active (unresolved) incidents shown above the monitor list, with current status and most recent update
-- [ ] Resolved incidents listed in a paginated history, separate from the existing per-monitor 90-day uptime bar ([US-0603](ep-06-status-page.md))
-- [ ] An active Major/Critical incident escalates the existing overall status banner ("Partial outage" / "Major outage"), the same banner monitor-down already drives today
+- [x] Active (unresolved) incidents shown above the monitor list, with current status and most recent update
+- [x] Resolved incidents listed in a paginated history, separate from the existing per-monitor 90-day uptime bar ([US-0603](ep-06-status-page.md))
+- [x] An active Major/Critical incident escalates the existing overall status banner ("Partial outage" / "Major outage"), the same banner monitor-down already drives today
 
 ---
 
@@ -57,9 +57,9 @@ Manual incidents live in a new `status_page_incidents` table, decoupled from mon
 
 **Acceptance criteria:**
 
-- [ ] Title and any update's message editable after creation
-- [ ] Deleting an incident removes it (and its updates) from the public page entirely — for genuine mistakes, not a way to hide real incidents
-- [ ] Edits don't trigger alerts on any channel — declaring/updating an incident is a status-page concept for MVP, not a new alert source
+- [x] Title and any update's message editable after creation
+- [x] Deleting an incident removes it (and its updates) from the public page entirely — for genuine mistakes, not a way to hide real incidents
+- [x] Edits don't trigger alerts on any channel — declaring/updating an incident is a status-page concept for MVP, not a new alert source
 
 ---
 
@@ -71,5 +71,5 @@ Manual incidents live in a new `status_page_incidents` table, decoupled from mon
 
 **Acceptance criteria:**
 
-- [ ] Declaring an incident on a monitor already under an active maintenance window ([EP-09](ep-09-maintenance-windows.md)) shows a warning before confirming — both can coexist but it's an explicit choice, not an accident
-- [ ] When both apply to the same monitor, the status page clearly distinguishes "planned maintenance" from "unplanned incident" rather than showing one generic state
+- [x] Declaring an incident on a monitor already under an active maintenance window ([EP-09](ep-09-maintenance-windows.md)) shows a warning before confirming — both can coexist but it's an explicit choice, not an accident
+- [x] When both apply to the same monitor, the status page clearly distinguishes "planned maintenance" from "unplanned incident" rather than showing one generic state

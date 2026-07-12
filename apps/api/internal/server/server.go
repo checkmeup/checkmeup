@@ -82,6 +82,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
 	maintenance := handler.NewMaintenanceHandler(s.db)
+	incidents := handler.NewIncidentHandler(s.db)
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 	apiKeys := handler.NewAPIKeyHandler(s.db)
 
@@ -241,6 +242,18 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Patch("/", maintenance.UpdateMaintenanceWindow)
 					r.Delete("/", maintenance.DeleteMaintenanceWindow)
 					r.Post("/end", maintenance.EndMaintenanceWindowNow)
+				})
+			})
+
+			r.Route("/incidents", func(r chi.Router) {
+				r.Get("/", incidents.ListIncidents)
+				r.Post("/", incidents.CreateIncident)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", incidents.GetIncident)
+					r.Patch("/", incidents.UpdateIncidentTitle)
+					r.Delete("/", incidents.DeleteIncident)
+					r.Post("/updates", incidents.PostIncidentUpdate)
+					r.Patch("/updates/{updateId}", incidents.UpdateIncidentUpdateMessage)
 				})
 			})
 		})

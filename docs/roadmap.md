@@ -24,7 +24,6 @@ Ordered by how easy the blocker is to clear — internal decisions first, extern
 - [EP-31](stories/ep-31-assertion-checks.md) US-3105 — Multi-step (chained) API checks — **5 h**. US-3101–3104 shipped in v1.9; this is the request-chaining follow-on — story flags it as a good candidate for its own epic during grooming
 - [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts — **4 h**.
 
-- [EP-24](stories/ep-24-incident-management.md) — Incident management — **5.5 h**. Schema decided ([ADR-034](decisions/034-manual-incident-schema.md)), ready to implement.
 - [EP-34](stories/ep-34-zombie-job-detection.md) — Zombie (stuck) job detection — **5 h**. Blocked on the start/completion ping design decision in [decision backlog](decisions/backlog.md) — internal schema design.
 - [EP-35](stories/ep-35-overlap-detection.md) — Overlap detection — **3.5 h**. Same decision as EP-34, plus depends on EP-34's start-ping endpoint shipping first.
 - [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts — **3.5 h**. Postponed: needs a Microsoft 365 work/school (business) account to build and test against, which doesn't exist yet — no cost to the API itself, just a founder-side tenant setup step (e.g. the free Microsoft 365 Developer Program) before work can resume.

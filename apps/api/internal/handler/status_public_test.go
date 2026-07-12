@@ -227,21 +227,25 @@ func TestComputeOverallStatus(t *testing.T) {
 	cases := []struct {
 		name      string
 		rows      []publicMonitorRow
+		incidents []publicIncidentRow
 		wantLabel string
 		wantColor string
 	}{
-		{"no monitors", nil, "All systems operational", statusColorGreen},
-		{"all green", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorGreen}}, "All systems operational", statusColorGreen},
-		{"one amber", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorAmber}}, "Partial outage", statusColorAmber},
-		{"one red", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorRed}}, "Major outage", statusColorRed},
-		{"red wins over amber", []publicMonitorRow{{StatusColor: statusColorAmber}, {StatusColor: statusColorRed}}, "Major outage", statusColorRed},
-		{"gray (unknown/paused) alone doesn't trigger an outage", []publicMonitorRow{{StatusColor: statusColorGray}}, "All systems operational", statusColorGreen},
+		{"no monitors", nil, nil, "All systems operational", statusColorGreen},
+		{"all green", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorGreen}}, nil, "All systems operational", statusColorGreen},
+		{"one amber", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorAmber}}, nil, "Partial outage", statusColorAmber},
+		{"one red", []publicMonitorRow{{StatusColor: statusColorGreen}, {StatusColor: statusColorRed}}, nil, "Major outage", statusColorRed},
+		{"red wins over amber", []publicMonitorRow{{StatusColor: statusColorAmber}, {StatusColor: statusColorRed}}, nil, "Major outage", statusColorRed},
+		{"gray (unknown/paused) alone doesn't trigger an outage", []publicMonitorRow{{StatusColor: statusColorGray}}, nil, "All systems operational", statusColorGreen},
+		{"minor incident alone doesn't escalate", nil, []publicIncidentRow{{SeverityColor: statusColorBlue}}, "All systems operational", statusColorGreen},
+		{"major incident escalates even with all-green monitors", []publicMonitorRow{{StatusColor: statusColorGreen}}, []publicIncidentRow{{SeverityColor: statusColorAmber}}, "Partial outage", statusColorAmber},
+		{"critical incident escalates even with all-green monitors", []publicMonitorRow{{StatusColor: statusColorGreen}}, []publicIncidentRow{{SeverityColor: statusColorRed}}, "Major outage", statusColorRed},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			label, color := computeOverallStatus(tc.rows)
+			label, color := computeOverallStatus(tc.rows, tc.incidents)
 			if label != tc.wantLabel || color != tc.wantColor {
-				t.Fatalf("computeOverallStatus(%v) = (%q, %q), want (%q, %q)", tc.rows, label, color, tc.wantLabel, tc.wantColor)
+				t.Fatalf("computeOverallStatus(%v, %v) = (%q, %q), want (%q, %q)", tc.rows, tc.incidents, label, color, tc.wantLabel, tc.wantColor)
 			}
 		})
 	}

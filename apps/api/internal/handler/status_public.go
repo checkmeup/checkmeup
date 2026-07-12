@@ -6,6 +6,7 @@ import (
 	"html"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,11 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 )
 
+// resolvedIncidentsPageSize is the page size for the public status page's
+// paginated "past incidents" history (US-2403) — plain query-param
+// pagination since this page is server-rendered with no JS.
+const resolvedIncidentsPageSize = 10
+
 // StatusPublicHandler serves the public /status/:slug page (no auth required).
 type StatusPublicHandler struct {
 	queries *db.Queries
@@ -23,7 +29,11 @@ type StatusPublicHandler struct {
 }
 
 func NewStatusPublicHandler(pool *pgxpool.Pool) *StatusPublicHandler {
-	tmpl := template.Must(template.New("status").Parse(statusPageHTML))
+	funcs := template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+	}
+	tmpl := template.Must(template.New("status").Funcs(funcs).Parse(statusPageHTML))
 	return &StatusPublicHandler{queries: db.New(pool), tmpl: tmpl}
 }
 
@@ -50,15 +60,33 @@ type activeMaintenance struct {
 	Message string
 }
 
+// publicIncidentRow is a manually-declared incident (EP-24), independent of
+// the automatic up/down monitor rows above.
+type publicIncidentRow struct {
+	Title               string
+	Severity            string // "Minor" / "Major" / "Critical"
+	SeverityColor       string
+	StatusLabel         string // "Investigating" / "Identified" / "Monitoring" / "Resolved"
+	LatestUpdateMessage string
+	LatestUpdateAt      string
+	CreatedAt           string
+	ResolvedAt          string
+}
+
 type publicPageData struct {
-	Title        string
-	Description  string
-	LogoURL      string
-	Initials     string
-	Overall      string
-	OverallColor string
-	Monitors     []publicMonitorRow
-	UpdatedAt    string
+	Title                 string
+	Description           string
+	LogoURL               string
+	Initials              string
+	Overall               string
+	OverallColor          string
+	Monitors              []publicMonitorRow
+	ActiveIncidents       []publicIncidentRow
+	ResolvedIncidents     []publicIncidentRow
+	ResolvedIncidentsPage int
+	HasPrevIncidentsPage  bool
+	HasNextIncidentsPage  bool
+	UpdatedAt             string
 }
 
 // initials derives a 1-2 letter fallback badge from a status page's title
@@ -101,16 +129,34 @@ func (h *StatusPublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	overall, overallColor := computeOverallStatus(rows)
+	activeIncidents, err := h.loadActiveIncidents(ctx, page)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	resolvedPage := parseIncidentsPageParam(r.URL.Query().Get("incidents_page"))
+	resolvedIncidents, resolvedTotal, err := h.loadResolvedIncidents(ctx, page, resolvedPage)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	overall, overallColor := computeOverallStatus(rows, activeIncidents)
 	data := publicPageData{
-		Title:        page.Title,
-		Description:  page.Description,
-		LogoURL:      page.LogoUrl,
-		Initials:     initials(page.Title),
-		Overall:      overall,
-		OverallColor: overallColor,
-		Monitors:     rows,
-		UpdatedAt:    time.Now().UTC().Format("2006-01-02 15:04 UTC"),
+		Title:                 page.Title,
+		Description:           page.Description,
+		LogoURL:               page.LogoUrl,
+		Initials:              initials(page.Title),
+		Overall:               overall,
+		OverallColor:          overallColor,
+		Monitors:              rows,
+		ActiveIncidents:       activeIncidents,
+		ResolvedIncidents:     resolvedIncidents,
+		ResolvedIncidentsPage: resolvedPage,
+		HasPrevIncidentsPage:  resolvedPage > 1,
+		HasNextIncidentsPage:  int64(resolvedPage*resolvedIncidentsPageSize) < resolvedTotal,
+		UpdatedAt:             time.Now().UTC().Format("2006-01-02 15:04 UTC"),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -147,6 +193,71 @@ func (h *StatusPublicHandler) loadRows(ctx context.Context, page db.StatusPage) 
 	return rows, nil
 }
 
+// parseIncidentsPageParam parses the resolved-incidents 1-based page-number
+// query param, defaulting to page 1 on anything invalid or out of range.
+func parseIncidentsPageParam(s string) int {
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return 1
+	}
+	return n
+}
+
+// loadActiveIncidents fetches manually-declared incidents (EP-24) that are
+// still open and affect at least one monitor on this page, each annotated
+// with its most recent update for the "current status" line (US-2403).
+func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.StatusPage) ([]publicIncidentRow, error) {
+	rows, err := h.queries.ListActiveStatusPageIncidentsForPage(ctx, page.ID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]publicIncidentRow, 0, len(rows))
+	for _, r := range rows {
+		row := publicIncidentRow{
+			Title:         r.Title,
+			Severity:      incidentSeverityLabel(r.Severity),
+			SeverityColor: incidentSeverityColor(r.Severity),
+			StatusLabel:   incidentStatusLabel(r.Status),
+			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
+		}
+		if latest, err := h.queries.GetLatestStatusPageIncidentUpdate(ctx, r.ID); err == nil {
+			row.LatestUpdateMessage = latest.Message
+			row.LatestUpdateAt = latest.CreatedAt.Time.Format("2006-01-02 15:04 UTC")
+		}
+		result = append(result, row)
+	}
+	return result, nil
+}
+
+// loadResolvedIncidents fetches one page of this page's resolved-incident
+// history, separate from the existing 90-day uptime bars (US-2403).
+func (h *StatusPublicHandler) loadResolvedIncidents(ctx context.Context, page db.StatusPage, pageNum int) ([]publicIncidentRow, int64, error) {
+	offset := (pageNum - 1) * resolvedIncidentsPageSize
+	dbRows, err := h.queries.ListResolvedStatusPageIncidentsForPage(ctx, db.ListResolvedStatusPageIncidentsForPageParams{
+		PageID: page.ID, Limit: resolvedIncidentsPageSize, Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := h.queries.CountResolvedStatusPageIncidentsForPage(ctx, page.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]publicIncidentRow, len(dbRows))
+	for i, r := range dbRows {
+		result[i] = publicIncidentRow{
+			Title:         r.Title,
+			Severity:      incidentSeverityLabel(r.Severity),
+			SeverityColor: incidentSeverityColor(r.Severity),
+			StatusLabel:   incidentStatusLabel(r.Status),
+			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
+			ResolvedAt:    r.ResolvedAt.Time.Format("2006-01-02 15:04 UTC"),
+		}
+	}
+	return result, total, nil
+}
+
 // ─── badges (EP-30) ──────────────────────────────────────────────────────────
 
 // ServePageBadge handles GET /status/:slug/badge.svg — an embeddable badge
@@ -168,7 +279,13 @@ func (h *StatusPublicHandler) ServePageBadge(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, color := computeOverallStatus(rows)
+	activeIncidents, err := h.loadActiveIncidents(ctx, page)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	_, color := computeOverallStatus(rows, activeIncidents)
 	writeBadge(w, "status", badgeStatusWord(color), color)
 }
 
@@ -408,7 +525,47 @@ const (
 	statusColorAmber = "#F59E0B"
 	statusColorGray  = "#94A3B8"
 	statusColorLight = "#E2E8F0"
+	statusColorBlue  = "#3B82F6"
 )
+
+// incidentSeverityLabel/-Color mirror the minor/major/critical vocabulary
+// from US-2401 — minor is informational (blue) and doesn't escalate the
+// overall banner; major/critical reuse the same red/amber tiers monitor
+// outages already use, so computeOverallStatus treats them identically.
+func incidentSeverityLabel(s db.IncidentSeverity) string {
+	switch s {
+	case db.IncidentSeverityCritical:
+		return "Critical"
+	case db.IncidentSeverityMajor:
+		return "Major"
+	default:
+		return "Minor"
+	}
+}
+
+func incidentSeverityColor(s db.IncidentSeverity) string {
+	switch s {
+	case db.IncidentSeverityCritical:
+		return statusColorRed
+	case db.IncidentSeverityMajor:
+		return statusColorAmber
+	default:
+		return statusColorBlue
+	}
+}
+
+func incidentStatusLabel(s db.IncidentStatus) string {
+	switch s {
+	case db.IncidentStatusIdentified:
+		return "Identified"
+	case db.IncidentStatusMonitoring:
+		return "Monitoring"
+	case db.IncidentStatusResolved:
+		return "Resolved"
+	default:
+		return "Investigating"
+	}
+}
 
 func expiryStatusDisplay(s string) (label, color string) {
 	switch s {
@@ -457,10 +614,22 @@ func monitorStatusDisplay(s string) (label, color string) {
 	}
 }
 
-func computeOverallStatus(rows []publicMonitorRow) (label, color string) {
+// computeOverallStatus drives both the page banner and the badge routes
+// (kept in sync so a badge always agrees with what the page shows). An
+// active major/critical incident (US-2403) escalates it exactly like a
+// monitor outage would, independent of any monitor's own up/down state.
+func computeOverallStatus(rows []publicMonitorRow, activeIncidents []publicIncidentRow) (label, color string) {
 	anyDown, anyDegraded := false, false
 	for _, r := range rows {
 		switch r.StatusColor {
+		case statusColorRed:
+			anyDown = true
+		case statusColorAmber:
+			anyDegraded = true
+		}
+	}
+	for _, inc := range activeIncidents {
+		switch inc.SeverityColor {
 		case statusColorRed:
 			anyDown = true
 		case statusColorAmber:
@@ -536,6 +705,18 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 :root[data-theme='light'] .theme-toggle .icon-moon{display:block}
 .banner{border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;margin-bottom:22px}
 .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.incidents{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.incident{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.incident-header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.incident-title{font-weight:600;font-size:13.5px;color:var(--text-strong);flex:1}
+.incident-status{font-size:11.5px;color:var(--text-muted)}
+.incident-message{margin-top:8px;font-size:12.5px;color:var(--text-dim)}
+.incident.resolved{opacity:.75}
+.incidents-history{margin-top:8px;margin-bottom:8px}
+.section-title{font-size:13px;font-weight:600;color:var(--text-strong);margin-bottom:10px}
+.pagination{display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px}
+.pagination a{color:var(--accent);text-decoration:none}
+.pagination a:hover{text-decoration:underline}
 .monitors{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
 .monitor{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
 .monitor-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
@@ -584,6 +765,21 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
     <span style="color:{{.OverallColor}}">{{.Overall}}</span>
   </div>
 
+  {{if .ActiveIncidents}}
+  <div class="incidents">
+    {{range .ActiveIncidents}}
+    <div class="incident">
+      <div class="incident-header">
+        <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
+        <span class="incident-title">{{.Title}}</span>
+        <span class="incident-status">{{.StatusLabel}}</span>
+      </div>
+      {{if .LatestUpdateMessage}}<p class="incident-message">{{.LatestUpdateMessage}}</p>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
   <div class="monitors">
     {{range .Monitors}}
     <div class="monitor">
@@ -610,6 +806,29 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
     <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
     {{end}}
   </div>
+
+  {{if .ResolvedIncidents}}
+  <div class="incidents-history">
+    <h2 class="section-title">Past incidents</h2>
+    <div class="incidents">
+      {{range .ResolvedIncidents}}
+      <div class="incident resolved">
+        <div class="incident-header">
+          <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
+          <span class="incident-title">{{.Title}}</span>
+          <span class="incident-status">Resolved {{.ResolvedAt}}</span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
+    <div class="pagination">
+      {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
+      {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
 
   <div class="footer">
     <p>Last updated {{.UpdatedAt}}</p>

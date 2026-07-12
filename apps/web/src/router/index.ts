@@ -265,6 +265,24 @@ export const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/incidents',
+      name: 'incidents',
+      component: () => import('@/views/IncidentListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/incidents/new',
+      name: 'incidents-create',
+      component: () => import('@/views/IncidentCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/incidents/:id',
+      name: 'incident-detail',
+      component: () => import('@/views/IncidentDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/billing',
       name: 'billing',
       component: () => import('@/views/BillingView.vue'),

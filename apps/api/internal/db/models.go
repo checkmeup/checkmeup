@@ -58,6 +58,93 @@ func (ns NullDomainMonitorStatus) Value() (driver.Value, error) {
 	return string(ns.DomainMonitorStatus), nil
 }
 
+type IncidentSeverity string
+
+const (
+	IncidentSeverityMinor    IncidentSeverity = "minor"
+	IncidentSeverityMajor    IncidentSeverity = "major"
+	IncidentSeverityCritical IncidentSeverity = "critical"
+)
+
+func (e *IncidentSeverity) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = IncidentSeverity(s)
+	case string:
+		*e = IncidentSeverity(s)
+	default:
+		return fmt.Errorf("unsupported scan type for IncidentSeverity: %T", src)
+	}
+	return nil
+}
+
+type NullIncidentSeverity struct {
+	IncidentSeverity IncidentSeverity `json:"incident_severity"`
+	Valid            bool             `json:"valid"` // Valid is true if IncidentSeverity is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullIncidentSeverity) Scan(value interface{}) error {
+	if value == nil {
+		ns.IncidentSeverity, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.IncidentSeverity.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullIncidentSeverity) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.IncidentSeverity), nil
+}
+
+type IncidentStatus string
+
+const (
+	IncidentStatusInvestigating IncidentStatus = "investigating"
+	IncidentStatusIdentified    IncidentStatus = "identified"
+	IncidentStatusMonitoring    IncidentStatus = "monitoring"
+	IncidentStatusResolved      IncidentStatus = "resolved"
+)
+
+func (e *IncidentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = IncidentStatus(s)
+	case string:
+		*e = IncidentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for IncidentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullIncidentStatus struct {
+	IncidentStatus IncidentStatus `json:"incident_status"`
+	Valid          bool           `json:"valid"` // Valid is true if IncidentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullIncidentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.IncidentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.IncidentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullIncidentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.IncidentStatus), nil
+}
+
 type KeywordMode string
 
 const (
@@ -538,6 +625,32 @@ type StatusPage struct {
 	LogoUrl     string             `json:"logo_url"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StatusPageIncident struct {
+	ID         uuid.UUID          `json:"id"`
+	OrgID      uuid.UUID          `json:"org_id"`
+	Title      string             `json:"title"`
+	Severity   IncidentSeverity   `json:"severity"`
+	Status     IncidentStatus     `json:"status"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+}
+
+type StatusPageIncidentMonitor struct {
+	ID          uuid.UUID `json:"id"`
+	IncidentID  uuid.UUID `json:"incident_id"`
+	MonitorType string    `json:"monitor_type"`
+	MonitorID   uuid.UUID `json:"monitor_id"`
+}
+
+type StatusPageIncidentUpdate struct {
+	ID         uuid.UUID          `json:"id"`
+	IncidentID uuid.UUID          `json:"incident_id"`
+	Message    string             `json:"message"`
+	Status     IncidentStatus     `json:"status"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type StatusPageMonitor struct {
