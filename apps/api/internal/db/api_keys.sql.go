@@ -11,6 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const countActiveAPIKeys = `-- name: CountActiveAPIKeys :one
+SELECT COUNT(*) FROM api_keys WHERE org_id = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) CountActiveAPIKeys(ctx context.Context, orgID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveAPIKeys, orgID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAPIKey = `-- name: CreateAPIKey :one
 INSERT INTO api_keys (org_id, key_hash, key_prefix, label)
 VALUES ($1, $2, $3, $4)
@@ -66,7 +77,7 @@ func (q *Queries) GetActiveAPIKeyByHash(ctx context.Context, keyHash string) (Ap
 }
 
 const listAPIKeys = `-- name: ListAPIKeys :many
-SELECT id, org_id, key_hash, key_prefix, label, created_at, last_used_at, revoked_at FROM api_keys WHERE org_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC
+SELECT id, org_id, key_hash, key_prefix, label, created_at, last_used_at, revoked_at FROM api_keys WHERE org_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 200
 `
 
 func (q *Queries) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]ApiKey, error) {

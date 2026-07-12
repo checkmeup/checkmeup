@@ -286,6 +286,27 @@ func TestCreateMaintenanceWindow(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("rejects creating a 101st window", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "x")
+		orgID := u.resp.OrgID
+		for i := 0; i < 100; i++ {
+			mustExec(t, pool, "INSERT INTO maintenance_windows (org_id, title, starts_at) VALUES ($1, 'seed', NOW())", orgID)
+		}
+
+		w := doAuthed(t, http.MethodPost, maintH.CreateMaintenanceWindow, u.access, maintenanceWindowRequest{
+			Title: "101st", StartsAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			Monitors: []maintenanceMonitorInput{{MonitorType: "cron", MonitorID: mon.ID}},
+		})
+		if w.Code != http.StatusConflict {
+			t.Fatalf("want 409, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "too_many_maintenance_windows" {
+			t.Fatalf("want code too_many_maintenance_windows, got %q", body["code"])
+		}
+	})
 }
 
 func TestGetMaintenanceWindow(t *testing.T) {

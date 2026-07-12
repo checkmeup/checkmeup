@@ -272,6 +272,32 @@ func (h *IncidentHandler) checkActiveIncidentCap(ctx context.Context, w http.Res
 	return true
 }
 
+// maxUpdatesPerIncident caps how many updates a single incident can
+// accumulate — a flat safety cap, uniform across every plan. Well under
+// ListStatusPageIncidentUpdates' LIMIT 200, so that LIMIT never actually
+// truncates a real incident's timeline; it's defense in depth for this cap,
+// not the primary control.
+const maxUpdatesPerIncident = 100
+
+// checkUpdateCap rejects posting another update once an incident already
+// has maxUpdatesPerIncident. loadActiveIncidents (status_public.go) renders
+// an incident's full update timeline on every unauthenticated visitor's
+// page load, so this bounds that render, not just the private dashboard.
+func (h *IncidentHandler) checkUpdateCap(ctx context.Context, w http.ResponseWriter, incidentID uuid.UUID) bool {
+	count, err := h.queries.CountStatusPageIncidentUpdates(ctx, incidentID)
+	if err != nil {
+		respond.InternalError(w)
+		return false
+	}
+	if count >= maxUpdatesPerIncident {
+		respond.Error(w, http.StatusConflict,
+			"this incident already has the maximum number of updates",
+			"too_many_incident_updates")
+		return false
+	}
+	return true
+}
+
 // checkMaintenanceOverlap implements US-2405: warn (don't block) if a
 // selected monitor is already under active maintenance. Returns false —
 // having written a 409 response — only when overlap exists and the caller
@@ -444,6 +470,27 @@ func (h *IncidentHandler) DeleteIncident(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// decodeAndValidatePostUpdateRequest decodes the request body and validates
+// its fields, writing an error response and returning ok=false on failure.
+func decodeAndValidatePostUpdateRequest(w http.ResponseWriter, r *http.Request) (message string, status db.IncidentStatus, ok bool) {
+	var req postUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
+		return "", "", false
+	}
+	message = strings.TrimSpace(req.Message)
+	if message == "" {
+		respond.Error(w, http.StatusBadRequest, "message is required", "bad_request")
+		return "", "", false
+	}
+	status, ok = validStatuses[req.Status]
+	if !ok {
+		respond.Error(w, http.StatusBadRequest, "status must be investigating, identified, monitoring, or resolved", "bad_request")
+		return "", "", false
+	}
+	return message, status, true
+}
+
 // PostIncidentUpdate POST /api/v1/incidents/:id/updates
 func (h *IncidentHandler) PostIncidentUpdate(w http.ResponseWriter, r *http.Request) {
 	orgID, id, ok := incidentIDs(w, r)
@@ -461,23 +508,15 @@ func (h *IncidentHandler) PostIncidentUpdate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var req postUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
-		return
-	}
-	message := strings.TrimSpace(req.Message)
-	if message == "" {
-		respond.Error(w, http.StatusBadRequest, "message is required", "bad_request")
-		return
-	}
-	status, ok := validStatuses[req.Status]
+	message, status, ok := decodeAndValidatePostUpdateRequest(w, r)
 	if !ok {
-		respond.Error(w, http.StatusBadRequest, "status must be investigating, identified, monitoring, or resolved", "bad_request")
 		return
 	}
 
 	ctx := r.Context()
+	if !h.checkUpdateCap(ctx, w, incident.ID) {
+		return
+	}
 	if _, err := h.queries.InsertStatusPageIncidentUpdate(ctx, db.InsertStatusPageIncidentUpdateParams{
 		IncidentID: incident.ID, Message: message, Status: status,
 	}); err != nil {

@@ -92,11 +92,11 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Can I pause checks during planned maintenance?',
-        a: "Yes — schedule a maintenance window covering any combination of monitors. While it's active, those monitors aren't checked at all: no alerts, no incidents, and uptime stats stay untouched.",
+        a: "Yes — schedule a maintenance window covering any combination of monitors. While it's active, those monitors aren't checked at all: no alerts, no incidents, and uptime stats stay untouched. Up to 100 maintenance windows per org, on every plan.",
       },
       {
         q: "Can I read a monitor's status programmatically?",
-        a: 'Yes — generate an API key in Settings and call GET /api/v1/public/monitors/{type}/{id}/status with an X-API-Key header. Keys are read-only for now and rate-limited to 60 requests/minute.',
+        a: 'Yes — generate an API key in Settings and call GET /api/v1/public/monitors/{type}/{id}/status with an X-API-Key header. Keys are read-only for now and rate-limited to 60 requests/minute. Up to 100 active keys per org, on every plan.',
       },
     ],
   },
@@ -134,7 +134,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Is there a limit on how many incidents I can have?',
-        a: "Up to 100 unresolved incidents at once, on every plan — resolve one to free up room for the next. It's a flat safety cap, not a plan allowance, so there's nothing to upgrade past it.",
+        a: "Up to 100 unresolved incidents at once, and up to 100 updates on any single incident, on every plan — resolve an incident or start a new one to free up room. Both are flat safety caps, not a plan allowance, so there's nothing to upgrade past them.",
       },
     ],
   },

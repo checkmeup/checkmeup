@@ -79,5 +79,9 @@ https://checkmeup.net/api/v1/public/monitors/cron/&lt;monitor-id&gt;/status</cod
         >daysUntilExpiry</code
       >.
     </p>
+    <p class="text-sm leading-relaxed mt-4" style="color: var(--text-dim)">
+      Up to 100 active keys per org, on every plan — revoke an old one to free up room for a
+      new one.
+    </p>
   </section>
 </template>

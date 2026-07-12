@@ -1,6 +1,6 @@
 ---
 name: overload-audit
-description: Re-verify the concrete, greppable claims in docs/reference/limits.md (bounded check-loop concurrency, incident-list query caps, old-data pruning, rate limits, request body cap, plan-limited monitor creation) so the DoS/overload audit doc can't silently drift stale again. Use when asked to "check for DoS/overload regressions", "audit unbounded operations", "verify limits.md", or periodically as a health check independent of any single PR.
+description: Re-verify the concrete, greppable claims in docs/reference/limits.md (bounded check-loop concurrency, incident/maintenance-window/API-key list-query caps, flat creation caps on incidents/incident updates/maintenance windows/API keys, old-data pruning, rate limits, request body cap, plan-limited monitor creation) so the DoS/overload audit doc can't silently drift stale again. Use when asked to "check for DoS/overload regressions", "audit unbounded operations", "verify limits.md", or periodically as a health check independent of any single PR.
 ---
 
 # Overload audit
@@ -52,8 +52,18 @@ claims... still hold."
   (`sem := make(chan struct{}, checkConcurrency)` in each `worker_*.go`)
 - `cron_incidents`/`uptime_incidents`/`port_incidents` list queries still
   cap at `LIMIT 200`
-- `pruneOldPings` (`worker.go`) still calls all three retention-cleanup
-  queries (`DeleteOldCronPings`/`DeleteOldUptimeChecks`/`DeleteOldPortChecks`)
+- `ListStatusPageIncidents`/`ListActiveStatusPageIncidentsForPage`/
+  `ListStatusPageIncidentUpdates` (`queries/incidents.sql`),
+  `ListMaintenanceWindows` (`queries/maintenance.sql`), and `ListAPIKeys`
+  (`queries/api_keys.sql`) still cap at `LIMIT 200`
+- The four flat, uniform-across-every-plan creation caps added
+  2026-07-12 are still wired in: `maxActiveIncidents`/`maxUpdatesPerIncident`
+  (`incidents.go`), `maxMaintenanceWindows` (`maintenance.go`), `maxAPIKeys`
+  (`api_keys.go`) — each a constant plus a call site, not a `billing.Check*Limit`
+  (nothing to upgrade past any of these)
+- `pruneOldPings` (`worker.go`) still calls all four retention-cleanup
+  queries (`DeleteOldCronPings`/`DeleteOldUptimeChecks`/`DeleteOldPortChecks`/
+  `DeleteOldStatusPageIncidents`)
 - The public status page + its two badge endpoints are still IP-rate-limited
   at 300/min (`server.go`)
 - The `RequireAuth` group still carries its blanket 300/min-per-org
@@ -95,9 +105,10 @@ prospector .claude/skills/overload-audit/audit.py
 ## Scope
 
 Only covers the specific files `limits.md` cites
-(`internal/worker/worker_*.go`, `queries/{monitors,uptime,port}.sql`,
-`internal/server/server.go`, `internal/billing/plans.go`). If a check
-loop, query, or limit moves to a new file, update the corresponding path
-constant in `audit.py` alongside the move — same discipline
-`org-id-audit`'s `KNOWN_EXCEPTIONS` update already requires when code
-moves.
+(`internal/worker/worker_*.go`, `queries/{monitors,uptime,port,incidents,
+maintenance,api_keys}.sql`, `internal/handler/{incidents,maintenance,
+api_keys}.go`, `internal/server/server.go`, `internal/billing/plans.go`).
+If a check loop, query, or limit moves to a new file, update the
+corresponding path constant in `audit.py` alongside the move — same
+discipline `org-id-audit`'s `KNOWN_EXCEPTIONS` update already requires
+when code moves.

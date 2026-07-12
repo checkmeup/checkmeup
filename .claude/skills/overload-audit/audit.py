@@ -31,6 +31,14 @@ PRUNE_QUERIES = ["DeleteOldCronPings", "DeleteOldUptimeChecks", "DeleteOldPortCh
 
 STATUS_PAGE_INCIDENT_QUERIES = ["ListStatusPageIncidents", "ListActiveStatusPageIncidentsForPage"]
 
+# (query file, [:many query names expected to carry a LIMIT 200]) — the
+# three added 2026-07-12 alongside FLAT_CAPS below, same audit pass.
+NAMED_LIMIT_200_QUERIES = [
+    ("queries/incidents.sql", ["ListStatusPageIncidentUpdates"]),
+    ("queries/maintenance.sql", ["ListMaintenanceWindows"]),
+    ("queries/api_keys.sql", ["ListAPIKeys"]),
+]
+
 
 def check_bounded_concurrency(findings):
     missing = []
@@ -64,12 +72,37 @@ def check_status_page_incident_limits(findings):
             findings.append(f"queries/incidents.sql: {name} has no LIMIT 200 cap")
 
 
-def check_active_incident_cap(findings):
-    text = (API / "internal" / "handler" / "incidents.go").read_text()
-    if "maxActiveIncidents = 100" not in text:
-        findings.append("incidents.go: maxActiveIncidents constant is no longer 100")
-    if "checkActiveIncidentCap(ctx, w, orgID)" not in text:
-        findings.append("incidents.go: CreateIncident no longer calls checkActiveIncidentCap")
+def check_named_limit_200_queries(findings):
+    for rel, names in NAMED_LIMIT_200_QUERIES:
+        text = (API / rel).read_text()
+        blocks = dict(re.findall(r"-- name: (\w+) :\w+\n(.*?)(?=\n-- name:|\Z)", text, re.DOTALL))
+        for name in names:
+            body = blocks.get(name)
+            if body is None:
+                findings.append(f"{rel}: query {name} not found")
+            elif "LIMIT 200" not in body:
+                findings.append(f"{rel}: {name} has no LIMIT 200 cap")
+
+
+# Each entry: (handler file, "const = N" snippet, "call-site" snippet) for a
+# flat, uniform-across-every-plan creation cap — the four added 2026-07-12
+# after ListStatusPageIncidentUpdates' missing LIMIT led to auditing every
+# other unbounded-creation handler in the same pass.
+FLAT_CAPS = [
+    ("incidents.go", "maxActiveIncidents = 100", "checkActiveIncidentCap(ctx, w, orgID)"),
+    ("incidents.go", "maxUpdatesPerIncident = 100", "checkUpdateCap(ctx, w, incident.ID)"),
+    ("maintenance.go", "maxMaintenanceWindows = 100", "count >= maxMaintenanceWindows"),
+    ("api_keys.go", "maxAPIKeys = 100", "count >= maxAPIKeys"),
+]
+
+
+def check_flat_caps(findings):
+    for filename, const_snippet, call_snippet in FLAT_CAPS:
+        text = (API / "internal" / "handler" / filename).read_text()
+        if const_snippet not in text:
+            findings.append(f"{filename}: {const_snippet!r} no longer found")
+        if call_snippet not in text:
+            findings.append(f"{filename}: {call_snippet!r} no longer found — cap may not be wired in")
 
 
 def check_pruning_wired(findings):
@@ -114,7 +147,8 @@ CHECKS = [
     check_bounded_concurrency,
     check_incident_limits,
     check_status_page_incident_limits,
-    check_active_incident_cap,
+    check_named_limit_200_queries,
+    check_flat_caps,
     check_pruning_wired,
     check_status_page_rate_limit,
     check_blanket_org_limit,

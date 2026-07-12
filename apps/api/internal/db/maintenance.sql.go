@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countMaintenanceWindows = `-- name: CountMaintenanceWindows :one
+SELECT COUNT(*) FROM maintenance_windows WHERE org_id = $1
+`
+
+func (q *Queries) CountMaintenanceWindows(ctx context.Context, orgID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countMaintenanceWindows, orgID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMaintenanceWindow = `-- name: CreateMaintenanceWindow :one
 
 INSERT INTO maintenance_windows (org_id, title, message, starts_at, ends_at)
@@ -232,6 +243,7 @@ LEFT JOIN maintenance_window_monitors mwm ON mwm.window_id = mw.id
 WHERE mw.org_id = $1
 GROUP BY mw.id
 ORDER BY mw.starts_at DESC
+LIMIT 200
 `
 
 type ListMaintenanceWindowsRow struct {

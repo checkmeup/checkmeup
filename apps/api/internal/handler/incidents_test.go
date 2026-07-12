@@ -559,6 +559,27 @@ func TestPostIncidentUpdate(t *testing.T) {
 			t.Fatal("want resolvedAt set once resolved")
 		}
 	})
+
+	t.Run("rejects a 101st update on the same incident", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "x")
+		created := createIncident(t, incidentH, u.access, createIncidentRequest{
+			Title: "x", Message: "Initial report", Severity: "minor",
+			Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		})
+		for i := 0; i < 99; i++ {
+			mustExec(t, pool, "INSERT INTO status_page_incident_updates (incident_id, message, status) VALUES ($1, 'seed', 'investigating')", created.ID)
+		}
+
+		w := doIncidentRequest(t, http.MethodPost, incidentH.PostIncidentUpdate, u.access, "/api/v1/incidents/"+created.ID+"/updates", map[string]string{"id": created.ID}, postUpdateRequest{Message: "101st", Status: "identified"})
+		if w.Code != http.StatusConflict {
+			t.Fatalf("want 409, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "too_many_incident_updates" {
+			t.Fatalf("want code too_many_incident_updates, got %q", body["code"])
+		}
+	})
 }
 
 func TestUpdateIncidentUpdateMessage(t *testing.T) {

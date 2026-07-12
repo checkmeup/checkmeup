@@ -3,7 +3,7 @@
 **Status:** Accepted  
 **Date:** 2026-06-15  
 **Revised:** 2026-07-12 — extended the same daily-prune mechanism to resolved manual incidents ([EP-24](../stories/ep-24-incident-management.md)'s `status_page_incidents`, not the automatic `cron_incidents`/`uptime_incidents`/`port_incidents` this ADR's Context section discusses): 90-day retention, uniform across every plan, in place of a per-plan creation limit — see Consequences
-**Revised:** 2026-07-12 — added a flat 100-active-incident cap per org, closing the gap the retention change alone left open (an org that never resolves anything could still grow the table unboundedly) — see Consequences
+**Revised:** 2026-07-12 — added a flat 100-active-incident cap per org, closing the gap the retention change alone left open (an org that never resolves anything could still grow the table unboundedly) — see Consequences. Three sibling caps on other unbounded-creation resources (incident updates, maintenance windows, API keys) followed in the same pass — see [ADR-036](036-flat-safety-caps.md).
 
 ## Context
 

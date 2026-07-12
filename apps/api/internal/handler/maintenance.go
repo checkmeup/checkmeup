@@ -243,6 +243,12 @@ func (h *MaintenanceHandler) ListMaintenanceWindows(w http.ResponseWriter, r *ht
 	respond.JSON(w, http.StatusOK, result)
 }
 
+// maxMaintenanceWindows caps how many maintenance windows an org can create
+// in total — a flat safety cap, uniform across every plan. Unlike
+// incidents, maintenance windows have no retention/pruning of old ones, so
+// this bounds cumulative creation, not a concurrently-active count.
+const maxMaintenanceWindows = 100
+
 // CreateMaintenanceWindow POST /api/v1/maintenance-windows
 func (h *MaintenanceHandler) CreateMaintenanceWindow(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -260,6 +266,18 @@ func (h *MaintenanceHandler) CreateMaintenanceWindow(w http.ResponseWriter, r *h
 	title, message, startsAt, endsAt, monitors, errMsg := h.validateWindowInput(r.Context(), orgID, req)
 	if errMsg != "" {
 		respond.Error(w, http.StatusBadRequest, errMsg, "bad_request")
+		return
+	}
+
+	count, err := h.queries.CountMaintenanceWindows(r.Context(), orgID)
+	if err != nil {
+		respond.InternalError(w)
+		return
+	}
+	if count >= maxMaintenanceWindows {
+		respond.Error(w, http.StatusConflict,
+			"too many maintenance windows — delete an old one before creating more",
+			"too_many_maintenance_windows")
 		return
 	}
 

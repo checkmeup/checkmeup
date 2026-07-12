@@ -61,8 +61,11 @@ INSERT INTO status_page_incident_updates (incident_id, message, status)
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: CountStatusPageIncidentUpdates :one
+SELECT COUNT(*) FROM status_page_incident_updates WHERE incident_id = $1;
+
 -- name: ListStatusPageIncidentUpdates :many
-SELECT * FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC;
+SELECT * FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 200;
 
 -- name: GetLatestStatusPageIncidentUpdate :one
 SELECT * FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1;

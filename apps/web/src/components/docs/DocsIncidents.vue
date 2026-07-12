@@ -80,6 +80,16 @@
           allowance.</span
         >
       </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">Up to 100 updates per incident</strong> —
+          same safety-cap philosophy, per incident rather than per org.</span
+        >
+      </li>
     </ul>
   </section>
 </template>

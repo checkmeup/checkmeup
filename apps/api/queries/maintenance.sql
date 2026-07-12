@@ -14,7 +14,11 @@ FROM maintenance_windows mw
 LEFT JOIN maintenance_window_monitors mwm ON mwm.window_id = mw.id
 WHERE mw.org_id = $1
 GROUP BY mw.id
-ORDER BY mw.starts_at DESC;
+ORDER BY mw.starts_at DESC
+LIMIT 200;
+
+-- name: CountMaintenanceWindows :one
+SELECT COUNT(*) FROM maintenance_windows WHERE org_id = $1;
 
 -- name: UpdateMaintenanceWindow :one
 UPDATE maintenance_windows

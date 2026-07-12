@@ -92,3 +92,21 @@ func TestRevokeAPIKey_CrossOrgIsolation(t *testing.T) {
 		t.Fatalf("org A's key was affected by org B's revoke call: %+v", keys)
 	}
 }
+
+func TestCreateAPIKey_RejectsA101stActiveKey(t *testing.T) {
+	auth, h, pool := testAPIKeyHandler(t)
+	user := signUpTestUser(t, auth, pool)
+
+	for i := 0; i < 100; i++ {
+		mustExec(t, pool, "INSERT INTO api_keys (org_id, key_hash, key_prefix, label) VALUES ($1, gen_random_uuid()::text, 'cmu_live_seed', 'seed')", user.resp.OrgID)
+	}
+
+	w := doAuthed(t, http.MethodPost, h.CreateAPIKey, user.access, map[string]any{"label": "101st"})
+	if w.Code != http.StatusConflict {
+		t.Fatalf("want 409, got %d: %s", w.Code, w.Body.String())
+	}
+	body := decodeBody[map[string]string](t, w)
+	if body["code"] != "too_many_api_keys" {
+		t.Fatalf("want code too_many_api_keys, got %q", body["code"])
+	}
+}

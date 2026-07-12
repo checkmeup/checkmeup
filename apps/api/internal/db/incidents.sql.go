@@ -38,6 +38,17 @@ func (q *Queries) CountResolvedStatusPageIncidentsForPage(ctx context.Context, p
 	return count, err
 }
 
+const countStatusPageIncidentUpdates = `-- name: CountStatusPageIncidentUpdates :one
+SELECT COUNT(*) FROM status_page_incident_updates WHERE incident_id = $1
+`
+
+func (q *Queries) CountStatusPageIncidentUpdates(ctx context.Context, incidentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countStatusPageIncidentUpdates, incidentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createStatusPageIncident = `-- name: CreateStatusPageIncident :one
 
 INSERT INTO status_page_incidents (org_id, title, severity)
@@ -322,7 +333,7 @@ func (q *Queries) ListStatusPageIncidentMonitors(ctx context.Context, incidentID
 }
 
 const listStatusPageIncidentUpdates = `-- name: ListStatusPageIncidentUpdates :many
-SELECT id, incident_id, message, status, created_at FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC
+SELECT id, incident_id, message, status, created_at FROM status_page_incident_updates WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 200
 `
 
 func (q *Queries) ListStatusPageIncidentUpdates(ctx context.Context, incidentID uuid.UUID) ([]StatusPageIncidentUpdate, error) {

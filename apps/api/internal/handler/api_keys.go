@@ -16,6 +16,10 @@ import (
 
 const apiKeyPrefixLen = 16 // "cmu_live_" (9 chars) + 7 hex chars, enough to recognize in logs
 
+// maxAPIKeys caps how many active API keys an org can have at once — a flat
+// safety cap, uniform across every plan.
+const maxAPIKeys = 100
+
 type APIKeyHandler struct {
 	queries *db.Queries
 }
@@ -67,6 +71,18 @@ func (h *APIKeyHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	var req createAPIKeyRequest
 	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	count, err := h.queries.CountActiveAPIKeys(r.Context(), orgID)
+	if err != nil {
+		respond.InternalError(w)
+		return
+	}
+	if count >= maxAPIKeys {
+		respond.Error(w, http.StatusConflict,
+			"too many active API keys — revoke one before creating more",
+			"too_many_api_keys")
+		return
+	}
 
 	raw, err := generateAPIKey()
 	if err != nil {
