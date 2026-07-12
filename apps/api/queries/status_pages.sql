@@ -16,12 +16,16 @@ SELECT * FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateStatusPage :one
 UPDATE status_pages
-SET title = $3, description = $4, logo_url = $5, updated_at = NOW()
+SET title = $3, description = $4, logo_url = $5, hide_branding = $6, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
 -- name: DeleteStatusPage :exec
 DELETE FROM status_pages WHERE id = $1 AND org_id = $2;
+
+-- name: ClearHideBrandingForOrg :exec
+UPDATE status_pages SET hide_branding = false, updated_at = NOW()
+WHERE org_id = $1 AND hide_branding = true;
 
 -- name: SlugAvailable :one
 SELECT NOT EXISTS (SELECT 1 FROM status_pages WHERE slug = $1) AS available;

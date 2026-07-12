@@ -617,14 +617,15 @@ type SslMonitor struct {
 }
 
 type StatusPage struct {
-	ID          uuid.UUID          `json:"id"`
-	OrgID       uuid.UUID          `json:"org_id"`
-	Slug        string             `json:"slug"`
-	Title       string             `json:"title"`
-	Description string             `json:"description"`
-	LogoUrl     string             `json:"logo_url"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ID           uuid.UUID          `json:"id"`
+	OrgID        uuid.UUID          `json:"org_id"`
+	Slug         string             `json:"slug"`
+	Title        string             `json:"title"`
+	Description  string             `json:"description"`
+	LogoUrl      string             `json:"logo_url"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	HideBranding bool               `json:"hide_branding"`
 }
 
 type StatusPageIncident struct {

@@ -8,6 +8,7 @@ const pushMock = vi.fn()
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
   useRoute: () => ({ params: { id: 'sp1' } }),
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
 }))
 
 vi.mock('@/layouts/AppLayout.vue', () => ({
@@ -34,12 +35,19 @@ vi.mock('@/composables/useStatusPages', () => ({
   }),
 }))
 
+const billingData = ref<{ plan: string } | null>({ plan: 'solo' })
+
+vi.mock('@/composables/useBilling', () => ({
+  useBilling: () => ({ data: billingData }),
+}))
+
 const page = {
   id: 'sp1',
   slug: 'acme',
   title: 'Acme Status',
   description: 'Live status of Acme services',
   logoUrl: 'https://example.com/logo.png',
+  hideBranding: false,
   publicUrl: 'https://checkmeup.net/status/acme',
   createdAt: '2026-06-01T00:00:00Z',
 }
@@ -52,6 +60,7 @@ beforeEach(() => {
   pageData.value = null
   pagePending.value = false
   pageError.value = null
+  billingData.value = { plan: 'solo' }
 })
 
 afterEach(() => {
@@ -113,6 +122,7 @@ describe('StatusPageEditView', () => {
       title: 'Acme Status Updated',
       description: 'Live status of Acme services',
       logoUrl: 'https://example.com/logo.png',
+      hideBranding: false,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'status-page-detail',
@@ -142,5 +152,35 @@ describe('StatusPageEditView', () => {
       name: 'status-page-detail',
       params: { id: 'sp1' },
     })
+  })
+
+  it('enables the hide-branding checkbox on a paid plan and submits it checked', async () => {
+    billingData.value = { plan: 'solo' }
+    pageData.value = { ...page }
+    updateMock.mockResolvedValueOnce({ ...page, hideBranding: true })
+    const wrapper = mount(StatusPageEditView)
+
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    expect((checkbox.element as HTMLInputElement).disabled).toBe(false)
+    await checkbox.setValue(true)
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith('sp1', {
+      title: 'Acme Status',
+      description: 'Live status of Acme services',
+      logoUrl: 'https://example.com/logo.png',
+      hideBranding: true,
+    })
+  })
+
+  it('disables the hide-branding checkbox on Hobby and shows an upgrade hint', () => {
+    billingData.value = { plan: 'hobby' }
+    pageData.value = { ...page }
+    const wrapper = mount(StatusPageEditView)
+
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    expect((checkbox.element as HTMLInputElement).disabled).toBe(true)
+    expect(wrapper.text()).toContain('Hiding branding requires a paid plan')
   })
 })

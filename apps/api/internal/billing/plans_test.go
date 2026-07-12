@@ -40,10 +40,10 @@ func TestGetLimits(t *testing.T) {
 		plan db.Plan
 		want Limits
 	}{
-		{db.PlanHobby, Limits{MonitorTotal: 10, StatusPages: 1, NotificationChannels: 5, MinIntervalMins: 5, SMSCredits: 0}},
-		{db.PlanSolo, Limits{MonitorTotal: 30, StatusPages: 3, NotificationChannels: 20, MinIntervalMins: 1, SMSCredits: 10}},
-		{db.PlanStartup, Limits{MonitorTotal: 100, StatusPages: 10, NotificationChannels: 50, MinIntervalMins: 1, SMSCredits: 30}},
-		{db.PlanEnterprise, Limits{MonitorTotal: 1000, StatusPages: 100, NotificationChannels: 100, MinIntervalMins: 1, SMSCredits: 100}},
+		{db.PlanHobby, Limits{MonitorTotal: 10, StatusPages: 1, NotificationChannels: 5, MinIntervalMins: 5, SMSCredits: 0, HideBrandingAllowed: false}},
+		{db.PlanSolo, Limits{MonitorTotal: 30, StatusPages: 3, NotificationChannels: 20, MinIntervalMins: 1, SMSCredits: 10, HideBrandingAllowed: true}},
+		{db.PlanStartup, Limits{MonitorTotal: 100, StatusPages: 10, NotificationChannels: 50, MinIntervalMins: 1, SMSCredits: 30, HideBrandingAllowed: true}},
+		{db.PlanEnterprise, Limits{MonitorTotal: 1000, StatusPages: 100, NotificationChannels: 100, MinIntervalMins: 1, SMSCredits: 100, HideBrandingAllowed: true}},
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.plan), func(t *testing.T) {

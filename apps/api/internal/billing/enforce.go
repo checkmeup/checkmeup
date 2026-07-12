@@ -80,3 +80,15 @@ func EnforceNotificationChannelLimit(ctx context.Context, q *db.Queries, orgID u
 	}
 	return nil
 }
+
+// EnforceHideBrandingLimit clears status_pages.hide_branding across the org
+// once it's no longer on a plan that allows it (ADR-035) — same
+// downgrade-time enforcement as EnforceMonitorLimit/
+// EnforceNotificationChannelLimit, for a boolean instead of a count. A no-op
+// when the plan still allows it or no page has the flag set.
+func EnforceHideBrandingLimit(ctx context.Context, q *db.Queries, orgID uuid.UUID, allowed bool) error {
+	if allowed {
+		return nil
+	}
+	return q.ClearHideBrandingForOrg(ctx, orgID)
+}

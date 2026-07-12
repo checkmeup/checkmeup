@@ -28,6 +28,7 @@ const statusPage = {
   title: 'checkmeup status',
   description: 'Live status of our services',
   logoUrl: 'https://checkmeup.net/logo.png',
+  hideBranding: false,
   publicUrl: 'https://checkmeup.net/status/status',
   createdAt: '2026-06-01T00:00:00Z',
 }
@@ -51,6 +52,7 @@ const updateInput = {
   title: 'checkmeup status',
   description: 'Live status of our services',
   logoUrl: 'https://checkmeup.net/logo.png',
+  hideBranding: false,
 }
 
 const setMonitorsInput = {

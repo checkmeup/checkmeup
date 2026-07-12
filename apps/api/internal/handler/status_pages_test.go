@@ -417,6 +417,35 @@ func TestUpdateStatusPage(t *testing.T) {
 			t.Fatalf("want slug unchanged (no slug field in update request), got %q vs %q", resp.Slug, page.Slug)
 		}
 	})
+
+	t.Run("ADR-035: hideBranding requires a paid plan", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: uniqueSlug(t), Title: "x"})
+		page := decodeBody[statusPageResponse](t, createW)
+
+		hobby := doStatusPageRequest(t, http.MethodPatch, statusH.UpdateStatusPage, u.access, page.ID, updateStatusPageRequest{
+			Title: "x", HideBranding: true,
+		})
+		if hobby.Code != http.StatusPaymentRequired {
+			t.Fatalf("want 402 on Hobby, got %d: %s", hobby.Code, hobby.Body.String())
+		}
+		body := decodeBody[map[string]string](t, hobby)
+		if body["code"] != "plan_limit_reached" {
+			t.Fatalf("want code plan_limit_reached, got %q", body["code"])
+		}
+
+		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)
+		solo := doStatusPageRequest(t, http.MethodPatch, statusH.UpdateStatusPage, u.access, page.ID, updateStatusPageRequest{
+			Title: "x", HideBranding: true,
+		})
+		if solo.Code != http.StatusOK {
+			t.Fatalf("want 200 on Solo, got %d: %s", solo.Code, solo.Body.String())
+		}
+		resp := decodeBody[statusPageResponse](t, solo)
+		if !resp.HideBranding {
+			t.Fatal("want hideBranding true on Solo")
+		}
+	})
 }
 
 func TestDeleteStatusPage(t *testing.T) {

@@ -372,6 +372,20 @@ func TestWebhook(t *testing.T) {
 			}
 		}
 
+		// ADR-035: a status page with hide_branding set on Solo should have it
+		// cleared once the downgrade below drops the org to Hobby.
+		page, err := billH.queries.CreateStatusPage(context.Background(), db.CreateStatusPageParams{
+			OrgID: orgID, Slug: "downgrade-branding-" + uuid.NewString(), Title: "x",
+		})
+		if err != nil {
+			t.Fatalf("create status page: %v", err)
+		}
+		if _, err := billH.queries.UpdateStatusPage(context.Background(), db.UpdateStatusPageParams{
+			ID: page.ID, OrgID: orgID, Title: "x", HideBranding: true,
+		}); err != nil {
+			t.Fatalf("set hide_branding: %v", err)
+		}
+
 		periodEndsAt := time.Now().Add(5 * 24 * time.Hour).UTC().Format(time.RFC3339)
 		cancelW := doWebhook(t, billH, webhookEvent("subscription.canceled", u.resp.OrgID, "canceled", testSoloPriceID, "ctm_downgrade", "sub_downgrade", nil, &periodEndsAt))
 		if cancelW.Code != http.StatusOK {
@@ -406,6 +420,14 @@ func TestWebhook(t *testing.T) {
 		}
 		if newestChannel.Enabled {
 			t.Fatal("want the newest channel auto-disabled after downgrading past the 5-channel Hobby limit")
+		}
+
+		downgradedPage, err := billH.queries.GetStatusPage(context.Background(), db.GetStatusPageParams{ID: page.ID, OrgID: orgID})
+		if err != nil {
+			t.Fatalf("get status page: %v", err)
+		}
+		if downgradedPage.HideBranding {
+			t.Fatal("want hide_branding cleared after downgrading to Hobby (ADR-035)")
 		}
 	})
 }

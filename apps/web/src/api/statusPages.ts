@@ -6,6 +6,7 @@ export interface StatusPage {
   title: string
   description: string
   logoUrl: string
+  hideBranding: boolean
   publicUrl: string
   createdAt: string
 }
@@ -33,6 +34,7 @@ export interface UpdateStatusPageInput {
   title: string
   description: string
   logoUrl: string
+  hideBranding: boolean
 }
 
 export interface SetMonitorsInput {

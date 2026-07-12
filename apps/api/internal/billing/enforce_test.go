@@ -244,3 +244,70 @@ func TestEnforceNotificationChannelLimit(t *testing.T) {
 		}
 	})
 }
+
+func TestEnforceHideBrandingLimit(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+
+	createPage := func(t *testing.T, orgID uuid.UUID, hideBranding bool) db.StatusPage {
+		t.Helper()
+		p, err := queries.CreateStatusPage(context.Background(), db.CreateStatusPageParams{
+			OrgID: orgID, Slug: "sp-" + uuid.NewString(), Title: "x",
+		})
+		if err != nil {
+			t.Fatalf("create status page: %v", err)
+		}
+		p, err = queries.UpdateStatusPage(context.Background(), db.UpdateStatusPageParams{
+			ID: p.ID, OrgID: orgID, Title: p.Title, HideBranding: hideBranding,
+		})
+		if err != nil {
+			t.Fatalf("set hide_branding: %v", err)
+		}
+		return p
+	}
+
+	t.Run("clears hide_branding across every page in the org when not allowed", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		hidden1 := createPage(t, org.ID, true)
+		hidden2 := createPage(t, org.ID, true)
+		alreadyOff := createPage(t, org.ID, false)
+
+		if err := EnforceHideBrandingLimit(context.Background(), queries, org.ID, false); err != nil {
+			t.Fatalf("enforce: %v", err)
+		}
+
+		get := func(id uuid.UUID) db.StatusPage {
+			p, err := queries.GetStatusPage(context.Background(), db.GetStatusPageParams{ID: id, OrgID: org.ID})
+			if err != nil {
+				t.Fatalf("get status page: %v", err)
+			}
+			return p
+		}
+		if get(hidden1.ID).HideBranding {
+			t.Error("want hide_branding cleared")
+		}
+		if get(hidden2.ID).HideBranding {
+			t.Error("want hide_branding cleared")
+		}
+		if get(alreadyOff.ID).HideBranding {
+			t.Error("want an already-false page to stay false")
+		}
+	})
+
+	t.Run("no-op when the plan still allows it", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		hidden := createPage(t, org.ID, true)
+
+		if err := EnforceHideBrandingLimit(context.Background(), queries, org.ID, true); err != nil {
+			t.Fatalf("enforce: %v", err)
+		}
+
+		got, err := queries.GetStatusPage(context.Background(), db.GetStatusPageParams{ID: hidden.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get status page: %v", err)
+		}
+		if !got.HideBranding {
+			t.Error("want hide_branding to stay true when allowed=true")
+		}
+	})
+}

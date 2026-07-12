@@ -99,6 +99,7 @@ type publicPageData struct {
 	HasPrevIncidentsPage  bool
 	HasNextIncidentsPage  bool
 	UpdatedAt             string
+	HideBranding          bool
 }
 
 // initials derives a 1-2 letter fallback badge from a status page's title
@@ -169,6 +170,7 @@ func (h *StatusPublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		HasPrevIncidentsPage:  resolvedPage > 1,
 		HasNextIncidentsPage:  int64(resolvedPage*resolvedIncidentsPageSize) < resolvedTotal,
 		UpdatedAt:             time.Now().UTC().Format("2006-01-02 15:04 UTC"),
+		HideBranding:          page.HideBranding,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -926,8 +928,10 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 
   <div class="footer">
     <p>Last updated {{.UpdatedAt}}</p>
+    {{if not .HideBranding}}
     <p>Powered by <a href="https://checkmeup.net">Checkmeup</a></p>
     <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
+    {{end}}
   </div>
 </div>
 </body>

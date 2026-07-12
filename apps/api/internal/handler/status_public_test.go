@@ -94,6 +94,39 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		if !strings.Contains(body, "All systems operational") {
 			t.Fatal("want an empty page to report all systems operational")
 		}
+		if !strings.Contains(body, "Powered by") {
+			t.Fatal("want the branding footer by default (hide_branding defaults false)")
+		}
+	})
+
+	t.Run("ADR-035: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Branded Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+
+		updateW := doStatusPageRequest(t, http.MethodPatch, statusH.UpdateStatusPage, u.access, page.ID, updateStatusPageRequest{
+			Title: "Branded Co", HideBranding: true,
+		})
+		if updateW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", updateW.Code, updateW.Body.String())
+		}
+
+		w := doPublicStatusPage(publicH, slug)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		body := w.Body.String()
+		if strings.Contains(body, "Powered by") {
+			t.Fatal("want the branding line hidden")
+		}
+		if strings.Contains(body, "checkmeup.net/faq") {
+			t.Fatal("want the FAQ/Terms/Privacy links hidden")
+		}
+		if !strings.Contains(body, "Last updated") {
+			t.Fatal("want the footer's Last updated line to stay, only branding hidden")
+		}
 	})
 
 	t.Run("renders monitor statuses and aggregates overall status", func(t *testing.T) {

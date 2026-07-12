@@ -449,6 +449,9 @@ func (h *BillingHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	if err := billing.EnforceNotificationChannelLimit(r.Context(), h.queries, orgID, limits.NotificationChannels); err != nil {
 		slog.ErrorContext(r.Context(), "failed to enforce notification channel limit after plan change", "org_id", orgID, "error", err)
 	}
+	if err := billing.EnforceHideBrandingLimit(r.Context(), h.queries, orgID, limits.HideBrandingAllowed); err != nil {
+		slog.ErrorContext(r.Context(), "failed to enforce hide-branding limit after plan change", "org_id", orgID, "error", err)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { statusPagesApi } from '@/api/statusPages'
 import { useStatusPage } from '@/composables/useStatusPages'
+import { useBilling } from '@/composables/useBilling'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,6 +17,7 @@ const title = ref('')
 const description = ref('')
 const logoUrl = ref('')
 const slug = ref('')
+const hideBranding = ref(false)
 const submitting = ref(false)
 const error = ref('')
 
@@ -28,12 +30,16 @@ watch(
     description.value = p.description
     logoUrl.value = p.logoUrl
     slug.value = p.slug
+    hideBranding.value = p.hideBranding
   },
   { immediate: true },
 )
 watch(loadError, (e) => {
   if (e) error.value = e.message
 })
+
+const { data: billingInfo } = useBilling()
+const hobbyPlanNoBrandingToggle = computed(() => billingInfo.value?.plan === 'hobby')
 
 async function submit() {
   error.value = ''
@@ -48,6 +54,7 @@ async function submit() {
       title: title.value.trim(),
       description: description.value.trim(),
       logoUrl: logoUrl.value.trim(),
+      hideBranding: hideBranding.value,
     })
     router.push({ name: 'status-page-detail', params: { id } })
   } catch (e: unknown) {
@@ -101,6 +108,22 @@ async function submit() {
         <div>
           <Label for="logoUrl">Logo URL <span style="color: var(--text-muted)">(optional)</span></Label>
           <Input id="logoUrl" v-model="logoUrl" placeholder="https://example.com/logo.png" class="mt-1" />
+        </div>
+
+        <div>
+          <label
+            class="flex items-center gap-2 text-sm"
+            :style="{ color: hobbyPlanNoBrandingToggle ? 'var(--text-muted)' : 'var(--text)' }"
+          >
+            <input v-model="hideBranding" type="checkbox" :disabled="hobbyPlanNoBrandingToggle" />
+            Hide "Powered by Checkmeup" and FAQ/Terms/Privacy links on this page
+          </label>
+          <p v-if="hobbyPlanNoBrandingToggle" class="mt-1 text-xs" style="color: var(--text-muted)">
+            Hiding branding requires a paid plan —
+            <RouterLink to="/billing" class="underline" style="color: var(--color-green-500)"
+              >view plans</RouterLink
+            >.
+          </p>
         </div>
 
         <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>

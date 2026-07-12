@@ -33,13 +33,14 @@ func NewStatusPageHandler(pool *pgxpool.Pool) *StatusPageHandler {
 // ─── response types ──────────────────────────────────────────────────────────
 
 type statusPageResponse struct {
-	ID          string `json:"id"`
-	Slug        string `json:"slug"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	LogoURL     string `json:"logoUrl"`
-	PublicURL   string `json:"publicUrl"`
-	CreatedAt   string `json:"createdAt"`
+	ID           string `json:"id"`
+	Slug         string `json:"slug"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	LogoURL      string `json:"logoUrl"`
+	HideBranding bool   `json:"hideBranding"`
+	PublicURL    string `json:"publicUrl"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 type statusPageMonitorResponse struct {
@@ -57,13 +58,14 @@ type statusPageDetailResponse struct {
 
 func toStatusPageResponse(p db.StatusPage, baseURL string) statusPageResponse {
 	return statusPageResponse{
-		ID:          p.ID.String(),
-		Slug:        p.Slug,
-		Title:       p.Title,
-		Description: p.Description,
-		LogoURL:     p.LogoUrl,
-		PublicURL:   baseURL + "/status/" + p.Slug,
-		CreatedAt:   p.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ID:           p.ID.String(),
+		Slug:         p.Slug,
+		Title:        p.Title,
+		Description:  p.Description,
+		LogoURL:      p.LogoUrl,
+		HideBranding: p.HideBranding,
+		PublicURL:    baseURL + "/status/" + p.Slug,
+		CreatedAt:    p.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
 }
 
@@ -266,9 +268,10 @@ func (h *StatusPageHandler) GetStatusPage(w http.ResponseWriter, r *http.Request
 }
 
 type updateStatusPageRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	LogoURL     string `json:"logoUrl"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	LogoURL      string `json:"logoUrl"`
+	HideBranding bool   `json:"hideBranding"`
 }
 
 // UpdateStatusPage PATCH /api/v1/status-pages/:id
@@ -292,12 +295,27 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
+
+	// ADR-035: hide_branding can only be turned on for orgs on a paid plan.
+	if req.HideBranding {
+		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return
+		}
+		if !billing.GetLimits(plan).HideBrandingAllowed {
+			respond.Error(w, http.StatusPaymentRequired, "hiding branding requires a paid plan — upgrade to enable this", "plan_limit_reached")
+			return
+		}
+	}
+
 	page, err := h.queries.UpdateStatusPage(r.Context(), db.UpdateStatusPageParams{
-		ID:          pageID,
-		OrgID:       orgID,
-		Title:       req.Title,
-		Description: strings.TrimSpace(req.Description),
-		LogoUrl:     req.LogoURL,
+		ID:           pageID,
+		OrgID:        orgID,
+		Title:        req.Title,
+		Description:  strings.TrimSpace(req.Description),
+		LogoUrl:      req.LogoURL,
+		HideBranding: req.HideBranding,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

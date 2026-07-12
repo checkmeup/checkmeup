@@ -12,11 +12,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearHideBrandingForOrg = `-- name: ClearHideBrandingForOrg :exec
+UPDATE status_pages SET hide_branding = false, updated_at = NOW()
+WHERE org_id = $1 AND hide_branding = true
+`
+
+func (q *Queries) ClearHideBrandingForOrg(ctx context.Context, orgID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearHideBrandingForOrg, orgID)
+	return err
+}
+
 const createStatusPage = `-- name: CreateStatusPage :one
 
 INSERT INTO status_pages (org_id, slug, title, description, logo_url)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at
+RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding
 `
 
 type CreateStatusPageParams struct {
@@ -46,6 +56,7 @@ func (q *Queries) CreateStatusPage(ctx context.Context, arg CreateStatusPagePara
 		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideBranding,
 	)
 	return i, err
 }
@@ -273,7 +284,7 @@ func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMon
 }
 
 const getStatusPage = `-- name: GetStatusPage :one
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at FROM status_pages WHERE id = $1 AND org_id = $2
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE id = $1 AND org_id = $2
 `
 
 type GetStatusPageParams struct {
@@ -293,12 +304,13 @@ func (q *Queries) GetStatusPage(ctx context.Context, arg GetStatusPageParams) (S
 		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideBranding,
 	)
 	return i, err
 }
 
 const getStatusPageBySlug = `-- name: GetStatusPageBySlug :one
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at FROM status_pages WHERE slug = $1
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE slug = $1
 `
 
 func (q *Queries) GetStatusPageBySlug(ctx context.Context, slug string) (StatusPage, error) {
@@ -313,6 +325,7 @@ func (q *Queries) GetStatusPageBySlug(ctx context.Context, slug string) (StatusP
 		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideBranding,
 	)
 	return i, err
 }
@@ -476,7 +489,7 @@ func (q *Queries) ListStatusPageMonitors(ctx context.Context, pageID uuid.UUID) 
 }
 
 const listStatusPages = `-- name: ListStatusPages :many
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListStatusPages(ctx context.Context, orgID uuid.UUID) ([]StatusPage, error) {
@@ -497,6 +510,7 @@ func (q *Queries) ListStatusPages(ctx context.Context, orgID uuid.UUID) ([]Statu
 			&i.LogoUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HideBranding,
 		); err != nil {
 			return nil, err
 		}
@@ -521,17 +535,18 @@ func (q *Queries) SlugAvailable(ctx context.Context, slug string) (bool, error) 
 
 const updateStatusPage = `-- name: UpdateStatusPage :one
 UPDATE status_pages
-SET title = $3, description = $4, logo_url = $5, updated_at = NOW()
+SET title = $3, description = $4, logo_url = $5, hide_branding = $6, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at
+RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding
 `
 
 type UpdateStatusPageParams struct {
-	ID          uuid.UUID `json:"id"`
-	OrgID       uuid.UUID `json:"org_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	LogoUrl     string    `json:"logo_url"`
+	ID           uuid.UUID `json:"id"`
+	OrgID        uuid.UUID `json:"org_id"`
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	LogoUrl      string    `json:"logo_url"`
+	HideBranding bool      `json:"hide_branding"`
 }
 
 func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPageParams) (StatusPage, error) {
@@ -541,6 +556,7 @@ func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPagePara
 		arg.Title,
 		arg.Description,
 		arg.LogoUrl,
+		arg.HideBranding,
 	)
 	var i StatusPage
 	err := row.Scan(
@@ -552,6 +568,7 @@ func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPagePara
 		&i.LogoUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideBranding,
 	)
 	return i, err
 }
