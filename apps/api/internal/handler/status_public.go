@@ -60,6 +60,15 @@ type activeMaintenance struct {
 	Message string
 }
 
+// publicIncidentUpdateRow is one entry in an active incident's timeline
+// (design: CheckMeUp Status Page.dc.html, option 1a).
+type publicIncidentUpdateRow struct {
+	StatusLabel  string
+	RelativeTime string
+	Message      string
+	IsLast       bool // true for the oldest entry — suppresses the connecting line below it
+}
+
 // publicIncidentRow is a manually-declared incident (EP-24), independent of
 // the automatic up/down monitor rows above.
 type publicIncidentRow struct {
@@ -67,10 +76,13 @@ type publicIncidentRow struct {
 	Severity            string // "Minor" / "Major" / "Critical"
 	SeverityColor       string
 	StatusLabel         string // "Investigating" / "Identified" / "Monitoring" / "Resolved"
+	Affected            string // comma-joined display names of affected monitors
+	Updates             []publicIncidentUpdateRow
 	LatestUpdateMessage string
 	LatestUpdateAt      string
 	CreatedAt           string
 	ResolvedAt          string
+	Duration            string // resolved incidents only, e.g. "45 min" / "1h 12min"
 }
 
 type publicPageData struct {
@@ -193,6 +205,49 @@ func (h *StatusPublicHandler) loadRows(ctx context.Context, page db.StatusPage) 
 	return rows, nil
 }
 
+// relativeTime formats a past timestamp the way the incident timeline design
+// does ("58 min ago", "2h 10min ago", "3 days ago") — coarser than a clock
+// time since visitors care about recency, not the exact minute.
+func relativeTime(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%d min ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		h := int(d.Hours())
+		m := int(d.Minutes()) - h*60
+		if m == 0 {
+			return fmt.Sprintf("%dh ago", h)
+		}
+		return fmt.Sprintf("%dh %dmin ago", h, m)
+	default:
+		days := int(d.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
+}
+
+// formatDuration renders an incident's total open time for the resolved
+// history ("45 min", "1h 12min") — same coarse-grain style as relativeTime.
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return "< 1 min"
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%d min", int(d.Minutes()))
+	}
+	h := int(d.Hours())
+	m := int(d.Minutes()) - h*60
+	if m == 0 {
+		return fmt.Sprintf("%dh", h)
+	}
+	return fmt.Sprintf("%dh %dmin", h, m)
+}
+
 // parseIncidentsPageParam parses the resolved-incidents 1-based page-number
 // query param, defaulting to page 1 on anything invalid or out of range.
 func parseIncidentsPageParam(s string) int {
@@ -204,8 +259,9 @@ func parseIncidentsPageParam(s string) int {
 }
 
 // loadActiveIncidents fetches manually-declared incidents (EP-24) that are
-// still open and affect at least one monitor on this page, each annotated
-// with its most recent update for the "current status" line (US-2403).
+// still open and affect at least one monitor on this page, each with its
+// full update timeline (design: CheckMeUp Status Page.dc.html, option 1a —
+// the timeline shows every update, not just the latest one).
 func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.StatusPage) ([]publicIncidentRow, error) {
 	rows, err := h.queries.ListActiveStatusPageIncidentsForPage(ctx, page.ID)
 	if err != nil {
@@ -218,11 +274,23 @@ func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.S
 			Severity:      incidentSeverityLabel(r.Severity),
 			SeverityColor: incidentSeverityColor(r.Severity),
 			StatusLabel:   incidentStatusLabel(r.Status),
+			Affected:      string(r.Affected),
 			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
 		}
-		if latest, err := h.queries.GetLatestStatusPageIncidentUpdate(ctx, r.ID); err == nil {
-			row.LatestUpdateMessage = latest.Message
-			row.LatestUpdateAt = latest.CreatedAt.Time.Format("2006-01-02 15:04 UTC")
+		if updates, err := h.queries.ListStatusPageIncidentUpdates(ctx, r.ID); err == nil {
+			row.Updates = make([]publicIncidentUpdateRow, len(updates))
+			for i, u := range updates {
+				row.Updates[i] = publicIncidentUpdateRow{
+					StatusLabel:  incidentStatusLabel(u.Status),
+					RelativeTime: relativeTime(u.CreatedAt.Time),
+					Message:      u.Message,
+					IsLast:       i == len(updates)-1,
+				}
+			}
+			if len(updates) > 0 {
+				row.LatestUpdateMessage = updates[0].Message
+				row.LatestUpdateAt = updates[0].CreatedAt.Time.Format("2006-01-02 15:04 UTC")
+			}
 		}
 		result = append(result, row)
 	}
@@ -246,14 +314,19 @@ func (h *StatusPublicHandler) loadResolvedIncidents(ctx context.Context, page db
 
 	result := make([]publicIncidentRow, len(dbRows))
 	for i, r := range dbRows {
-		result[i] = publicIncidentRow{
+		row := publicIncidentRow{
 			Title:         r.Title,
 			Severity:      incidentSeverityLabel(r.Severity),
 			SeverityColor: incidentSeverityColor(r.Severity),
 			StatusLabel:   incidentStatusLabel(r.Status),
 			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
 			ResolvedAt:    r.ResolvedAt.Time.Format("2006-01-02 15:04 UTC"),
+			Duration:      formatDuration(r.ResolvedAt.Time.Sub(r.CreatedAt.Time)),
 		}
+		if latest, err := h.queries.GetLatestStatusPageIncidentUpdate(ctx, r.ID); err == nil {
+			row.LatestUpdateMessage = latest.Message
+		}
+		result[i] = row
 	}
 	return result, total, nil
 }
@@ -705,15 +778,26 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 :root[data-theme='light'] .theme-toggle .icon-moon{display:block}
 .banner{border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;margin-bottom:22px}
 .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-.incidents{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
-.incident{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-.incident-header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.incident-title{font-weight:600;font-size:13.5px;color:var(--text-strong);flex:1}
-.incident-status{font-size:11.5px;color:var(--text-muted)}
-.incident-message{margin-top:8px;font-size:12.5px;color:var(--text-dim)}
-.incident.resolved{opacity:.75}
+.banner-count{margin-left:auto;font-size:12px;font-weight:500;color:var(--text-muted)}
+.incident{border-radius:12px;padding:18px 20px;margin-bottom:26px}
+.incident-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.incident-title{font-size:14px;font-weight:700;color:var(--text-strong)}
+.incident-status-chip{padding:2px 9px;border-radius:100px;background:var(--surface-raised);color:var(--text-dim);font-size:10.5px;font-weight:600}
+.incident-affected{margin:8px 0 14px;font-size:12.5px;color:var(--text-muted)}
+.timeline-row{display:flex;gap:12px;padding-bottom:14px}
+.timeline-rail{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.timeline-dot{width:7px;height:7px;border-radius:50%;margin-top:5px}
+.timeline-line{width:1px;flex:1;margin-top:4px}
+.timeline-status{font-size:12.5px;font-weight:600;color:var(--text-strong)}
+.timeline-time{font-weight:400;color:var(--text-muted);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px}
+.timeline-message{font-size:12.5px;color:var(--text-dim);margin-top:3px;line-height:1.5}
 .incidents-history{margin-top:8px;margin-bottom:8px}
-.section-title{font-size:13px;font-weight:600;color:var(--text-strong);margin-bottom:10px}
+.section-title{font-size:12.5px;font-weight:600;color:var(--text-dim);margin-bottom:10px}
+.history-row{padding:12px 0;border-top:1px solid var(--border)}
+.history-head{display:flex;align-items:center;gap:8px}
+.history-title{font-size:13px;font-weight:600;color:var(--text-strong)}
+.history-meta{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
+.history-summary{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
 .pagination{display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px}
 .pagination a{color:var(--accent);text-decoration:none}
 .pagination a:hover{text-decoration:underline}
@@ -763,18 +847,30 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
   <div class="banner" style="background:{{.OverallColor}}18;border:1px solid {{.OverallColor}}44">
     <span class="dot" style="background:{{.OverallColor}}"></span>
     <span style="color:{{.OverallColor}}">{{.Overall}}</span>
+    {{if .ActiveIncidents}}
+    <span class="banner-count">{{len .ActiveIncidents}} active incident{{if ne (len .ActiveIncidents) 1}}s{{end}}</span>
+    {{end}}
   </div>
 
-  {{if .ActiveIncidents}}
-  <div class="incidents">
-    {{range .ActiveIncidents}}
-    <div class="incident">
-      <div class="incident-header">
-        <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
-        <span class="incident-title">{{.Title}}</span>
-        <span class="incident-status">{{.StatusLabel}}</span>
+  {{range .ActiveIncidents}}
+  <div class="incident" style="border:1px solid {{.SeverityColor}}4D;background:{{.SeverityColor}}14">
+    <div class="incident-header">
+      <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
+      <span class="incident-status-chip">{{.StatusLabel}}</span>
+      <span class="incident-title">{{.Title}}</span>
+    </div>
+    {{if .Affected}}<p class="incident-affected">Affecting: {{.Affected}}</p>{{end}}
+    {{$incidentColor := .SeverityColor}}
+    {{range .Updates}}
+    <div class="timeline-row">
+      <div class="timeline-rail">
+        <span class="timeline-dot" style="background:{{$incidentColor}}"></span>
+        {{if not .IsLast}}<span class="timeline-line" style="background:{{$incidentColor}}59"></span>{{end}}
       </div>
-      {{if .LatestUpdateMessage}}<p class="incident-message">{{.LatestUpdateMessage}}</p>{{end}}
+      <div>
+        <div class="timeline-status">{{.StatusLabel}} <span class="timeline-time">· {{.RelativeTime}}</span></div>
+        <div class="timeline-message">{{.Message}}</div>
+      </div>
     </div>
     {{end}}
   </div>
@@ -810,17 +906,15 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
   {{if .ResolvedIncidents}}
   <div class="incidents-history">
     <h2 class="section-title">Past incidents</h2>
-    <div class="incidents">
-      {{range .ResolvedIncidents}}
-      <div class="incident resolved">
-        <div class="incident-header">
-          <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
-          <span class="incident-title">{{.Title}}</span>
-          <span class="incident-status">Resolved {{.ResolvedAt}}</span>
-        </div>
+    {{range .ResolvedIncidents}}
+    <div class="history-row">
+      <div class="history-head">
+        <span class="history-title">{{.Title}}</span>
+        <span class="history-meta">{{.ResolvedAt}} · {{.Duration}}</span>
       </div>
-      {{end}}
+      {{if .LatestUpdateMessage}}<p class="history-summary">{{.LatestUpdateMessage}}</p>{{end}}
     </div>
+    {{end}}
     {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
     <div class="pagination">
       {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}

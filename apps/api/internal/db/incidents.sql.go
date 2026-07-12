@@ -168,11 +168,13 @@ func (q *Queries) InsertStatusPageIncidentUpdate(ctx context.Context, arg Insert
 
 const listActiveStatusPageIncidentsForPage = `-- name: ListActiveStatusPageIncidentsForPage :many
 
-SELECT DISTINCT spi.id, spi.title, spi.severity, spi.status, spi.created_at
+SELECT spi.id, spi.title, spi.severity, spi.status, spi.created_at,
+       string_agg(DISTINCT spm.display_name, ', ') AS affected
 FROM status_page_incidents spi
 JOIN status_page_incident_monitors spim ON spim.incident_id = spi.id
 JOIN status_page_monitors spm ON spm.monitor_type = spim.monitor_type AND spm.monitor_id = spim.monitor_id
 WHERE spm.page_id = $1 AND spi.status != 'resolved'
+GROUP BY spi.id, spi.title, spi.severity, spi.status, spi.created_at
 ORDER BY spi.created_at DESC
 `
 
@@ -182,6 +184,7 @@ type ListActiveStatusPageIncidentsForPageRow struct {
 	Severity  IncidentSeverity   `json:"severity"`
 	Status    IncidentStatus     `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Affected  []byte             `json:"affected"`
 }
 
 // ─── public status page lookups (scoped by page_id) ──────────────────────────
@@ -200,6 +203,7 @@ func (q *Queries) ListActiveStatusPageIncidentsForPage(ctx context.Context, page
 			&i.Severity,
 			&i.Status,
 			&i.CreatedAt,
+			&i.Affected,
 		); err != nil {
 			return nil, err
 		}

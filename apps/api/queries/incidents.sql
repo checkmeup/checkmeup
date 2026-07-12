@@ -65,11 +65,13 @@ RETURNING *;
 -- ─── public status page lookups (scoped by page_id) ──────────────────────────
 
 -- name: ListActiveStatusPageIncidentsForPage :many
-SELECT DISTINCT spi.id, spi.title, spi.severity, spi.status, spi.created_at
+SELECT spi.id, spi.title, spi.severity, spi.status, spi.created_at,
+       string_agg(DISTINCT spm.display_name, ', ') AS affected
 FROM status_page_incidents spi
 JOIN status_page_incident_monitors spim ON spim.incident_id = spi.id
 JOIN status_page_monitors spm ON spm.monitor_type = spim.monitor_type AND spm.monitor_id = spim.monitor_id
 WHERE spm.page_id = $1 AND spi.status != 'resolved'
+GROUP BY spi.id, spi.title, spi.severity, spi.status, spi.created_at
 ORDER BY spi.created_at DESC;
 
 -- name: ListResolvedStatusPageIncidentsForPage :many
