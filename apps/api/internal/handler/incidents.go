@@ -398,6 +398,21 @@ func (h *IncidentHandler) CreateIncident(w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, http.StatusCreated, resp)
 }
 
+// respondIncidentNotFoundOrInternal writes a 404 if err is pgx.ErrNoRows, a
+// 500 for any other non-nil error, and reports whether it wrote a response
+// so the caller knows to return immediately.
+func respondIncidentNotFoundOrInternal(w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "incident not found", "not_found")
+		return true
+	}
+	respond.InternalError(w)
+	return true
+}
+
 // GetIncident GET /api/v1/incidents/:id
 func (h *IncidentHandler) GetIncident(w http.ResponseWriter, r *http.Request) {
 	orgID, id, ok := incidentIDs(w, r)
@@ -405,12 +420,7 @@ func (h *IncidentHandler) GetIncident(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	incident, err := h.queries.GetStatusPageIncident(r.Context(), db.GetStatusPageIncidentParams{ID: id, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "incident not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	if respondIncidentNotFoundOrInternal(w, err) {
 		return
 	}
 	resp, err := h.buildIncidentDetail(r.Context(), orgID, incident)
@@ -441,12 +451,7 @@ func (h *IncidentHandler) UpdateIncidentTitle(w http.ResponseWriter, r *http.Req
 	incident, err := h.queries.UpdateStatusPageIncidentTitle(r.Context(), db.UpdateStatusPageIncidentTitleParams{
 		ID: id, OrgID: orgID, Title: title,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "incident not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	if respondIncidentNotFoundOrInternal(w, err) {
 		return
 	}
 	resp, err := h.buildIncidentDetail(r.Context(), orgID, incident)
@@ -491,6 +496,24 @@ func decodeAndValidatePostUpdateRequest(w http.ResponseWriter, r *http.Request) 
 	return message, status, true
 }
 
+// decodeAndValidateMessage decodes a request body with a single "message"
+// field and validates it's non-empty, responding and returning ok=false on
+// failure. Used by UpdateIncidentUpdateMessage; PostIncidentUpdate uses
+// decodeAndValidatePostUpdateRequest since it also needs a status.
+func decodeAndValidateMessage(w http.ResponseWriter, r *http.Request) (string, bool) {
+	var req updateMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
+		return "", false
+	}
+	message := strings.TrimSpace(req.Message)
+	if message == "" {
+		respond.Error(w, http.StatusBadRequest, "message is required", "bad_request")
+		return "", false
+	}
+	return message, true
+}
+
 // PostIncidentUpdate POST /api/v1/incidents/:id/updates
 func (h *IncidentHandler) PostIncidentUpdate(w http.ResponseWriter, r *http.Request) {
 	orgID, id, ok := incidentIDs(w, r)
@@ -499,12 +522,7 @@ func (h *IncidentHandler) PostIncidentUpdate(w http.ResponseWriter, r *http.Requ
 	}
 
 	incident, err := h.queries.GetStatusPageIncident(r.Context(), db.GetStatusPageIncidentParams{ID: id, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "incident not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	if respondIncidentNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -553,23 +571,12 @@ func (h *IncidentHandler) UpdateIncidentUpdateMessage(w http.ResponseWriter, r *
 	}
 
 	incident, err := h.queries.GetStatusPageIncident(r.Context(), db.GetStatusPageIncidentParams{ID: id, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "incident not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	if respondIncidentNotFoundOrInternal(w, err) {
 		return
 	}
 
-	var req updateMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
-		return
-	}
-	message := strings.TrimSpace(req.Message)
-	if message == "" {
-		respond.Error(w, http.StatusBadRequest, "message is required", "bad_request")
+	message, ok := decodeAndValidateMessage(w, r)
+	if !ok {
 		return
 	}
 

@@ -10,7 +10,6 @@ import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useBilling } from '@/composables/useBilling'
-import { validateUptimeMonitorForm } from '@/lib/uptimeMonitorValidation'
 
 const router = useRouter()
 
@@ -85,14 +84,27 @@ const alertFilterOptions = [
   { label: 'Skip first 5 failures', value: 5 },
 ]
 
-async function submit() {
-  error.value = ''
-  limitReached.value = false
-  const validationError = validateUptimeMonitorForm(name.value, url.value, keyword.value)
-  if (validationError) {
-    error.value = validationError
-    return
+function validateUptimeMonitorForm(): string {
+  if (!name.value.trim()) return 'Name is required'
+  if (!url.value.trim()) return 'URL is required'
+  if (!url.value.match(/^https?:\/\//)) return 'URL must start with http:// or https://'
+  if (keyword.value.trim().length > 500) return 'Keyword must be 500 characters or fewer'
+  return ''
+}
+
+function handleSubmitError(e: unknown, fallbackMessage: string): void {
+  if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+    limitReached.value = true
+    error.value = e.message
+  } else {
+    error.value = e instanceof Error ? e.message : fallbackMessage
   }
+}
+
+async function submit() {
+  limitReached.value = false
+  error.value = validateUptimeMonitorForm()
+  if (error.value) return
 
   submitting.value = true
   try {
@@ -111,12 +123,7 @@ async function submit() {
     })
     router.push({ name: 'uptime-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-      limitReached.value = true
-      error.value = e.message
-    } else {
-      error.value = e instanceof Error ? e.message : 'Failed to create monitor'
-    }
+    handleSubmitError(e, 'Failed to create monitor')
   } finally {
     submitting.value = false
   }

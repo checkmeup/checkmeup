@@ -168,6 +168,54 @@ func toUserResponse(user db.User) userResponse {
 	return resp
 }
 
+// errEmailTaken signals CreateUser's unique-violation case so SignUp can map
+// it to 409 instead of the generic 500 used for every other createOrgAndUser
+// failure.
+var errEmailTaken = errors.New("email already taken")
+
+// createOrgAndUser creates the org+user pair for a new signup within tx's
+// queries — org and user must land in the same transaction so a failed
+// CreateUser (e.g. duplicate email) rolls the org back too, instead of
+// leaving it as a permanent orphan row.
+func createOrgAndUser(ctx context.Context, qtx *db.Queries, email string, hash []byte) (db.User, error) {
+	orgName := strings.SplitN(email, "@", 2)[0]
+	org, err := qtx.CreateOrg(ctx, db.CreateOrgParams{
+		Name:       orgName,
+		AlertEmail: pgtype.Text{String: email, Valid: true},
+	})
+	if err != nil {
+		return db.User{}, err
+	}
+	user, err := qtx.CreateUser(ctx, db.CreateUserParams{
+		OrgID:        org.ID,
+		Email:        email,
+		PasswordHash: string(hash),
+		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return db.User{}, errEmailTaken
+		}
+		return db.User{}, err
+	}
+	return user, nil
+}
+
+// finalizeSignUp commits tx and issues session tokens for the newly created
+// user — the last two fallible steps of SignUp, both mapping any failure to
+// a generic 500.
+func (h *AuthHandler) finalizeSignUp(w http.ResponseWriter, r *http.Request, tx pgx.Tx, user db.User) bool {
+	if err := tx.Commit(r.Context()); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := h.issueTokens(w, r, user); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	return true
+}
+
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	var req signUpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -187,9 +235,20 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.createOrgAndUser(r.Context(), req.Email, string(hash))
+	// Org and user are created in the same transaction — if CreateUser fails
+	// (e.g. duplicate email), the org is rolled back too instead of being
+	// left as a permanent orphan row.
+	tx, err := h.db.Begin(r.Context())
 	if err != nil {
-		if isUniqueViolation(err) {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+	qtx := h.queries.WithTx(tx)
+
+	user, err := createOrgAndUser(r.Context(), qtx, req.Email, hash)
+	if err != nil {
+		if errors.Is(err, errEmailTaken) {
 			respond.Error(w, http.StatusConflict, "an account with this email already exists", "email_taken")
 			return
 		}
@@ -197,48 +256,11 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.issueTokens(w, r, user); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if !h.finalizeSignUp(w, r, tx, user) {
 		return
 	}
 
 	respond.JSON(w, http.StatusCreated, toUserResponse(user))
-}
-
-// createOrgAndUser creates the org and user in the same transaction — if
-// CreateUser fails (e.g. duplicate email), the org is rolled back too
-// instead of being left as a permanent orphan row.
-func (h *AuthHandler) createOrgAndUser(ctx context.Context, email, passwordHash string) (db.User, error) {
-	tx, err := h.db.Begin(ctx)
-	if err != nil {
-		return db.User{}, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	qtx := h.queries.WithTx(tx)
-
-	orgName := strings.SplitN(email, "@", 2)[0]
-	org, err := qtx.CreateOrg(ctx, db.CreateOrgParams{
-		Name:       orgName,
-		AlertEmail: pgtype.Text{String: email, Valid: true},
-	})
-	if err != nil {
-		return db.User{}, err
-	}
-
-	user, err := qtx.CreateUser(ctx, db.CreateUserParams{
-		OrgID:        org.ID,
-		Email:        email,
-		PasswordHash: passwordHash,
-		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
-	})
-	if err != nil {
-		return db.User{}, err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return db.User{}, err
-	}
-	return user, nil
 }
 
 func validateSignUp(req signUpRequest) string {

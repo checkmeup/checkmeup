@@ -115,46 +115,84 @@ func maintenanceWindowIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uu
 	return orgID, id, true
 }
 
+// monitorNameLookups fetches a single monitor's name by ID+org, one closure
+// per monitor type — each Get*MonitorParams is its own generated sqlc type,
+// so this is the shared shape without generics. Used by resolveMonitorName.
+var monitorNameLookups = map[string]func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error){
+	"cron": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetCronMonitor(ctx, db.GetCronMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
+	"uptime": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetUptimeMonitor(ctx, db.GetUptimeMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
+	"ssl": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetSSLMonitor(ctx, db.GetSSLMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
+	"domain": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetDomainMonitor(ctx, db.GetDomainMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
+	"port": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetPortMonitor(ctx, db.GetPortMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
+}
+
 // resolveMonitorName verifies a monitor belongs to the org and returns its display name.
 func resolveMonitorName(ctx context.Context, queries *db.Queries, orgID uuid.UUID, monitorType, monitorIDStr string) (uuid.UUID, string, error) {
 	id, err := uuid.Parse(monitorIDStr)
 	if err != nil {
 		return uuid.UUID{}, "", fmt.Errorf("invalid monitor id: %s", monitorIDStr)
 	}
-	switch monitorType {
-	case "cron":
-		m, err := queries.GetCronMonitor(ctx, db.GetCronMonitorParams{ID: id, OrgID: orgID})
-		if err != nil {
-			return uuid.UUID{}, "", fmt.Errorf("cron monitor not found: %s", monitorIDStr)
-		}
-		return id, m.Name, nil
-	case "uptime":
-		m, err := queries.GetUptimeMonitor(ctx, db.GetUptimeMonitorParams{ID: id, OrgID: orgID})
-		if err != nil {
-			return uuid.UUID{}, "", fmt.Errorf("uptime monitor not found: %s", monitorIDStr)
-		}
-		return id, m.Name, nil
-	case "ssl":
-		m, err := queries.GetSSLMonitor(ctx, db.GetSSLMonitorParams{ID: id, OrgID: orgID})
-		if err != nil {
-			return uuid.UUID{}, "", fmt.Errorf("ssl monitor not found: %s", monitorIDStr)
-		}
-		return id, m.Name, nil
-	case "domain":
-		m, err := queries.GetDomainMonitor(ctx, db.GetDomainMonitorParams{ID: id, OrgID: orgID})
-		if err != nil {
-			return uuid.UUID{}, "", fmt.Errorf("domain monitor not found: %s", monitorIDStr)
-		}
-		return id, m.Name, nil
-	case "port":
-		m, err := queries.GetPortMonitor(ctx, db.GetPortMonitorParams{ID: id, OrgID: orgID})
-		if err != nil {
-			return uuid.UUID{}, "", fmt.Errorf("port monitor not found: %s", monitorIDStr)
-		}
-		return id, m.Name, nil
-	default:
+	lookup, ok := monitorNameLookups[monitorType]
+	if !ok {
 		return uuid.UUID{}, "", fmt.Errorf("invalid monitor type: %s", monitorType)
 	}
+	name, err := lookup(ctx, queries, id, orgID)
+	if err != nil {
+		return uuid.UUID{}, "", fmt.Errorf("%s monitor not found: %s", monitorType, monitorIDStr)
+	}
+	return id, name, nil
+}
+
+// parseWindowEndsAt parses the optional endsAt field, validating it's after
+// start when present. Returns a zero-value (unset) Timestamptz and empty
+// errMsg when endsAt is omitted — an open-ended window is valid.
+func parseWindowEndsAt(rawEndsAt *string, start time.Time) (endsAt pgtype.Timestamptz, errMsg string) {
+	if rawEndsAt == nil || strings.TrimSpace(*rawEndsAt) == "" {
+		return pgtype.Timestamptz{}, ""
+	}
+	end, err := time.Parse(time.RFC3339, *rawEndsAt)
+	if err != nil {
+		return pgtype.Timestamptz{}, "endsAt must be an RFC3339 timestamp"
+	}
+	if !end.After(start) {
+		return pgtype.Timestamptz{}, "endsAt must be after startsAt"
+	}
+	return pgtype.Timestamptz{Time: end, Valid: true}, ""
+}
+
+// resolveWindowMonitors resolves and de-duplicates reqMonitors against the
+// org. errMsg is non-empty (with monitors nil) on the first resolution
+// failure.
+func (h *MaintenanceHandler) resolveWindowMonitors(ctx context.Context, orgID uuid.UUID, reqMonitors []maintenanceMonitorInput) (monitors []resolvedMonitor, errMsg string) {
+	seen := map[string]bool{}
+	for _, m := range reqMonitors {
+		id, name, rerr := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
+		if rerr != nil {
+			return nil, rerr.Error()
+		}
+		key := m.MonitorType + ":" + id.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		monitors = append(monitors, resolvedMonitor{monitorType: m.MonitorType, monitorID: id, name: name})
+	}
+	return monitors, ""
 }
 
 // validateWindowInput parses and validates a create/update request, resolving and
@@ -179,33 +217,12 @@ func (h *MaintenanceHandler) validateWindowInput(ctx context.Context, orgID uuid
 	}
 	startsAt = pgtype.Timestamptz{Time: start, Valid: true}
 
-	if req.EndsAt != nil && strings.TrimSpace(*req.EndsAt) != "" {
-		end, err := time.Parse(time.RFC3339, *req.EndsAt)
-		if err != nil {
-			errMsg = "endsAt must be an RFC3339 timestamp"
-			return
-		}
-		if !end.After(start) {
-			errMsg = "endsAt must be after startsAt"
-			return
-		}
-		endsAt = pgtype.Timestamptz{Time: end, Valid: true}
+	endsAt, errMsg = parseWindowEndsAt(req.EndsAt, start)
+	if errMsg != "" {
+		return
 	}
 
-	seen := map[string]bool{}
-	for _, m := range req.Monitors {
-		id, name, rerr := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
-		if rerr != nil {
-			errMsg = rerr.Error()
-			return
-		}
-		key := m.MonitorType + ":" + id.String()
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		monitors = append(monitors, resolvedMonitor{monitorType: m.MonitorType, monitorID: id, name: name})
-	}
+	monitors, errMsg = h.resolveWindowMonitors(ctx, orgID, req.Monitors)
 	return
 }
 
@@ -249,6 +266,61 @@ func (h *MaintenanceHandler) ListMaintenanceWindows(w http.ResponseWriter, r *ht
 // this bounds cumulative creation, not a concurrently-active count.
 const maxMaintenanceWindows = 100
 
+// respondMaintenanceWindowNotFoundOrInternal writes a 404 if err is
+// pgx.ErrNoRows, a 500 for any other non-nil error, and reports whether it
+// wrote a response so the caller knows to return immediately.
+func respondMaintenanceWindowNotFoundOrInternal(w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "maintenance window not found", "not_found")
+		return true
+	}
+	respond.InternalError(w)
+	return true
+}
+
+// checkMaintenanceWindowCreateLimit enforces maxMaintenanceWindows (a flat
+// cumulative cap, uniform across every plan — see maxMaintenanceWindows).
+// Responds and returns false on any failure (query error or limit hit).
+func (h *MaintenanceHandler) checkMaintenanceWindowCreateLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	count, err := h.queries.CountMaintenanceWindows(r.Context(), orgID)
+	if err != nil {
+		respond.InternalError(w)
+		return false
+	}
+	if count >= maxMaintenanceWindows {
+		respond.Error(w, http.StatusConflict,
+			"too many maintenance windows — delete an old one before creating more",
+			"too_many_maintenance_windows")
+		return false
+	}
+	return true
+}
+
+// insertWindowMonitors attaches monitors to windowID.
+func (h *MaintenanceHandler) insertWindowMonitors(ctx context.Context, windowID uuid.UUID, monitors []resolvedMonitor) error {
+	for _, m := range monitors {
+		if _, err := h.queries.InsertMaintenanceWindowMonitor(ctx, db.InsertMaintenanceWindowMonitorParams{
+			WindowID: windowID, MonitorType: m.monitorType, MonitorID: m.monitorID,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// replaceWindowMonitors swaps out windowID's monitor attachments for
+// monitors — used by UpdateMaintenanceWindow, where the new list may drop or
+// add monitors compared to what's already attached.
+func (h *MaintenanceHandler) replaceWindowMonitors(ctx context.Context, windowID uuid.UUID, monitors []resolvedMonitor) error {
+	if err := h.queries.DeleteMaintenanceWindowMonitors(ctx, windowID); err != nil {
+		return err
+	}
+	return h.insertWindowMonitors(ctx, windowID, monitors)
+}
+
 // CreateMaintenanceWindow POST /api/v1/maintenance-windows
 func (h *MaintenanceHandler) CreateMaintenanceWindow(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -269,15 +341,7 @@ func (h *MaintenanceHandler) CreateMaintenanceWindow(w http.ResponseWriter, r *h
 		return
 	}
 
-	count, err := h.queries.CountMaintenanceWindows(r.Context(), orgID)
-	if err != nil {
-		respond.InternalError(w)
-		return
-	}
-	if count >= maxMaintenanceWindows {
-		respond.Error(w, http.StatusConflict,
-			"too many maintenance windows — delete an old one before creating more",
-			"too_many_maintenance_windows")
+	if !h.checkMaintenanceWindowCreateLimit(w, r, orgID) {
 		return
 	}
 
@@ -289,13 +353,9 @@ func (h *MaintenanceHandler) CreateMaintenanceWindow(w http.ResponseWriter, r *h
 		return
 	}
 
-	for _, m := range monitors {
-		if _, err := h.queries.InsertMaintenanceWindowMonitor(r.Context(), db.InsertMaintenanceWindowMonitorParams{
-			WindowID: win.ID, MonitorType: m.monitorType, MonitorID: m.monitorID,
-		}); err != nil {
-			respond.InternalError(w)
-			return
-		}
+	if err := h.insertWindowMonitors(r.Context(), win.ID, monitors); err != nil {
+		respond.InternalError(w)
+		return
 	}
 
 	respond.JSON(w, http.StatusCreated, toMaintenanceWindowResponse(win, monitors))
@@ -309,12 +369,7 @@ func (h *MaintenanceHandler) GetMaintenanceWindow(w http.ResponseWriter, r *http
 	}
 
 	win, err := h.queries.GetMaintenanceWindow(r.Context(), db.GetMaintenanceWindowParams{ID: id, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "maintenance window not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	if respondMaintenanceWindowNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -343,12 +398,8 @@ func (h *MaintenanceHandler) UpdateMaintenanceWindow(w http.ResponseWriter, r *h
 		return
 	}
 
-	if _, err := h.queries.GetMaintenanceWindow(r.Context(), db.GetMaintenanceWindowParams{ID: id, OrgID: orgID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "maintenance window not found", "not_found")
-			return
-		}
-		respond.InternalError(w)
+	_, err := h.queries.GetMaintenanceWindow(r.Context(), db.GetMaintenanceWindowParams{ID: id, OrgID: orgID})
+	if respondMaintenanceWindowNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -372,17 +423,9 @@ func (h *MaintenanceHandler) UpdateMaintenanceWindow(w http.ResponseWriter, r *h
 		return
 	}
 
-	if err := h.queries.DeleteMaintenanceWindowMonitors(r.Context(), win.ID); err != nil {
+	if err := h.replaceWindowMonitors(r.Context(), win.ID, monitors); err != nil {
 		respond.InternalError(w)
 		return
-	}
-	for _, m := range monitors {
-		if _, err := h.queries.InsertMaintenanceWindowMonitor(r.Context(), db.InsertMaintenanceWindowMonitorParams{
-			WindowID: win.ID, MonitorType: m.monitorType, MonitorID: m.monitorID,
-		}); err != nil {
-			respond.InternalError(w)
-			return
-		}
 	}
 
 	respond.JSON(w, http.StatusOK, toMaintenanceWindowResponse(win, monitors))

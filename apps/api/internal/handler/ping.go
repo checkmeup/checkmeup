@@ -84,9 +84,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Recovery: monitor was down and just checked in again. The incident is
-	// resolved regardless of AlertsEnabled — only the alert send itself is
-	// gated by that setting (matches the uptime-monitor worker's pattern).
+	// Recovery: monitor was down and just checked in again.
 	if wasDown {
 		h.sendCronRecoveryAlert(r.Context(), monitor, now)
 	}
@@ -94,12 +92,15 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// sendCronRecoveryAlert resolves the monitor's latest open incident and, if
-// alerts are enabled, dispatches a recovery notification. Routed through
-// worker.DispatchAlert (not org.TelegramChatID/AlertEmail directly) so cron
-// recovery alerts respect the monitor's attached notification_channels —
-// including webhook (EP-14) — same as every other alert path; this used to
-// be a special case still wired to the pre-EP-28 org-level fields.
+// sendCronRecoveryAlert dispatches a recovery alert now that a
+// previously-down cron monitor has checked in again. The incident is
+// resolved regardless of AlertsEnabled — only the alert send itself is
+// gated by that setting (matches the uptime-monitor worker's pattern).
+// Routed through worker.DispatchAlert (not org.TelegramChatID/AlertEmail
+// directly) so cron recovery alerts respect the monitor's attached
+// notification_channels — including webhook (EP-14) — same as every other
+// alert path; this used to be a special case still wired to the pre-EP-28
+// org-level fields.
 func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.CronMonitor, now time.Time) {
 	inc, err := h.queries.ResolveLatestCronIncident(ctx, monitor.ID)
 	if err != nil || !monitor.AlertsEnabled {

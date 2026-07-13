@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -101,6 +101,231 @@ func formatDeliveryAt(t pgtype.Timestamptz) string {
 	return t.Time.Format("2006-01-02T15:04:05Z")
 }
 
+// validateChannelConfig checks config has the field(s) required for type.
+// Other notification_channel_type values get added (their own migration +
+// their own case here) when their epic actually ships (ADR-023).
+func validateChannelConfig(channelType string, config map[string]any) error {
+	switch channelType {
+	case "telegram":
+		chatID, _ := config["chatId"].(string)
+		if strings.TrimSpace(chatID) == "" {
+			return errors.New("chatId is required")
+		}
+	case "email":
+		addr, _ := config["email"].(string)
+		if strings.TrimSpace(addr) == "" {
+			return errors.New("email is required")
+		}
+	case "webhook":
+		return validateWebhookURL(config)
+	case "slack":
+		return validateSlackURL(config)
+	case "sms":
+		return validateSMSConfig(config)
+	default:
+		return errors.New("unsupported channel type")
+	}
+	return nil
+}
+
+// e164Pattern matches E.164 phone numbers (US-1901): a leading +, no leading
+// zero, up to 15 digits total.
+var e164Pattern = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+
+// validateSMSConfig enforces US-1901: a valid E.164 phone number, and an
+// explicit opt-in checkbox — a TCPA-style regulatory requirement for
+// automated texts, not satisfied just by providing a number (ADR-029).
+// consent is required true on every request that reaches here; callers that
+// want to carry an existing consent forward without re-prompting the user
+// (see resolveUpdatedChannelConfig, for an unchanged phone number on update)
+// inject consent: true themselves before calling validateChannelConfig.
+func validateSMSConfig(config map[string]any) error {
+	phone, _ := config["phone_number"].(string)
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return errors.New("phone_number is required")
+	}
+	if !e164Pattern.MatchString(phone) {
+		return errors.New("phone_number must be in E.164 format (e.g. +14155551234)")
+	}
+	if !consentGiven(config["consent"]) {
+		return errors.New("consent is required — check the opt-in box before saving")
+	}
+	return nil
+}
+
+// consentGiven reports true for either a JSON boolean true or the string
+// "true" — config values arrive as any (json.Unmarshal into map[string]any),
+// but every other channel's config is plain strings on the wire (chatId,
+// email, url...), so the frontend sends "true" here too rather than being
+// the one field that needs a non-string type.
+func consentGiven(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		return t == "true"
+	default:
+		return false
+	}
+}
+
+// finalizeSMSConsent strips the client-supplied consent flag (already
+// validated true by validateSMSConfig) and stamps a server-set consent_at —
+// never trusting a client-supplied timestamp — unless one was already
+// carried forward from an existing channel (see resolveUpdatedChannelConfig).
+func finalizeSMSConsent(config map[string]any) {
+	if _, ok := config["consent_at"]; !ok {
+		config["consent_at"] = time.Now().UTC().Format(time.RFC3339)
+	}
+	delete(config, "consent")
+}
+
+// validateWebhookURL enforces the US-1401 AC that a webhook URL must be
+// https://. Doesn't require config["secret"] — that's generated server-side
+// (see ensureWebhookSecret), never supplied by the client.
+func validateWebhookURL(config map[string]any) error {
+	rawURL, _ := config["url"].(string)
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return errors.New("url is required")
+	}
+	if !strings.HasPrefix(rawURL, "https://") {
+		return errors.New("url must start with https://")
+	}
+	return nil
+}
+
+// validateSlackURL enforces US-1701: the URL must match the Slack Incoming
+// Webhook pattern (https://hooks.slack.com/...). The URL itself is the
+// credential — no separate secret like the generic webhook channel (US-1401).
+func validateSlackURL(config map[string]any) error {
+	rawURL, _ := config["url"].(string)
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return errors.New("url is required")
+	}
+	if !strings.HasPrefix(rawURL, "https://hooks.slack.com/") {
+		return errors.New("url must be a Slack Incoming Webhook URL (https://hooks.slack.com/...)")
+	}
+	return nil
+}
+
+// respondChannelNotFoundOrInternal writes a 404 if err is pgx.ErrNoRows, a
+// 500 for any other non-nil error, and reports whether it wrote a response
+// so the caller knows to return immediately.
+func respondChannelNotFoundOrInternal(w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
+		return true
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	return true
+}
+
+// decodeNotificationChannelRequest decodes and normalizes a create/update
+// request body: strips any client-supplied consent_at (always server-
+// stamped — finalizeSMSConsent, or carried forward explicitly in
+// resolveUpdatedChannelConfig on update) and validates the name is
+// non-empty. Shared by CreateNotificationChannel and UpdateNotificationChannel.
+func decodeNotificationChannelRequest(w http.ResponseWriter, r *http.Request) (notificationChannelRequest, bool) {
+	var req notificationChannelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
+		return req, false
+	}
+	delete(req.Config, "consent_at")
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+		return req, false
+	}
+	return req, true
+}
+
+// checkNotificationChannelCreateLimit checks whether orgID can create
+// another notification channel under its plan, returning the resolved plan
+// for further per-type checks (e.g. SMS credits). Responds and returns false
+// on any failure (query error or plan limit hit).
+func (h *NotificationChannelHandler) checkNotificationChannelCreateLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) (db.Plan, bool) {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return "", false
+	}
+	total, err := h.queries.CountOrgNotificationChannels(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return "", false
+	}
+	if err := billing.CheckNotificationChannelLimit(plan, int(total)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return "", false
+	}
+	return plan, true
+}
+
+// checkNotificationChannelReenableLimit checks whether re-enabling a
+// disabled channel would push orgID over its plan's channel limit — same
+// rule as creating one (ADR-019), checked against the enabled-only count
+// since a disabled channel doesn't count against the limit at all.
+func (h *NotificationChannelHandler) checkNotificationChannelReenableLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	enabledCount, err := h.queries.CountEnabledNotificationChannelsForOrg(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := billing.CheckNotificationChannelLimit(plan, int(enabledCount)); err != nil {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return false
+	}
+	return true
+}
+
+// smsRequiresPaidPlan reports whether creating an sms channel should be
+// blocked because the plan has no monthly SMS credits (Hobby, per ADR-032)
+// — no point saving a channel that can never send.
+func smsRequiresPaidPlan(channelType string, plan db.Plan) bool {
+	return channelType == "sms" && billing.GetLimits(plan).SMSCredits <= 0
+}
+
+// channelIsBeingReenabled reports whether an update flips a previously-
+// disabled channel back on.
+func channelIsBeingReenabled(enabled bool, existing db.NotificationChannel) bool {
+	return enabled && !existing.Enabled
+}
+
+// finalizeChannelConfig applies type-specific server-side config fields
+// (webhook signing secret, SMS consent stamp) and marshals the result.
+// Responds and reports ok=false on failure.
+func finalizeChannelConfig(w http.ResponseWriter, channelType string, config map[string]any) ([]byte, bool) {
+	if channelType == "webhook" {
+		secret, err := webhook.GenerateSecret()
+		if err != nil {
+			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+			return nil, false
+		}
+		config["secret"] = secret
+	}
+	if channelType == "sms" {
+		finalizeSMSConsent(config)
+	}
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid config", "bad_request")
+		return nil, false
+	}
+	return configBytes, true
+}
+
 // ListNotificationChannels GET /api/v1/notification-channels
 func (h *NotificationChannelHandler) ListNotificationChannels(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -137,37 +362,26 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		return
 	}
 
-	var req notificationChannelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
-		return
-	}
-	// consent_at is always server-stamped (finalizeSMSConsent) — never trust
-	// a client-supplied value here, or a forged timestamp would persist.
-	delete(req.Config, "consent_at")
-
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+	req, ok := decodeNotificationChannelRequest(w, r)
+	if !ok {
 		return
 	}
 
-	if err := h.checkNotificationChannelCreateLimits(r.Context(), orgID, req.Type); err != nil {
-		if errors.Is(err, billing.ErrNotificationChannelLimit) || errors.Is(err, errSMSRequiresPaidPlan) {
-			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	plan, ok := h.checkNotificationChannelCreateLimit(w, r, orgID)
+	if !ok {
+		return
+	}
+	if smsRequiresPaidPlan(req.Type, plan) {
+		respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
 		return
 	}
 
-	configBytes, err := buildNotificationChannelConfig(&req)
-	if err != nil {
-		if errors.Is(err, errWebhookSecretGeneration) {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
+	if err := validateChannelConfig(req.Type, req.Config); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	configBytes, ok := finalizeChannelConfig(w, req.Type, req.Config)
+	if !ok {
 		return
 	}
 
@@ -184,59 +398,6 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 	respond.JSON(w, http.StatusCreated, toNotificationChannelResponse(channel))
 }
 
-// errSMSRequiresPaidPlan is returned when an org on a plan with 0 monthly
-// SMS credits (Hobby, per ADR-032) tries to create an sms channel — no
-// point saving one that can never send.
-var errSMSRequiresPaidPlan = errors.New("SMS alerts require a paid plan — upgrade to enable this channel")
-
-func (h *NotificationChannelHandler) checkNotificationChannelCreateLimits(ctx context.Context, orgID uuid.UUID, channelType string) error {
-	plan, err := h.queries.GetOrgPlan(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	total, err := h.queries.CountOrgNotificationChannels(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	if err := billing.CheckNotificationChannelLimit(plan, int(total)); err != nil {
-		return err
-	}
-	if channelType == "sms" && billing.GetLimits(plan).SMSCredits <= 0 {
-		return errSMSRequiresPaidPlan
-	}
-	return nil
-}
-
-// errWebhookSecretGeneration wraps a webhook.GenerateSecret failure so the
-// caller can distinguish it (an internal/crypto failure, 500) from the
-// validation-shaped errors buildNotificationChannelConfig otherwise returns
-// (400) — see the errors.Is check at the CreateNotificationChannel call site.
-var errWebhookSecretGeneration = errors.New("failed to generate webhook secret")
-
-// buildNotificationChannelConfig validates req.Config against req.Type,
-// fills in server-generated fields (webhook secret, SMS consent timestamp),
-// and marshals the result for storage.
-func buildNotificationChannelConfig(req *notificationChannelRequest) ([]byte, error) {
-	if err := validateChannelConfig(req.Type, req.Config); err != nil {
-		return nil, err
-	}
-	if req.Type == "webhook" {
-		secret, err := webhook.GenerateSecret()
-		if err != nil {
-			return nil, errWebhookSecretGeneration
-		}
-		req.Config["secret"] = secret
-	}
-	if req.Type == "sms" {
-		finalizeSMSConsent(req.Config)
-	}
-	configBytes, err := json.Marshal(req.Config)
-	if err != nil {
-		return nil, errors.New("invalid config")
-	}
-	return configBytes, nil
-}
-
 // UpdateNotificationChannel PATCH /api/v1/notification-channels/{id}
 func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWriter, r *http.Request) {
 	orgID, channelID, ok := notificationChannelIDs(w, r)
@@ -244,24 +405,13 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		return
 	}
 
-	var req notificationChannelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
-		return
-	}
-	// consent_at is always server-stamped (finalizeSMSConsent, or carried
-	// forward explicitly in resolveUpdatedChannelConfig) — never trust a
-	// client-supplied value here, or a forged timestamp would persist.
-	delete(req.Config, "consent_at")
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+	req, ok := decodeNotificationChannelRequest(w, r)
+	if !ok {
 		return
 	}
 
 	existing, err := h.queries.GetNotificationChannel(r.Context(), db.GetNotificationChannelParams{ID: channelID, OrgID: orgID})
-	if err != nil {
-		respondChannelLookupErr(w, err)
+	if respondChannelNotFoundOrInternal(w, err) {
 		return
 	}
 	configBytes, enabled, err := resolveUpdatedChannelConfig(existing, req)
@@ -269,8 +419,11 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-	if err := h.checkReEnableLimitIfNeeded(r.Context(), orgID, existing.Enabled, enabled); err != nil {
-		respondNotificationChannelLimitErr(w, err)
+	// Re-enabling a previously-disabled channel grows the org's active
+	// channel count, same as creating one — gated the same way (ADR-019),
+	// checked against enabled-only count since a disabled channel doesn't
+	// count against the limit at all.
+	if channelIsBeingReenabled(enabled, existing) && !h.checkNotificationChannelReenableLimit(w, r, orgID) {
 		return
 	}
 
@@ -288,40 +441,37 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 	respond.JSON(w, http.StatusOK, toNotificationChannelResponse(channel))
 }
 
-func respondChannelLookupErr(w http.ResponseWriter, err error) {
-	if errors.Is(err, pgx.ErrNoRows) {
-		respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
-		return
+// carryForwardWebhookSecret preserves an existing webhook channel's signing
+// secret across an update — it can only change via RegenerateWebhookSecret
+// (US-1403), so a regular PATCH (editing the URL or name) always carries it
+// forward, ignoring anything the client sent for it.
+func carryForwardWebhookSecret(existing db.NotificationChannel, config map[string]any) map[string]any {
+	if config == nil {
+		config = map[string]any{}
 	}
-	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	var existingCfg map[string]any
+	_ = json.Unmarshal(existing.Config, &existingCfg)
+	config["secret"] = existingCfg["secret"]
+	return config
 }
 
-func respondNotificationChannelLimitErr(w http.ResponseWriter, err error) {
-	if errors.Is(err, billing.ErrNotificationChannelLimit) {
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
+// carryForwardSMSConsent preserves an existing SMS channel's consent
+// (ADR-029) across an update when the phone number is unchanged — consent is
+// tied to the number, not to the act of editing, so re-saving the same
+// number shouldn't force the user to re-check the opt-in box.
+func carryForwardSMSConsent(existing db.NotificationChannel, config map[string]any) map[string]any {
+	if config == nil {
+		config = map[string]any{}
 	}
-	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-}
-
-// checkReEnableLimitIfNeeded checks the plan's enabled-channel cap only when
-// this update actually re-enables a previously-disabled channel — that
-// grows the org's active channel count, same as creating one, gated the
-// same way (ADR-019). A disabled channel doesn't count against the limit at
-// all, so no other transition needs this check.
-func (h *NotificationChannelHandler) checkReEnableLimitIfNeeded(ctx context.Context, orgID uuid.UUID, wasEnabled, nowEnabled bool) error {
-	if !nowEnabled || wasEnabled {
-		return nil
+	var existingCfg map[string]any
+	_ = json.Unmarshal(existing.Config, &existingCfg)
+	existingPhone, _ := existingCfg["phone_number"].(string)
+	newPhone, _ := config["phone_number"].(string)
+	if strings.TrimSpace(newPhone) == strings.TrimSpace(existingPhone) {
+		config["consent"] = true
+		config["consent_at"] = existingCfg["consent_at"]
 	}
-	plan, err := h.queries.GetOrgPlan(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	enabledCount, err := h.queries.CountEnabledNotificationChannelsForOrg(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	return billing.CheckNotificationChannelLimit(plan, int(enabledCount))
+	return config
 }
 
 // resolveUpdatedChannelConfig validates req.Config against the channel's
@@ -329,42 +479,20 @@ func (h *NotificationChannelHandler) checkReEnableLimitIfNeeded(ctx context.Cont
 // config bytes plus the enabled value to write, preserving existing.Enabled
 // when req.Enabled is omitted.
 func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificationChannelRequest) ([]byte, bool, error) {
-	if existing.Type == db.NotificationChannelTypeWebhook {
-		// The signing secret can only change via RegenerateWebhookSecret
-		// (US-1403) — a regular PATCH (editing the URL or name) always
-		// carries the existing secret forward, ignoring anything the client
-		// sent for it.
-		var existingCfg map[string]any
-		_ = json.Unmarshal(existing.Config, &existingCfg)
-		if req.Config == nil {
-			req.Config = map[string]any{}
-		}
-		req.Config["secret"] = existingCfg["secret"]
+	config := req.Config
+	switch existing.Type {
+	case db.NotificationChannelTypeWebhook:
+		config = carryForwardWebhookSecret(existing, config)
+	case db.NotificationChannelTypeSms:
+		config = carryForwardSMSConsent(existing, config)
 	}
-	if existing.Type == db.NotificationChannelTypeSms {
-		// Consent (ADR-029) is tied to the phone number, not to the act of
-		// editing — re-saving the same number shouldn't force the user to
-		// re-check the opt-in box. Only require fresh consent when the
-		// number itself is changing (a new recipient).
-		var existingCfg map[string]any
-		_ = json.Unmarshal(existing.Config, &existingCfg)
-		existingPhone, _ := existingCfg["phone_number"].(string)
-		if req.Config == nil {
-			req.Config = map[string]any{}
-		}
-		newPhone, _ := req.Config["phone_number"].(string)
-		if strings.TrimSpace(newPhone) == strings.TrimSpace(existingPhone) {
-			req.Config["consent"] = true
-			req.Config["consent_at"] = existingCfg["consent_at"]
-		}
-	}
-	if err := validateChannelConfig(string(existing.Type), req.Config); err != nil {
+	if err := validateChannelConfig(string(existing.Type), config); err != nil {
 		return nil, false, err
 	}
 	if existing.Type == db.NotificationChannelTypeSms {
-		finalizeSMSConsent(req.Config)
+		finalizeSMSConsent(config)
 	}
-	configBytes, err := json.Marshal(req.Config)
+	configBytes, err := json.Marshal(config)
 	if err != nil {
 		return nil, false, errors.New("invalid config")
 	}
@@ -387,12 +515,7 @@ func (h *NotificationChannelHandler) RegenerateWebhookSecret(w http.ResponseWrit
 	}
 
 	existing, err := h.queries.GetNotificationChannel(r.Context(), db.GetNotificationChannelParams{ID: channelID, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondChannelNotFoundOrInternal(w, err) {
 		return
 	}
 	if existing.Type != db.NotificationChannelTypeWebhook {
@@ -438,6 +561,145 @@ func (h *NotificationChannelHandler) DeleteNotificationChannel(w http.ResponseWr
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type testNotificationChannelRequest struct {
+	Type   string         `json:"type"`
+	Config map[string]any `json:"config"`
+}
+
+// TestNotificationChannel POST /api/v1/notification-channels/test
+// Sends a test message using the given type+config without requiring it to
+// be saved first, so the UI can verify a channel before saving (US-2801).
+func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWriter, r *http.Request) {
+	var req testNotificationChannelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
+		return
+	}
+	if err := validateChannelConfig(req.Type, req.Config); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	if req.Type == "sms" && !h.checkSMSTestAllowed(w, r) {
+		return
+	}
+	if !h.sendTestNotification(w, req.Type, req.Config) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// checkSMSTestAllowed gates SMS test-sends behind plan credits and rate
+// limits — same guard as CreateNotificationChannel. Without this, a
+// zero-credit-plan org could rack up real Twilio spend via test sends alone,
+// without ever being able to save/use an sms channel. Responds and returns
+// false if the send should be blocked.
+func (h *NotificationChannelHandler) checkSMSTestAllowed(w http.ResponseWriter, r *http.Request) bool {
+	orgID, err := orgIDFrom(r)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+		return false
+	}
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if billing.GetLimits(plan).SMSCredits <= 0 {
+		respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
+		return false
+	}
+	if h.smsTestLimiter.RespondOnLimit(w, r, orgID.String()) {
+		return false
+	}
+	if h.smsTestHourlyLimiter.RespondOnLimit(w, r, orgID.String()) {
+		return false
+	}
+	return !h.smsTestDailyLimiter.RespondOnLimit(w, r, orgID.String())
+}
+
+// sendTestTelegram, sendTestEmail, etc. each perform one channel type's test
+// send, returning the error (if any) for sendTestNotification to report
+// against that type's error code. webhook is the only one with its own
+// pre-step (a throwaway signing secret — the real one doesn't exist until
+// the channel is saved, US-1401 — so the request shape on the wire still
+// matches a real send even with nothing for the receiver to verify against).
+
+func (h *NotificationChannelHandler) sendTestTelegram(config map[string]any) error {
+	chatID, _ := config["chatId"].(string)
+	return h.tg.SendMessage(strings.TrimSpace(chatID), "✅ Checkmeup is connected! You'll receive alerts here.")
+}
+
+func (h *NotificationChannelHandler) sendTestEmail(config map[string]any) error {
+	addr, _ := config["email"].(string)
+	return h.mailer.SendTestAlertEmail(strings.TrimSpace(addr))
+}
+
+// testSendInternalError wraps a failure that happened on our side (e.g.
+// generating a throwaway signing secret) rather than the downstream
+// provider, so sendTestNotification can report it as a 500 instead of the
+// 502 used for provider failures.
+type testSendInternalError struct{ err error }
+
+func (e *testSendInternalError) Error() string { return e.err.Error() }
+func (e *testSendInternalError) Unwrap() error { return e.err }
+
+func (h *NotificationChannelHandler) sendTestWebhook(config map[string]any) error {
+	url, _ := config["url"].(string)
+	secret, err := webhook.GenerateSecret()
+	if err != nil {
+		return &testSendInternalError{err}
+	}
+	event := webhook.Event{
+		EventType:   "test",
+		MonitorName: "Test monitor",
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+	}
+	_, err = h.wh.Send(strings.TrimSpace(url), secret, event)
+	return err
+}
+
+func (h *NotificationChannelHandler) sendTestSlack(config map[string]any) error {
+	url, _ := config["url"].(string)
+	_, err := h.sl.Send(strings.TrimSpace(url), slack.TestMessage())
+	return err
+}
+
+func (h *NotificationChannelHandler) sendTestSMS(config map[string]any) error {
+	phone, _ := config["phone_number"].(string)
+	_, err := h.sm.Send(strings.TrimSpace(phone), "Checkmeup: this is a test SMS alert. You're all set!")
+	return err
+}
+
+// sendTestNotification dispatches a test message for the given channel type,
+// responding with a type-specific error and returning false on failure.
+func (h *NotificationChannelHandler) sendTestNotification(w http.ResponseWriter, channelType string, config map[string]any) bool {
+	senders := map[string]struct {
+		send    func(map[string]any) error
+		errCode string
+	}{
+		"telegram": {h.sendTestTelegram, "telegram_error"},
+		"email":    {h.sendTestEmail, "email_error"},
+		"webhook":  {h.sendTestWebhook, "webhook_error"},
+		"slack":    {h.sendTestSlack, "slack_error"},
+		"sms":      {h.sendTestSMS, "sms_error"},
+	}
+	sender, ok := senders[channelType]
+	if !ok {
+		return true
+	}
+	err := sender.send(config)
+	if err == nil {
+		return true
+	}
+	var internalErr *testSendInternalError
+	if errors.As(err, &internalErr) {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	respond.Error(w, http.StatusBadGateway, err.Error(), sender.errCode)
+	return false
 }
 
 func notificationChannelIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {

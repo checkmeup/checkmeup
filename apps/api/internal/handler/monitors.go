@@ -1,15 +1,22 @@
 package handler
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
@@ -50,6 +57,21 @@ type cronPingResponse struct {
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
+func cronPingToResponse(p db.CronPing) cronPingResponse {
+	r := cronPingResponse{
+		ID:         p.ID.String(),
+		ReceivedAt: p.ReceivedAt.Time.Format("2006-01-02T15:04:05Z"),
+		SourceIP:   p.SourceIp,
+	}
+	if len(p.Metadata) > 0 {
+		meta := map[string]string{}
+		if json.Unmarshal(p.Metadata, &meta) == nil {
+			r.Metadata = meta
+		}
+	}
+	return r
+}
+
 type cronIncidentResponse struct {
 	ID         string  `json:"id"`
 	StartedAt  string  `json:"startedAt"`
@@ -79,6 +101,128 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		r.NextPingAt = &t
 	}
 	return r
+}
+
+// attachDefaultNotificationChannels attaches every enabled channel the org
+// currently has to a newly created monitor — a new monitor defaults to all
+// of the org's enabled channels (US-2802), matching the pre-EP-28 implicit
+// behavior of every monitor alerting on every org-level channel.
+func (h *MonitorHandler) attachDefaultNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID) {
+	channels, err := h.queries.ListEnabledNotificationChannels(ctx, orgID)
+	if err != nil {
+		return
+	}
+	for _, c := range channels {
+		_ = h.queries.InsertMonitorNotificationChannel(ctx, db.InsertMonitorNotificationChannelParams{
+			ChannelID: c.ID, MonitorType: monitorType, MonitorID: monitorID,
+		})
+	}
+}
+
+// setMonitorNotificationChannels replaces a monitor's attached channels with
+// channelIDs, dropping any ID that doesn't resolve to a channel owned by
+// orgID — same ownership-scoping approach as resolveMonitorName.
+func (h *MonitorHandler) setMonitorNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, channelIDs []string) error {
+	owned, err := h.queries.ListNotificationChannels(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	ownedSet := make(map[uuid.UUID]bool, len(owned))
+	for _, c := range owned {
+		ownedSet[c.ID] = true
+	}
+
+	if err := h.queries.DeleteMonitorNotificationChannels(ctx, db.DeleteMonitorNotificationChannelsParams{
+		MonitorType: monitorType, MonitorID: monitorID,
+	}); err != nil {
+		return err
+	}
+	for _, idStr := range channelIDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil || !ownedSet[id] {
+			continue
+		}
+		if err := h.queries.InsertMonitorNotificationChannel(ctx, db.InsertMonitorNotificationChannelParams{
+			ChannelID: id, MonitorType: monitorType, MonitorID: monitorID,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// applyMonitorNotificationChannels sets channelIDs on a newly created
+// monitor, or falls back to every one of the org's enabled channels by
+// default (US-2802) when none were specified. Shared by every monitor
+// type's create handler.
+func (h *MonitorHandler) applyMonitorNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, channelIDs []string) error {
+	if len(channelIDs) > 0 {
+		return h.setMonitorNotificationChannels(ctx, orgID, monitorType, monitorID, channelIDs)
+	}
+	h.attachDefaultNotificationChannels(ctx, orgID, monitorType, monitorID)
+	return nil
+}
+
+// loadNotificationChannelIDs returns the channel IDs attached to a monitor,
+// for inclusion in its API response (edit form pre-selection).
+func (h *MonitorHandler) loadNotificationChannelIDs(ctx context.Context, monitorType string, monitorID uuid.UUID) []string {
+	ids, err := h.queries.ListMonitorNotificationChannelIDs(ctx, db.ListMonitorNotificationChannelIDsParams{
+		MonitorType: monitorType, MonitorID: monitorID,
+	})
+	if err != nil {
+		return []string{}
+	}
+	result := make([]string, len(ids))
+	for i, id := range ids {
+		result[i] = id.String()
+	}
+	return result
+}
+
+// validateCronMonitorRequest validates and normalizes the fields shared by
+// create and update requests, responding with the first validation failure
+// and returning false — same "respond internally, return ok" idiom as
+// validateUptimeMonitorRequest.
+func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, gracePeriodMins, maxAlertsPerIncident *int32) bool {
+	*name = strings.TrimSpace(*name)
+	*schedule = strings.TrimSpace(*schedule)
+	if *name == "" {
+		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
+		return false
+	}
+	if err := validateSchedule(*schedule); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return false
+	}
+	if *gracePeriodMins < 1 {
+		*gracePeriodMins = 5
+	}
+	if *maxAlertsPerIncident < 0 {
+		*maxAlertsPerIncident = 3
+	}
+	return true
+}
+
+// checkCronMonitorCreateLimit checks whether orgID can create another cron
+// monitor under its plan. Responds and returns false on any failure (query
+// error or plan limit hit).
+func (h *MonitorHandler) checkCronMonitorCreateLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "cron_monitor")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return false
+	}
+	return true
 }
 
 // ListCronMonitors GET /api/v1/monitors/cron
@@ -125,22 +269,34 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := normalizeAndValidateCreateCronMonitorRequest(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident) {
+		return
+	}
+	if !h.checkCronMonitorCreateLimit(w, r, orgID) {
 		return
 	}
 
-	if err := h.checkMonitorCreateLimit(r.Context(), orgID); err != nil {
-		respondMonitorCreateLimitErr(w, r, orgID, "cron_monitor", err)
+	tokenBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
+	token := hex.EncodeToString(tokenBytes)
 
-	monitor, err := h.createCronMonitorRow(r.Context(), orgID, req)
+	monitor, err := h.queries.CreateCronMonitor(r.Context(), db.CreateCronMonitorParams{
+		OrgID:                orgID,
+		Name:                 req.Name,
+		Schedule:             req.Schedule,
+		GracePeriodMins:      req.GracePeriodMins,
+		PingToken:            token,
+		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
+		AlertAfterNFailures:  req.AlertAfterNFailures,
+	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if err := h.attachMonitorChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
+	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -161,19 +317,42 @@ func (h *MonitorHandler) GetCronMonitor(w http.ResponseWriter, r *http.Request) 
 		ID:    monitorID,
 		OrgID: orgID,
 	})
+	if respondMonitorNotFoundOrInternal(w, err) {
+		return
+	}
+
+	pings, err := h.queries.ListCronPings(r.Context(), db.ListCronPingsParams{
+		MonitorID: monitorID,
+		Limit:     50,
+		Offset:    0,
+	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 
-	pingResp, incidentResp, err := h.loadCronMonitorDetail(r.Context(), monitorID)
+	incidents, err := h.queries.ListCronIncidents(r.Context(), monitorID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
+	}
+
+	pingResp := make([]cronPingResponse, len(pings))
+	for i, p := range pings {
+		pingResp[i] = cronPingToResponse(p)
+	}
+
+	incidentResp := make([]cronIncidentResponse, len(incidents))
+	for i, inc := range incidents {
+		ir := cronIncidentResponse{
+			ID:        inc.ID.String(),
+			StartedAt: inc.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+		}
+		if inc.ResolvedAt.Valid {
+			t := inc.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+			ir.ResolvedAt = &t
+		}
+		incidentResp[i] = ir
 	}
 
 	resp := h.monitorToResponse(monitor)
@@ -194,14 +373,10 @@ func (h *MonitorHandler) GetCronPings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the monitor belongs to this org.
-	if _, err := h.queries.GetCronMonitor(r.Context(), db.GetCronMonitorParams{
+	_, err := h.queries.GetCronMonitor(r.Context(), db.GetCronMonitorParams{
 		ID: monitorID, OrgID: orgID,
-	}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	})
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -253,8 +428,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := normalizeAndValidateUpdateCronMonitorRequest(&req); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident) {
 		return
 	}
 
@@ -268,12 +442,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "cron", monitorID, req.ChannelIDs); err != nil {
@@ -296,15 +465,42 @@ func (h *MonitorHandler) PauseCronMonitor(w http.ResponseWriter, r *http.Request
 	monitor, err := h.queries.PauseCronMonitor(r.Context(), db.PauseCronMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.monitorToResponse(monitor))
+}
+
+// checkMonitorResumeLimit returns billing.ErrMonitorLimit when resuming a
+// paused monitor would push the org's active-monitor count over its plan
+// limit (ADR-019) — after a downgrade, resuming doesn't create anything
+// new, but it does grow the active count, so it's gated the same way
+// creation is, just checked against CountActiveMonitorsForOrg (non-paused
+// only) rather than the raw total CreateXMonitor checks. A non-nil error
+// that isn't billing.ErrMonitorLimit means the check itself failed (DB
+// error) — callers should treat that as an internal error, not a 402;
+// distinguish with errors.Is(err, billing.ErrMonitorLimit).
+func (h *MonitorHandler) checkMonitorResumeLimit(ctx context.Context, orgID uuid.UUID) error {
+	plan, err := h.queries.GetOrgPlan(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	active, err := h.queries.CountActiveMonitorsForOrg(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	return billing.CheckMonitorLimit(plan, int(active))
+}
+
+// respondResumeLimitErr writes the right response for checkMonitorResumeLimit's
+// error, telling a real plan-limit block (402) apart from an internal
+// failure (500) that happened while checking.
+func respondResumeLimitErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, billing.ErrMonitorLimit) {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 }
 
 // ResumeCronMonitor POST /api/v1/monitors/cron/{id}/resume
@@ -321,12 +517,7 @@ func (h *MonitorHandler) ResumeCronMonitor(w http.ResponseWriter, r *http.Reques
 	monitor, err := h.queries.ResumeCronMonitor(r.Context(), db.ResumeCronMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.monitorToResponse(monitor))
@@ -346,4 +537,38 @@ func (h *MonitorHandler) DeleteCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func monitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
+	orgID, err := orgIDFrom(r)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
+		return uuid.UUID{}, uuid.UUID{}, false
+	}
+	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
+		return uuid.UUID{}, uuid.UUID{}, false
+	}
+	return orgID, monitorID, true
+}
+
+func validateSchedule(s string) error {
+	if s == "" {
+		return fmt.Errorf("schedule is required")
+	}
+	s = strings.ToLower(s)
+
+	// Plain interval: "every 1m", "every 30m", "every 1h", "every 12h", "every 1d"
+	if strings.HasPrefix(s, "every ") {
+		return nil
+	}
+
+	// Cron expression: 5 whitespace-separated fields
+	fields := strings.Fields(s)
+	if len(fields) == 5 {
+		return nil
+	}
+
+	return fmt.Errorf("schedule must be a cron expression (e.g. \"0 * * * *\") or interval (e.g. \"every 1h\")")
 }

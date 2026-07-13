@@ -6,11 +6,10 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import MaintenanceMonitorPicker from '@/components/MaintenanceMonitorPicker.vue'
-import { maintenanceApi, type MaintenanceMonitorRef } from '@/api/maintenance'
+import { maintenanceApi } from '@/api/maintenance'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { useMaintenanceWindow } from '@/composables/useMaintenanceWindows'
-import { validateMaintenanceWindowForm } from '@/lib/maintenanceWindowValidation'
 
 const router = useRouter()
 const route = useRoute()
@@ -21,7 +20,7 @@ const message = ref('')
 const startsAt = ref('')
 const noEnd = ref(false)
 const endsAt = ref('')
-const monitors = ref<MaintenanceMonitorRef[]>([])
+const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string; name: string }[]>([])
 const submitting = ref(false)
 const error = ref('')
 const confirmDelete = ref(false)
@@ -62,20 +61,27 @@ watch(loadError, (e) => {
   if (e) error.value = e.message
 })
 
-async function submit() {
-  error.value = ''
-  limitReached.value = false
-  const validationError = validateMaintenanceWindowForm(
-    title.value,
-    startsAt.value,
-    noEnd.value,
-    endsAt.value,
-    monitors.value.length,
-  )
-  if (validationError) {
-    error.value = validationError
-    return
+function validateMaintenanceWindowForm(): string {
+  if (!title.value.trim()) return 'Title is required'
+  if (!startsAt.value) return 'Start time is required'
+  if (!noEnd.value && !endsAt.value) return 'End time is required, or check "no end date"'
+  if (monitors.value.length === 0) return 'Select at least one monitor'
+  return ''
+}
+
+function handleSubmitError(e: unknown): void {
+  if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+    limitReached.value = true
+    error.value = e.message
+  } else {
+    error.value = e instanceof Error ? e.message : 'Failed to update maintenance window'
   }
+}
+
+async function submit() {
+  limitReached.value = false
+  error.value = validateMaintenanceWindowForm()
+  if (error.value) return
 
   submitting.value = true
   try {
@@ -88,12 +94,7 @@ async function submit() {
     })
     router.push({ name: 'maintenance' })
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-      limitReached.value = true
-      error.value = e.message
-    } else {
-      error.value = e instanceof Error ? e.message : 'Failed to update maintenance window'
-    }
+    handleSubmitError(e)
   } finally {
     submitting.value = false
   }

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -125,6 +127,28 @@ type createSSLMonitorRequest struct {
 	ChannelIDs []string `json:"channelIds"`
 }
 
+// checkSSLMonitorLimit checks whether orgID can create another SSL monitor
+// under its plan. Responds and returns false on any failure (query error or
+// plan limit hit).
+func (h *MonitorHandler) checkSSLMonitorLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "ssl_monitor")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return false
+	}
+	return true
+}
+
 // CreateSSLMonitor POST /api/v1/monitors/ssl
 func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -150,8 +174,7 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.checkMonitorCreateLimit(r.Context(), orgID); err != nil {
-		respondMonitorCreateLimitErr(w, r, orgID, "ssl_monitor", err)
+	if !h.checkSSLMonitorLimit(w, r, orgID) {
 		return
 	}
 
@@ -164,7 +187,7 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if err := h.attachMonitorChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
+	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

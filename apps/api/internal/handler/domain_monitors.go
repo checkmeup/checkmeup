@@ -152,13 +152,9 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if len(req.ChannelIDs) > 0 {
-		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "domain", monitor.ID, req.ChannelIDs); err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-	} else {
-		h.attachDefaultNotificationChannels(r.Context(), orgID, "domain", monitor.ID)
+	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "domain", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
 	}
 
 	resp := domainMonitorToResponse(monitor)

@@ -118,6 +118,116 @@ func statusPageIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID
 	return orgID, pageID, true
 }
 
+// respondStatusPageNotFoundOrInternal writes a 404 if err is pgx.ErrNoRows,
+// a 500 for any other non-nil error, and reports whether it wrote a
+// response so the caller knows to return immediately.
+func respondStatusPageNotFoundOrInternal(w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "page not found", "not_found")
+		return true
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	return true
+}
+
+// validateStatusPageTitleAndLogo trims and validates the title/logo fields
+// shared by create and update requests, responding with the first
+// validation failure and returning false.
+func validateStatusPageTitleAndLogo(w http.ResponseWriter, title, logoURL *string) bool {
+	*title = strings.TrimSpace(*title)
+	if *title == "" {
+		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
+		return false
+	}
+	*logoURL = strings.TrimSpace(*logoURL)
+	if err := validateLogoURL(*logoURL); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return false
+	}
+	return true
+}
+
+// checkStatusPageCreateLimit checks whether orgID can create another status
+// page under its plan. Responds and returns false on any failure (query
+// error or plan limit hit).
+func (h *StatusPageHandler) checkStatusPageCreateLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
+	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	spCount, err := h.queries.CountOrgStatusPages(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return false
+	}
+	if err := billing.CheckStatusPageLimit(plan, int(spCount)); err != nil {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "status_page")
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return false
+	}
+	return true
+}
+
+// resolvedStatusPageMonitor is a request monitor item after resolving its
+// display name and confirming org ownership (see resolveStatusPageMonitors).
+type resolvedStatusPageMonitor struct {
+	monitorType  string
+	monitorID    uuid.UUID
+	displayName  string
+	displayOrder int32
+}
+
+// resolveStatusPageMonitors resolves each requested monitor against orgID.
+// resolveMonitorName (shared with maintenance.go) scopes its lookup by
+// org_id, so this also confirms ownership — a status page can never
+// reference another org's monitor. It also supplies the real monitor name as
+// the displayName fallback (EP-06 US-0602: "defaults to monitor name"),
+// rather than falling back to the raw UUID string.
+func (h *StatusPageHandler) resolveStatusPageMonitors(ctx context.Context, orgID uuid.UUID, items []setMonitorItem) ([]resolvedStatusPageMonitor, error) {
+	resolved := make([]resolvedStatusPageMonitor, 0, len(items))
+	for _, m := range items {
+		id, name, err := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
+		if err != nil {
+			return nil, err
+		}
+		displayName := strings.TrimSpace(m.DisplayName)
+		if displayName == "" {
+			displayName = name
+		}
+		resolved = append(resolved, resolvedStatusPageMonitor{
+			monitorType: m.MonitorType, monitorID: id, displayName: displayName, displayOrder: m.DisplayOrder,
+		})
+	}
+	return resolved, nil
+}
+
+// replaceStatusPageMonitors atomically swaps pageID's monitor list for
+// resolved (delete + insert).
+func (h *StatusPageHandler) replaceStatusPageMonitors(ctx context.Context, pageID uuid.UUID, resolved []resolvedStatusPageMonitor) ([]statusPageMonitorResponse, error) {
+	if err := h.queries.DeleteStatusPageMonitors(ctx, pageID); err != nil {
+		return nil, err
+	}
+	result := make([]statusPageMonitorResponse, 0, len(resolved))
+	for _, m := range resolved {
+		inserted, err := h.queries.InsertStatusPageMonitor(ctx, db.InsertStatusPageMonitorParams{
+			PageID:       pageID,
+			MonitorType:  m.monitorType,
+			MonitorID:    m.monitorID,
+			DisplayName:  m.displayName,
+			DisplayOrder: m.displayOrder,
+		})
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, toStatusPageMonitorResponse(inserted))
+	}
+	return result, nil
+}
+
 func baseURL(r *http.Request) string {
 	scheme := "https"
 	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
@@ -186,18 +296,16 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
-	if err := normalizeAndValidateCreateStatusPageRequest(&req); err != nil {
+
+	req.Slug = strings.ToLower(strings.TrimSpace(req.Slug))
+	if err := validateSlug(req.Slug); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-
-	if err := h.checkStatusPageQuota(r.Context(), orgID); err != nil {
-		if errors.Is(err, billing.ErrStatusPageLimit) {
-			slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "resource", "status_page")
-			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if !validateStatusPageTitleAndLogo(w, &req.Title, &req.LogoURL) {
+		return
+	}
+	if !h.checkStatusPageCreateLimit(w, r, orgID) {
 		return
 	}
 
@@ -219,31 +327,6 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 	respond.JSON(w, http.StatusCreated, toStatusPageResponse(page, baseURL(r)))
 }
 
-func normalizeAndValidateCreateStatusPageRequest(req *createStatusPageRequest) error {
-	req.Slug = strings.ToLower(strings.TrimSpace(req.Slug))
-	if err := validateSlug(req.Slug); err != nil {
-		return err
-	}
-	req.Title = strings.TrimSpace(req.Title)
-	if req.Title == "" {
-		return errors.New("title is required")
-	}
-	req.LogoURL = strings.TrimSpace(req.LogoURL)
-	return validateLogoURL(req.LogoURL)
-}
-
-func (h *StatusPageHandler) checkStatusPageQuota(ctx context.Context, orgID uuid.UUID) error {
-	plan, err := h.queries.GetOrgPlan(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	spCount, err := h.queries.CountOrgStatusPages(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	return billing.CheckStatusPageLimit(plan, int(spCount))
-}
-
 // GetStatusPage GET /api/v1/status-pages/:id
 func (h *StatusPageHandler) GetStatusPage(w http.ResponseWriter, r *http.Request) {
 	orgID, pageID, ok := statusPageIDs(w, r)
@@ -251,12 +334,7 @@ func (h *StatusPageHandler) GetStatusPage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	page, err := h.queries.GetStatusPage(r.Context(), db.GetStatusPageParams{ID: pageID, OrgID: orgID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "page not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondStatusPageNotFoundOrInternal(w, err) {
 		return
 	}
 	monitors, err := h.queries.ListStatusPageMonitors(r.Context(), pageID)
@@ -293,14 +371,7 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
 		return
 	}
-	req.Title = strings.TrimSpace(req.Title)
-	if req.Title == "" {
-		respond.Error(w, http.StatusBadRequest, "title is required", "bad_request")
-		return
-	}
-	req.LogoURL = strings.TrimSpace(req.LogoURL)
-	if err := validateLogoURL(req.LogoURL); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+	if !validateStatusPageTitleAndLogo(w, &req.Title, &req.LogoURL) {
 		return
 	}
 
@@ -325,12 +396,7 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		LogoUrl:      req.LogoURL,
 		HideBranding: req.HideBranding,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "page not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondStatusPageNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, toStatusPageResponse(page, baseURL(r)))
@@ -370,14 +436,10 @@ func (h *StatusPageHandler) SetStatusPageMonitors(w http.ResponseWriter, r *http
 	}
 
 	// Verify page belongs to org
-	if _, err := h.queries.GetStatusPage(r.Context(), db.GetStatusPageParams{
+	_, err := h.queries.GetStatusPage(r.Context(), db.GetStatusPageParams{
 		ID: pageID, OrgID: orgID,
-	}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "page not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	})
+	if respondStatusPageNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -393,64 +455,10 @@ func (h *StatusPageHandler) SetStatusPageMonitors(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Replace all monitors atomically (delete + insert)
-	if err := h.queries.DeleteStatusPageMonitors(r.Context(), pageID); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	result, err := h.insertStatusPageMonitors(r.Context(), pageID, resolved)
+	result, err := h.replaceStatusPageMonitors(r.Context(), pageID, resolved)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	respond.JSON(w, http.StatusOK, result)
-}
-
-type resolvedStatusPageMonitor struct {
-	monitorType  string
-	monitorID    uuid.UUID
-	displayName  string
-	displayOrder int32
-}
-
-// resolveStatusPageMonitors resolves each monitor against this org before
-// touching the DB. resolveMonitorName (shared with maintenance.go) scopes
-// its lookup by org_id, so this also confirms ownership — a status page can
-// never reference another org's monitor. It also supplies the real monitor
-// name as the displayName fallback (EP-06 US-0602: "defaults to monitor
-// name"), rather than falling back to the raw UUID string.
-func (h *StatusPageHandler) resolveStatusPageMonitors(ctx context.Context, orgID uuid.UUID, monitors []setMonitorItem) ([]resolvedStatusPageMonitor, error) {
-	resolved := make([]resolvedStatusPageMonitor, 0, len(monitors))
-	for _, m := range monitors {
-		id, name, err := resolveMonitorName(ctx, h.queries, orgID, m.MonitorType, m.MonitorID)
-		if err != nil {
-			return nil, err
-		}
-		displayName := strings.TrimSpace(m.DisplayName)
-		if displayName == "" {
-			displayName = name
-		}
-		resolved = append(resolved, resolvedStatusPageMonitor{
-			monitorType: m.MonitorType, monitorID: id, displayName: displayName, displayOrder: m.DisplayOrder,
-		})
-	}
-	return resolved, nil
-}
-
-func (h *StatusPageHandler) insertStatusPageMonitors(ctx context.Context, pageID uuid.UUID, resolved []resolvedStatusPageMonitor) ([]statusPageMonitorResponse, error) {
-	result := make([]statusPageMonitorResponse, 0, len(resolved))
-	for _, m := range resolved {
-		inserted, err := h.queries.InsertStatusPageMonitor(ctx, db.InsertStatusPageMonitorParams{
-			PageID:       pageID,
-			MonitorType:  m.monitorType,
-			MonitorID:    m.monitorID,
-			DisplayName:  m.displayName,
-			DisplayOrder: m.displayOrder,
-		})
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, toStatusPageMonitorResponse(inserted))
-	}
-	return result, nil
 }

@@ -17,7 +17,6 @@ import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
 import { useBilling } from '@/composables/useBilling'
-import { validateUptimeMonitorForm } from '@/lib/uptimeMonitorValidation'
 
 const router = useRouter()
 const route = useRoute()
@@ -88,23 +87,30 @@ const { data: detail, isPending: monitorLoading, error: loadError } = useUptimeM
 const { data: billingInfo, isPending: billingLoading } = useBilling()
 const loading = computed(() => monitorLoading.value || billingLoading.value)
 
-// populateForm assigns the fetched monitor's fields to the form refs —
-// split out from the watch callback below so the "have we populated yet"
-// guard and the field-by-field ?? fallbacks (one branch each) aren't both
-// counted against a single function's complexity.
-function populateForm(m: UptimeMonitor) {
+// applyOptionalMonitorFields sets the fields that arrive possibly-null from
+// the API and need a form-friendly default — split out from
+// applyDetailToForm so neither function carries all of the ?? branches.
+function applyOptionalMonitorFields(m: UptimeMonitor) {
+  keyword.value = m.keyword ?? ''
+  maxResponseTimeMs.value = m.maxResponseTimeMs ?? null
+  applyOptionalMonitorLists(m)
+}
+
+function applyOptionalMonitorLists(m: UptimeMonitor) {
+  jsonAssertions.value = [...(m.jsonAssertions ?? [])]
+  channelIds.value = m.channelIds ?? []
+}
+
+function applyDetailToForm(m: UptimeMonitor) {
   name.value = m.name
   url.value = m.url
   intervalMins.value = m.intervalMins
   alertsEnabled.value = m.alertsEnabled
   maxAlertsPerIncident.value = m.maxAlertsPerIncident
   alertAfterNFailures.value = m.alertAfterNFailures
-  keyword.value = m.keyword ?? ''
   keywordMode.value = m.keywordMode
   keywordCaseSensitive.value = m.keywordCaseSensitive
-  jsonAssertions.value = [...m.jsonAssertions]
-  maxResponseTimeMs.value = m.maxResponseTimeMs
-  channelIds.value = m.channelIds ?? []
+  applyOptionalMonitorFields(m)
 }
 
 let formPopulated = false
@@ -113,7 +119,7 @@ watch(
   (d) => {
     if (!d || formPopulated) return
     formPopulated = true
-    populateForm(d.monitor)
+    applyDetailToForm(d.monitor)
   },
   { immediate: true },
 )
@@ -129,14 +135,26 @@ watch(loadError, (e) => {
   if (e) error.value = e.message
 })
 
-async function submit() {
-  error.value = ''
-  limitReached.value = false
-  const validationError = validateUptimeMonitorForm(name.value, url.value, keyword.value)
-  if (validationError) {
-    error.value = validationError
-    return
+function validateUptimeMonitorForm(): string {
+  if (!name.value.trim()) return 'Name is required'
+  if (!url.value.trim() || !url.value.match(/^https?:\/\//)) return 'URL must start with http:// or https://'
+  if (keyword.value.trim().length > 500) return 'Keyword must be 500 characters or fewer'
+  return ''
+}
+
+function handleSubmitError(e: unknown, fallbackMessage: string): void {
+  if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+    limitReached.value = true
+    error.value = e.message
+  } else {
+    error.value = e instanceof Error ? e.message : fallbackMessage
   }
+}
+
+async function submit() {
+  limitReached.value = false
+  error.value = validateUptimeMonitorForm()
+  if (error.value) return
 
   submitting.value = true
   try {
@@ -156,12 +174,7 @@ async function submit() {
     })
     router.push({ name: 'uptime-monitor-detail', params: { id } })
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-      limitReached.value = true
-      error.value = e.message
-    } else {
-      error.value = e instanceof Error ? e.message : 'Failed to update monitor'
-    }
+    handleSubmitError(e, 'Failed to update monitor')
   } finally {
     submitting.value = false
   }
