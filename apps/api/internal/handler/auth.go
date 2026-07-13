@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -186,43 +187,12 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Org and user are created in the same transaction — if CreateUser fails
-	// (e.g. duplicate email), the org is rolled back too instead of being
-	// left as a permanent orphan row.
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
-	qtx := h.queries.WithTx(tx)
-
-	orgName := strings.SplitN(req.Email, "@", 2)[0]
-	org, err := qtx.CreateOrg(r.Context(), db.CreateOrgParams{
-		Name:       orgName,
-		AlertEmail: pgtype.Text{String: req.Email, Valid: true},
-	})
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-
-	user, err := qtx.CreateUser(r.Context(), db.CreateUserParams{
-		OrgID:        org.ID,
-		Email:        req.Email,
-		PasswordHash: string(hash),
-		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
-	})
+	user, err := h.createOrgAndUser(r.Context(), req.Email, string(hash))
 	if err != nil {
 		if isUniqueViolation(err) {
 			respond.Error(w, http.StatusConflict, "an account with this email already exists", "email_taken")
 			return
 		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-
-	if err := tx.Commit(r.Context()); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -233,6 +203,42 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusCreated, toUserResponse(user))
+}
+
+// createOrgAndUser creates the org and user in the same transaction — if
+// CreateUser fails (e.g. duplicate email), the org is rolled back too
+// instead of being left as a permanent orphan row.
+func (h *AuthHandler) createOrgAndUser(ctx context.Context, email, passwordHash string) (db.User, error) {
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		return db.User{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	qtx := h.queries.WithTx(tx)
+
+	orgName := strings.SplitN(email, "@", 2)[0]
+	org, err := qtx.CreateOrg(ctx, db.CreateOrgParams{
+		Name:       orgName,
+		AlertEmail: pgtype.Text{String: email, Valid: true},
+	})
+	if err != nil {
+		return db.User{}, err
+	}
+
+	user, err := qtx.CreateUser(ctx, db.CreateUserParams{
+		OrgID:        org.ID,
+		Email:        email,
+		PasswordHash: passwordHash,
+		TermsVersion: pgtype.Text{String: legal.CurrentVersion, Valid: true},
+	})
+	if err != nil {
+		return db.User{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return db.User{}, err
+	}
+	return user, nil
 }
 
 func validateSignUp(req signUpRequest) string {

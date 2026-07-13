@@ -152,6 +152,17 @@ func (h *MonitorHandler) setMonitorNotificationChannels(ctx context.Context, org
 	return nil
 }
 
+// attachMonitorChannels attaches the requested channels to a newly created
+// monitor, or falls back to every enabled org channel when none were
+// explicitly selected (US-2802).
+func (h *MonitorHandler) attachMonitorChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, channelIDs []string) error {
+	if len(channelIDs) > 0 {
+		return h.setMonitorNotificationChannels(ctx, orgID, monitorType, monitorID, channelIDs)
+	}
+	h.attachDefaultNotificationChannels(ctx, orgID, monitorType, monitorID)
+	return nil
+}
+
 // loadNotificationChannelIDs returns the channel IDs attached to a monitor,
 // for inclusion in its API response (edit form pre-selection).
 func (h *MonitorHandler) loadNotificationChannelIDs(ctx context.Context, monitorType string, monitorID uuid.UUID) []string {
@@ -212,16 +223,40 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if err := normalizeAndValidateCreateCronMonitorRequest(&req); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+
+	if err := h.checkMonitorCreateLimit(r.Context(), orgID); err != nil {
+		respondMonitorCreateLimitErr(w, r, orgID, "cron_monitor", err)
+		return
+	}
+
+	monitor, err := h.createCronMonitorRow(r.Context(), orgID, req)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.attachMonitorChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+
+	resp := h.monitorToResponse(monitor)
+	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "cron", monitor.ID)
+	respond.JSON(w, http.StatusCreated, resp)
+}
+
+func normalizeAndValidateCreateCronMonitorRequest(req *createCronMonitorRequest) error {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Schedule = strings.TrimSpace(req.Schedule)
 
 	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
-		return
+		return errors.New("name is required")
 	}
 	if err := validateSchedule(req.Schedule); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
+		return err
 	}
 	if req.GracePeriodMins < 1 {
 		req.GracePeriodMins = 5
@@ -229,31 +264,28 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	if req.MaxAlertsPerIncident < 0 {
 		req.MaxAlertsPerIncident = 3
 	}
+	return nil
+}
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "cron_monitor")
+// respondMonitorCreateLimitErr maps a checkMonitorCreateLimit failure to an
+// HTTP response — a plan-limit hit is a 402 with the billing error's own
+// message, anything else (a query failure) is a generic 500.
+func respondMonitorCreateLimitErr(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, resource string, err error) {
+	if errors.Is(err, billing.ErrMonitorLimit) {
+		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "resource", resource)
 		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
 		return
 	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+}
 
-	tokenBytes := make([]byte, 16)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
+// createCronMonitorRow generates the monitor's ping token and creates the row.
+func (h *MonitorHandler) createCronMonitorRow(ctx context.Context, orgID uuid.UUID, req createCronMonitorRequest) (db.CronMonitor, error) {
+	token, err := generatePingToken()
+	if err != nil {
+		return db.CronMonitor{}, err
 	}
-	token := hex.EncodeToString(tokenBytes)
-
-	monitor, err := h.queries.CreateCronMonitor(r.Context(), db.CreateCronMonitorParams{
+	return h.queries.CreateCronMonitor(ctx, db.CreateCronMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
 		Schedule:             req.Schedule,
@@ -262,22 +294,29 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if len(req.ChannelIDs) > 0 {
-		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-	} else {
-		h.attachDefaultNotificationChannels(r.Context(), orgID, "cron", monitor.ID)
-	}
+}
 
-	resp := h.monitorToResponse(monitor)
-	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "cron", monitor.ID)
-	respond.JSON(w, http.StatusCreated, resp)
+// checkMonitorCreateLimit checks whether orgID can create another monitor
+// under its plan's total-monitor cap — the same cap applies across all
+// monitor types (cron, uptime, SSL, ...).
+func (h *MonitorHandler) checkMonitorCreateLimit(ctx context.Context, orgID uuid.UUID) error {
+	plan, err := h.queries.GetOrgPlan(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	total, err := h.queries.CountOrgMonitors(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	return billing.CheckMonitorLimit(plan, int(total))
+}
+
+func generatePingToken() (string, error) {
+	tokenBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(tokenBytes), nil
 }
 
 // GetCronMonitor GET /api/v1/monitors/cron/{id}
@@ -300,38 +339,10 @@ func (h *MonitorHandler) GetCronMonitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pings, err := h.queries.ListCronPings(r.Context(), db.ListCronPingsParams{
-		MonitorID: monitorID,
-		Limit:     50,
-		Offset:    0,
-	})
+	pingResp, incidentResp, err := h.loadCronMonitorDetail(r.Context(), monitorID)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
-	}
-
-	incidents, err := h.queries.ListCronIncidents(r.Context(), monitorID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-
-	pingResp := make([]cronPingResponse, len(pings))
-	for i, p := range pings {
-		pingResp[i] = cronPingToResponse(p)
-	}
-
-	incidentResp := make([]cronIncidentResponse, len(incidents))
-	for i, inc := range incidents {
-		ir := cronIncidentResponse{
-			ID:        inc.ID.String(),
-			StartedAt: inc.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
-		}
-		if inc.ResolvedAt.Valid {
-			t := inc.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
-			ir.ResolvedAt = &t
-		}
-		incidentResp[i] = ir
 	}
 
 	resp := h.monitorToResponse(monitor)
@@ -342,6 +353,48 @@ func (h *MonitorHandler) GetCronMonitor(w http.ResponseWriter, r *http.Request) 
 		"pings":     pingResp,
 		"incidents": incidentResp,
 	})
+}
+
+func cronIncidentToResponse(inc db.CronIncident) cronIncidentResponse {
+	ir := cronIncidentResponse{
+		ID:        inc.ID.String(),
+		StartedAt: inc.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+	}
+	if inc.ResolvedAt.Valid {
+		t := inc.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+		ir.ResolvedAt = &t
+	}
+	return ir
+}
+
+// loadCronMonitorDetail fetches the pings/incidents shown on the cron
+// monitor detail page and converts them to response types.
+func (h *MonitorHandler) loadCronMonitorDetail(ctx context.Context, monitorID uuid.UUID) ([]cronPingResponse, []cronIncidentResponse, error) {
+	pings, err := h.queries.ListCronPings(ctx, db.ListCronPingsParams{
+		MonitorID: monitorID,
+		Limit:     50,
+		Offset:    0,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	incidents, err := h.queries.ListCronIncidents(ctx, monitorID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pingResp := make([]cronPingResponse, len(pings))
+	for i, p := range pings {
+		pingResp[i] = cronPingToResponse(p)
+	}
+
+	incidentResp := make([]cronIncidentResponse, len(incidents))
+	for i, inc := range incidents {
+		incidentResp[i] = cronIncidentToResponse(inc)
+	}
+
+	return pingResp, incidentResp, nil
 }
 
 // GetCronPings GET /api/v1/monitors/cron/{id}/pings
@@ -411,22 +464,9 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	req.Name = strings.TrimSpace(req.Name)
-	req.Schedule = strings.TrimSpace(req.Schedule)
-
-	if req.Name == "" {
-		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
-		return
-	}
-	if err := validateSchedule(req.Schedule); err != nil {
+	if err := normalizeAndValidateUpdateCronMonitorRequest(&req); err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
-	}
-	if req.GracePeriodMins < 1 {
-		req.GracePeriodMins = 5
-	}
-	if req.MaxAlertsPerIncident < 0 {
-		req.MaxAlertsPerIncident = 3
 	}
 
 	monitor, err := h.queries.UpdateCronMonitor(r.Context(), db.UpdateCronMonitorParams{
@@ -455,6 +495,25 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 	resp := h.monitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "cron", monitorID)
 	respond.JSON(w, http.StatusOK, resp)
+}
+
+func normalizeAndValidateUpdateCronMonitorRequest(req *updateCronMonitorRequest) error {
+	req.Name = strings.TrimSpace(req.Name)
+	req.Schedule = strings.TrimSpace(req.Schedule)
+
+	if req.Name == "" {
+		return errors.New("name is required")
+	}
+	if err := validateSchedule(req.Schedule); err != nil {
+		return err
+	}
+	if req.GracePeriodMins < 1 {
+		req.GracePeriodMins = 5
+	}
+	if req.MaxAlertsPerIncident < 0 {
+		req.MaxAlertsPerIncident = 3
+	}
+	return nil
 }
 
 // PauseCronMonitor POST /api/v1/monitors/cron/{id}/pause

@@ -10,6 +10,7 @@ import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useBilling } from '@/composables/useBilling'
+import { validateUptimeMonitorForm } from '@/lib/uptimeMonitorValidation'
 
 const router = useRouter()
 
@@ -87,20 +88,9 @@ const alertFilterOptions = [
 async function submit() {
   error.value = ''
   limitReached.value = false
-  if (!name.value.trim()) {
-    error.value = 'Name is required'
-    return
-  }
-  if (!url.value.trim()) {
-    error.value = 'URL is required'
-    return
-  }
-  if (!url.value.match(/^https?:\/\//)) {
-    error.value = 'URL must start with http:// or https://'
-    return
-  }
-  if (keyword.value.trim().length > 500) {
-    error.value = 'Keyword must be 500 characters or fewer'
+  const validationError = validateUptimeMonitorForm(name.value, url.value, keyword.value)
+  if (validationError) {
+    error.value = validationError
     return
   }
 

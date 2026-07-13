@@ -5,12 +5,19 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
-import { monitorsApi, type KeywordMode, type JsonAssertion, type AssertionComparator } from '@/api/monitors'
+import {
+  monitorsApi,
+  type KeywordMode,
+  type JsonAssertion,
+  type AssertionComparator,
+  type UptimeMonitor,
+} from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useUptimeMonitor } from '@/composables/useUptimeMonitors'
 import { useBilling } from '@/composables/useBilling'
+import { validateUptimeMonitorForm } from '@/lib/uptimeMonitorValidation'
 
 const router = useRouter()
 const route = useRoute()
@@ -81,25 +88,32 @@ const { data: detail, isPending: monitorLoading, error: loadError } = useUptimeM
 const { data: billingInfo, isPending: billingLoading } = useBilling()
 const loading = computed(() => monitorLoading.value || billingLoading.value)
 
+// populateForm assigns the fetched monitor's fields to the form refs —
+// split out from the watch callback below so the "have we populated yet"
+// guard and the field-by-field ?? fallbacks (one branch each) aren't both
+// counted against a single function's complexity.
+function populateForm(m: UptimeMonitor) {
+  name.value = m.name
+  url.value = m.url
+  intervalMins.value = m.intervalMins
+  alertsEnabled.value = m.alertsEnabled
+  maxAlertsPerIncident.value = m.maxAlertsPerIncident
+  alertAfterNFailures.value = m.alertAfterNFailures
+  keyword.value = m.keyword ?? ''
+  keywordMode.value = m.keywordMode
+  keywordCaseSensitive.value = m.keywordCaseSensitive
+  jsonAssertions.value = [...m.jsonAssertions]
+  maxResponseTimeMs.value = m.maxResponseTimeMs
+  channelIds.value = m.channelIds ?? []
+}
+
 let formPopulated = false
 watch(
   detail,
   (d) => {
     if (!d || formPopulated) return
     formPopulated = true
-    const m = d.monitor
-    name.value = m.name
-    url.value = m.url
-    intervalMins.value = m.intervalMins
-    alertsEnabled.value = m.alertsEnabled
-    maxAlertsPerIncident.value = m.maxAlertsPerIncident
-    alertAfterNFailures.value = m.alertAfterNFailures
-    keyword.value = m.keyword ?? ''
-    keywordMode.value = m.keywordMode
-    keywordCaseSensitive.value = m.keywordCaseSensitive
-    jsonAssertions.value = [...(m.jsonAssertions ?? [])]
-    maxResponseTimeMs.value = m.maxResponseTimeMs ?? null
-    channelIds.value = m.channelIds ?? []
+    populateForm(d.monitor)
   },
   { immediate: true },
 )
@@ -118,16 +132,9 @@ watch(loadError, (e) => {
 async function submit() {
   error.value = ''
   limitReached.value = false
-  if (!name.value.trim()) {
-    error.value = 'Name is required'
-    return
-  }
-  if (!url.value.trim() || !url.value.match(/^https?:\/\//)) {
-    error.value = 'URL must start with http:// or https://'
-    return
-  }
-  if (keyword.value.trim().length > 500) {
-    error.value = 'Keyword must be 500 characters or fewer'
+  const validationError = validateUptimeMonitorForm(name.value, url.value, keyword.value)
+  if (validationError) {
+    error.value = validationError
     return
   }
 

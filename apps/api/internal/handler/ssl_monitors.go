@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -152,19 +150,8 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "ssl_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+	if err := h.checkMonitorCreateLimit(r.Context(), orgID); err != nil {
+		respondMonitorCreateLimitErr(w, r, orgID, "ssl_monitor", err)
 		return
 	}
 
@@ -177,13 +164,9 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
-	if len(req.ChannelIDs) > 0 {
-		if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-	} else {
-		h.attachDefaultNotificationChannels(r.Context(), orgID, "ssl", monitor.ID)
+	if err := h.attachMonitorChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
 	}
 
 	resp := sslMonitorToResponse(monitor)

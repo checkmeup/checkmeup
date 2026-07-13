@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -262,45 +263,22 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		return
 	}
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
+	if err := h.checkNotificationChannelCreateLimits(r.Context(), orgID, req.Type); err != nil {
+		if errors.Is(err, billing.ErrNotificationChannelLimit) || errors.Is(err, errSMSRequiresPaidPlan) {
+			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+			return
+		}
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	total, err := h.queries.CountOrgNotificationChannels(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := billing.CheckNotificationChannelLimit(plan, int(total)); err != nil {
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	// A plan with 0 monthly SMS credits (Hobby, per ADR-032) can't create an
-	// sms channel at all — no point saving one that can never send.
-	if req.Type == "sms" && billing.GetLimits(plan).SMSCredits <= 0 {
-		respond.Error(w, http.StatusPaymentRequired, "SMS alerts require a paid plan — upgrade to enable this channel", "plan_limit_reached")
 		return
 	}
 
-	if err := validateChannelConfig(req.Type, req.Config); err != nil {
-		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
-		return
-	}
-	if req.Type == "webhook" {
-		secret, err := webhook.GenerateSecret()
-		if err != nil {
+	configBytes, err := buildNotificationChannelConfig(&req)
+	if err != nil {
+		if errors.Is(err, errWebhookSecretGeneration) {
 			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 			return
 		}
-		req.Config["secret"] = secret
-	}
-	if req.Type == "sms" {
-		finalizeSMSConsent(req.Config)
-	}
-	configBytes, err := json.Marshal(req.Config)
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid config", "bad_request")
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
 
@@ -315,6 +293,59 @@ func (h *NotificationChannelHandler) CreateNotificationChannel(w http.ResponseWr
 		return
 	}
 	respond.JSON(w, http.StatusCreated, toNotificationChannelResponse(channel))
+}
+
+// errSMSRequiresPaidPlan is returned when an org on a plan with 0 monthly
+// SMS credits (Hobby, per ADR-032) tries to create an sms channel — no
+// point saving one that can never send.
+var errSMSRequiresPaidPlan = errors.New("SMS alerts require a paid plan — upgrade to enable this channel")
+
+func (h *NotificationChannelHandler) checkNotificationChannelCreateLimits(ctx context.Context, orgID uuid.UUID, channelType string) error {
+	plan, err := h.queries.GetOrgPlan(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	total, err := h.queries.CountOrgNotificationChannels(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	if err := billing.CheckNotificationChannelLimit(plan, int(total)); err != nil {
+		return err
+	}
+	if channelType == "sms" && billing.GetLimits(plan).SMSCredits <= 0 {
+		return errSMSRequiresPaidPlan
+	}
+	return nil
+}
+
+// errWebhookSecretGeneration wraps a webhook.GenerateSecret failure so the
+// caller can distinguish it (an internal/crypto failure, 500) from the
+// validation-shaped errors buildNotificationChannelConfig otherwise returns
+// (400) — see the errors.Is check at the CreateNotificationChannel call site.
+var errWebhookSecretGeneration = errors.New("failed to generate webhook secret")
+
+// buildNotificationChannelConfig validates req.Config against req.Type,
+// fills in server-generated fields (webhook secret, SMS consent timestamp),
+// and marshals the result for storage.
+func buildNotificationChannelConfig(req *notificationChannelRequest) ([]byte, error) {
+	if err := validateChannelConfig(req.Type, req.Config); err != nil {
+		return nil, err
+	}
+	if req.Type == "webhook" {
+		secret, err := webhook.GenerateSecret()
+		if err != nil {
+			return nil, errWebhookSecretGeneration
+		}
+		req.Config["secret"] = secret
+	}
+	if req.Type == "sms" {
+		finalizeSMSConsent(req.Config)
+	}
+	configBytes, err := json.Marshal(req.Config)
+	if err != nil {
+		return nil, errors.New("invalid config")
+	}
+	return configBytes, nil
 }
 
 // UpdateNotificationChannel PATCH /api/v1/notification-channels/{id}
@@ -341,11 +372,7 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 
 	existing, err := h.queries.GetNotificationChannel(r.Context(), db.GetNotificationChannelParams{ID: channelID, OrgID: orgID})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		respondChannelLookupErr(w, err)
 		return
 	}
 	configBytes, enabled, err := resolveUpdatedChannelConfig(existing, req)
@@ -353,25 +380,9 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
-	// Re-enabling a previously-disabled channel grows the org's active
-	// channel count, same as creating one — gated the same way (ADR-019),
-	// checked against enabled-only count since a disabled channel doesn't
-	// count against the limit at all.
-	if enabled && !existing.Enabled {
-		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-		if err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-		enabledCount, err := h.queries.CountEnabledNotificationChannelsForOrg(r.Context(), orgID)
-		if err != nil {
-			respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-			return
-		}
-		if err := billing.CheckNotificationChannelLimit(plan, int(enabledCount)); err != nil {
-			respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-			return
-		}
+	if err := h.checkReEnableLimitIfNeeded(r.Context(), orgID, existing.Enabled, enabled); err != nil {
+		respondNotificationChannelLimitErr(w, err)
+		return
 	}
 
 	channel, err := h.queries.UpdateNotificationChannel(r.Context(), db.UpdateNotificationChannelParams{
@@ -386,6 +397,42 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		return
 	}
 	respond.JSON(w, http.StatusOK, toNotificationChannelResponse(channel))
+}
+
+func respondChannelLookupErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, pgx.ErrNoRows) {
+		respond.Error(w, http.StatusNotFound, "channel not found", "not_found")
+		return
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+}
+
+func respondNotificationChannelLimitErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, billing.ErrNotificationChannelLimit) {
+		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
+		return
+	}
+	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+}
+
+// checkReEnableLimitIfNeeded checks the plan's enabled-channel cap only when
+// this update actually re-enables a previously-disabled channel — that
+// grows the org's active channel count, same as creating one, gated the
+// same way (ADR-019). A disabled channel doesn't count against the limit at
+// all, so no other transition needs this check.
+func (h *NotificationChannelHandler) checkReEnableLimitIfNeeded(ctx context.Context, orgID uuid.UUID, wasEnabled, nowEnabled bool) error {
+	if !nowEnabled || wasEnabled {
+		return nil
+	}
+	plan, err := h.queries.GetOrgPlan(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	enabledCount, err := h.queries.CountEnabledNotificationChannelsForOrg(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	return billing.CheckNotificationChannelLimit(plan, int(enabledCount))
 }
 
 // resolveUpdatedChannelConfig validates req.Config against the channel's

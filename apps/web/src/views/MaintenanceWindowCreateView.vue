@@ -6,7 +6,8 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import MaintenanceMonitorPicker from '@/components/MaintenanceMonitorPicker.vue'
-import { maintenanceApi } from '@/api/maintenance'
+import { maintenanceApi, type MaintenanceMonitorRef } from '@/api/maintenance'
+import { validateMaintenanceWindowForm } from '@/lib/maintenanceWindowValidation'
 
 const router = useRouter()
 
@@ -15,7 +16,7 @@ const message = ref('')
 const startsAt = ref('')
 const noEnd = ref(false)
 const endsAt = ref('')
-const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string; name: string }[]>([])
+const monitors = ref<MaintenanceMonitorRef[]>([])
 const submitting = ref(false)
 const error = ref('')
 
@@ -25,20 +26,15 @@ function toIso(local: string): string {
 
 async function submit() {
   error.value = ''
-  if (!title.value.trim()) {
-    error.value = 'Title is required'
-    return
-  }
-  if (!startsAt.value) {
-    error.value = 'Start time is required'
-    return
-  }
-  if (!noEnd.value && !endsAt.value) {
-    error.value = 'End time is required, or check "no end date"'
-    return
-  }
-  if (monitors.value.length === 0) {
-    error.value = 'Select at least one monitor'
+  const validationError = validateMaintenanceWindowForm(
+    title.value,
+    startsAt.value,
+    noEnd.value,
+    endsAt.value,
+    monitors.value.length,
+  )
+  if (validationError) {
+    error.value = validationError
     return
   }
 
