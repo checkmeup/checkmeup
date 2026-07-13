@@ -8,7 +8,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        git=1:2.47.3-0+deb13u1 \
        openssh-client=1:10.0p1-7+deb13u4 \
-       curl=8.14.1-2+deb13u3 \
+       curl=8.14.1-2+deb13u4 \
        make=4.4.1-2 \
        zsh=5.9-8+b23 \
        unzip=6.0-29 \
@@ -62,7 +62,9 @@ RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI
     && go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest \
     && go install github.com/pressly/goose/v3/cmd/goose@latest \
     && go install github.com/jandelgado/gcov2lcov@latest \
-    && go install golang.org/x/tools/gopls@latest
+    && go install golang.org/x/tools/gopls@latest \
+    && go install github.com/fzipp/gocyclo/cmd/gocyclo@latest \
+    && go install github.com/uudashr/gocognit/cmd/gocognit@latest
 
 # Python tools — same tool names Codacy runs in CI (bandit, prospector,
 # lizard), so skills/agents can run them locally before pushing instead of
