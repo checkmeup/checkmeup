@@ -13,6 +13,7 @@ RUN apt-get update \
        zsh=5.9-8+b23 \
        unzip=6.0-29 \
        ca-certificates=20250419 \
+       jq \
        sudo \
     && install -m 0755 -d /etc/apt/keyrings \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
