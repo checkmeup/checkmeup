@@ -356,11 +356,7 @@ type createUptimeMonitorRequest struct {
 }
 
 func buildCreateUptimeMonitorParams(orgID uuid.UUID, req createUptimeMonitorRequest) db.CreateUptimeMonitorParams {
-	assertionsJSON, _ := json.Marshal(req.JsonAssertions)
-	var maxRTParam pgtype.Int4
-	if req.MaxResponseTimeMs != nil {
-		maxRTParam = pgtype.Int4{Int32: *req.MaxResponseTimeMs, Valid: true}
-	}
+	assertionsJSON, maxRTParam := marshalUptimeMonitorRequestFields(req.JsonAssertions, req.MaxResponseTimeMs)
 	return db.CreateUptimeMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -392,11 +388,7 @@ type updateUptimeMonitorRequest struct {
 }
 
 func buildUpdateUptimeMonitorParams(orgID, monitorID uuid.UUID, req updateUptimeMonitorRequest) db.UpdateUptimeMonitorParams {
-	assertionsJSON, _ := json.Marshal(req.JsonAssertions)
-	var maxRTParam pgtype.Int4
-	if req.MaxResponseTimeMs != nil {
-		maxRTParam = pgtype.Int4{Int32: *req.MaxResponseTimeMs, Valid: true}
-	}
+	assertionsJSON, maxRTParam := marshalUptimeMonitorRequestFields(req.JsonAssertions, req.MaxResponseTimeMs)
 	return db.UpdateUptimeMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -412,4 +404,17 @@ func buildUpdateUptimeMonitorParams(orgID, monitorID uuid.UUID, req updateUptime
 		JsonAssertions:       assertionsJSON,
 		MaxResponseTimeMs:    maxRTParam,
 	}
+}
+
+// marshalUptimeMonitorRequestFields converts the two fields shared verbatim
+// by buildCreateUptimeMonitorParams and buildUpdateUptimeMonitorParams —
+// factored out so the DB param builders differ only in the fields that
+// actually differ between create and update.
+func marshalUptimeMonitorRequestFields(assertions []JsonAssertion, maxResponseTimeMs *int32) ([]byte, pgtype.Int4) {
+	assertionsJSON, _ := json.Marshal(assertions)
+	var maxRTParam pgtype.Int4
+	if maxResponseTimeMs != nil {
+		maxRTParam = pgtype.Int4{Int32: *maxResponseTimeMs, Valid: true}
+	}
+	return assertionsJSON, maxRTParam
 }

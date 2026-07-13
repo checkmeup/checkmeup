@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 )
@@ -49,17 +50,11 @@ func (h *StatusPublicHandler) fillUptimeRow(ctx context.Context, id uuid.UUID, r
 	}
 
 	dailyRows, err := h.queries.GetUptimeDailyStatus90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := false
-	if err == nil && len(dailyRows) > 0 {
-		hasData = true
-		for _, d := range dailyRows {
-			if d.DownCount > 0 {
-				downDays[d.Day.Time.Format("2006-01-02")] = true
-			}
-		}
+	days := make([]dailyDownCount, len(dailyRows))
+	for i, d := range dailyRows {
+		days[i] = dailyDownCount{Day: d.Day, DownCount: d.DownCount}
 	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = build90DayBarFromDailyCounts(days, err)
 }
 
 func (h *StatusPublicHandler) fillCronRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -116,17 +111,11 @@ func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row
 	}
 
 	dailyRows, err := h.queries.GetPortDailyStatus90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := false
-	if err == nil && len(dailyRows) > 0 {
-		hasData = true
-		for _, d := range dailyRows {
-			if d.DownCount > 0 {
-				downDays[d.Day.Time.Format("2006-01-02")] = true
-			}
-		}
+	days := make([]dailyDownCount, len(dailyRows))
+	for i, d := range dailyRows {
+		days[i] = dailyDownCount{Day: d.Day, DownCount: d.DownCount}
 	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = build90DayBarFromDailyCounts(days, err)
 }
 
 // ─── display helpers ─────────────────────────────────────────────────────────
@@ -247,6 +236,32 @@ func computeOverallStatus(rows []publicMonitorRow, activeIncidents []publicIncid
 	default:
 		return "All systems operational", statusColorGreen
 	}
+}
+
+// dailyDownCount is the shape shared by GetUptimeDailyStatus90dRow and
+// GetPortDailyStatus90dRow — distinct sqlc-generated types with identical
+// fields, normalized here so fillUptimeRow/fillPortRow can share one bar
+// builder instead of duplicating the same downDays/hasData loop.
+type dailyDownCount struct {
+	Day       pgtype.Date
+	DownCount int64
+}
+
+// build90DayBarFromDailyCounts computes the 90-day bar from a per-day
+// down-count query result — shared by uptime and port monitors, which both
+// track a simple per-day count (unlike cron, which derives days from
+// incident windows instead, or SSL/domain, which use a flat solid-color bar).
+func build90DayBarFromDailyCounts(days []dailyDownCount, queryErr error) []publicBar {
+	downDays := map[string]bool{}
+	hasData := queryErr == nil && len(days) > 0
+	if hasData {
+		for _, d := range days {
+			if d.DownCount > 0 {
+				downDays[d.Day.Time.Format("2006-01-02")] = true
+			}
+		}
+	}
+	return build90DayBar(downDays, hasData)
 }
 
 func build90DayBar(downDays map[string]bool, hasData bool) []publicBar {

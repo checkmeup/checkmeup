@@ -47,6 +47,40 @@ func (h *BillingHandler) paddleAPIBase() string {
 	return "https://api.paddle.com"
 }
 
+// paddleRequest builds and sends an authenticated request to the Paddle API
+// — factored out of createPaddleTransaction/updatePaddleSubscription/
+// cancelPaddleSubscription/createPaddlePortalSession, which otherwise
+// duplicated this same marshal-headers-send sequence with only the method,
+// path, and body differing. Callers handle their own response body (a
+// decoded JSON payload, or just a status check) since that varies per
+// endpoint.
+func (h *BillingHandler) paddleRequest(method, path string, body any) (*http.Response, error) {
+	var reader io.Reader
+	if body != nil {
+		b, _ := json.Marshal(body)
+		reader = bytes.NewReader(b)
+	}
+	req, err := http.NewRequest(method, h.paddleAPIBase()+path, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+	return http.DefaultClient.Do(req)
+}
+
+// checkPaddleResponseStatus turns a non-2xx Paddle response into a
+// paddleAPIError, capturing the response body for callers that only care
+// about success/failure (updatePaddleSubscription, cancelPaddleSubscription)
+// rather than decoding a JSON payload.
+func checkPaddleResponseStatus(resp *http.Response) error {
+	if resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
+		return &paddleAPIError{StatusCode: resp.StatusCode, Body: string(respBody)}
+	}
+	return nil
+}
+
 // createPaddleTransaction creates a Paddle transaction server-side so
 // custom_data.org_id comes from the authenticated session (orgIDFrom),
 // never from client input — the frontend only ever sees the resulting
@@ -58,13 +92,7 @@ func (h *BillingHandler) createPaddleTransaction(orgID uuid.UUID, priceID string
 		},
 		"custom_data": map[string]string{"org_id": orgID.String()},
 	}
-
-	b, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(http.MethodPost, h.paddleAPIBase()+"/transactions", bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := h.paddleRequest(http.MethodPost, "/transactions", payload)
 	if err != nil {
 		return "", err
 	}
@@ -125,22 +153,12 @@ func (h *BillingHandler) updatePaddleSubscription(subscriptionID, priceID string
 		},
 		"proration_billing_mode": "prorated_immediately",
 	}
-	b, _ := json.Marshal(payload)
-	url := fmt.Sprintf("%s/subscriptions/%s", h.paddleAPIBase(), subscriptionID)
-	req, _ := http.NewRequest(http.MethodPatch, url, bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := h.paddleRequest(http.MethodPatch, "/subscriptions/"+subscriptionID, payload)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
-		return &paddleAPIError{StatusCode: resp.StatusCode, Body: string(respBody)}
-	}
-	return nil
+	return checkPaddleResponseStatus(resp)
 }
 
 // cancelPaddleSubscription schedules cancellation for the end of the current
@@ -150,34 +168,19 @@ func (h *BillingHandler) updatePaddleSubscription(subscriptionID, priceID string
 // Paddle's subscription.canceled webhook actually fires at period end.
 func (h *BillingHandler) cancelPaddleSubscription(subscriptionID string) error {
 	payload := map[string]any{"effective_from": "next_billing_period"}
-	b, _ := json.Marshal(payload)
-	url := fmt.Sprintf("%s/subscriptions/%s/cancel", h.paddleAPIBase(), subscriptionID)
-	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := h.paddleRequest(http.MethodPost, "/subscriptions/"+subscriptionID+"/cancel", payload)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4*1024))
-		return &paddleAPIError{StatusCode: resp.StatusCode, Body: string(respBody)}
-	}
-	return nil
+	return checkPaddleResponseStatus(resp)
 }
 
 // createPaddlePortalSession generates a single-use, short-lived customer
 // portal URL — Paddle explicitly documents these as not cacheable, unlike
 // LemonSqueezy's static my-orders link, so this is called fresh every time.
 func (h *BillingHandler) createPaddlePortalSession(customerID string) (string, error) {
-	url := fmt.Sprintf("%s/customers/%s/portal-sessions", h.paddleAPIBase(), customerID)
-	req, _ := http.NewRequest(http.MethodPost, url, nil)
-	req.Header.Set("Authorization", "Bearer "+h.cfg.PaddleAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := h.paddleRequest(http.MethodPost, "/customers/"+customerID+"/portal-sessions", nil)
 	if err != nil {
 		return "", err
 	}
