@@ -6,11 +6,11 @@ export const post: BlogPost = {
   date: 'July 14, 2026',
   readTime: '4 min read',
   excerpt:
-    "Bing Webmaster Tools flagged the homepage for a missing <h1> tag. It wasn't a markup bug — every page really does render one. The actual problem was that checkmeup is a client-rendered app, and Bingbot doesn't run JavaScript. This release fixes that properly, and closes an older, related gap along the way.",
+    "Bing Webmaster Tools flagged the homepage for a missing h1 heading. It wasn't a markup bug — every page really does render one. The actual problem was that checkmeup is a client-rendered app, and Bingbot doesn't run JavaScript. This release fixes that properly, and closes an older, related gap along the way.",
   content: [
     {
       type: 'p',
-      text: "A Bing crawl report came back with a \"missing H1\" notice on the homepage. My first instinct was to go check HeroSection.vue — and there it was, a perfectly normal <h1>Know before your client does.</h1>, right where it should be. The component was fine. What wasn't fine is that checkmeup ships index.html to every visitor as an empty shell: <div id=\"app\"></div> and a script tag, nothing else. The real markup only exists after the browser runs Vue. Google's crawler executes JavaScript, so it's never had a problem with this. Bingbot apparently doesn't, reliably — so it requested the homepage, got back an empty div, and correctly reported no H1, because there genuinely wasn't one in what it received.",
+      text: "A Bing crawl report came back with a \"missing H1\" notice on the homepage. My first instinct was to go check HeroSection.vue — and there it was, a perfectly normal h1 heading reading \"Know before your client does.\", right where it should be. The component was fine. What wasn't fine is that checkmeup ships index.html to every visitor as an empty shell: just an empty root element and a script tag, nothing else. The real markup only exists after the browser runs Vue. Google's crawler executes JavaScript, so it's never had a problem with this. Bingbot apparently doesn't, reliably — so it requested the homepage, got back an empty div, and correctly reported no H1, because there genuinely wasn't one in what it received.",
     },
     {
       type: 'h3',
