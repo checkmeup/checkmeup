@@ -14,7 +14,7 @@ ENV VITE_APP_VERSION=$APP_VERSION \
     VITE_PADDLE_CLIENT_TOKEN=$VITE_PADDLE_CLIENT_TOKEN \
     VITE_PADDLE_ENVIRONMENT=$VITE_PADDLE_ENVIRONMENT \
     VITE_GTM_ID=$VITE_GTM_ID
-RUN node scripts/generate-sitemap.mjs && ./node_modules/.bin/vite build
+RUN node scripts/generate-sitemap.mjs && ./node_modules/.bin/vite build && ./node_modules/.bin/vite-node -c vite.prerender.config.ts scripts/prerender.mts
 
 # ── Stage 2: Build Go API (native arch + cross-compile target) ──────────────
 FROM --platform=${BUILDPLATFORM} golang:1.25-bookworm AS backend

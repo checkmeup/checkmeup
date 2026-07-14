@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && node scripts/generate-sitemap.mjs && vite build",
+    "build": "vue-tsc -b && node scripts/generate-sitemap.mjs && vite build && vite-node -c vite.prerender.config.ts scripts/prerender.mts",
     "lint": "oxlint src/",
     "test": "vitest run --coverage",
     "preview": "vite preview"
@@ -32,6 +32,7 @@
     "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
+    "vite-node": "^3.2.4",
     "vitest": "^3.2.4",
     "vue-tsc": "^2.2.10"
   }
