@@ -18,7 +18,16 @@ const id = route.params.id as string
 
 const name = ref('')
 const host = ref('')
-const port = ref<number | null>(null)
+const port = ref<number | undefined>(undefined)
+// Input's modelValue is string-typed (it doesn't implement Vue's
+// modelModifiers convention, so a bare `v-model.number` silently does no
+// numeric conversion) — bridge it to the numeric `port` ref explicitly.
+const portInput = computed({
+  get: () => port.value?.toString() ?? '',
+  set: (v: string) => {
+    port.value = v === '' ? undefined : Number(v)
+  },
+})
 const expectedState = ref<ExpectedState>('open')
 const intervalMins = ref(10)
 const alertsEnabled = ref(true)
@@ -116,7 +125,8 @@ async function submit() {
     await monitorsApi.updatePort(id, {
       name: name.value.trim(),
       host: host.value.trim(),
-      port: port.value,
+      // Non-null: validatePortForm() above already returned early if unset.
+      port: port.value as number,
       expectedState: expectedState.value,
       intervalMins: intervalMins.value,
       alertsEnabled: alertsEnabled.value,
@@ -172,7 +182,7 @@ async function submit() {
           </div>
           <div>
             <Label for="port">Port</Label>
-            <Input id="port" v-model.number="port" type="number" min="1" max="65535" class="mt-1" />
+            <Input id="port" v-model="portInput" type="number" min="1" max="65535" class="mt-1" />
           </div>
         </div>
 

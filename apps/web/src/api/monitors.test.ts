@@ -39,6 +39,7 @@ const createCronInput = {
   name: 'Nightly backup',
   schedule: '0 2 * * *',
   gracePeriodMins: 5,
+  alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
 }
 
@@ -47,6 +48,7 @@ const updateCronInput = {
   schedule: '0 2 * * *',
   gracePeriodMins: 5,
   alertsEnabled: true,
+  alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
   channelIds: ['ch1'],
 }
@@ -155,6 +157,8 @@ const updateSSLInput = {
   name: 'Primary cert',
   hostname: 'checkmeup.net',
   alertsEnabled: true,
+  alertAfterNFailures: 1,
+  maxAlertsPerIncident: 3,
   channelIds: ['ch1'],
 }
 
@@ -243,6 +247,8 @@ const updateDomainInput = {
   name: 'Primary domain',
   domain: 'checkmeup.net',
   alertsEnabled: true,
+  alertAfterNFailures: 1,
+  maxAlertsPerIncident: 3,
   channelIds: ['ch1'],
 }
 
@@ -334,7 +340,10 @@ const createUptimeInput = {
   name: 'Marketing site',
   url: 'https://checkmeup.net',
   intervalMins: 5,
+  alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
+  jsonAssertions: [],
+  maxResponseTimeMs: null,
   keyword: '',
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
@@ -345,7 +354,10 @@ const updateUptimeInput = {
   url: 'https://checkmeup.net',
   intervalMins: 5,
   alertsEnabled: true,
+  alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
+  jsonAssertions: [],
+  maxResponseTimeMs: null,
   keyword: '',
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,

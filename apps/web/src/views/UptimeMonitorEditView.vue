@@ -32,7 +32,16 @@ const keyword = ref('')
 const keywordMode = ref<KeywordMode>('contains')
 const keywordCaseSensitive = ref(false)
 const jsonAssertions = ref<JsonAssertion[]>([])
-const maxResponseTimeMs = ref<number | null>(null)
+const maxResponseTimeMs = ref<number | undefined>(undefined)
+// Input's modelValue is string-typed (it doesn't implement Vue's
+// modelModifiers convention, so a bare `v-model.number` silently does no
+// numeric conversion) — bridge it to the numeric ref explicitly.
+const maxResponseTimeMsInput = computed({
+  get: () => maxResponseTimeMs.value?.toString() ?? '',
+  set: (v: string) => {
+    maxResponseTimeMs.value = v === '' ? undefined : Number(v)
+  },
+})
 const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
@@ -92,7 +101,7 @@ const loading = computed(() => monitorLoading.value || billingLoading.value)
 // applyDetailToForm so neither function carries all of the ?? branches.
 function applyOptionalMonitorFields(m: UptimeMonitor) {
   keyword.value = m.keyword ?? ''
-  maxResponseTimeMs.value = m.maxResponseTimeMs ?? null
+  maxResponseTimeMs.value = m.maxResponseTimeMs ?? undefined
   applyOptionalMonitorLists(m)
 }
 
@@ -169,7 +178,7 @@ async function submit() {
       keywordMode: keywordMode.value,
       keywordCaseSensitive: keywordCaseSensitive.value,
       jsonAssertions: jsonAssertions.value,
-      maxResponseTimeMs: maxResponseTimeMs.value,
+      maxResponseTimeMs: maxResponseTimeMs.value ?? null,
       channelIds: channelIds.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id } })
@@ -299,7 +308,7 @@ async function submit() {
           <div class="flex items-center gap-2 mt-1">
             <Input
               id="maxResponseTimeMs"
-              v-model.number="maxResponseTimeMs"
+              v-model="maxResponseTimeMsInput"
               type="number"
               min="1"
               placeholder="e.g. 2000"
