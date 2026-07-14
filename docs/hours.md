@@ -101,3 +101,7 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-12 | Sun | Incident-list LIMIT 200 fix (PR #76) + 90-day incident retention (ADR-015 revised) + 100-active-incident cap | 2 h   |
 | 2026-07-12 | Sun | ADR-036 flat safety caps (incident updates, maintenance windows, API keys) + N+1 query batching fix on public status page | 3 h   |
 | 2026-07-12 | Sun | v1.29 release notes blog post                                    | 1 h   |
+| 2026-07-14 | Tue | EP-36/ADR-037: investigate Bing "missing H1" notice, design and ship build-time prerendering of public routes (vite-node + vue/server-renderer), verify end-to-end against the real Go server (PR #84) | 5 h   |
+| 2026-07-14 | Tue | Fix pre-existing production build break (24 type errors, invisible to CI) + latent v-model.number no-op bug in Port/Uptime monitor forms | 2 h   |
+| 2026-07-14 | Tue | ADR-037 + EP-36/decision-backlog/roadmap docs updates                | 1 h   |
+| 2026-07-14 | Tue | v1.30 release notes blog post (PR #85)                             | 1 h   |
