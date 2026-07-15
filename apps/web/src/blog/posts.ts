@@ -30,6 +30,7 @@ import { post as v128ReleaseNotes } from './posts/v1-28-release-notes'
 import { post as v129ReleaseNotes } from './posts/v1-29-release-notes'
 import { post as v130ReleaseNotes } from './posts/v1-30-release-notes'
 import { post as v131ReleaseNotes } from './posts/v1-31-release-notes'
+import { post as domainExpiryMonitoring } from './posts/domain-expiry-monitoring'
 
 export type { ContentBlock, BlogPost } from './types'
 
@@ -66,6 +67,7 @@ export const posts = [
   v129ReleaseNotes,
   v130ReleaseNotes,
   v131ReleaseNotes,
+  domainExpiryMonitoring,
 ]
 
 export function getPost(slug: string) {
