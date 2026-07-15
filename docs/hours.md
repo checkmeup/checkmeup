@@ -105,3 +105,7 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-14 | Tue | Fix pre-existing production build break (24 type errors, invisible to CI) + latent v-model.number no-op bug in Port/Uptime monitor forms | 2 h   |
 | 2026-07-14 | Tue | ADR-037 + EP-36/decision-backlog/roadmap docs updates                | 1 h   |
 | 2026-07-14 | Tue | v1.30 release notes blog post (PR #85)                             | 1 h   |
+| 2026-07-15 | Wed | SEO technical audit: verified ADR-037 prerendering live in production, found sitemap blog-slug mismatch and SPA trailing-slash 301 redirect bugs | 2 h   |
+| 2026-07-15 | Wed | Sitemap blog-slug mismatch fix — generate-sitemap.mjs now reads the post's slug field instead of its filename (PR #86) | 1 h   |
+| 2026-07-15 | Wed | SPA directory-redirect fix — handleSPA serves a prerendered route's index.html directly instead of letting http.ServeFile 301 to a trailing slash (PR #87) | 1 h   |
+| 2026-07-15 | Wed | Organization/SoftwareApplication JSON-LD schema on the homepage | 1 h   |

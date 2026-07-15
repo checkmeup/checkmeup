@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import FeatureCard from '@/components/FeatureCard.vue'
@@ -17,6 +18,44 @@ useSeo({
   description:
     'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
   path: '/',
+})
+
+// Organization + SoftwareApplication structured data, so search results can
+// show Checkmeup's identity (logo, GitHub) and pricing directly rather than
+// just a title/description — same idea as the FAQPage/Article schema already
+// on the FAQ and blog-post pages. Offers are derived from the real `plans`
+// data so this can't silently drift from actual pricing.
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Checkmeup',
+  url: 'https://checkmeup.net',
+  logo: 'https://checkmeup.net/img/checkmeup-og.png',
+  sameAs: ['https://github.com/checkmeup/checkmeup'],
+}
+
+const softwareApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Checkmeup',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  url: 'https://checkmeup.net',
+  description:
+    'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
+  offers: plans.map((plan) => ({
+    '@type': 'Offer',
+    name: plan.name,
+    price: plan.price,
+    priceCurrency: 'USD',
+  })),
+}
+
+useHead({
+  script: [
+    { type: 'application/ld+json', innerHTML: JSON.stringify(organizationSchema) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(softwareApplicationSchema) },
+  ],
 })
 </script>
 
