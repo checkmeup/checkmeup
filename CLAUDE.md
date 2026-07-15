@@ -102,6 +102,8 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 "
 ```
 
+**Verify a fix locally before pushing**, rather than round-tripping through CI: `.codacy/cli.sh analyze <path>` runs the same engines (incl. Opengrep) CI does. It needs a UTF-8 locale forced or Opengrep's config loader crashes decoding a non-ASCII byte in this environment's default locale — `LC_ALL=C.UTF-8 LANG=C.UTF-8 .codacy/cli.sh analyze <path>`.
+
 **Triage guide:**
 
 - **TSQLLint** — always ignore, SQL Server rules applied to PostgreSQL migrations
@@ -110,6 +112,7 @@ for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
 - **Opengrep/ESLint in production code** — investigate before dismissing. Note: Codacy's ESLint (with `@typescript-eslint`, type-aware rules) is **stricter than and different from** this repo's local `bun run lint` (oxlint) — oxlint passing locally does not guarantee Codacy's ESLint pass. Two rules seen catching things oxlint doesn't: `security/detect-object-injection` (any `obj[variable]` bracket access, even when the variable is statically known-safe — a closed union's own keys, never external input) and `@typescript-eslint/no-redundant-type-constituents` (has fired on a plain `SomeInterface | undefined` param type, likely because a cross-module `@/` path-aliased type import doesn't resolve in Codacy's isolated lint environment and silently degrades to `any`; fix by narrowing the param to a minimal structural type declared inline instead of importing the interface, if only 1-2 fields are actually used)
 - **CodeQL/Codacy line-number findings** — always fetch the finding against the **exact commit SHA** it was analyzed at (`git show <sha>:<path> | sed -n '<n>p'`, or the raw GitHub blob URL) before diagnosing. Don't diagnose from memory of "what's around that line" from an earlier edit — line numbers shift, and guessing wrong here means fixing the wrong code and re-triggering CI for nothing (happened twice in a row on one PR before switching to this check).
 - **Bandit subprocess findings (B603/B404) on `.claude/skills/**/*.py`** — usually fine if the script only ever invokes a literal argv list (never `shell=True`, no externally-supplied input); suppress with `# nosec <code>` **on the exact flagged line**, not a comment above it, plus a one-line rationale
+- **Opengrep `open-redirect` (or other Semgrep-rule) false positives on Go code** — e.g. an `http.Redirect` whose target is provably confined to a fixed, config-derived host with only the path/query copied from the request (never the scheme/host) isn't a real open redirect; suppress with `// nosemgrep: <rule-id>` **trailing on the exact flagged line** — same-line only, a comment on the line *above* is silently ignored (unlike Bandit's `# nosec`, which Python tooling accepts either way) — plus a one-line rationale
 - **Prospector docstring D212/D213 on `.py` files** — these two rules are mutually exclusive (one wants the summary on line 1, the other on line 2); don't chase them back and forth — use a single-line module docstring instead, which sidesteps the multi-line-summary rule pair entirely
 - **Lizard/Prospector complexity on `.py` files** — same threshold philosophy as Go handlers; split into small single-purpose functions rather than suppressing
 
