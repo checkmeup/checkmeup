@@ -320,12 +320,21 @@ func suggestionRateLimited(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Join(s.cfg.StaticDir, filepath.Clean("/"+r.URL.Path))
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
 		// index.html is unhashed and must be revalidated every time, or
 		// deploys wouldn't reach clients holding a cached copy.
 		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(s.cfg.StaticDir, "index.html"))
 		return
+	}
+	if err == nil && info.IsDir() {
+		// Prerendered routes (ADR-037) are directories containing their own
+		// index.html (e.g. /pricing -> dist/pricing/index.html). Serve that
+		// file directly rather than passing the bare directory to
+		// http.ServeFile below, which would 301-redirect to a trailing-slash
+		// URL — an extra hop on every marketing/blog URL in the sitemap.
+		path = filepath.Join(path, "index.html")
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		// Vite content-hashes every file under /assets/ (new hash per

@@ -226,6 +226,26 @@ func TestHandleSPA(t *testing.T) {
 		}
 	})
 
+	t.Run("prerendered route directory serves its index.html without a redirect", func(t *testing.T) {
+		if err := os.MkdirAll(filepath.Join(dir, "pricing"), 0o750); err != nil {
+			t.Fatalf("mkdir pricing: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "pricing", "index.html"), []byte("<html>pricing-page</html>"), 0o600); err != nil {
+			t.Fatalf("write pricing/index.html: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/pricing", http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d (no 301-to-trailing-slash redirect)", w.Code, http.StatusOK)
+		}
+		if w.Body.String() != "<html>pricing-page</html>" {
+			t.Fatalf("body = %q, want pricing/index.html contents", w.Body.String())
+		}
+	})
+
 	t.Run("hashed asset under /assets/ gets a long-lived immutable cache header", func(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o750); err != nil {
 			t.Fatalf("mkdir assets: %v", err)
