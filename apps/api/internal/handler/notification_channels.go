@@ -47,15 +47,22 @@ type NotificationChannelHandler struct {
 
 func NewNotificationChannelHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sender, wh *webhook.Client, sl *slack.Client, sm *twilio.Client) *NotificationChannelHandler {
 	return &NotificationChannelHandler{
-		queries:              db.New(pool),
-		tg:                   tg,
-		mailer:               mailer,
-		wh:                   wh,
-		sl:                   sl,
-		sm:                   sm,
-		smsTestLimiter:       httprate.NewRateLimiter(10, time.Minute),
-		smsTestHourlyLimiter: httprate.NewRateLimiter(10, time.Hour),
-		smsTestDailyLimiter:  httprate.NewRateLimiter(20, 24*time.Hour),
+		queries: db.New(pool),
+		tg:      tg,
+		mailer:  mailer,
+		wh:      wh,
+		sl:      sl,
+		sm:      sm,
+		// WithLimitCounter pins each limiter to wall-clock-aligned windows —
+		// httprate's default (as of v0.16.0) instead offsets windows by
+		// however long after process start the limiter was constructed, to
+		// spread out resets across many differently-offset limiters. That
+		// doesn't help here (one shared instance per limiter, keyed by org,
+		// not many instances), and it broke tests that seed a window's count
+		// directly via a wall-clock-truncated key.
+		smsTestLimiter:       httprate.NewRateLimiter(10, time.Minute, httprate.WithLimitCounter(httprate.NewLocalLimitCounter(time.Minute))),
+		smsTestHourlyLimiter: httprate.NewRateLimiter(10, time.Hour, httprate.WithLimitCounter(httprate.NewLocalLimitCounter(time.Hour))),
+		smsTestDailyLimiter:  httprate.NewRateLimiter(20, 24*time.Hour, httprate.WithLimitCounter(httprate.NewLocalLimitCounter(24*time.Hour))),
 	}
 }
 

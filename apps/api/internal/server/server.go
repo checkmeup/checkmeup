@@ -54,6 +54,12 @@ func (s *Server) buildRouter() *chi.Mux {
 	// every OG/canonical/sitemap URL already assumes, first thing, before
 	// any other middleware does real work.
 	r.Use(s.redirectWWW())
+	// Populates the context clientIPKey reads from. Explicitly the "directly
+	// exposed to clients" trust model (chi's own recommended equivalent of
+	// the RemoteAddr-based keying every rate limiter here already used) —
+	// see clientIPKey's comment for the caveat that isn't quite true in
+	// production, sitting behind kamal-proxy.
+	r.Use(middleware.ClientIPFromRemoteAddr)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -95,36 +101,36 @@ func (s *Server) buildRouter() *chi.Mux {
 	apiKeys := handler.NewAPIKeyHandler(s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
-	r.With(httprate.LimitByIP(300, time.Minute)).Get("/status/{slug}", statusPublic.ServeHTTP)
+	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}", statusPublic.ServeHTTP)
 
 	// Badges (EP-30): embeddable SVGs, rate-limited per ADR-013 (not exempted
 	// just because they're images — README/CDN embeds can hit these often,
 	// so the limit is generous relative to auth routes; Cache-Control on the
 	// response is the primary defense against repeat hits).
-	r.With(httprate.LimitByIP(300, time.Minute)).Get("/status/{slug}/badge.svg", statusPublic.ServePageBadge)
-	r.With(httprate.LimitByIP(300, time.Minute)).Get("/status/{slug}/badge/{monitor_id}.svg", statusPublic.ServeMonitorBadge)
+	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}/badge.svg", statusPublic.ServePageBadge)
+	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}/badge/{monitor_id}.svg", statusPublic.ServeMonitorBadge)
 
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
 	}
 
 	// No-auth public endpoints
-	r.With(httprate.Limit(60, time.Minute, httprate.WithKeyFuncs(func(r *http.Request) (string, error) {
+	r.With(httprate.LimitBy(60, time.Minute, func(r *http.Request) (string, error) {
 		return chi.URLParam(r, "token"), nil
-	}))).Get("/ping/{token}", ping.ReceivePing)
-	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
-	r.With(httprate.LimitByIP(60, time.Minute)).Post("/webhook/paddle", billing.Webhook)
+	})).Get("/ping/{token}", ping.ReceivePing)
+	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
+	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/paddle", billing.Webhook)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
 
 		r.Route("/auth", func(r chi.Router) {
-			r.With(httprate.LimitByIP(5, time.Hour)).Post("/sign-up", auth.SignUp)
-			r.With(httprate.LimitByIP(10, 10*time.Minute)).Post("/sign-in", auth.SignIn)
-			r.With(httprate.LimitByIP(30, time.Minute)).Post("/sign-out", auth.SignOut)
-			r.With(httprate.LimitByIP(30, time.Minute)).Post("/refresh", auth.Refresh)
-			r.With(httprate.LimitByIP(3, 10*time.Minute)).Post("/forgot-password", auth.ForgotPassword)
-			r.With(httprate.LimitByIP(10, time.Hour)).Post("/reset-password", auth.ResetPassword)
+			r.With(httprate.LimitBy(5, time.Hour, clientIPKey)).Post("/sign-up", auth.SignUp)
+			r.With(httprate.LimitBy(10, 10*time.Minute, clientIPKey)).Post("/sign-in", auth.SignIn)
+			r.With(httprate.LimitBy(30, time.Minute, clientIPKey)).Post("/sign-out", auth.SignOut)
+			r.With(httprate.LimitBy(30, time.Minute, clientIPKey)).Post("/refresh", auth.Refresh)
+			r.With(httprate.LimitBy(3, 10*time.Minute, clientIPKey)).Post("/forgot-password", auth.ForgotPassword)
+			r.With(httprate.LimitBy(10, time.Hour, clientIPKey)).Post("/reset-password", auth.ResetPassword)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -134,13 +140,13 @@ func (s *Server) buildRouter() *chi.Mux {
 			// leaked/compromised access token can hammer the API even
 			// though it already passed auth. Keyed by org (not IP) since
 			// the whole point is limiting a token, not an address.
-			r.Use(httprate.Limit(300, time.Minute, httprate.WithKeyFuncs(authOrgKey)))
+			r.Use(httprate.LimitBy(300, time.Minute, authOrgKey))
 
 			r.Get("/me", auth.Me)
 			r.Post("/auth/accept-terms", auth.AcceptTerms)
 			r.With(
-				httprate.Limit(5, time.Hour, httprate.WithKeyByIP(), httprate.WithLimitHandler(suggestionRateLimited)),
-				httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey), httprate.WithLimitHandler(suggestionRateLimited)),
+				httprate.LimitBy(5, time.Hour, clientIPKey, httprate.WithLimitHandler(suggestionRateLimited)),
+				httprate.LimitBy(20, time.Hour, authOrgKey, httprate.WithLimitHandler(suggestionRateLimited)),
 			).Post("/suggestions", suggestions.SubmitSuggestion)
 
 			r.Route("/api-keys", func(r chi.Router) {
@@ -152,7 +158,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Route("/notification-channels", func(r chi.Router) {
 				r.Get("/", notifChannels.ListNotificationChannels)
 				r.Post("/", notifChannels.CreateNotificationChannel)
-				r.With(httprate.LimitByIP(5, time.Minute)).Post("/test", notifChannels.TestNotificationChannel)
+				r.With(httprate.LimitBy(5, time.Minute, clientIPKey)).Post("/test", notifChannels.TestNotificationChannel)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Patch("/", notifChannels.UpdateNotificationChannel)
 					r.Delete("/", notifChannels.DeleteNotificationChannel)
@@ -190,8 +196,8 @@ func (s *Server) buildRouter() *chi.Mux {
 				// Real Paddle API calls, not just DB writes — tighter than
 				// the blanket per-org limit above since a normal org
 				// changes plans a handful of times a year, not per minute.
-				r.With(httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey))).Post("/checkout", billing.CreateCheckout)
-				r.With(httprate.Limit(20, time.Hour, httprate.WithKeyFuncs(authOrgKey))).Post("/change-plan", billing.ChangePlan)
+				r.With(httprate.LimitBy(20, time.Hour, authOrgKey)).Post("/checkout", billing.CreateCheckout)
+				r.With(httprate.LimitBy(20, time.Hour, authOrgKey)).Post("/change-plan", billing.ChangePlan)
 			})
 
 			r.Route("/status-pages", func(r chi.Router) {
@@ -272,7 +278,7 @@ func (s *Server) buildRouter() *chi.Mux {
 		// mechanisms can never be silently conflated.
 		r.Route("/public", func(r chi.Router) {
 			r.Use(apimiddleware.RequireAPIKey(db.New(s.db)))
-			r.Use(httprate.Limit(60, time.Minute, httprate.WithKeyFuncs(apiKeyRateKey)))
+			r.Use(httprate.LimitBy(60, time.Minute, apiKeyRateKey))
 
 			r.Get("/monitors/cron/{id}/status", monitors.GetCronStatus)
 			r.Get("/monitors/uptime/{id}/status", monitors.GetUptimeStatus)
@@ -298,6 +304,19 @@ func (s *Server) Start() error {
 	}
 
 	return srv.ListenAndServe()
+}
+
+// clientIPKey preserves httprate's now-deprecated LimitByIP/KeyByIP behavior
+// (key by the TCP peer's address) through the non-deprecated
+// ClientIPFromRemoteAddr + GetClientIP instead. Bug-for-bug identical to what
+// every IP-keyed limiter here already did — NOT a fix for the caveat
+// go-chi/httprate's deprecation notice calls out: behind a reverse proxy
+// (kamal-proxy, per config/deploy.yml, in production), r.RemoteAddr is the
+// proxy's own address, so every client sharing it lands in one bucket. Worth
+// a deliberate look at trusting kamal-proxy's forwarded-for header via
+// ClientIPFromXFF instead — not folded into this dependency-bump change.
+func clientIPKey(r *http.Request) (string, error) {
+	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
 }
 
 // authOrgKey rate-limits per org rather than per IP, so a single abusive
