@@ -6,7 +6,9 @@ servers:
 
 proxy:
   ssl: true
-  host: checkmeup.net
+  hosts:
+    - checkmeup.net
+    - www.checkmeup.net
   app_port: 8080
 
 registry:

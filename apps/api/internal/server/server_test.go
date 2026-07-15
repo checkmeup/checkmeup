@@ -187,6 +187,49 @@ func TestRoutes_SPAResponseIsCompressedWhenAccepted(t *testing.T) {
 	}
 }
 
+// ─── redirectWWW ─────────────────────────────────────────────────────────────
+
+func TestRedirectWWW(t *testing.T) {
+	srv := &Server{cfg: &config.Config{AppURL: "https://checkmeup.net"}}
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+
+	t.Run("www host redirects to the canonical apex, preserving path and query", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/blog/some-post?utm=1", http.NoBody)
+		req.Host = "www.checkmeup.net"
+		w := httptest.NewRecorder()
+		srv.redirectWWW()(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusMovedPermanently {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusMovedPermanently)
+		}
+		if got, want := w.Header().Get("Location"), "https://checkmeup.net/blog/some-post?utm=1"; got != want {
+			t.Fatalf("Location = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("apex host passes through unchanged", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/pricing", http.NoBody)
+		req.Host = "checkmeup.net"
+		w := httptest.NewRecorder()
+		srv.redirectWWW()(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d (non-www host should pass through)", w.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("unrelated host passes through unchanged", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/pricing", http.NoBody)
+		req.Host = "example.com"
+		w := httptest.NewRecorder()
+		srv.redirectWWW()(next).ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d (host other than www.<canonical> should pass through)", w.Code, http.StatusOK)
+		}
+	})
+}
+
 // ─── handleSPA ───────────────────────────────────────────────────────────────
 
 func TestHandleSPA(t *testing.T) {

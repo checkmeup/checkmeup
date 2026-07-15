@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,13 @@ func New(cfg *config.Config, logger *slog.Logger, db *pgxpool.Pool, version stri
 func (s *Server) buildRouter() *chi.Mux {
 	r := chi.NewRouter()
 
+	// kamal-proxy (config/deploy.yml) terminates TLS and forwards traffic
+	// for both checkmeup.net and www.checkmeup.net so the www variant isn't
+	// a dead 404/cert-error dead end, but it has no host-based redirect
+	// primitive of its own — this collapses www onto the one canonical host
+	// every OG/canonical/sitemap URL already assumes, first thing, before
+	// any other middleware does real work.
+	r.Use(s.redirectWWW())
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -400,6 +408,27 @@ func (s *Server) securityHeaders() func(http.Handler) http.Handler {
 				// dev has no effect but is a confusing thing to see in
 				// devtools while debugging.
 				h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// redirectWWW 301s any request against www.<canonical-host> (derived from
+// AppURL, e.g. www.checkmeup.net) to the same path+query on the canonical
+// apex host. Any other Host — including local dev, where AppURL doesn't
+// resolve to a real "www.<host>" the request could ever actually carry — is
+// untouched.
+func (s *Server) redirectWWW() func(http.Handler) http.Handler {
+	wwwHost := ""
+	if u, err := url.Parse(s.cfg.AppURL); err == nil && u.Host != "" {
+		wwwHost = "www." + u.Host
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if wwwHost != "" && r.Host == wwwHost {
+				http.Redirect(w, r, s.cfg.AppURL+r.URL.RequestURI(), http.StatusMovedPermanently)
+				return
 			}
 			next.ServeHTTP(w, r)
 		})
