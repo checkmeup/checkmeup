@@ -22,6 +22,13 @@ export async function getPost(slug: string): Promise<BlogPost | undefined> {
   const entry = postsMeta.find((m) => m.slug === slug)
   if (!entry) return undefined
   const loader = postLoaders[`./posts/${entry.file}.ts`]
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- false
+  // positive: `tsc --strict` on this exact expression genuinely errors
+  // ("Cannot invoke an object which is possibly 'undefined'") without this
+  // guard, confirming Partial<Record<...>> above does make `loader` real,
+  // necessary `X | undefined` — Codacy's isolated ESLint environment isn't
+  // resolving that cast the same way the project's own tsc does (same class
+  // of type-resolution gap as no-redundant-type-constituents, see CLAUDE.md).
   if (!loader) return undefined
   const mod = await loader()
   return { ...entry, content: mod.content }
