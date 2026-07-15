@@ -115,9 +115,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	}
 
 	// No-auth public endpoints
-	r.With(httprate.LimitBy(60, time.Minute, func(r *http.Request) (string, error) {
-		return chi.URLParam(r, "token"), nil
-	})).Get("/ping/{token}", ping.ReceivePing)
+	r.With(httprate.LimitBy(60, time.Minute, pingTokenKey)).Get("/ping/{token}", ping.ReceivePing)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/paddle", billing.Webhook)
 
@@ -317,6 +315,14 @@ func (s *Server) Start() error {
 // ClientIPFromXFF instead — not folded into this dependency-bump change.
 func clientIPKey(r *http.Request) (string, error) {
 	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
+}
+
+// pingTokenKey rate-limits cron pings per token rather than per IP — a
+// legitimate monitored job always pings from the same token regardless of
+// which IP it runs from, and keying by IP would let a single noisy or
+// NAT-shared IP throttle every token behind it.
+func pingTokenKey(r *http.Request) (string, error) {
+	return chi.URLParam(r, "token"), nil
 }
 
 // authOrgKey rate-limits per org rather than per IP, so a single abusive

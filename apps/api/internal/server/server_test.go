@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -388,6 +390,60 @@ func TestSuggestionOrgKey_ReturnsOrgIDFromClaims(t *testing.T) {
 	}
 	if gotKey != "org-abc" {
 		t.Fatalf("key = %q, want org-abc", gotKey)
+	}
+}
+
+// ─── clientIPKey / pingTokenKey ─────────────────────────────────────────────
+
+func TestClientIPKey(t *testing.T) {
+	var gotKey string
+	var gotErr error
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotKey, gotErr = clientIPKey(r)
+		w.WriteHeader(http.StatusOK)
+	})
+	// clientIPKey reads middleware.GetClientIP from the request context, which
+	// only chi's ClientIPFromRemoteAddr (installed globally in buildRouter)
+	// populates — route a request through it rather than poking context directly.
+	handler := middleware.ClientIPFromRemoteAddr(next)
+
+	req := httptest.NewRequest(http.MethodGet, "/status/some-slug", http.NoBody)
+	req.RemoteAddr = "203.0.113.7:54321"
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if gotErr != nil {
+		t.Fatalf("clientIPKey error: %v", gotErr)
+	}
+	if gotKey != "203.0.113.7" {
+		t.Fatalf("key = %q, want %q (port stripped)", gotKey, "203.0.113.7")
+	}
+}
+
+func TestPingTokenKey(t *testing.T) {
+	r := chi.NewRouter()
+	var gotKey string
+	var gotErr error
+	r.Get("/ping/{token}", func(w http.ResponseWriter, r *http.Request) {
+		gotKey, gotErr = pingTokenKey(r)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ping/abc123", http.NoBody)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if gotErr != nil {
+		t.Fatalf("pingTokenKey error: %v", gotErr)
+	}
+	if gotKey != "abc123" {
+		t.Fatalf("key = %q, want %q", gotKey, "abc123")
 	}
 }
 
