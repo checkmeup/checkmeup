@@ -5,6 +5,10 @@
   "workspaceFolder": "/workspaces/checkmeup",
   "postCreateCommand": "make install",
   "postStartCommand": "sudo chmod 666 /var/run/docker.sock",
+  "containerEnv": {
+    "LC_ALL": "C.UTF-8",
+    "LANG": "C.UTF-8"
+  },
   "customizations": {
     "vscode": {
       "settings": {
