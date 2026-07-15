@@ -438,6 +438,8 @@ func (s *Server) redirectWWW() func(http.Handler) http.Handler {
 				target := *canonical
 				target.Path = r.URL.Path
 				target.RawQuery = r.URL.RawQuery
+				// nosemgrep: go.lang.security.injection.open-redirect.open-redirect -- target's
+				// Scheme/Host are always canonical's (config-derived), never r's; see comment above.
 				http.Redirect(w, r, target.String(), http.StatusMovedPermanently)
 				return
 			}
