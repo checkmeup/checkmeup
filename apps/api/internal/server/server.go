@@ -420,14 +420,25 @@ func (s *Server) securityHeaders() func(http.Handler) http.Handler {
 // resolve to a real "www.<host>" the request could ever actually carry — is
 // untouched.
 func (s *Server) redirectWWW() func(http.Handler) http.Handler {
+	canonical, err := url.Parse(s.cfg.AppURL)
 	wwwHost := ""
-	if u, err := url.Parse(s.cfg.AppURL); err == nil && u.Host != "" {
-		wwwHost = "www." + u.Host
+	if err == nil && canonical.Host != "" {
+		wwwHost = "www." + canonical.Host
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if wwwHost != "" && r.Host == wwwHost {
-				http.Redirect(w, r, s.cfg.AppURL+r.URL.RequestURI(), http.StatusMovedPermanently)
+				// Scheme+host always come from `canonical` (parsed once
+				// from the AppURL config, never from the request) — only
+				// path/query are copied from the incoming request, onto a
+				// fresh copy so concurrent requests never share/mutate the
+				// same *url.URL. An attacker controls where on this same
+				// host they land, never what host they land on, so this
+				// isn't an open redirect despite the request-derived path.
+				target := *canonical
+				target.Path = r.URL.Path
+				target.RawQuery = r.URL.RawQuery
+				http.Redirect(w, r, target.String(), http.StatusMovedPermanently)
 				return
 			}
 			next.ServeHTTP(w, r)
