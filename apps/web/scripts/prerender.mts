@@ -17,7 +17,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
 import App from '../src/App.vue'
 import { routes } from '../src/router/routes'
-import { posts } from '../src/blog/posts'
+import { postsMeta } from '../src/blog/posts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distDir = join(__dirname, '../dist')
@@ -28,7 +28,7 @@ const template = readFileSync(join(distDir, 'index.html'), 'utf-8')
 // rather than importing the typed module) for the unrelated job of writing
 // sitemap.xml; both lists should keep matching the indexable routes below.
 const staticPaths = ['/', '/pricing', '/docs', '/faq', '/about', '/blog', '/terms', '/privacy', '/refund']
-const blogPostPaths = posts.map((post) => `/blog/${post.slug}`)
+const blogPostPaths = postsMeta.map((meta) => `/blog/${meta.slug}`)
 const targetPaths = [...staticPaths, ...blogPostPaths]
 
 function outputPathFor(routePath: string): string {

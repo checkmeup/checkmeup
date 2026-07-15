@@ -1,14 +1,37 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onServerPrefetch, ref, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import NotFoundHero from '@/components/NotFoundHero.vue'
+import type { BlogPost } from '@/blog/posts'
 import { getPost } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 const route = useRoute()
-const post = computed(() => getPost(route.params.slug as string))
+const post = ref<BlogPost | undefined>(undefined)
+// Distinguishes "haven't resolved the slug yet" from "resolved to nothing" —
+// getPost() is async (each post's full content is a separate, lazily-loaded
+// chunk, so the list page doesn't have to ship every post's prose), so
+// !post is briefly true during a genuine in-flight load too.
+const loading = ref(true)
+
+async function loadPost() {
+  loading.value = true
+  post.value = await getPost(route.params.slug as string)
+  loading.value = false
+}
+
+// onServerPrefetch: awaited by @vue/server-renderer's renderToString before
+// it serializes HTML (see scripts/prerender.mts) — this is what gets a real
+// post's content into the prerendered page a crawler or a non-JS client
+// actually receives, same reasoning as ADR-037. onMounted covers the client
+// browser's own render pass (a fresh mount, not a hydration of the
+// prerendered HTML — ADR-037 again), and the watcher covers navigating
+// client-side from one post straight to another without a full reload.
+onServerPrefetch(loadPost)
+onMounted(loadPost)
+watch(() => route.params.slug, loadPost)
 
 useSeo({
   title: () => (post.value ? `${post.value.title} — Checkmeup blog` : 'Post not found — Checkmeup'),
@@ -56,9 +79,14 @@ useHead({
 
 <template>
   <LandingLayout>
+    <!-- Loading: the requested post's content chunk hasn't resolved yet -->
+    <div v-if="loading" class="max-w-3xl mx-auto px-4 sm:px-6 py-24 text-center">
+      <p class="text-sm" style="color: var(--text-muted)">Loading…</p>
+    </div>
+
     <!-- 404 -->
     <NotFoundHero
-      v-if="!post"
+      v-else-if="!post"
       badge="Post status: not found"
       heading="This post doesn't exist, or it moved without telling anyone."
       description="The post you're looking for isn't here — check the link, or head back to the blog for everything that's actually been published."

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
-import { posts } from '@/blog/posts'
+import { postsMeta } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
@@ -10,7 +10,7 @@ useSeo({
   path: '/blog',
 })
 
-const sortedPosts = [...posts].reverse()
+const sortedPosts = [...postsMeta].reverse()
 </script>
 
 <template>

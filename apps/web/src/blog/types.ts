@@ -10,11 +10,14 @@ export type ContentBlock =
   | { type: 'image'; src: string; alt: string; caption?: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
 
-export interface BlogPost {
+export interface BlogPostMeta {
   slug: string
   title: string
   date: string
   readTime: string
   excerpt: string
+}
+
+export interface BlogPost extends BlogPostMeta {
   content: ContentBlock[]
 }
