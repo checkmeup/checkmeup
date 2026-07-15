@@ -17,11 +17,19 @@ function blogPostUrls() {
   return readdirSync(postsDir)
     .filter((file) => file.endsWith('.ts'))
     .map((file) => {
-      const slug = file.replace(/\.ts$/, '')
       const contents = readFileSync(join(postsDir, file), 'utf-8')
+      // The post's `slug:` field is the source of truth for its URL (it's what
+      // the router and prerender.mts both use) — the filename can drift from it,
+      // as happened for checkmeup-vs-competitors.ts (slug:
+      // checkmeup-vs-healthchecks-uptimerobot-cronitor), which left the sitemap
+      // advertising a dead URL while the real post was missing from it entirely.
+      const slugMatch = contents.match(/slug:\s*'([^']+)'/)
+      if (!slugMatch) {
+        throw new Error(`${file}: no slug field found`)
+      }
       const dateMatch = contents.match(/date:\s*'([^']+)'/)
       const lastmod = dateMatch ? new Date(dateMatch[1]).toISOString().slice(0, 10) : undefined
-      return { path: `/blog/${slug}`, lastmod }
+      return { path: `/blog/${slugMatch[1]}`, lastmod }
     })
 }
 
