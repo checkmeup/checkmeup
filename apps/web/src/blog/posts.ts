@@ -1,8 +1,14 @@
 import type { BlogPost, ContentBlock } from './types'
-import { postsMeta } from './postsMeta'
+import { postsMeta as unsortedPostsMeta } from './postsMeta'
 
 export type { ContentBlock, BlogPost, BlogPostMeta } from './types'
-export { postsMeta } from './postsMeta'
+
+// postsMeta.ts's array order is whatever order its entries happen to be
+// written in (not meaningful — nothing enforces it), so every consumer needs
+// a real chronological sort rather than assuming array order already is one.
+export const postsMeta = [...unsortedPostsMeta].sort(
+  (a, b) => Date.parse(a.date) - Date.parse(b.date),
+)
 
 // Nothing eagerly imports from posts/*.ts (see postsMeta.ts's comment for
 // why that matters) — each post's full content is a genuine, separate,
