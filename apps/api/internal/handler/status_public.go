@@ -781,6 +781,10 @@ const statusPageHTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} — Status</title>
+<meta name="description" content="{{if .Description}}{{.Description}}{{else}}{{.Title}} status page — live uptime, incidents, and maintenance updates.{{end}}">
+<meta property="og:title" content="{{.Title}} — Status">
+<meta property="og:description" content="{{if .Description}}{{.Description}}{{else}}{{.Title}} status page — live uptime, incidents, and maintenance updates.{{end}}">
+<meta property="og:type" content="website">
 {{if .LogoURL}}<link rel="icon" href="{{.LogoURL}}">{{else}}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{{end}}
 <script src="/status-theme.js"></script>
 <style>
@@ -853,7 +857,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 <div class="page">
   <div class="head">
     <div class="head-left">
-      {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
+      {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="{{.Title}} logo">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
       <div>
         <h1>{{.Title}}</h1>
         {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}

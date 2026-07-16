@@ -28,6 +28,12 @@ release has a theme, otherwise `-release-notes`).
 
 Shape (from `apps/web/src/blog/types.ts`):
 
+Keep `title` at **52 characters or fewer**. `BlogPostView.vue` renders the
+`<title>` tag as `` `${title} — Checkmeup blog` `` (18 more characters), and
+SEO checkers flag anything over ~70 total as truncated in search results —
+several existing posts (e.g. the v1.29, v1.1, and "Checkmeup vs. ..." posts)
+already exceed this and are on the list to shorten.
+
 ```ts
 import type { BlogPost } from '../types'
 

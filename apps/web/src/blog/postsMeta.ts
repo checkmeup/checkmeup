@@ -26,7 +26,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-18-release-notes',
     slug: 'v1-18-release-notes',
-    title: "v1.18: A Public API, So Checkmeup Isn't the Only Place Status Lives",
+    title: "v1.18: A Public API, So Status Isn't Dashboard-Only",
     date: 'July 3, 2026',
     readTime: '4 min read',
     excerpt:
@@ -35,7 +35,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-26-release-notes',
     slug: 'v1-26-release-notes',
-    title: 'v1.26: A 404 Page Worth Hitting, and Getting the Name Right',
+    title: 'v1.26: A Real 404 Page, and a Name Fixed',
     date: 'July 10, 2026',
     readTime: '4 min read',
     excerpt:
@@ -80,7 +80,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-29-release-notes',
     slug: 'v1-29-release-notes',
-    title: 'v1.29: Incidents Get an Expiry Date, and So Does Everything Else That Was Missing One',
+    title: 'v1.29: Incidents Get Limits, Finally',
     date: 'July 12, 2026',
     readTime: '4 min read',
     excerpt:
@@ -89,7 +89,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-17-release-notes',
     slug: 'v1-17-release-notes',
-    title: 'v1.17: Web Analytics, With a Consent Banner That Means It',
+    title: 'v1.17: Analytics, With a Consent Banner That Counts',
     date: 'July 3, 2026',
     readTime: '3 min read',
     excerpt:
@@ -116,7 +116,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-20-to-v1-22-redesign',
     slug: 'v1-20-to-v1-22-redesign',
-    title: 'v1.20–v1.22: The Redesign Reaches the Rest of the App',
+    title: 'v1.20–v1.22: The Redesign Reaches Everything Else',
     date: 'July 6, 2026',
     readTime: '6 min read',
     excerpt:
@@ -125,7 +125,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-19-release-notes',
     slug: 'v1-19-release-notes',
-    title: 'v1.19: SMS Alerts, and a Downgrade That Actually Downgrades',
+    title: 'v1.19: SMS Alerts, and a Real Downgrade',
     date: 'July 4, 2026',
     readTime: '5 min read',
     excerpt:
@@ -134,7 +134,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-27-release-notes',
     slug: 'v1-27-release-notes',
-    title: 'v1.27: Checks That Reuse Connections Instead of Rebuilding Them',
+    title: 'v1.27: Checks That Reuse Connections',
     date: 'July 10, 2026',
     readTime: '3 min read',
     excerpt:
@@ -170,7 +170,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-28-release-notes',
     slug: 'v1-28-release-notes',
-    title: 'v1.28: Manual Incidents, and a Real "Powered by" Toggle',
+    title: 'v1.28: Manual Incidents Arrive, Plus a Real Toggle',
     date: 'July 12, 2026',
     readTime: '4 min read',
     excerpt:
@@ -206,7 +206,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'domain-expiry-monitoring',
     slug: 'domain-expiry-monitoring',
-    title: 'Why Domains Expire Silently, and How to Stop It From Being Your Fault',
+    title: 'Why Domains Expire Silently, Not From Negligence',
     date: 'July 16, 2026',
     readTime: '5 min read',
     excerpt:
@@ -215,7 +215,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'checkmeup-vs-competitors',
     slug: 'checkmeup-vs-healthchecks-uptimerobot-cronitor',
-    title: 'Checkmeup vs. Healthchecks.io, UptimeRobot, and Cronitor: The Honest Comparison',
+    title: 'Checkmeup vs. Healthchecks, UptimeRobot, Cronitor',
     date: 'July 4, 2026',
     readTime: '6 min read',
     excerpt:
@@ -224,7 +224,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-30-release-notes',
     slug: 'v1-30-release-notes',
-    title: "v1.30: Teaching Bing (and Every Non-JS Crawler) That Checkmeup's Pages Have Content",
+    title: 'v1.30: Teaching Bing That Checkmeup Has Content',
     date: 'July 14, 2026',
     readTime: '4 min read',
     excerpt:
@@ -242,7 +242,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-24-to-v1-25-seo-foundations',
     slug: 'v1-24-to-v1-25-seo-foundations',
-    title: 'v1.24–v1.25: Teaching Search Engines Checkmeup Exists',
+    title: 'v1.24–v1.25: Teaching Search Engines Checkmeup',
     date: 'July 10, 2026',
     readTime: '5 min read',
     excerpt:
@@ -260,7 +260,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-1-release-notes',
     slug: 'v1-1-release-notes',
-    title: 'v1.1: Light & Dark Mode, Legal Pages, FAQ, and a Faster Way to Reach Me',
+    title: 'v1.1: Themes, Legal Pages, FAQ, and Feedback',
     date: 'June 18, 2026',
     readTime: '2 min read',
     excerpt:
@@ -287,7 +287,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-31-release-notes',
     slug: 'v1-31-release-notes',
-    title: 'v1.31: The Sitemap Was Lying, and Some Structured Data',
+    title: 'v1.31: The Sitemap Was Lying, Plus Structured Data',
     date: 'July 15, 2026',
     readTime: '4 min read',
     excerpt:
