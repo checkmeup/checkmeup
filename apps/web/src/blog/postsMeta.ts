@@ -311,4 +311,13 @@ export const postsMeta: BlogPostMetaEntry[] = [
     excerpt:
       "Checkmeup v1.0 is live. Here's the complete changelog, what we deliberately left out, and a foggy look at the road ahead.",
   },
+  {
+    file: 'cron-job-monitoring-guide',
+    slug: 'cron-job-monitoring-guide',
+    title: 'How to Monitor Cron Jobs (Before a Client Notices They Stopped)',
+    date: 'July 17, 2026',
+    readTime: '6 min read',
+    excerpt:
+      "Cron jobs fail silently, not loudly. Here's how cron job monitoring — the dead man's switch — works, how to set it up in three steps, and what to check before trusting a tool with it.",
+  },
 ]
