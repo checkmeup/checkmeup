@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.source="https://github.com/checkmeup/checkmeup" \
       org.opencontainers.image.created="${BUILD_DATE}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates=20250419 \
+    ca-certificates=20230311+deb12u1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend /api /api
