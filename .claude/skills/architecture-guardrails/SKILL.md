@@ -46,11 +46,15 @@ alone doesn't prove a violation, but in practice every current hit is:
   single-purpose functions rather than suppressing." Don't extract
   a helper that's only ever called from one place and doesn't reduce
   branching — that's just moving the complexity, not reducing it.
-- **Go handler/worker file > 700 logical lines** → currently only
-  `worker.go` (~1070 logical lines, all monitor types' check loops in
-  one file). Split by monitor type (`worker_cron.go`, `worker_uptime.go`,
-  `worker_ssl.go`, …) in the same package — Go doesn't need one file per
-  package, and per-type files make each check loop reviewable on its own.
+- **Go handler/worker file > 700 non-comment lines** → currently
+  `status_public.go` (824 non-comment lines — HTTP handlers, SVG badge
+  rendering, and status/uptime computation all in one file). `worker.go`
+  was this file's original example (~1070 logical lines, all monitor
+  types' check loops in one place) and has since been split by monitor
+  type (`worker_cron.go`, `worker_uptime.go`, `worker_ssl.go`, …) in the
+  same package — Go doesn't need one file per package, and per-type files
+  make each check loop reviewable on its own. Same pattern applies to
+  whatever crosses the threshold next.
 - **Vue view > 600 lines** → extract subcomponents for reusable chunks
   of template, and move non-trivial logic into a composable in
   `apps/web/src/composables/` rather than leaving it inline in `<script
@@ -72,9 +76,12 @@ Picked by finding the actual gap in this repo's size distribution, not
 guessed — re-derive if the codebase grows enough that a threshold starts
 flagging routine files:
 
-- Go handler files run 95–668 raw lines; `worker.go` alone jumps to
-  ~1070 logical lines with no other file within 2x of it. 700 sits in
-  that gap.
+- Go handler/worker files run 21–562 non-comment lines; `status_public.go`
+  alone jumps to 824, with no other file within 1.5x of it. 700 sits in
+  that gap. (Measured via lizard's whole-file NLOC — the per-function
+  `--csv` sum audit.py used to use undercounts real file size, since it
+  misses top-level code outside any function body; see `run_lizard_file_totals`
+  in `audit.py`.)
 - Vue views run 251–494 lines, then jump to 729/746/1158 for
   `DocsView`/`DashboardView`/`HomeView`. 600 sits in that gap.
 - Vue components (excl. `ui/`) run 34–170 lines, then jump to 570 for

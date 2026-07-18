@@ -16,7 +16,6 @@ import csv
 import io
 import subprocess  # nosec B404 - only ever invoked with a fixed lizard argv below, never a shell
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 GO_DIRS = ["apps/api/internal/handler", "apps/api/internal/worker"]
@@ -44,6 +43,33 @@ def run_lizard_csv(paths: list[str]) -> list[list[str]]:
     return [row for row in csv.reader(io.StringIO(out)) if row]
 
 
+def run_lizard_file_totals(paths: list[str]) -> dict[str, int]:
+    # Whole-file NLOC (used for the size check) has to come from lizard's
+    # plain-text per-file summary table, not --csv: --csv is function-grained
+    # only, so summing it misses top-level code (struct/type/var blocks
+    # outside any function) — that undercounted real files like
+    # status_public.go (824 whole-file NLOC vs 549 summed from --csv) enough
+    # to hide them from this check entirely. See SKILL.md.
+    cmd = ["lizard", *paths, "--exclude", "*_test.go"]
+    out = subprocess.run(  # nosec B603
+        cmd, capture_output=True, text=True, check=True,
+    ).stdout
+    totals: dict[str, int] = {}
+    for line in out.splitlines():
+        parts = line.split()
+        # Per-file summary rows are the only 6-field lines with a numeric
+        # NLOC and a bare path (no "@") as the last field — per-function
+        # rows are also 6 fields but their last field is a
+        # "name@start-end@path" location string, so the "@" check tells
+        # them apart from header/divider/totals lines too.
+        if len(parts) != 6 or "@" in parts[-1] or "/" not in parts[-1]:
+            continue
+        nloc_str, file = parts[0], parts[-1]
+        if nloc_str.isdigit():
+            totals[file] = int(nloc_str)
+    return totals
+
+
 def go_function_complexity(rows: list[list[str]]) -> list[tuple[str, str, str, int]]:
     findings = []
     for _nloc, ccn, _, _param, _length, _loc, file, func_name, *_rest in rows:
@@ -54,10 +80,7 @@ def go_function_complexity(rows: list[list[str]]) -> list[tuple[str, str, str, i
     return findings
 
 
-def go_file_size(rows: list[list[str]]) -> list[tuple[str, int]]:
-    totals: dict[str, int] = defaultdict(int)
-    for nloc, _ccn, _, _param, _length, _loc, file, *_rest in rows:
-        totals[file] += int(nloc)
+def go_file_size(totals: dict[str, int]) -> list[tuple[str, int]]:
     return [(f, n) for f, n in totals.items() if n > GO_FILE_NLOC_THRESHOLD and f not in KNOWN_EXCEPTIONS]
 
 
@@ -90,6 +113,7 @@ def print_section(title: str, findings: list, fmt) -> bool:
 
 def report() -> int:
     go_rows = run_lizard_csv(GO_DIRS)
+    go_file_totals = run_lizard_file_totals(GO_DIRS)
     exit_code = 0
 
     if print_section(
@@ -100,9 +124,9 @@ def report() -> int:
         exit_code = 1
 
     if print_section(
-        f"Go handler/worker files (logical lines > {GO_FILE_NLOC_THRESHOLD})",
-        sorted(go_file_size(go_rows), key=lambda f: -f[1]),
-        lambda r: f"{r[0]}: {r[1]} logical lines",
+        f"Go handler/worker files (non-comment lines > {GO_FILE_NLOC_THRESHOLD})",
+        sorted(go_file_size(go_file_totals), key=lambda f: -f[1]),
+        lambda r: f"{r[0]}: {r[1]} non-comment lines",
     ):
         exit_code = 1
 
