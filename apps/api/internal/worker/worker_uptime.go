@@ -187,8 +187,15 @@ const maxKeywordCheckBytes = 512 * 1024
 // generic uptime checker, unlike the one-shot Slack/webhook delivery
 // clients), but each hop re-dials through the same Control-equipped Dialer,
 // so a redirect into a blocked range is caught too.
+//
+// No client-level Timeout: EP-37 US-3702 makes the request timeout
+// per-monitor (m.MaxResponseTimeMs), enforced via a context deadline in
+// performHTTPCheck instead — a fixed client.Timeout here would silently cap
+// every monitor at whatever that constant is, regardless of what the
+// monitor is actually configured for. deliver.Timeout still bounds the dial
+// (connection-establishment) phase specifically, via the Dialer below; the
+// context deadline bounds the full request including body read.
 var sharedUptimeClient = &http.Client{
-	Timeout: deliver.Timeout,
 	Transport: &http.Transport{
 		DialContext:         httpsafe.Dialer(deliver.Timeout).DialContext,
 		MaxIdleConnsPerHost: 4,
@@ -200,14 +207,26 @@ func uptimeCheckClient() *http.Client {
 }
 
 // performHTTPCheck runs the monitor's HTTP check and evaluates all configured
-// assertions in order: status code → keyword → JSON assertions → response-time
-// threshold. The first failing condition is the recorded failure reason.
-// client is injected so tests can pass an unguarded client to reach a local
-// httptest server — see uptimeCheckClient for the hardened client real
-// checks use.
+// assertions in order: status code → keyword → JSON assertions. The first
+// failing condition is the recorded failure reason. client is injected so
+// tests can pass an unguarded client to reach a local httptest server — see
+// uptimeCheckClient for the hardened client real checks use.
+//
+// m.MaxResponseTimeMs bounds the whole request (connect + response, via a
+// context deadline) rather than being checked post-hoc after a successful
+// response — a slow response now aborts the connection at the configured
+// ceiling instead of completing and then being judged (EP-37 US-3702).
 func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.MaxResponseTimeMs)*time.Millisecond)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, string(m.HttpMethod), m.Url, nil)
+	if err != nil {
+		return 0, 0, false, "invalid request"
+	}
+
 	start := time.Now()
-	resp, err := client.Get(m.Url)
+	resp, err := client.Do(req)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
 		return 0, elapsed, false, "timeout / connection error"
@@ -229,7 +248,7 @@ func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, 
 		_, _ = io.Copy(io.Discard, resp.Body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if !statusCodeAccepted(resp.StatusCode, m.AcceptedStatusCodes) {
 		return resp.StatusCode, elapsed, false, httpStatusDesc(resp.StatusCode)
 	}
 
@@ -243,11 +262,18 @@ func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, 
 		}
 	}
 
-	if elapsed > int64(m.MaxResponseTimeMs) {
-		return resp.StatusCode, elapsed, false, "response time exceeded"
-	}
-
 	return resp.StatusCode, elapsed, true, ""
+}
+
+// statusCodeAccepted reports whether code is one of the monitor's configured
+// accepted status codes.
+func statusCodeAccepted(code int, accepted []int32) bool {
+	for _, c := range accepted {
+		if int32(code) == c {
+			return true
+		}
+	}
+	return false
 }
 
 // keywordCheckPasses reports whether body satisfies the monitor's keyword

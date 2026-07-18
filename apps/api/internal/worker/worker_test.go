@@ -371,6 +371,20 @@ func TestHTTPStatusDesc(t *testing.T) {
 
 // ─── performHTTPCheck (local httptest.Server, no live network) ───────────
 
+// baseUptimeCheckMonitor returns a db.UptimeMonitor with the fields the DB
+// now guarantees NOT NULL on every real row (HttpMethod, MaxResponseTimeMs,
+// AcceptedStatusCodes) — performHTTPCheck derives the request method and
+// context timeout straight from these, so a zero-value monitor would form
+// an already-expired context and fail every check before it starts.
+func baseUptimeCheckMonitor(url string) db.UptimeMonitor {
+	return db.UptimeMonitor{
+		Url:                 url,
+		HttpMethod:          db.HttpMethodGET,
+		MaxResponseTimeMs:   10000,
+		AcceptedStatusCodes: []int32{200},
+	}
+}
+
 func TestPerformHTTPCheck(t *testing.T) {
 	t.Run("200 with no keyword is up", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -378,7 +392,7 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL}, &http.Client{Timeout: 10 * time.Second})
+		code, _, isUp, reason := performHTTPCheck(baseUptimeCheckMonitor(srv.URL), &http.Client{Timeout: 10 * time.Second})
 		if code != 200 || !isUp || reason != "" {
 			t.Fatalf("want (200, up, \"\"), got (%d, %v, %q)", code, isUp, reason)
 		}
@@ -390,14 +404,14 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: srv.URL}, &http.Client{Timeout: 10 * time.Second})
+		code, _, isUp, reason := performHTTPCheck(baseUptimeCheckMonitor(srv.URL), &http.Client{Timeout: 10 * time.Second})
 		if code != 500 || isUp || reason != "HTTP 500" {
 			t.Fatalf("want (500, down, HTTP 500), got (%d, %v, %q)", code, isUp, reason)
 		}
 	})
 
 	t.Run("connection error is down with no status code", func(t *testing.T) {
-		code, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{Url: "http://127.0.0.1:1"}, &http.Client{Timeout: 10 * time.Second})
+		code, _, isUp, reason := performHTTPCheck(baseUptimeCheckMonitor("http://127.0.0.1:1"), &http.Client{Timeout: 10 * time.Second})
 		if code != 0 || isUp || reason != "timeout / connection error" {
 			t.Fatalf("want (0, down, timeout), got (%d, %v, %q)", code, isUp, reason)
 		}
@@ -409,9 +423,10 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.Keyword = pgtype.Text{String: "Welcome", Valid: true}
+		m.KeywordMode = db.KeywordModeContains
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want up with no failure reason, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -423,9 +438,10 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.Keyword = pgtype.Text{String: "Welcome", Valid: true}
+		m.KeywordMode = db.KeywordModeContains
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "Keyword not found" {
 			t.Fatalf("want down/Keyword not found, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -437,9 +453,10 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url: srv.URL, Keyword: pgtype.Text{String: "maintenance", Valid: true}, KeywordMode: db.KeywordModeNotContains,
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.Keyword = pgtype.Text{String: "maintenance", Valid: true}
+		m.KeywordMode = db.KeywordModeNotContains
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "Keyword found" {
 			t.Fatalf("want down/Keyword found, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -452,9 +469,10 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url: srv.URL, Keyword: pgtype.Text{String: "Welcome", Valid: true}, KeywordMode: db.KeywordModeContains,
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.Keyword = pgtype.Text{String: "Welcome", Valid: true}
+		m.KeywordMode = db.KeywordModeContains
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if isUp || reason != "HTTP 503" {
 			t.Fatalf("want the status code to win over the keyword, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -466,10 +484,9 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url:            srv.URL,
-			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.JsonAssertions = []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`)
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if !isUp || reason != "" {
 			t.Fatalf("want up with no failure reason, got isUp=%v reason=%q", isUp, reason)
 		}
@@ -481,12 +498,56 @@ func TestPerformHTTPCheck(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, _, isUp, reason := performHTTPCheck(db.UptimeMonitor{
-			Url:            srv.URL,
-			JsonAssertions: []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`),
-		}, &http.Client{Timeout: 10 * time.Second})
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.JsonAssertions = []byte(`[{"path":"$.status","comparator":"equals","expected":"ok"}]`)
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
 		if isUp || !strings.Contains(reason, "JSON assertion failed") {
 			t.Fatalf("want down with a JSON assertion failure reason, got isUp=%v reason=%q", isUp, reason)
+		}
+	})
+
+	t.Run("HEAD method is issued when configured", func(t *testing.T) {
+		var gotMethod string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotMethod = r.Method
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.HttpMethod = db.HttpMethodHEAD
+		_, _, isUp, _ := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+		if !isUp || gotMethod != http.MethodHead {
+			t.Fatalf("want HEAD request and up, got method=%q isUp=%v", gotMethod, isUp)
+		}
+	})
+
+	t.Run("a non-default accepted status code is up", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.AcceptedStatusCodes = []int32{200, 201}
+		code, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+		if code != 201 || !isUp || reason != "" {
+			t.Fatalf("want (201, up, \"\"), got (%d, %v, %q)", code, isUp, reason)
+		}
+	})
+
+	t.Run("a response slower than the configured timeout is down", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(50 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.MaxResponseTimeMs = 10
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{})
+		if isUp || reason != "timeout / connection error" {
+			t.Fatalf("want down/timeout, got isUp=%v reason=%q", isUp, reason)
 		}
 	})
 }

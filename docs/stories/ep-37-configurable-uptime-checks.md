@@ -33,16 +33,16 @@ Builds on the same per-monitor check model as keyword monitoring ([EP-11](ep-11-
 
 **Estimate:** 1.5 h
 
-**Not started.** US-3701 only touched the worker enough to keep it compiling against the schema change (`elapsed > int64(m.MaxResponseTimeMs)`, a straight field-type fix) — it still always issues `GET` against the shared `sharedUptimeClient`/`deliver.Timeout`, and still only accepts exact `200`. This story is the real enforcement work.
+**Shipped 2026-07-18.** `sharedUptimeClient` dropped its client-level `Timeout: deliver.Timeout` — a fixed client-level timeout would have silently capped every monitor at that constant regardless of its own configured value, which is exactly the "process-wide shared client" the AC says not to use. `performHTTPCheck` now derives a `context.WithTimeout(..., m.MaxResponseTimeMs)` per request and builds the request with `http.NewRequestWithContext(ctx, string(m.HttpMethod), m.Url, nil)`; `deliver.Timeout` still bounds the dial (connect) phase only, via the existing `httpsafe.Dialer`. Added `statusCodeAccepted` for the accepted-set membership check. Two new worker tests cover the previously-unexercised paths: a non-`GET` method actually reaching the server, and a response slower than the configured timeout (not the old fixed 10s) failing as a timeout.
 
 **Acceptance criteria:**
 
-- [ ] Worker issues the configured HTTP method instead of always `GET`
-- [ ] Worker uses `max_response_time_ms` as the actual per-request HTTP client timeout, replacing the shared `deliver.Timeout` constant for uptime checks specifically (a per-monitor client/context deadline, not the process-wide shared client — `deliver.Timeout` stays as-is for alert delivery, which this epic doesn't touch)
-- [ ] A response counts as "up" when its status code is in the configured accepted set, "down" otherwise — replaces the current `resp.StatusCode != http.StatusOK` check
-- [ ] The old post-hoc `elapsed > MaxResponseTimeMs` → "response time exceeded" check is removed — now unreachable, since a response that would have exceeded it already errors out as a timeout before the check would run
-- [ ] Redirect handling unchanged (still followed automatically per ADR-014); the accepted-status-codes check applies to the final response in the chain
-- [ ] Keyword ([EP-11](ep-11-keyword-monitoring.md)) and JSON-body assertion ([EP-31](ep-31-assertion-checks.md)) checks still run on top of the status-code check exactly as today — an accepted status code alone doesn't skip them
+- [x] Worker issues the configured HTTP method instead of always `GET`
+- [x] Worker uses `max_response_time_ms` as the actual per-request HTTP client timeout, replacing the shared `deliver.Timeout` constant for uptime checks specifically (a per-monitor client/context deadline, not the process-wide shared client — `deliver.Timeout` stays as-is for alert delivery, which this epic doesn't touch)
+- [x] A response counts as "up" when its status code is in the configured accepted set, "down" otherwise — replaces the current `resp.StatusCode != http.StatusOK` check
+- [x] The old post-hoc `elapsed > MaxResponseTimeMs` → "response time exceeded" check is removed — now unreachable, since a response that would have exceeded it already errors out as a timeout before the check would run
+- [x] Redirect handling unchanged (still followed automatically per ADR-014); the accepted-status-codes check applies to the final response in the chain
+- [x] Keyword ([EP-11](ep-11-keyword-monitoring.md)) and JSON-body assertion ([EP-31](ep-31-assertion-checks.md)) checks still run on top of the status-code check exactly as today — an accepted status code alone doesn't skip them
 
 ---
 
