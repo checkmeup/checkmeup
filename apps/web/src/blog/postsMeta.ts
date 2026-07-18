@@ -314,7 +314,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'cron-job-monitoring-guide',
     slug: 'cron-job-monitoring-guide',
-    title: 'How to Monitor Cron Jobs (Before a Client Notices They Stopped)',
+    title: 'Cron Job Monitoring: Catch Silent Failures',
     date: 'July 17, 2026',
     readTime: '6 min read',
     excerpt:
@@ -323,7 +323,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'uptime-monitoring-guide',
     slug: 'uptime-monitoring-guide',
-    title: 'Uptime Monitoring 101: What It Actually Catches (and What It Misses)',
+    title: 'Uptime Monitoring: Beyond the Status Code',
     date: 'July 18, 2026',
     readTime: '6 min read',
     excerpt:

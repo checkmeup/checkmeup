@@ -12,6 +12,14 @@ export type ContentBlock =
 
 export interface BlogPostMeta {
   slug: string
+  // Keep to 52 characters or fewer, for every post (release notes and
+  // SEO/content posts alike, whichever workflow wrote it) — BlogPostView.vue
+  // renders the <title> tag as `${title} — Checkmeup blog`, 18 more
+  // characters, and SEO checkers flag the combined tag as truncated past
+  // ~70. Caught late on two posts (cron-job-monitoring-guide,
+  // uptime-monitoring-guide) that were drafted without going through the
+  // release-notes skill, which already documented this budget for its own
+  // output but nothing enforced it here.
   title: string
   date: string
   readTime: string
