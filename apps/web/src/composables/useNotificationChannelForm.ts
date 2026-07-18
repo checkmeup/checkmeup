@@ -125,9 +125,27 @@ export function useNotificationChannelForm(opts: {
     showForm.value = true
   }
 
-  function cancelForm() {
-    showForm.value = false
-    editingId.value = null
+  async function test() {
+    testing.value = true
+    testError.value = ''
+    testSuccess.value = false
+    limitReached.value = false
+    try {
+      await notificationChannelsApi.test({
+        type: type.value,
+        config: buildChannelConfig(type.value, value.value, smsConsent.value),
+      })
+      testSuccess.value = true
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.code === 'plan_limit_reached') {
+        limitReached.value = true
+        testError.value = e.message
+      } else {
+        testError.value = e instanceof Error ? e.message : 'Failed to send test message'
+      }
+    } finally {
+      testing.value = false
+    }
   }
 
   async function regenerateSecret() {
@@ -193,27 +211,9 @@ export function useNotificationChannelForm(opts: {
     }
   }
 
-  async function test() {
-    testing.value = true
-    testError.value = ''
-    testSuccess.value = false
-    limitReached.value = false
-    try {
-      await notificationChannelsApi.test({
-        type: type.value,
-        config: buildChannelConfig(type.value, value.value, smsConsent.value),
-      })
-      testSuccess.value = true
-    } catch (e: unknown) {
-      if (e instanceof ApiError && e.code === 'plan_limit_reached') {
-        limitReached.value = true
-        testError.value = e.message
-      } else {
-        testError.value = e instanceof Error ? e.message : 'Failed to send test message'
-      }
-    } finally {
-      testing.value = false
-    }
+  function cancelForm() {
+    showForm.value = false
+    editingId.value = null
   }
 
   return {

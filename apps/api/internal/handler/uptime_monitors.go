@@ -414,9 +414,17 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	h.respondUptimeMonitor(w, r, monitor, http.StatusCreated)
+}
+
+// respondUptimeMonitor writes the standard uptime-monitor response body
+// (monitor fields + its notification channel IDs) — shared by
+// CreateUptimeMonitor and UpdateUptimeMonitor, which otherwise duplicated
+// this exact tail.
+func (h *MonitorHandler) respondUptimeMonitor(w http.ResponseWriter, r *http.Request, monitor db.UptimeMonitor, status int) {
 	resp := h.uptimeMonitorToResponse(monitor)
 	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitor.ID)
-	respond.JSON(w, http.StatusCreated, resp)
+	respond.JSON(w, status, resp)
 }
 
 // GetUptimeMonitor GET /api/v1/monitors/uptime/{id}
@@ -601,9 +609,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	resp := h.uptimeMonitorToResponse(monitor)
-	resp.ChannelIDs = h.loadNotificationChannelIDs(r.Context(), "uptime", monitorID)
-	respond.JSON(w, http.StatusOK, resp)
+	h.respondUptimeMonitor(w, r, monitor, http.StatusOK)
 }
 
 // PauseUptimeMonitor POST /api/v1/monitors/uptime/{id}/pause
