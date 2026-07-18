@@ -109,3 +109,13 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-15 | Wed | Sitemap blog-slug mismatch fix — generate-sitemap.mjs now reads the post's slug field instead of its filename (PR #86) | 1 h   |
 | 2026-07-15 | Wed | SPA directory-redirect fix — handleSPA serves a prerendered route's index.html directly instead of letting http.ServeFile 301 to a trailing slash (PR #87) | 1 h   |
 | 2026-07-15 | Wed | Organization/SoftwareApplication JSON-LD schema on the homepage | 1 h   |
+| 2026-07-16 | Thu | Blog postsMeta chronological sort fix (array order isn't meaningful) | 1 h   |
+| 2026-07-16 | Thu | Public status page meta description/OG tags/alt text fix + shortened 12 blog post titles past the 70-char SEO budget + release-notes skill doc update | 2 h   |
+| 2026-07-17 | Fri | Cron job monitoring SEO guide blog post (PR #95)                  | 1 h   |
+| 2026-07-18 | Sat | Uptime monitoring SEO guide blog post (PR #96)                    | 1 h   |
+| 2026-07-18 | Sat | EP-37 epic/story scaffolding (US-3701–3703) + design revision merging request timeout into max_response_time_ms | 2 h   |
+| 2026-07-18 | Sat | EP-37 US-3701: configurable HTTP method/timeout/status codes (migration, backend handler, frontend create/edit forms) | 2 h   |
+| 2026-07-18 | Sat | EP-37 US-3702: worker enforcement of configured method/timeout/status codes | 1 h   |
+| 2026-07-18 | Sat | EP-37 US-3703: server- and client-side validation bounds           | 1 h   |
+| 2026-07-18 | Sat | v1.32 release notes blog post                                     | 1 h   |
+| 2026-07-18 | Sat | Docs/FAQ/knowledge-doc drift audit and fixes for EP-37 (PR #97) + security/architecture review | 2 h   |
