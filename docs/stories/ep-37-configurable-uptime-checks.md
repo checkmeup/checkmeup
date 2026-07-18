@@ -52,9 +52,11 @@ Builds on the same per-monitor check model as keyword monitoring ([EP-11](ep-11-
 
 **Estimate:** 1 h
 
+**Shipped 2026-07-18.** `validateUptimeMonitorRequest` now rejects any `httpMethod` outside `{GET, HEAD, POST}` (replacing US-3701's permissive `parseHTTPMethod`, which is removed — validation now guarantees a valid value, so create/update cast directly with `db.HttpMethod(req.HttpMethod)`), bounds `maxResponseTimeMs` to `[1000, 30000]`, and rejects any accepted status code outside `[100, 599]`. The create/edit forms also gained matching client-side bounds (`min`/`max` on the timeout input, plus a form-level check) so a bad value surfaces as an inline form error rather than a raw API error — the method select and status-code checkboxes were already whitelist-constrained by construction (can't submit a value the UI doesn't offer).
+
 **Acceptance criteria:**
 
-- [ ] HTTP method restricted to a fixed whitelist (`GET`, `HEAD`, `POST`) — anything else rejected with a clear error, both create and edit
-- [ ] `max_response_time_ms` bounded to 1,000–30,000 (1–30 seconds) and required (replaces today's `<= 0` check, which allowed unbounded-above and nil) — below 1s isn't a meaningful check, above 30s risks piling up against the worker's per-cycle check budget
-- [ ] Status codes restricted to the valid HTTP range (100–599)
-- [ ] Validation enforced server-side as the authoritative check, not just client-side on the form
+- [x] HTTP method restricted to a fixed whitelist (`GET`, `HEAD`, `POST`) — anything else rejected with a clear error, both create and edit
+- [x] `max_response_time_ms` bounded to 1,000–30,000 (1–30 seconds) and required (replaces today's `<= 0` check, which allowed unbounded-above and nil) — below 1s isn't a meaningful check, above 30s risks piling up against the worker's per-cycle check budget
+- [x] Status codes restricted to the valid HTTP range (100–599)
+- [x] Validation enforced server-side as the authoritative check, not just client-side on the form

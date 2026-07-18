@@ -10,7 +10,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-- [EP-37](stories/ep-37-configurable-uptime-checks.md) — Configurable uptime check parameters — **3.5 h**. No blockers — defaults preserve today's exact behavior (`GET`, 10s, exact `200`); merges the existing optional `max_response_time_ms` field into the request timeout rather than adding a new one.
+(empty)
 
 ### Next
 

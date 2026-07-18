@@ -201,7 +201,7 @@ func validateKeyword(raw string) error {
 // create and update requests, responding with the first validation failure
 // and returning false — same "respond internally, return ok" idiom as
 // uptimeMonitorIDs above.
-func validateUptimeMonitorRequest(w http.ResponseWriter, name *string, url string, keyword *string, jsonAssertions *[]JsonAssertion, maxResponseTimeMs int32, acceptedStatusCodes []int32) bool {
+func validateUptimeMonitorRequest(w http.ResponseWriter, name *string, url string, keyword *string, jsonAssertions *[]JsonAssertion, maxResponseTimeMs int32, httpMethod string, acceptedStatusCodes []int32) bool {
 	*name = strings.TrimSpace(*name)
 	if *name == "" {
 		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
@@ -223,27 +223,31 @@ func validateUptimeMonitorRequest(w http.ResponseWriter, name *string, url strin
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return false
 	}
-	if maxResponseTimeMs <= 0 {
-		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be a positive integer", "bad_request")
+	if !validHTTPMethods[httpMethod] {
+		respond.Error(w, http.StatusBadRequest, "httpMethod must be one of GET, HEAD, POST", "bad_request")
+		return false
+	}
+	if maxResponseTimeMs < 1000 || maxResponseTimeMs > 30000 {
+		respond.Error(w, http.StatusBadRequest, "maxResponseTimeMs must be between 1000 and 30000", "bad_request")
 		return false
 	}
 	if len(acceptedStatusCodes) == 0 {
 		respond.Error(w, http.StatusBadRequest, "at least one accepted status code is required", "bad_request")
 		return false
 	}
+	for _, code := range acceptedStatusCodes {
+		if code < 100 || code > 599 {
+			respond.Error(w, http.StatusBadRequest, "accepted status codes must be between 100 and 599", "bad_request")
+			return false
+		}
+	}
 	return true
 }
 
-// parseHTTPMethod maps a request's method string to the http_method enum,
-// defaulting to GET for anything unrecognized — same permissive pattern as
-// parseKeywordMode. Strict whitelist rejection is EP-37 US-3703's job.
-func parseHTTPMethod(raw string) db.HttpMethod {
-	switch db.HttpMethod(raw) {
-	case db.HttpMethodHEAD, db.HttpMethodPOST:
-		return db.HttpMethod(raw)
-	default:
-		return db.HttpMethodGET
-	}
+var validHTTPMethods = map[string]bool{
+	string(db.HttpMethodGET):  true,
+	string(db.HttpMethodHEAD): true,
+	string(db.HttpMethodPOST): true,
 }
 
 // clampUptimeMonitorInterval applies the org's plan-aware interval clamp,
@@ -377,7 +381,7 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs, req.AcceptedStatusCodes) {
+	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs, req.HttpMethod, req.AcceptedStatusCodes) {
 		return
 	}
 	clampedInterval, ok := h.checkUptimeMonitorCreateLimits(w, r, orgID, req.IntervalMins)
@@ -398,7 +402,7 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		KeywordCaseSensitive: req.KeywordCaseSensitive,
 		JsonAssertions:       encodeJsonAssertions(req.JsonAssertions),
 		MaxResponseTimeMs:    req.MaxResponseTimeMs,
-		HttpMethod:           parseHTTPMethod(req.HttpMethod),
+		HttpMethod:           db.HttpMethod(req.HttpMethod),
 		AcceptedStatusCodes:  req.AcceptedStatusCodes,
 	})
 	if err != nil {
@@ -553,7 +557,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs, req.AcceptedStatusCodes) {
+	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs, req.HttpMethod, req.AcceptedStatusCodes) {
 		return
 	}
 
@@ -586,7 +590,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		KeywordCaseSensitive: req.KeywordCaseSensitive,
 		JsonAssertions:       encodeJsonAssertions(req.JsonAssertions),
 		MaxResponseTimeMs:    req.MaxResponseTimeMs,
-		HttpMethod:           parseHTTPMethod(req.HttpMethod),
+		HttpMethod:           db.HttpMethod(req.HttpMethod),
 		AcceptedStatusCodes:  req.AcceptedStatusCodes,
 	})
 	if respondMonitorNotFoundOrInternal(w, err) {

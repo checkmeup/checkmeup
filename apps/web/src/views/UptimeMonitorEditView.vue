@@ -171,6 +171,8 @@ function validateUptimeMonitorForm(): string {
   if (!url.value.trim() || !url.value.match(/^https?:\/\//)) return 'URL must start with http:// or https://'
   if (keyword.value.trim().length > 500) return 'Keyword must be 500 characters or fewer'
   if (acceptedStatusCodes.value.length === 0) return 'Select at least one accepted status code'
+  if (maxResponseTimeMs.value < 1000 || maxResponseTimeMs.value > 30000)
+    return 'Request timeout must be between 1000 and 30000 ms'
   return ''
 }
 
@@ -377,7 +379,8 @@ async function submit() {
                   id="maxResponseTimeMs"
                   v-model="maxResponseTimeMsInput"
                   type="number"
-                  min="1"
+                  min="1000"
+                  max="30000"
                   class="w-40"
                   required
                 />
