@@ -36,10 +36,6 @@ coverage/
 # Turborepo
 .turbo/
 
-# Kamal — never commit secrets
-.kamal/secrets
-
-
 # Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
 
