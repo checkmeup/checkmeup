@@ -83,3 +83,11 @@ jobs:
           VITE_PADDLE_CLIENT_TOKEN: ${{ secrets.VITE_PADDLE_CLIENT_TOKEN }}
           VITE_PADDLE_ENVIRONMENT: ${{ secrets.VITE_PADDLE_ENVIRONMENT }}
           VITE_GTM_ID: ${{ secrets.VITE_GTM_ID }}
+
+      - name: Prune old GHCR image versions
+        run: bash scripts/ghcr-clean.sh 5
+        env:
+          # GITHUB_TOKEN can't delete packages regardless of the permissions:
+          # block above (Actions' built-in token is capped there) — this needs
+          # a classic PAT with read:packages + delete:packages scope.
+          GHCR_CLEANUP_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN }}
