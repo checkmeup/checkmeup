@@ -329,4 +329,13 @@ export const postsMeta: BlogPostMetaEntry[] = [
     excerpt:
       "A 200 response isn't proof a page actually works. Here's how uptime monitoring works, why content checks beat status codes alone, and what to look for in a tool before you trust it.",
   },
+  {
+    file: 'v1-32-release-notes',
+    slug: 'v1-32-release-notes',
+    title: 'v1.32: Configurable Uptime Checks',
+    date: 'July 18, 2026',
+    readTime: '3 min read',
+    excerpt:
+      'Uptime monitors were always a GET request, a 10-second timeout, and exactly HTTP 200. v1.32 makes all three configurable per monitor, and collapses the existing optional response-time SLA field into the actual request timeout instead of leaving two overlapping knobs.',
+  },
 ]
