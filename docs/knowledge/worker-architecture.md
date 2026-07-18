@@ -2,7 +2,7 @@
 title: Worker / Monitor-Check Architecture
 type: knowledge
 status: current
-updated: 2026-07-10
+updated: 2026-07-18
 tags: [architecture, monitoring, cron, uptime, ssl, domain, port, backend]
 scope: apps/api/internal/worker
 superseded_by:
@@ -25,7 +25,7 @@ One goroutine (`worker.Run`, started from `cmd/api/main.go`) drives everything. 
 
 3. **One file per monitor type**, split out of a single `worker.go` that had grown to ~1070 logical lines (commit `61ef075`, tracked by the `architecture-guardrails` skill's 700-line threshold):
    - `worker_cron.go` — `checkOverdue`: cron monitors are ping-driven (the monitor's own schedule triggers an inbound `POST /ping`, handled in `internal/handler/ping.go`, not here); this loop only detects *missed* pings past the grace period.
-   - `worker_uptime.go` — `checkUptimeMonitors` / `performHTTPCheck`: HTTP GET, evaluates status code → keyword → JSON assertions → response-time threshold in that order, first failure wins.
+   - `worker_uptime.go` — `checkUptimeMonitors` / `performHTTPCheck`: HTTP request using the monitor's configured method (GET/HEAD/POST, GET by default), bounded by a per-monitor `context.WithTimeout` derived from `max_response_time_ms` rather than a fixed client timeout ([EP-37](../stories/ep-37-configurable-uptime-checks.md), 2026-07-18); evaluates accepted-status-code membership → keyword → JSON assertions in that order, first failure wins. The response-time threshold used to be a fourth post-hoc step here but is now the request timeout itself, enforced before any of the three checks can run.
    - `worker_ssl.go` — `checkSSLMonitors` / `performTLSCheck`: TLS handshake, reads the leaf cert's `NotAfter`; alerts at 30/14/7-day thresholds and on expiry (`sslCrossedThreshold`).
    - `worker_domain.go` — `checkDomainMonitors`: RDAP lookup via `internal/rdap`, same 30/14/7-day threshold pattern as SSL (`domainThresholdAlert` mirrors `sslThresholdAlert`), differing only in data source (RDAP vs TLS handshake) and field names (registrar vs issuer).
    - `worker_port.go` — `checkPortMonitors` / `performTCPCheck`: raw TCP dial, no data sent; a monitor's `ExpectedState` (open/closed) decides whether a successful connect means up or down (US-3302).

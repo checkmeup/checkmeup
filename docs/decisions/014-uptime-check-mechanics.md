@@ -1,6 +1,6 @@
 # ADR-014: Uptime check mechanics
 
-**Status:** Accepted  
+**Status:** Accepted — method, timeout, and the 200-only rule became per-monitor configuration in [EP-37](../stories/ep-37-configurable-uptime-checks.md) (2026-07-18), exactly as the "relax if users report it" note below anticipated. The decisions here are now the *defaults*, not absolute rules; the mechanics (redirects followed, one worker call per check) are otherwise unchanged.  
 **Date:** 2026-06-15
 
 ## Context

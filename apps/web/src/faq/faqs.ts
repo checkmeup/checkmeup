@@ -84,7 +84,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Can I assert on specific fields in a JSON response, or fail on a slow response?',
-        a: 'Yes — uptime monitors also support JSON field assertions (e.g. $.status equals ok, with equals/not equals/contains/greater-than/less-than comparators) and a max response-time threshold. All configured checks — status code, keyword, JSON assertions, response time — must pass for the monitor to be considered up.',
+        a: "Yes — uptime monitors support JSON field assertions (e.g. $.status equals ok, with equals/not equals/contains/greater-than/less-than comparators), and the request timeout (1-30 seconds, 10 by default) doubles as your slow-response cutoff: a response that doesn't arrive in time counts as down. All configured checks — accepted status codes, keyword, JSON assertions — must pass for the monitor to be considered up.",
       },
       {
         q: 'Can I mute alerts for a noisy monitor?',

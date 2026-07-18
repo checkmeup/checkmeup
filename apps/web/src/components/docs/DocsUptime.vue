@@ -4,12 +4,45 @@
       Uptime monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
-      Point an uptime monitor at any URL. We send a GET request on your chosen interval — 5,
-      10, or 30 minutes on Hobby, plus 1 minute on paid plans — with a 10-second timeout, and
-      expect an HTTP 200 back. Anything else (a different status code, a timeout, a connection
-      error) opens an incident.
+      Point an uptime monitor at any URL on your chosen interval — 5, 10, or 30 minutes on
+      Hobby, plus 1 minute on paid plans. By default we send a GET request with a 10-second
+      timeout and expect an HTTP 200 back, but all three are configurable per monitor under
+      "Advanced check settings". Anything outside your configuration (an unaccepted status
+      code, a timeout, a connection error) opens an incident.
     </p>
     <ul class="space-y-2 text-sm" style="color: var(--text-dim)">
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">Request method</strong> — GET, HEAD, or
+          POST; GET by default.</span
+        >
+      </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">Accepted status codes</strong> — choose
+          which codes count as up, e.g. if your API legitimately returns 201 or 204 on success
+          instead of a plain 200.</span
+        >
+      </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">Request timeout</strong> — 1 to 30
+          seconds, 10 by default; a response that doesn't arrive in time aborts and counts as
+          down.</span
+        >
+      </li>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
@@ -81,17 +114,6 @@
           and an expected value; add as many as you need — all of them must pass, same 512 KB
           response-body limit as keyword monitoring. The failure reason (which assertion didn't
           match) shows on the monitor's incident history.
-        </span>
-      </li>
-      <li class="flex items-start gap-2">
-        <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
-        ></span>
-        <span>
-          <strong style="color: var(--text-strong)">Response time threshold</strong> — set a max
-          response time in milliseconds; a check that's otherwise healthy (200, keyword, and
-          JSON assertions all pass) still opens an incident if it's slower than that.
         </span>
       </li>
     </ul>
