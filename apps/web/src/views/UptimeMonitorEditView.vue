@@ -46,6 +46,7 @@ const maxResponseTimeMsInput = computed({
   },
 })
 const channelIds = ref<string[]>([])
+const advancedOpen = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const minIntervalMins = ref(5)
@@ -330,18 +331,35 @@ async function submit() {
           </div>
         </div>
 
-        <details class="rounded-md border px-4 py-3" style="border-color: var(--border)">
-          <summary class="text-sm font-medium cursor-pointer" style="color: var(--text)">
+        <div>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-sm font-medium"
+            style="color: var(--text-dim)"
+            :aria-expanded="advancedOpen"
+            @click="advancedOpen = !advancedOpen"
+          >
+            <span
+              class="inline-block text-[10px] transition-transform duration-150"
+              :style="{ transform: advancedOpen ? 'rotate(90deg)' : 'rotate(0deg)' }"
+            >
+              ▶
+            </span>
             Advanced check settings
-          </summary>
-          <div class="space-y-4 mt-4">
+          </button>
+
+          <div
+            v-if="advancedOpen"
+            class="space-y-4 mt-2.5 p-4 rounded-[10px] border"
+            style="border-color: var(--border); background-color: var(--surface-raised)"
+          >
             <div>
               <Label for="httpMethod">Request method</Label>
               <select
                 id="httpMethod"
                 v-model="httpMethod"
                 class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+                style="background-color: var(--surface); border-color: var(--border); color: var(--text)"
               >
                 <option v-for="opt in httpMethodOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
@@ -351,23 +369,24 @@ async function submit() {
 
             <div>
               <Label>Accepted status codes</Label>
-              <div class="flex flex-wrap gap-3 mt-1">
-                <label
+              <div class="flex flex-wrap gap-2 mt-1.5">
+                <button
                   v-for="code in statusCodeOptions"
                   :key="code"
-                  class="flex items-center gap-1.5 text-sm cursor-pointer"
-                  style="color: var(--text)"
+                  type="button"
+                  :aria-pressed="acceptedStatusCodes.includes(code)"
+                  class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                  :style="{
+                    borderColor: acceptedStatusCodes.includes(code) ? 'var(--accent)' : 'var(--border)',
+                    backgroundColor: acceptedStatusCodes.includes(code) ? 'var(--accent-wash)' : 'transparent',
+                    color: acceptedStatusCodes.includes(code) ? 'var(--accent)' : 'var(--text-dim)',
+                  }"
+                  @click="toggleStatusCode(code)"
                 >
-                  <input
-                    type="checkbox"
-                    class="rounded"
-                    :checked="acceptedStatusCodes.includes(code)"
-                    @change="toggleStatusCode(code)"
-                  />
                   {{ code }}
-                </label>
+                </button>
               </div>
-              <p class="text-xs mt-1" style="color: var(--text-muted)">
+              <p class="text-xs mt-1.5" style="color: var(--text-muted)">
                 A response outside this set counts as down, regardless of body content.
               </p>
             </div>
@@ -391,7 +410,7 @@ async function submit() {
               </p>
             </div>
           </div>
-        </details>
+        </div>
 
         <div>
           <Label for="interval">Check interval</Label>

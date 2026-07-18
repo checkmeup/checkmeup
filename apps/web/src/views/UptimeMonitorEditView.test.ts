@@ -264,4 +264,43 @@ describe('UptimeMonitorEditView', () => {
       params: { id: 'u1' },
     })
   })
+
+  it('toggles the advanced check settings panel', async () => {
+    detailData.value = { ...detail, monitor: { ...monitor } }
+    const wrapper = mount(UptimeMonitorEditView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
+
+    expect(wrapper.find('#httpMethod').exists()).toBe(false)
+
+    const toggle = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Advanced check settings'))!
+    await toggle.trigger('click')
+    expect(wrapper.find('#httpMethod').exists()).toBe(true)
+
+    await toggle.trigger('click')
+    expect(wrapper.find('#httpMethod').exists()).toBe(false)
+  })
+
+  it('toggles accepted status codes as chip buttons', async () => {
+    detailData.value = { ...detail, monitor: { ...monitor } }
+    const wrapper = mount(UptimeMonitorEditView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
+    const toggle = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Advanced check settings'))!
+    await toggle.trigger('click')
+
+    const chip201 = findButtonByText(wrapper, '201')!
+    expect(chip201.attributes('aria-pressed')).toBe('false')
+    await chip201.trigger('click')
+    expect(chip201.attributes('aria-pressed')).toBe('true')
+
+    const chip200 = findButtonByText(wrapper, '200')!
+    expect(chip200.attributes('aria-pressed')).toBe('true')
+    await chip200.trigger('click')
+    expect(chip200.attributes('aria-pressed')).toBe('false')
+  })
 })
