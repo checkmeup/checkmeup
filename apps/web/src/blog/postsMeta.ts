@@ -320,4 +320,13 @@ export const postsMeta: BlogPostMetaEntry[] = [
     excerpt:
       "Cron jobs fail silently, not loudly. Here's how cron job monitoring — the dead man's switch — works, how to set it up in three steps, and what to check before trusting a tool with it.",
   },
+  {
+    file: 'uptime-monitoring-guide',
+    slug: 'uptime-monitoring-guide',
+    title: 'Uptime Monitoring 101: What It Actually Catches (and What It Misses)',
+    date: 'July 18, 2026',
+    readTime: '6 min read',
+    excerpt:
+      "A 200 response isn't proof a page actually works. Here's how uptime monitoring works, why content checks beat status codes alone, and what to look for in a tool before you trust it.",
+  },
 ]
