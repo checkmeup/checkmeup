@@ -334,6 +334,10 @@ const uptimeMonitor = {
   keyword: null,
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
+  jsonAssertions: [],
+  maxResponseTimeMs: 10000,
+  httpMethod: 'GET' as const,
+  acceptedStatusCodes: [200],
 }
 
 const createUptimeInput = {
@@ -343,7 +347,9 @@ const createUptimeInput = {
   alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
   jsonAssertions: [],
-  maxResponseTimeMs: null,
+  maxResponseTimeMs: 10000,
+  httpMethod: 'GET' as const,
+  acceptedStatusCodes: [200],
   keyword: '',
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
@@ -357,7 +363,9 @@ const updateUptimeInput = {
   alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
   jsonAssertions: [],
-  maxResponseTimeMs: null,
+  maxResponseTimeMs: 10000,
+  httpMethod: 'GET' as const,
+  acceptedStatusCodes: [200],
   keyword: '',
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,

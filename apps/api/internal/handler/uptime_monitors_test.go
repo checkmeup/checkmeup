@@ -150,6 +150,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 10, Keyword: "Welcome",
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusCreated {
 			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
@@ -164,6 +165,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 1, // Hobby's minimum is 5
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusPaymentRequired {
 			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())
@@ -174,6 +176,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "Fresh monitor", URL: "https://example.com/health", IntervalMins: 5, MaxAlertsPerIncident: -1,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusCreated {
 			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
@@ -199,6 +202,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "Keyword monitor", URL: "https://example.com", IntervalMins: 1, Keyword: "Welcome back", KeywordMode: "not_contains", KeywordCaseSensitive: true,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusCreated {
 			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
@@ -225,6 +229,7 @@ func TestCreateUptimeMonitor(t *testing.T) {
 		}
 		w := doAuthed(t, http.MethodPost, monitorH.CreateUptimeMonitor, u.access, createUptimeMonitorRequest{
 			Name: "One too many", URL: "https://example.com", IntervalMins: 10,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusPaymentRequired {
 			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())
@@ -377,6 +382,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 		mon := createUptimeMonitor(t, monitorH, u.access, "x")
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, mon.ID, updateUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 5, Keyword: "Welcome",
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
@@ -391,6 +397,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, "00000000-0000-0000-0000-000000000000", updateUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 10,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("want 404, got %d: %s", w.Code, w.Body.String())
@@ -404,6 +411,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, uB.access, mon.ID, updateUptimeMonitorRequest{
 			Name: "hijacked", URL: "https://example.com", IntervalMins: 10,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("want 404 updating org A's monitor as org B, got %d: %s", w.Code, w.Body.String())
@@ -416,6 +424,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, mon.ID, updateUptimeMonitorRequest{
 			Name: "Renamed", URL: "https://new.example.com/health", AlertsEnabled: false, IntervalMins: 30, MaxAlertsPerIncident: -1,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
@@ -449,6 +458,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, mon.ID, updateUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 1,
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
@@ -465,6 +475,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 
 		w := doUptimeMonitorRequest(t, http.MethodPatch, monitorH.UpdateUptimeMonitor, u.access, mon.ID, updateUptimeMonitorRequest{
 			Name: "x", URL: "https://example.com", IntervalMins: 1, // Hobby's minimum is 5
+			MaxResponseTimeMs: 10000, AcceptedStatusCodes: []int32{200},
 		})
 		if w.Code != http.StatusPaymentRequired {
 			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())

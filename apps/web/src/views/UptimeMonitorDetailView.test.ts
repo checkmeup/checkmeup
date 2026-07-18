@@ -59,7 +59,9 @@ const monitor = {
   keywordMode: 'contains' as const,
   keywordCaseSensitive: false,
   jsonAssertions: [],
-  maxResponseTimeMs: null,
+  maxResponseTimeMs: 10000,
+  httpMethod: 'GET' as const,
+  acceptedStatusCodes: [200],
 }
 
 const detail = {

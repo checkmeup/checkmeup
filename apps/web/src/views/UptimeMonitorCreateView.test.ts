@@ -144,7 +144,9 @@ describe('UptimeMonitorCreateView', () => {
       keywordMode: 'contains',
       keywordCaseSensitive: false,
       jsonAssertions: [],
-      maxResponseTimeMs: null,
+      maxResponseTimeMs: 10000,
+      httpMethod: 'GET',
+      acceptedStatusCodes: [200],
       channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({

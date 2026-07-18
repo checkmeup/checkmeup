@@ -58,6 +58,49 @@ func (ns NullDomainMonitorStatus) Value() (driver.Value, error) {
 	return string(ns.DomainMonitorStatus), nil
 }
 
+type HttpMethod string
+
+const (
+	HttpMethodGET  HttpMethod = "GET"
+	HttpMethodHEAD HttpMethod = "HEAD"
+	HttpMethodPOST HttpMethod = "POST"
+)
+
+func (e *HttpMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = HttpMethod(s)
+	case string:
+		*e = HttpMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for HttpMethod: %T", src)
+	}
+	return nil
+}
+
+type NullHttpMethod struct {
+	HttpMethod HttpMethod `json:"http_method"`
+	Valid      bool       `json:"valid"` // Valid is true if HttpMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullHttpMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.HttpMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.HttpMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullHttpMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.HttpMethod), nil
+}
+
 type IncidentSeverity string
 
 const (
@@ -699,8 +742,10 @@ type UptimeMonitor struct {
 	KeywordMode          KeywordMode        `json:"keyword_mode"`
 	KeywordCaseSensitive bool               `json:"keyword_case_sensitive"`
 	JsonAssertions       []byte             `json:"json_assertions"`
-	MaxResponseTimeMs    pgtype.Int4        `json:"max_response_time_ms"`
+	MaxResponseTimeMs    int32              `json:"max_response_time_ms"`
 	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	HttpMethod           HttpMethod         `json:"http_method"`
+	AcceptedStatusCodes  []int32            `json:"accepted_status_codes"`
 }
 
 type User struct {

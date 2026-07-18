@@ -14,14 +14,16 @@ Builds on the same per-monitor check model as keyword monitoring ([EP-11](ep-11-
 
 **Estimate:** 1 h
 
+**Shipped 2026-07-18.** Migration `033_configurable_uptime_checks.sql` backfills existing NULL `max_response_time_ms` rows to `10000` before adding `NOT NULL DEFAULT 10000` — any monitor that already had an explicit value (set back when the field was an optional post-hoc SLA check) keeps that exact value as its new timeout, only untouched rows get the default. `parseHTTPMethod` (mirrors the existing `parseKeywordMode` pattern) defaults anything unrecognized to `GET` rather than rejecting — strict whitelist rejection is US-3703's job.
+
 **Acceptance criteria:**
 
-- [ ] HTTP method field on create/edit (`GET` / `HEAD` / `POST`, default `GET`) — genuinely new field
-- [ ] `max_response_time_ms` ("Max response time") becomes **required**, default `10000` (10s) — drop the "(optional)" label, migration backfills existing NULLs to `10000` and adds `NOT NULL DEFAULT 10000`
-- [ ] Accepted status codes field (multiselect, default `[200]`) — genuinely new field
-- [ ] Existing monitors get today's exact defaults for all three — zero behavior change for any monitor that doesn't touch these fields
-- [ ] At least one status code must be selected — cannot save with an empty set
-- [ ] Fields shown collapsed under an "advanced" section on the create/edit form, not competing with name/URL/interval for attention
+- [x] HTTP method field on create/edit (`GET` / `HEAD` / `POST`, default `GET`) — genuinely new field
+- [x] `max_response_time_ms` ("Max response time") becomes **required**, default `10000` (10s) — drop the "(optional)" label, migration backfills existing NULLs to `10000` and adds `NOT NULL DEFAULT 10000`
+- [x] Accepted status codes field (multiselect, default `[200]`) — genuinely new field
+- [x] Existing monitors get today's exact defaults for all three — zero behavior change for any monitor that doesn't touch these fields
+- [x] At least one status code must be selected — cannot save with an empty set
+- [x] Fields shown collapsed under an "advanced" section on the create/edit form, not competing with name/URL/interval for attention
 
 ---
 
@@ -30,6 +32,8 @@ Builds on the same per-monitor check model as keyword monitoring ([EP-11](ep-11-
 **As a** user, **I want** the actual check to respect my configuration, **so that** the monitor reflects my endpoint's real behavior instead of a hardcoded assumption.
 
 **Estimate:** 1.5 h
+
+**Not started.** US-3701 only touched the worker enough to keep it compiling against the schema change (`elapsed > int64(m.MaxResponseTimeMs)`, a straight field-type fix) — it still always issues `GET` against the shared `sharedUptimeClient`/`deliver.Timeout`, and still only accepts exact `200`. This story is the real enforcement work.
 
 **Acceptance criteria:**
 

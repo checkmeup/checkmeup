@@ -61,6 +61,7 @@ func createUptimeMonitor(t *testing.T, h *MonitorHandler, access *http.Cookie, n
 	t.Helper()
 	w := doAuthed(t, http.MethodPost, h.CreateUptimeMonitor, access, map[string]any{
 		"name": name, "url": "https://example.com/health", "intervalMins": 10,
+		"maxResponseTimeMs": 10000, "acceptedStatusCodes": []int32{200},
 	})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("create uptime monitor: want 201, got %d: %s", w.Code, w.Body.String())

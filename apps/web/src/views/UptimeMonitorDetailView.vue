@@ -169,8 +169,18 @@ const chart = computed(() => {
             >
               🔎 <code>{{ a.path }}</code> {{ a.comparator.replace('_', ' ') }} <code>{{ a.expected }}</code>
             </p>
-            <p v-if="detail.monitor.maxResponseTimeMs" class="text-xs" style="color: var(--text-muted)">
-              ⏱ Max response time: {{ detail.monitor.maxResponseTimeMs }} ms
+            <p v-if="detail.monitor.httpMethod !== 'GET'" class="text-xs" style="color: var(--text-muted)">
+              {{ detail.monitor.httpMethod }} request
+            </p>
+            <p
+              v-if="!(detail.monitor.acceptedStatusCodes.length === 1 && detail.monitor.acceptedStatusCodes[0] === 200)"
+              class="text-xs"
+              style="color: var(--text-muted)"
+            >
+              ✓ Accepts status {{ detail.monitor.acceptedStatusCodes.join(', ') }}
+            </p>
+            <p class="text-xs" style="color: var(--text-muted)">
+              ⏱ Timeout: {{ detail.monitor.maxResponseTimeMs }} ms
             </p>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">

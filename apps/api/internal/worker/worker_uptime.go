@@ -243,7 +243,7 @@ func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, 
 		}
 	}
 
-	if m.MaxResponseTimeMs.Valid && elapsed > int64(m.MaxResponseTimeMs.Int32) {
+	if elapsed > int64(m.MaxResponseTimeMs) {
 		return resp.StatusCode, elapsed, false, "response time exceeded"
 	}
 

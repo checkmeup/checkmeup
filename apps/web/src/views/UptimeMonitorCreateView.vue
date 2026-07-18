@@ -5,7 +5,13 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
-import { monitorsApi, type KeywordMode, type JsonAssertion, type AssertionComparator } from '@/api/monitors'
+import {
+  monitorsApi,
+  type KeywordMode,
+  type JsonAssertion,
+  type AssertionComparator,
+  type HttpMethod,
+} from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
@@ -23,14 +29,16 @@ const keyword = ref('')
 const keywordMode = ref<KeywordMode>('contains')
 const keywordCaseSensitive = ref(false)
 const jsonAssertions = ref<JsonAssertion[]>([])
-const maxResponseTimeMs = ref<number | undefined>(undefined)
+const httpMethod = ref<HttpMethod>('GET')
+const acceptedStatusCodes = ref<number[]>([200])
+const maxResponseTimeMs = ref(10000)
 // Input's modelValue is string-typed (it doesn't implement Vue's
 // modelModifiers convention, so a bare `v-model.number` silently does no
 // numeric conversion) — bridge it to the numeric ref explicitly.
 const maxResponseTimeMsInput = computed({
-  get: () => maxResponseTimeMs.value?.toString() ?? '',
+  get: () => maxResponseTimeMs.value.toString(),
   set: (v: string) => {
-    maxResponseTimeMs.value = v === '' ? undefined : Number(v)
+    maxResponseTimeMs.value = v === '' ? 10000 : Number(v)
   },
 })
 const submitting = ref(false)
@@ -42,6 +50,23 @@ const keywordModeOptions: { label: string; value: KeywordMode }[] = [
   { label: 'Contains', value: 'contains' },
   { label: 'Does not contain', value: 'not_contains' },
 ]
+
+const httpMethodOptions: { label: string; value: HttpMethod }[] = [
+  { label: 'GET', value: 'GET' },
+  { label: 'HEAD', value: 'HEAD' },
+  { label: 'POST', value: 'POST' },
+]
+
+const statusCodeOptions = [200, 201, 202, 203, 204, 205, 206]
+
+function toggleStatusCode(code: number) {
+  const i = acceptedStatusCodes.value.indexOf(code)
+  if (i === -1) {
+    acceptedStatusCodes.value.push(code)
+  } else {
+    acceptedStatusCodes.value.splice(i, 1)
+  }
+}
 
 const comparatorOptions: { label: string; value: AssertionComparator }[] = [
   { label: 'equals', value: 'equals' },
@@ -98,6 +123,7 @@ function validateUptimeMonitorForm(): string {
   if (!url.value.trim()) return 'URL is required'
   if (!url.value.match(/^https?:\/\//)) return 'URL must start with http:// or https://'
   if (keyword.value.trim().length > 500) return 'Keyword must be 500 characters or fewer'
+  if (acceptedStatusCodes.value.length === 0) return 'Select at least one accepted status code'
   return ''
 }
 
@@ -127,7 +153,9 @@ async function submit() {
       keywordMode: keywordMode.value,
       keywordCaseSensitive: keywordCaseSensitive.value,
       jsonAssertions: jsonAssertions.value,
-      maxResponseTimeMs: maxResponseTimeMs.value ?? null,
+      maxResponseTimeMs: maxResponseTimeMs.value,
+      httpMethod: httpMethod.value,
+      acceptedStatusCodes: acceptedStatusCodes.value,
       channelIds: channelIds.value,
     })
     router.push({ name: 'uptime-monitor-detail', params: { id: monitor.id } })
@@ -178,7 +206,7 @@ async function submit() {
             class="mt-1"
           />
           <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Must return HTTP 200. GET request, 10-second timeout.
+            Defaults to a GET request, 10-second timeout, HTTP 200 — customize under Advanced below.
           </p>
         </div>
 
@@ -260,23 +288,67 @@ async function submit() {
           </div>
         </div>
 
-        <div>
-          <Label for="maxResponseTimeMs">Max response time (optional)</Label>
-          <div class="flex items-center gap-2 mt-1">
-            <Input
-              id="maxResponseTimeMs"
-              v-model="maxResponseTimeMsInput"
-              type="number"
-              min="1"
-              placeholder="e.g. 2000"
-              class="w-40"
-            />
-            <span class="text-sm" style="color: var(--text-muted)">ms</span>
+        <details class="rounded-md border px-4 py-3" style="border-color: var(--border)">
+          <summary class="text-sm font-medium cursor-pointer" style="color: var(--text)">
+            Advanced check settings
+          </summary>
+          <div class="space-y-4 mt-4">
+            <div>
+              <Label for="httpMethod">Request method</Label>
+              <select
+                id="httpMethod"
+                v-model="httpMethod"
+                class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+              >
+                <option v-for="opt in httpMethodOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <Label>Accepted status codes</Label>
+              <div class="flex flex-wrap gap-3 mt-1">
+                <label
+                  v-for="code in statusCodeOptions"
+                  :key="code"
+                  class="flex items-center gap-1.5 text-sm cursor-pointer"
+                  style="color: var(--text)"
+                >
+                  <input
+                    type="checkbox"
+                    class="rounded"
+                    :checked="acceptedStatusCodes.includes(code)"
+                    @change="toggleStatusCode(code)"
+                  />
+                  {{ code }}
+                </label>
+              </div>
+              <p class="text-xs mt-1" style="color: var(--text-muted)">
+                A response outside this set counts as down, regardless of body content.
+              </p>
+            </div>
+
+            <div>
+              <Label for="maxResponseTimeMs">Request timeout</Label>
+              <div class="flex items-center gap-2 mt-1">
+                <Input
+                  id="maxResponseTimeMs"
+                  v-model="maxResponseTimeMsInput"
+                  type="number"
+                  min="1"
+                  class="w-40"
+                  required
+                />
+                <span class="text-sm" style="color: var(--text-muted)">ms</span>
+              </div>
+              <p class="text-xs mt-1" style="color: var(--text-muted)">
+                Abort and fail the check if no response arrives within this window.
+              </p>
+            </div>
           </div>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Fail the check if response takes longer than this, regardless of status code.
-          </p>
-        </div>
+        </details>
 
         <div>
           <Label for="interval">Check interval</Label>
