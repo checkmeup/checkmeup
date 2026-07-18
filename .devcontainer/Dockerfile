@@ -1,6 +1,6 @@
 FROM debian:stable-slim
 
-ARG GO_VERSION=1.25.11
+ARG GO_VERSION=1.25.12
 ARG GOLANGCI_LINT_VERSION=v2.12.2
 
 # System packages + Go (multi-arch)
@@ -13,8 +13,8 @@ RUN apt-get update \
        zsh=5.9-8+b23 \
        unzip=6.0-29 \
        ca-certificates=20250419 \
-       jq \
-       sudo \
+       jq=1.7.1-6+deb13u2 \
+       sudo=1.9.16p2-3+deb13u2 \
     && install -m 0755 -d /etc/apt/keyrings \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
     && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
@@ -22,8 +22,8 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/docker.list \
     && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends \
-       nodejs=24.16.0-1nodesource1 gh ruby-full build-essential ruby-dev \
-       docker-ce-cli docker-buildx-plugin pipx \
+       nodejs=24.16.0-1nodesource1 gh=2.46.0-3 ruby-full=1:3.3 build-essential=12.12 ruby-dev=1:3.3+b1 \
+       docker-ce-cli=5:29.6.1-1~debian.12~bookworm docker-buildx-plugin=0.35.0-1~debian.12~bookworm pipx=1.7.1-1 \
     && GOARCH=$(dpkg --print-architecture) \
     && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C /usr/local -xz \
     && apt-get clean \
