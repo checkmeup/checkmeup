@@ -17,7 +17,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'ssl-certificate-expired-story',
     slug: 'ssl-certificate-expired-story',
-    title: 'The 2 AM SSL Cert That Cost Us a Client',
+    title: 'The 3 AM SSL Cert That Cost Us a Client',
     date: 'July 24, 2026',
     readTime: '5 min read',
     excerpt:
