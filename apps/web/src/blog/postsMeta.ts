@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'ssl-certificate-expired-story',
+    slug: 'ssl-certificate-expired-story',
+    title: 'The 2 AM SSL Cert That Cost Us a Client',
+    date: 'July 24, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "A red NET::ERR_CERT_DATE_INVALID screen, six hours of bounced checkout traffic, and a client who found out from their own customers before we did. The renewal cron job had been silently failing for two months — here's why that failure is invisible until the exact second it isn't, and what actually catches it.",
+  },
+  {
     file: 'v1-13-release-notes',
     slug: 'v1-13-release-notes',
     title: 'v1.13: New Homepage, New License',
