@@ -64,7 +64,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 
 Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, hours logging, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`.
 
-**Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log (`Date | Day | Epic/Story | Hours`). When asked to log/update hours for a day, check `git log --since/--until` for that day's commits (exclude stash artifacts — `git log --all` surfaces `refs/stash` entries as fake commits titled "On <branch>:"/"index on <branch>:"/"untracked files on <branch>:"), group related commits into one line per logical task, and estimate effort from diff size and complexity — minimum 1h per task/line, combine small related commits rather than one line per commit. Non-commit work in the same session (launch/marketing copy, doc corrections, etc.) gets its own line too. Roll the new daily total into that month's `docs/reports/YYYY-MM.md` Notes section.
+**Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log; [`docs/reports/`](docs/reports/) holds monthly rollups. Use the `log-hours` and `monthly-report` skills for these — they already encode the reconstruction rules (git-history grouping, stash-artifact exclusion, whole-hours-only).
 
 ---
 
@@ -83,39 +83,7 @@ Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR 
 
 ## Code quality (Codacy)
 
-CI uploads coverage to Codacy after every push. `CODACY_API_TOKEN` (account-level) is in `apps/api/.env`.
-
-**Fetch current issues before starting a fix session:**
-
-```bash
-source apps/api/.env
-curl -s -X POST \
-  -H "api-token: $CODACY_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"filters":{"categories":[],"levels":[],"languages":[]}}' \
-  "https://app.codacy.com/api/v3/analysis/organizations/gh/checkmeup/repositories/checkmeup/issues/search?limit=100" \
-  | python3 -c "
-import json, sys
-issues = json.load(sys.stdin)['data']
-priority = [i for i in issues if i['patternInfo']['level'] in ('Error','High','Warning')]
-for i in sorted(priority, key=lambda x: x['patternInfo']['level']):
-    print(f\"[{i['toolInfo']['name']}][{i['patternInfo']['level']}] {i['filePath']}:{i['lineNumber']}: {i['message'][:100]}\")
-"
-```
-
-**Verify a fix locally before pushing**, rather than round-tripping through CI: `.codacy/cli.sh analyze <path>` runs the same engines (incl. Opengrep) CI does. It needs a UTF-8 locale forced or Opengrep's config loader crashes decoding a non-ASCII byte in this environment's default locale — `LC_ALL=C.UTF-8 LANG=C.UTF-8 .codacy/cli.sh analyze <path>`.
-
-**Triage guide:**
-
-- **TSQLLint** — always ignore, SQL Server rules applied to PostgreSQL migrations
-- **Opengrep cookies in `*_test.go`** — ignore, synthetic request cookies in tests intentionally lack HttpOnly/Secure
-- **Trivy on `go.mod`** — real; upgrade the flagged dependency or pin a patched version
-- **Opengrep/ESLint in production code** — investigate before dismissing. Note: Codacy's ESLint (with `@typescript-eslint`, type-aware rules) is **stricter than and different from** this repo's local `bun run lint` (oxlint) — oxlint passing locally does not guarantee Codacy's ESLint pass. Rules seen catching things oxlint doesn't, or getting them wrong: `security/detect-object-injection` (any `obj[variable]` bracket access, even when the variable is statically known-safe — a closed union's own keys, never external input); `@typescript-eslint/no-redundant-type-constituents` (has fired on a plain `SomeInterface | undefined` param type, likely because a cross-module `@/` path-aliased type import doesn't resolve in Codacy's isolated lint environment and silently degrades to `any`; fix by narrowing the param to a minimal structural type declared inline instead of importing the interface, if only 1-2 fields are actually used); `@typescript-eslint/no-unnecessary-condition` (has fired on a `Partial<Record<K, V>>`-typed dictionary lookup's `if (!value)` guard, claiming the value is "always falsy" — Codacy's isolated environment isn't resolving the `Partial<...>` cast the same way this project's own `tsc` does. **When a type-aware rule's verdict is disputed, verify by running `tsc --strict` directly on a minimal repro of the exact expression** — if `tsc` genuinely errors without the guard (e.g. "Cannot invoke an object which is possibly 'undefined'"), that's a confirmed Codacy-environment false positive, not a real issue; suppress with `// eslint-disable-next-line <rule-id>` plus the verification rationale rather than contorting the code further to satisfy a tool that's demonstrably wrong)
-- **CodeQL/Codacy line-number findings** — always fetch the finding against the **exact commit SHA** it was analyzed at (`git show <sha>:<path> | sed -n '<n>p'`, or the raw GitHub blob URL) before diagnosing. Don't diagnose from memory of "what's around that line" from an earlier edit — line numbers shift, and guessing wrong here means fixing the wrong code and re-triggering CI for nothing (happened twice in a row on one PR before switching to this check).
-- **Bandit subprocess findings (B603/B404) on `.claude/skills/**/*.py`** — usually fine if the script only ever invokes a literal argv list (never `shell=True`, no externally-supplied input); suppress with `# nosec <code>` **on the exact flagged line**, not a comment above it, plus a one-line rationale
-- **Opengrep `open-redirect` (or other Semgrep-rule) false positives on Go code** — e.g. an `http.Redirect` whose target is provably confined to a fixed, config-derived host with only the path/query copied from the request (never the scheme/host) isn't a real open redirect; suppress with `// nosemgrep: <rule-id>` **trailing on the exact flagged line** — same-line only, a comment on the line *above* is silently ignored (unlike Bandit's `# nosec`, which Python tooling accepts either way) — plus a one-line rationale
-- **Prospector docstring D212/D213 on `.py` files** — these two rules are mutually exclusive (one wants the summary on line 1, the other on line 2); don't chase them back and forth — use a single-line module docstring instead, which sidesteps the multi-line-summary rule pair entirely
-- **Lizard/Prospector complexity on `.py` files** — same threshold philosophy as Go handlers; split into small single-purpose functions rather than suppressing
+CI uploads coverage to Codacy after every push (`CODACY_API_TOKEN`, account-level, in `apps/api/.env`). Use the `codacy-triage` skill to fetch and triage the current issue backlog — don't hand-roll the fetch/triage steps inline, the skill already encodes this repo's known-noise rules and keeps them current.
 
 ---
 
