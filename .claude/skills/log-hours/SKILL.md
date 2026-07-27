@@ -8,9 +8,11 @@ description: Log hours worked for a day into docs/hours.md and roll the new tota
 Reconstructs a day's effort from git history rather than asked-for
 estimates, per CLAUDE.md's hours-logging convention.
 
-A `PostToolUse` hook (`.claude/hooks/remind_log_hours.py`) fires after
-every `gh pr create` and feeds back a reminder to run this skill — hours
-get logged each time a PR is created, not just when asked.
+A `PreToolUse` hook (`.claude/hooks/require_log_hours.py`) blocks
+`gh pr create` until `docs/hours.md` has been touched by a commit on the
+current branch — hours ship in the *same* PR as the work, not a
+follow-up `docs/hours-*` PR. Run this skill and commit the result on the
+current branch before creating the PR, not after.
 
 ## Steps
 
@@ -31,10 +33,10 @@ those are `refs/stash` artifacts, not real commits.
 **3. Group commits into logical tasks, not one line per commit.** Small
 related commits (a fix-up, a lint pass, a follow-up typo fix on the same
 feature) collapse into one line. Estimate effort from diff size and
-complexity — minimum 1h per task/line, **whole numbers only** (no
-"1.5 h" — round each line to the nearest hour; if that makes the day
-feel off, redistribute across that day's other lines rather than
-introducing a decimal on any single row).
+complexity — **quarter-hour increments** (0.25/0.5/0.75/1/1.25 h, etc.),
+minimum 0.25 h per task/line. Round each line to the nearest 15 minutes;
+don't stack unrelated small tasks into one inflated line just to avoid a
+short one — a genuinely 15-minute fix gets its own 0.25 h row.
 
 **4. Include non-commit work from the same session** if mentioned in
 conversation — copywriting, launch/marketing text, doc corrections made
@@ -49,9 +51,10 @@ row format:
 | YYYY-MM-DD | Mon | <task description, matching commit's own wording style> | N h   |
 ```
 
-Reference `EP-XX`/`US-XXXX` in the description where the work maps to a
-tracked story; otherwise describe the work directly (e.g. "Codacy
-Stylelint fixes (style.css)").
+`N` is a quarter-hour value — `1 h`, `1.25 h`, `1.5 h`, `1.75 h`, `2 h`,
+etc., never anything finer than 0.25. Reference `EP-XX`/`US-XXXX` in the
+description where the work maps to a tracked story; otherwise describe
+the work directly (e.g. "Codacy Stylelint fixes (style.css)").
 
 **6. Roll the day's total into `docs/reports/YYYY-MM.md`'s `## Notes`
 section** — update both the month's total and the cumulative
@@ -64,10 +67,10 @@ since-project-start total:
 ```
 
 Recompute both totals from `docs/hours.md` rather than just adding —
-cheapest way to catch a prior arithmetic slip. Unlike the per-row Hours
-column, these rolled-up totals and the average-per-day figure are
-derived arithmetic and may come out as a decimal (e.g. "9.55 h/day") —
-that's expected, not a violation of the whole-numbers-only rule above.
+cheapest way to catch a prior arithmetic slip. The rolled-up totals and
+the average-per-day figure are derived arithmetic and can land on any
+decimal (e.g. "9.55 h/day"), unlike the per-row Hours column, which
+stays on quarter-hour steps.
 
 ## Notes
 

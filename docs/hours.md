@@ -127,3 +127,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-27 | Mon | Codacy pydocstyle fix on remind_log_hours.py, resolving remaining PR #114 CI failure | 1 h   |
 | 2026-07-27 | Mon | Architecture review: ran org-id-audit/rate-limit-audit/overload-audit/architecture-guardrails, read docs/knowledge/ snapshots, investigated status_public.go and DB pool config, wrote up recommendations | 2 h   |
 | 2026-07-27 | Mon | Fixed overload-audit's stale httprate.LimitBy regex + shipped EP-38 (status_public.go split by responsibility, 824 -> 481 lines) (PR #115) | 2 h   |
+| 2026-07-27 | Mon | Hours-workflow rule changes: hours now ship in the same PR (require_log_hours.py PreToolUse guard) + quarter-hour granularity, updated log-hours skill/CLAUDE.md/memory | 0.75 h |

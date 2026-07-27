@@ -64,7 +64,7 @@ Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs
 
 Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, hours logging, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code, and a `secrets-scan` gate before every `git push` — wired up in [`.claude/settings.json`](.claude/settings.json).
 
-**Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log; [`docs/reports/`](docs/reports/) holds monthly rollups. Use the `log-hours` and `monthly-report` skills for these — they already encode the reconstruction rules (git-history grouping, stash-artifact exclusion, whole-hours-only).
+**Hours:** [`docs/hours.md`](docs/hours.md) is the raw daily log; [`docs/reports/`](docs/reports/) holds monthly rollups. Use the `log-hours` and `monthly-report` skills for these — they already encode the reconstruction rules (git-history grouping, stash-artifact exclusion, quarter-hour granularity). A `PreToolUse` hook blocks `gh pr create` until hours are logged and committed on the current branch, so they ship in the same PR as the work.
 
 ---
 
