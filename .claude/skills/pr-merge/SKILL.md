@@ -1,6 +1,7 @@
 ---
 name: pr-merge
 description: Merge an open GitHub PR into main once CI passes, following this repo's rebase-only fast-forward convention (no gh pr merge, no squash, no merge commits). Use when asked to "merge PR #N", "merge this PR", or "merge it once CI passes".
+disable-model-invocation: true
 ---
 
 # PR merge

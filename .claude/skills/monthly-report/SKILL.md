@@ -46,7 +46,7 @@ total; if you're writing this section standalone, recompute both numbers
 from `docs/hours.md` rather than incrementing by feel:
 
 ```bash
-grep -c '^| 2026-07' docs/hours.md   # days logged this month
+grep -c '^| <YYYY-MM>' docs/hours.md   # days logged this month, e.g. '^| 2026-07'
 ```
 
 **4. Don't re-derive from git blindly** — cross-check against

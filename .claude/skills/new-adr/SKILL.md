@@ -6,7 +6,7 @@ description: Scaffold a new Architecture Decision Record under docs/decisions/, 
 # New ADR
 
 Records a decision under `docs/decisions/`, following the format the
-existing 35 ADRs actually use — **not** `_template.md`'s YAML-frontmatter
+existing ADRs actually use — **not** `_template.md`'s YAML-frontmatter
 shape, which no real ADR in this repo follows. Match the files, not the
 template.
 
