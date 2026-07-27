@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-33-to-v1-36-uptime-form-restyle',
+    slug: 'v1-33-to-v1-36-uptime-form-restyle',
+    title: 'v1.33–v1.36: The Design Reaches the Uptime Form',
+    date: 'July 27, 2026',
+    readTime: '3 min read',
+    excerpt:
+      'Four versions since the last release notes, and the quietest stretch yet: the uptime monitor form catches up to the Claude Design rollout, two new posts landed on the blog, and a chunk of time went into how I work on this codebase rather than what it does for you.',
+  },
+  {
     file: 'port-tcp-monitoring-guide',
     slug: 'port-tcp-monitoring-guide',
     title: 'Port (TCP) Monitoring: Beyond HTTP Checks',
