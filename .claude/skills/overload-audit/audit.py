@@ -123,7 +123,11 @@ def check_pruning_wired(findings):
 
 def check_status_page_rate_limit(findings):
     text = (API / "internal" / "server" / "server.go").read_text()
-    routes = re.findall(r'r\.With\(httprate\.LimitByIP\((\d+), time\.Minute\)\)\.Get\("(/status/[^"]*)"', text)
+    # httprate.LimitByIP is deprecated (see server.go's clientIPKey comment) —
+    # current code uses httprate.LimitBy(n, time.Minute, clientIPKey).
+    routes = re.findall(
+        r'r\.With\(httprate\.LimitBy\((\d+), time\.Minute, clientIPKey\)\)\.Get\("(/status/[^"]*)"', text
+    )
     if len(routes) < 3:
         findings.append(f"server.go: expected 3 IP-rate-limited /status/* routes (page, badge, monitor badge), found {len(routes)}")
     for limit, path in routes:
@@ -133,8 +137,8 @@ def check_status_page_rate_limit(findings):
 
 def check_blanket_org_limit(findings):
     text = (API / "internal" / "server" / "server.go").read_text()
-    if "httprate.Limit(300, time.Minute, httprate.WithKeyFuncs(authOrgKey))" not in text:
-        findings.append("server.go: no blanket 300/min-per-org httprate.Limit(...) found on the RequireAuth group")
+    if "httprate.LimitBy(300, time.Minute, authOrgKey)" not in text:
+        findings.append("server.go: no blanket 300/min-per-org httprate.LimitBy(...) found on the RequireAuth group")
 
 
 def check_body_limit(findings):
