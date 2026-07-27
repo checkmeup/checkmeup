@@ -33,6 +33,10 @@ apps/api/tmp/
 # Test coverage
 coverage/
 
+# Python (skill/hook scripts)
+__pycache__/
+*.pyc
+
 # Turborepo
 .turbo/
 

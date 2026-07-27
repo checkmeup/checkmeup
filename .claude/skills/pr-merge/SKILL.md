@@ -1,7 +1,6 @@
 ---
 name: pr-merge
 description: Merge an open GitHub PR into main once CI passes, following this repo's rebase-only fast-forward convention (no gh pr merge, no squash, no merge commits). Use when asked to "merge PR #N", "merge this PR", or "merge it once CI passes".
-disable-model-invocation: true
 ---
 
 # PR merge
@@ -14,6 +13,15 @@ disallowed so `main`'s log stays a straight line. See CLAUDE.md's
 
 Never commit or merge directly onto a local `main` that hasn't been
 pushed — always end by pushing the fast-forwarded `main` to `origin`.
+
+Three `PreToolUse` hooks now enforce parts of this deterministically:
+`block_main_commit.py` blocks any `git commit` while on local `main`,
+and `pre_push_guard.py` blocks a bare `--force` (use `--force-with-lease`,
+per step 3 below) and any force-push targeting `main`, and runs
+`secrets-scan` before every push. None of that changes this skill's
+steps — they already follow those rules — but a push failing here with a
+hook error rather than a git error is expected, not a sign something else
+broke.
 
 ## Steps
 

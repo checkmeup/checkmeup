@@ -54,7 +54,8 @@ cd apps/api && sqlc generate
 ```
 
 This writes generated code into `apps/api/internal/db/` — never hand-edit
-that directory.
+that directory. A `PreToolUse` hook (`.claude/hooks/protect-generated-db.sh`)
+blocks Edit/Write attempts there for Claude too.
 
 **5. Multi-tenancy checklist** — before wiring the new query into a
 handler:

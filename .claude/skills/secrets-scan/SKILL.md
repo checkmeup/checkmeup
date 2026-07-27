@@ -10,6 +10,13 @@ actual `.env` files — for two things: filenames that should never be
 committed, and credential-shaped strings that got typed or pasted into
 tracked content.
 
+A `PreToolUse` hook (`.claude/hooks/pre_push_guard.py`) already runs
+`scan.py tree` before every `git push` and blocks the push on a hit, so
+the "good pre-flight before pr-merge" step below now happens automatically
+rather than depending on remembering to run it. This skill is still useful
+on demand: `staged` mode (the hook only covers `tree`), or a full audit
+outside of a push.
+
 ## Steps
 
 **1. Before committing/pushing, scan staged changes:**

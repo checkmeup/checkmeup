@@ -8,6 +8,10 @@ description: Log hours worked for a day into docs/hours.md and roll the new tota
 Reconstructs a day's effort from git history rather than asked-for
 estimates, per CLAUDE.md's hours-logging convention.
 
+A `PostToolUse` hook (`.claude/hooks/remind_log_hours.py`) fires after
+every `gh pr create` and feeds back a reminder to run this skill — hours
+get logged each time a PR is created, not just when asked.
+
 ## Steps
 
 **1. Resolve the date.** Convert any relative reference ("today",
