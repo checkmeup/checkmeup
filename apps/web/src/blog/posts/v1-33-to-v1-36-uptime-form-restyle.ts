@@ -11,7 +11,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "The homepage, dashboard, and status pages got the \"Claude Design\" treatment a few releases back; the uptime monitor's create/edit form hadn't caught up yet. It has now. Accepted status codes used to be a stack of checkboxes — one row per code — and now they're toggleable pill chips, the same accent/wash/border treatment the monitor table's own type filters already use, so nothing about the palette is new, just more consistent. The advanced check settings section swapped a native <details>/<summary> disclosure (inconsistent triangle glyph, no animation, looked out of place next to everything else) for a custom one with a rotating chevron and a raised card background that actually matches the rest of the form.",
+    text: "The homepage, dashboard, and status pages got the \"Claude Design\" treatment a few releases back; the uptime monitor's create/edit form hadn't caught up yet. It has now. Accepted status codes used to be a stack of checkboxes — one row per code — and now they're toggleable pill chips, the same accent/wash/border treatment the monitor table's own type filters already use, so nothing about the palette is new, just more consistent. The advanced check settings section swapped the browser's native disclosure widget (inconsistent triangle glyph, no animation, looked out of place next to everything else) for a custom one with a rotating chevron and a raised card background that actually matches the rest of the form.",
   },
   {
     type: 'p',
