@@ -119,3 +119,8 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-18 | Sat | EP-37 US-3703: server- and client-side validation bounds           | 1 h   |
 | 2026-07-18 | Sat | v1.32 release notes blog post                                     | 1 h   |
 | 2026-07-18 | Sat | Docs/FAQ/knowledge-doc drift audit and fixes for EP-37 (PR #97) + security/architecture review | 2 h   |
+| 2026-07-27 | Mon | Port (TCP) monitoring SEO guide blog post (PR #111)               | 1 h   |
+| 2026-07-27 | Mon | Claude Code skills audit against Anthropic's best-practices/skill-authoring docs — reviewed all 16 .claude/skills/ | 2 h   |
+| 2026-07-27 | Mon | Skills audit fixes: rewrote release-notes for current blog architecture, pr-merge safety gate, new monitor-guide-post skill (PR #112) | 1 h   |
+| 2026-07-27 | Mon | Claude Code hooks: PreToolUse/PostToolUse guards for CLAUDE.md's highest-stakes rules (make deploy/kamal/docker-deploy, commit-on-main, force-push-main, generated-code edits, secrets-scan-before-push, hours-log reminder) + CLAUDE.md/skills doc updates (PR #114) | 3 h   |
+| 2026-07-27 | Mon | CLAUDE.md best-practices re-review: moved make-deploy incident narrative to docs/incidents/, shortened both hook-backed Don't entries, fixed a dangling EP-10 reference | 1 h   |
