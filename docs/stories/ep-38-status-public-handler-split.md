@@ -1,7 +1,7 @@
 ---
 title: "EP-38: Split status_public.go by responsibility"
 type: story
-status: planned            # planned | in-progress | shipped | cancelled
+status: shipped            # planned | in-progress | shipped | cancelled
 updated: 2026-07-18
 tags: [architecture, tech-debt]
 ---
@@ -19,6 +19,14 @@ earlier and was split by monitor type into `worker_cron.go`,
 `worker_uptime.go`, `worker_ssl.go`, etc. in the same package — this
 epic applies the same pattern here, same package, no behavior change.
 
+**Shipped 2026-07-27.** US-3801–US-3804 all landed exactly as scoped —
+pure code move, no signature or behavior changes. `status_public.go`
+went from 824 to 481 lines; the three new files (`status_public_badges.go`,
+`status_public_format.go`, `status_public_status.go`) are 69/137/150 lines
+respectively. `go build`, `go vet`, `golangci-lint`, and the full Go test
+suite (including every existing `status_public_test.go` case) pass
+unchanged. `architecture-guardrails` now reports nothing over threshold.
+
 ---
 
 ### US-3801: Extract SVG badge rendering into its own file
@@ -31,12 +39,12 @@ unrelated request-handling code.
 
 **Acceptance criteria:**
 
-- [ ] `renderBadgeSVG`, `badgeTextWidth`, `writeBadge`, and
+- [x] `renderBadgeSVG`, `badgeTextWidth`, `writeBadge`, and
       `badgeStatusWord` move to `status_public_badges.go` in the same
       package
-- [ ] `ServePageBadge` and `ServeMonitorBadge` (the HTTP handlers) stay in
+- [x] `ServePageBadge` and `ServeMonitorBadge` (the HTTP handlers) stay in
       `status_public.go` and call into the moved functions unchanged
-- [ ] `go build ./...` and existing tests in
+- [x] `go build ./...` and existing tests in
       `status_public_test.go` (or equivalent) pass unchanged
 
 ---
@@ -52,12 +60,12 @@ independently of request/response plumbing.
 
 **Acceptance criteria:**
 
-- [ ] `computeOverallStatus`, `applySeverity`, `build90DayBar`,
+- [x] `computeOverallStatus`, `applySeverity`, `build90DayBar`,
       `buildRow`, and the `fill*Row` family (`fillUptimeRow`,
       `fillCronRow`, `fillSSLRow`, `fillDomainRow`, `fillPortRow`) move
       to `status_public_status.go` in the same package
-- [ ] No behavior change — same function signatures, same call sites
-- [ ] `go build ./...` and existing tests pass unchanged
+- [x] No behavior change — same function signatures, same call sites
+- [x] `go build ./...` and existing tests pass unchanged
 
 ---
 
@@ -72,13 +80,13 @@ the handler.
 
 **Acceptance criteria:**
 
-- [ ] `relativeTime`, `formatDuration`, `initials`,
+- [x] `relativeTime`, `formatDuration`, `initials`,
       `incidentSeverityLabel`, `incidentSeverityColor`,
       `incidentStatusLabel`, `expiryStatusDisplay`, `solidColorBar`, and
       `monitorStatusDisplay` move to `status_public_format.go` in the
       same package
-- [ ] No behavior change — same function signatures, same call sites
-- [ ] `go build ./...` and existing tests pass unchanged
+- [x] No behavior change — same function signatures, same call sites
+- [x] `go build ./...` and existing tests pass unchanged
 
 ---
 
@@ -92,10 +100,10 @@ for, not just relocates code without checking.
 
 **Acceptance criteria:**
 
-- [ ] `python3 .claude/skills/architecture-guardrails/audit.py` reports
+- [x] `python3 .claude/skills/architecture-guardrails/audit.py` reports
       no Go handler/worker file over the 700-line threshold
-- [ ] `make test` passes (Go + Vue suites, lint)
-- [ ] Remaining `status_public.go` contains only HTTP handlers
+- [x] `make test` passes (Go + Vue suites, lint)
+- [x] Remaining `status_public.go` contains only HTTP handlers
       (`ServeHTTP`, `ServePageBadge`, `ServeMonitorBadge`,
       `NewStatusPublicHandler`, `loadRows`, `loadActiveIncidents`,
       `loadResolvedIncidents`, `toPublicIncidentRow`,
