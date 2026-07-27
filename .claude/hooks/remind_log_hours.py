@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""PostToolUse reminder for Bash — makes "log hours each time a PR is
-created" a standing instruction rather than something depending on being
-asked. Checks each command segment for a real `gh pr create` invocation
-(segment- and quote-aware, see _shell_utils.py) so an unrelated `gh pr
-view`/`gh pr checks` call, or a mention of "gh pr create" inside a quoted
-string, never triggers this — previously gated only by the settings.json
-`if` frontmatter field, which fails open on commands it can't parse and
-fired on every Bash call regardless of content.
-"""
+"""PostToolUse reminder for Bash — blocks after a real `gh pr create` invocation."""
+# Makes "log hours each time a PR is created" a standing instruction
+# rather than something depending on being asked. Checks each command
+# segment for a real `gh pr create` invocation (segment- and quote-aware,
+# see _shell_utils.py) so an unrelated `gh pr view`/`gh pr checks` call,
+# or a mention of "gh pr create" inside a quoted string, never triggers
+# this — previously gated only by the settings.json `if` frontmatter
+# field, which fails open on commands it can't parse and fired on every
+# Bash call regardless of content.
 import json
 import os
 import re
