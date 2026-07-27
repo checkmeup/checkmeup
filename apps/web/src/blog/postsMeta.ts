@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'port-tcp-monitoring-guide',
+    slug: 'port-tcp-monitoring-guide',
+    title: 'Port (TCP) Monitoring: Beyond HTTP Checks',
+    date: 'July 27, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "A database or mail server has no URL to poll, so an outage there is invisible to an uptime check. Here's how port (TCP) monitoring works, why a successful connection isn't proof the service behind it is healthy, and how to use it to catch a port that's exposed when it shouldn't be.",
+  },
+  {
     file: 'ssl-certificate-expired-story',
     slug: 'ssl-certificate-expired-story',
     title: 'The 3 AM SSL Cert That Cost Us a Client',
