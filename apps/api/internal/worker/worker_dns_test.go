@@ -374,4 +374,34 @@ func TestBuildDNSDownAlert(t *testing.T) {
 			t.Fatalf("want both old and new values in the reason, got %q", msg.Webhook.Reason)
 		}
 	})
+
+	t.Run("HTML in a DNS response is escaped in Telegram/email, not injected raw", func(t *testing.T) {
+		// resolvedValue and a baseline-captured ExpectedValue both come from
+		// the monitored domain's own DNS records — not from anything this
+		// org typed — so whoever controls that DNS zone could otherwise
+		// inject markup into another org's alert email/Telegram message.
+		m := db.DnsMonitor{Name: "Example", Hostname: "example.com", RecordType: db.DnsRecordTypeTXT,
+			ExpectedValue: pgtype.Text{String: `<img src=x onerror=alert(1)>`, Valid: true}}
+		msg := buildDNSDownAlert(m, `<script>evil()</script>`, "")
+
+		for _, raw := range []string{`<script>evil()</script>`, `<img src=x onerror=alert(1)>`} {
+			if strings.Contains(msg.Telegram, raw) {
+				t.Fatalf("want %q escaped out of the Telegram message, got %q", raw, msg.Telegram)
+			}
+			if strings.Contains(msg.EmailHTML, raw) {
+				t.Fatalf("want %q escaped out of EmailHTML, got %q", raw, msg.EmailHTML)
+			}
+		}
+		if !strings.Contains(msg.Telegram, "&lt;script&gt;") {
+			t.Fatalf("want the escaped form present in Telegram, got %q", msg.Telegram)
+		}
+		if !strings.Contains(msg.EmailHTML, "&lt;script&gt;") {
+			t.Fatalf("want the escaped form present in EmailHTML, got %q", msg.EmailHTML)
+		}
+		// Webhook is JSON (safe by construction) and Slack/SMS aren't HTML —
+		// those keep the raw value rather than showing literal "&lt;".
+		if !strings.Contains(msg.Webhook.Reason, `<script>evil()</script>`) {
+			t.Fatalf("want the raw value preserved in the JSON webhook reason, got %q", msg.Webhook.Reason)
+		}
+	})
 }

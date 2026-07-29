@@ -19,15 +19,23 @@ CHECK_LOOP_FILES = [
     "worker_ssl.go",
     "worker_domain.go",
     "worker_port.go",
+    "worker_dns.go",
 ]
 
 INCIDENT_QUERIES = {
     "queries/monitors.sql": "cron_incidents",
     "queries/uptime.sql": "uptime_incidents",
     "queries/port.sql": "port_incidents",
+    "queries/dns.sql": "dns_incidents",
 }
 
-PRUNE_QUERIES = ["DeleteOldCronPings", "DeleteOldUptimeChecks", "DeleteOldPortChecks", "DeleteOldStatusPageIncidents"]
+PRUNE_QUERIES = [
+    "DeleteOldCronPings",
+    "DeleteOldUptimeChecks",
+    "DeleteOldPortChecks",
+    "DeleteOldDNSChecks",
+    "DeleteOldStatusPageIncidents",
+]
 
 STATUS_PAGE_INCIDENT_QUERIES = ["ListStatusPageIncidents", "ListActiveStatusPageIncidentsForPage"]
 

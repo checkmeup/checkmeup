@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"net"
 	"sort"
 	"strings"
@@ -114,12 +115,13 @@ func handleDNSUp(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus d
 
 func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) AlertMessage {
 	hostRecord := fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType)
+	safeValue := html.EscapeString(resolvedValue)
 	return AlertMessage{
 		Telegram: fmt.Sprintf("✅ <b>%s</b> DNS record is back to normal\n\nHostname: <code>%s</code>\nValue: <code>%s</code>",
-			m.Name, hostRecord, resolvedValue),
+			m.Name, hostRecord, safeValue),
 		EmailSubject: fmt.Sprintf("%s recovered", m.Name),
 		EmailHTML: fmt.Sprintf("<p>✅ <b>%s</b> DNS record is back to normal</p><p>Hostname: <code>%s</code><br>Value: <code>%s</code></p>",
-			m.Name, hostRecord, resolvedValue),
+			m.Name, hostRecord, safeValue),
 		Webhook: &webhook.Event{
 			EventType:        "recovery",
 			MonitorName:      m.Name,
@@ -184,16 +186,27 @@ func alertDNSIncident(ctx context.Context, n Notifiers, m db.DnsMonitor, inc db.
 // error (NXDOMAIN/SERVFAIL/timeout) reads as "can't resolve", while an empty
 // failureReason means the lookup succeeded but didn't match — a changed/
 // hijacked record, phrased as old value → new value (US-3902/US-3903).
+//
+// resolvedValue and a baseline-captured expectedValue both originate from
+// the monitored domain's own DNS records — not from anything the alerted
+// org typed — so they're untrusted from checkmeup's perspective even
+// though nothing here is "user input" in the usual sense. Whoever controls
+// that DNS zone could otherwise inject markup into another org's alert
+// email/Telegram message; html.EscapeString neutralizes that before either
+// value reaches Telegram's HTML parse mode or EmailHTML. Webhook/Slack/SMS
+// use the raw values — Webhook is JSON (safe by construction), Slack/SMS
+// aren't HTML, and escaping them would just show literal "&amp;" etc.
 func buildDNSDownAlert(m db.DnsMonitor, resolvedValue, failureReason string) AlertMessage {
 	hostRecord := fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType)
 	if failureReason != "" {
 		subject := fmt.Sprintf("%s: DNS lookup failed", m.Name)
+		safeReason := html.EscapeString(failureReason)
 		return AlertMessage{
 			Telegram: fmt.Sprintf("🔴 <b>%s</b>: DNS lookup failed\n\nHostname: <code>%s</code>\nReason: %s",
-				m.Name, hostRecord, failureReason),
+				m.Name, hostRecord, safeReason),
 			EmailSubject: subject,
 			EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b>: DNS lookup failed</p><p>Hostname: <code>%s</code><br>Reason: %s</p>",
-				m.Name, hostRecord, failureReason),
+				m.Name, hostRecord, safeReason),
 			Webhook: &webhook.Event{
 				EventType:   "down",
 				MonitorName: m.Name,
@@ -211,13 +224,14 @@ func buildDNSDownAlert(m db.DnsMonitor, resolvedValue, failureReason string) Ale
 		oldValue = m.ExpectedValue.String
 	}
 	changeDesc := fmt.Sprintf("%s → %s", oldValue, resolvedValue)
+	safeChangeDesc := fmt.Sprintf("%s → %s", html.EscapeString(oldValue), html.EscapeString(resolvedValue))
 	subject := fmt.Sprintf("%s: DNS record changed", m.Name)
 	return AlertMessage{
 		Telegram: fmt.Sprintf("⚠️ <b>%s</b>: DNS record changed\n\nHostname: <code>%s</code>\n%s",
-			m.Name, hostRecord, changeDesc),
+			m.Name, hostRecord, safeChangeDesc),
 		EmailSubject: subject,
 		EmailHTML: fmt.Sprintf("<p>⚠️ <b>%s</b>: DNS record changed</p><p>Hostname: <code>%s</code><br>%s</p>",
-			m.Name, hostRecord, changeDesc),
+			m.Name, hostRecord, safeChangeDesc),
 		Webhook: &webhook.Event{
 			EventType:   "down",
 			MonitorName: m.Name,
