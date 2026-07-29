@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-40-status-page-grid-layout',
+    slug: 'v1-40-status-page-grid-layout',
+    title: 'v1.40: A Second Status Page Layout',
+    date: 'July 29, 2026',
+    readTime: '3 min read',
+    excerpt:
+      'A "grid" layout joins the original single-column status page: monitors two-per-row with active incidents and history moved into a sidebar, better suited to pages watching a lot of monitors. Pick it per page from the edit form — every existing page keeps the classic layout by default.',
+  },
+  {
     file: 'v1-37-to-v1-39-dns-monitoring',
     slug: 'v1-37-to-v1-39-dns-monitoring',
     title: 'v1.37–v1.39: DNS Record Monitoring',
