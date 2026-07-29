@@ -53,7 +53,7 @@ export const content: ContentBlock[] = [
     type: 'ul',
     items: [
       "Hours logging (an internal workflow thing, not a product feature — how I track my own time building this) now ships in the same PR as the work it's logging, instead of a follow-up docs PR, and rounds to the nearest 15 minutes instead of a whole hour.",
-      'A Codacy false positive on the blog: ESLint flagged literal HTML tag names mentioned in post prose (e.g. writing out `<script>`) as unsanitized markup. Fixed the trigger, not the check — the rule is still doing its job everywhere it should.',
+      'A Codacy false positive on the blog: ESLint flagged a post that named an HTML element in its own prose as unsanitized markup. Fixed the trigger, not the check — the rule is still doing its job everywhere it should.',
       'The DNS monitor sidebar link went missing from the initial release — caught within the hour and fixed same-day.',
     ],
   },
