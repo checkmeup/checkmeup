@@ -130,3 +130,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-27 | Mon | Hours-workflow rule changes: hours now ship in the same PR (require_log_hours.py PreToolUse guard) + quarter-hour granularity, updated log-hours skill/CLAUDE.md/memory | 0.75 h |
 | 2026-07-27 | Mon | v1.33-v1.36 combined release notes blog post (uptime form restyle, blog posts, workflow hardening) | 0.75 h |
 | 2026-07-27 | Mon | Fixed Codacy XSS false positive (PR #118) — literal HTML tag names in blog prose flagged by ESLint's no-mixed-html rule | 0.25 h |
+| 2026-07-29 | Wed | EP-39 epic/story scaffolding (US-3901–3905): DNS record monitoring, expected-value/baseline drift-detection modes, backlog + roadmap registration | 1.25 h |
