@@ -58,7 +58,8 @@ SELECT
     (SELECT COUNT(*) FROM uptime_monitors WHERE uptime_monitors.org_id = $1 AND uptime_monitors.status != 'paused')::int +
     (SELECT COUNT(*) FROM ssl_monitors WHERE ssl_monitors.org_id = $1 AND ssl_monitors.status != 'paused')::int +
     (SELECT COUNT(*) FROM domain_monitors WHERE domain_monitors.org_id = $1 AND domain_monitors.status != 'paused')::int +
-    (SELECT COUNT(*) FROM port_monitors WHERE port_monitors.org_id = $1 AND port_monitors.status != 'paused')::int AS total
+    (SELECT COUNT(*) FROM port_monitors WHERE port_monitors.org_id = $1 AND port_monitors.status != 'paused')::int +
+    (SELECT COUNT(*) FROM dns_monitors WHERE dns_monitors.org_id = $1 AND dns_monitors.status != 'paused')::int AS total
 `
 
 // Same shape as CountOrgMonitors, but excludes paused monitors — used to
@@ -89,7 +90,8 @@ SELECT
     (SELECT COUNT(*) FROM uptime_monitors WHERE uptime_monitors.org_id = $1)::int +
     (SELECT COUNT(*) FROM ssl_monitors WHERE ssl_monitors.org_id = $1)::int +
     (SELECT COUNT(*) FROM domain_monitors WHERE domain_monitors.org_id = $1)::int +
-    (SELECT COUNT(*) FROM port_monitors WHERE port_monitors.org_id = $1)::int AS total
+    (SELECT COUNT(*) FROM port_monitors WHERE port_monitors.org_id = $1)::int +
+    (SELECT COUNT(*) FROM dns_monitors WHERE dns_monitors.org_id = $1)::int AS total
 `
 
 func (q *Queries) CountOrgMonitors(ctx context.Context, orgID uuid.UUID) (int32, error) {
@@ -134,7 +136,8 @@ SELECT
         (SELECT COUNT(*) FROM uptime_monitors WHERE org_id = o.id)::int +
         (SELECT COUNT(*) FROM ssl_monitors WHERE org_id = o.id)::int +
         (SELECT COUNT(*) FROM domain_monitors WHERE org_id = o.id)::int +
-        (SELECT COUNT(*) FROM port_monitors WHERE org_id = o.id)::int
+        (SELECT COUNT(*) FROM port_monitors WHERE org_id = o.id)::int +
+        (SELECT COUNT(*) FROM dns_monitors WHERE org_id = o.id)::int
     ) AS monitor_count,
     (SELECT COUNT(*) FROM status_pages WHERE org_id = o.id)::int AS status_page_count,
     (SELECT COUNT(*) FROM notification_channels WHERE org_id = o.id)::int AS notification_channel_count,
@@ -198,6 +201,8 @@ UNION ALL
 SELECT domain_monitors.id, 'domain'::text, domain_monitors.created_at FROM domain_monitors WHERE domain_monitors.org_id = $1 AND domain_monitors.status != 'paused'
 UNION ALL
 SELECT port_monitors.id, 'port'::text, port_monitors.created_at FROM port_monitors WHERE port_monitors.org_id = $1 AND port_monitors.status != 'paused'
+UNION ALL
+SELECT dns_monitors.id, 'dns'::text, dns_monitors.created_at FROM dns_monitors WHERE dns_monitors.org_id = $1 AND dns_monitors.status != 'paused'
 ORDER BY created_at DESC
 `
 

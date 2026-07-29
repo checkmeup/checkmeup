@@ -549,3 +549,108 @@ describe('monitorsApi port', () => {
     expect(deleteMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/port/p1/')
   })
 })
+
+const dnsMonitor = {
+  id: 'd1',
+  name: 'Apex A record',
+  hostname: 'checkmeup.net',
+  recordType: 'A' as const,
+  expectedValue: '1.2.3.4',
+  baselineCaptured: false,
+  lastResolvedValue: '1.2.3.4',
+  intervalMins: 5,
+  status: 'up' as const,
+  alertsEnabled: true,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+  lastCheckedAt: '2026-06-22T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  uptime24h: 99.9,
+}
+
+const createDNSInput = {
+  name: 'Apex A record',
+  hostname: 'checkmeup.net',
+  recordType: 'A' as const,
+  expectedValue: '1.2.3.4',
+  intervalMins: 5,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+}
+
+const updateDNSInput = {
+  name: 'Apex A record',
+  hostname: 'checkmeup.net',
+  recordType: 'A' as const,
+  expectedValue: '1.2.3.4',
+  intervalMins: 5,
+  alertsEnabled: true,
+  maxAlertsPerIncident: 3,
+  alertAfterNFailures: 0,
+  channelIds: ['ch1'],
+}
+
+describe('monitorsApi dns', () => {
+  it('listDns fetches the dns monitor list', async () => {
+    getMock.mockResolvedValueOnce([dnsMonitor])
+
+    const result = await monitorsApi.listDns()
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/')
+    expect(result).toEqual([dnsMonitor])
+  })
+
+  it('getDns fetches a single dns monitor detail by id', async () => {
+    getMock.mockResolvedValueOnce(dnsMonitor)
+
+    const result = await monitorsApi.getDns('d1')
+
+    expect(getMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/d1/')
+    expect(result).toEqual(dnsMonitor)
+  })
+
+  it('createDns posts the input to create a dns monitor', async () => {
+    postMock.mockResolvedValueOnce(dnsMonitor)
+
+    const result = await monitorsApi.createDns(createDNSInput)
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/', createDNSInput)
+    expect(result).toEqual(dnsMonitor)
+  })
+
+  it('updateDns patches the input to update a dns monitor by id', async () => {
+    patchMock.mockResolvedValueOnce(dnsMonitor)
+
+    const result = await monitorsApi.updateDns('d1', updateDNSInput)
+
+    expect(patchMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/d1/', updateDNSInput)
+    expect(result).toEqual(dnsMonitor)
+  })
+
+  it('pauseDns posts to the pause endpoint with no body', async () => {
+    const paused = { ...dnsMonitor, status: 'paused' as const }
+    postMock.mockResolvedValueOnce(paused)
+
+    const result = await monitorsApi.pauseDns('d1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/d1/pause', {})
+    expect(result).toEqual(paused)
+  })
+
+  it('resumeDns posts to the resume endpoint with no body', async () => {
+    postMock.mockResolvedValueOnce(dnsMonitor)
+
+    const result = await monitorsApi.resumeDns('d1')
+
+    expect(postMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/d1/resume', {})
+    expect(result).toEqual(dnsMonitor)
+  })
+
+  it('deleteDns deletes a dns monitor by id', async () => {
+    deleteMock.mockResolvedValueOnce(undefined)
+
+    await monitorsApi.deleteDns('d1')
+
+    expect(deleteMock).toHaveBeenCalledExactlyOnceWith('/api/v1/monitors/dns/d1/')
+  })
+})

@@ -1,4 +1,4 @@
-export type MonitorType = 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
+export type MonitorType = 'cron' | 'uptime' | 'ssl' | 'domain' | 'port' | 'dns'
 
 export interface Row {
   key: string
@@ -18,6 +18,7 @@ export const typeLabel: Record<MonitorType, string> = {
   ssl: 'SSL',
   domain: 'Domain',
   port: 'Port',
+  dns: 'DNS',
 }
 
 export const detailRouteName: Record<MonitorType, string> = {
@@ -26,6 +27,7 @@ export const detailRouteName: Record<MonitorType, string> = {
   ssl: 'ssl-monitor-detail',
   domain: 'domain-monitor-detail',
   port: 'port-monitor-detail',
+  dns: 'dns-monitor-detail',
 }
 
 export const statusColors: Record<string, string> = {

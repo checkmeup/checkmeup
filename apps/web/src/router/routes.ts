@@ -215,6 +215,30 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/monitors/dns',
+    name: 'dns-monitors',
+    component: () => import('@/views/DNSMonitorListView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/monitors/dns/new',
+    name: 'dns-monitor-create',
+    component: () => import('@/views/DNSMonitorCreateView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/monitors/dns/:id',
+    name: 'dns-monitor-detail',
+    component: () => import('@/views/DNSMonitorDetailView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/monitors/dns/:id/edit',
+    name: 'dns-monitor-edit',
+    component: () => import('@/views/DNSMonitorEditView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/status-pages',
     name: 'status-pages',
     component: () => import('@/views/StatusPageListView.vue'),

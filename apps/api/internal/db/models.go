@@ -12,6 +12,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type DnsRecordType string
+
+const (
+	DnsRecordTypeA     DnsRecordType = "A"
+	DnsRecordTypeAAAA  DnsRecordType = "AAAA"
+	DnsRecordTypeCNAME DnsRecordType = "CNAME"
+	DnsRecordTypeMX    DnsRecordType = "MX"
+	DnsRecordTypeTXT   DnsRecordType = "TXT"
+	DnsRecordTypeNS    DnsRecordType = "NS"
+)
+
+func (e *DnsRecordType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DnsRecordType(s)
+	case string:
+		*e = DnsRecordType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DnsRecordType: %T", src)
+	}
+	return nil
+}
+
+type NullDnsRecordType struct {
+	DnsRecordType DnsRecordType `json:"dns_record_type"`
+	Valid         bool          `json:"valid"` // Valid is true if DnsRecordType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDnsRecordType) Scan(value interface{}) error {
+	if value == nil {
+		ns.DnsRecordType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DnsRecordType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDnsRecordType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DnsRecordType), nil
+}
+
 type DomainMonitorStatus string
 
 const (
@@ -494,6 +540,45 @@ type CronPing struct {
 	ReceivedAt pgtype.Timestamptz `json:"received_at"`
 	SourceIp   string             `json:"source_ip"`
 	Metadata   []byte             `json:"metadata"`
+}
+
+type DnsCheck struct {
+	ID             uuid.UUID          `json:"id"`
+	MonitorID      uuid.UUID          `json:"monitor_id"`
+	CheckedAt      pgtype.Timestamptz `json:"checked_at"`
+	ResponseTimeMs int32              `json:"response_time_ms"`
+	IsUp           bool               `json:"is_up"`
+	ResolvedValue  pgtype.Text        `json:"resolved_value"`
+	FailureReason  pgtype.Text        `json:"failure_reason"`
+}
+
+type DnsIncident struct {
+	ID         uuid.UUID          `json:"id"`
+	MonitorID  uuid.UUID          `json:"monitor_id"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount int32              `json:"alert_count"`
+}
+
+type DnsMonitor struct {
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Hostname             string             `json:"hostname"`
+	RecordType           DnsRecordType      `json:"record_type"`
+	ExpectedValue        pgtype.Text        `json:"expected_value"`
+	BaselineCaptured     bool               `json:"baseline_captured"`
+	LastResolvedValue    pgtype.Text        `json:"last_resolved_value"`
+	IntervalMins         int32              `json:"interval_mins"`
+	Status               MonitorStatus      `json:"status"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	ConsecutiveFailures  int32              `json:"consecutive_failures"`
+	LastCheckedAt        pgtype.Timestamptz `json:"last_checked_at"`
+	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type DomainMonitor struct {

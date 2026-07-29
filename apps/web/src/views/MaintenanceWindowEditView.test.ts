@@ -54,6 +54,9 @@ vi.mock('@/composables/useDomainMonitors', () => ({
 vi.mock('@/composables/usePortMonitors', () => ({
   usePortMonitors: () => ({ data: portData, isPending: monitorsPending }),
 }))
+vi.mock('@/composables/useDNSMonitors', () => ({
+  useDNSMonitors: () => ({ data: portData, isPending: monitorsPending }),
+}))
 
 const win = {
   id: 'mw1',

@@ -13,6 +13,7 @@ import { useUptimeMonitors } from '@/composables/useUptimeMonitors'
 import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
 import { usePortMonitors } from '@/composables/usePortMonitors'
+import { useDNSMonitors } from '@/composables/useDNSMonitors'
 import { useBilling } from '@/composables/useBilling'
 import type {
   CronMonitor,
@@ -20,6 +21,7 @@ import type {
   SSLMonitor,
   DomainMonitor,
   PortMonitor,
+  DNSMonitor,
 } from '@/api/monitors'
 import {
   type MonitorType,
@@ -42,6 +44,7 @@ const { data: uptimeData } = useUptimeMonitors()
 const { data: sslData } = useSSLMonitors()
 const { data: domainData } = useDomainMonitors()
 const { data: portData } = usePortMonitors()
+const { data: dnsData } = useDNSMonitors()
 const { data: billingInfo } = useBilling()
 
 const cronRows = computed<Row[]>(() =>
@@ -119,12 +122,28 @@ const portRows = computed<Row[]>(() =>
   ),
 )
 
+const dnsRows = computed<Row[]>(() =>
+  (dnsData.value ?? []).map((m: DNSMonitor) =>
+    buildRow(
+      'dns',
+      m.id,
+      m.name,
+      `${m.hostname} (${m.recordType})`,
+      m.status,
+      'Uptime 24h',
+      fmtPct(m.uptime24h),
+      relativeTime(m.lastCheckedAt),
+    ),
+  ),
+)
+
 const allRows = computed<Row[]>(() => [
   ...cronRows.value,
   ...uptimeRows.value,
   ...sslRows.value,
   ...domainRows.value,
   ...portRows.value,
+  ...dnsRows.value,
 ])
 
 const hasAnyMonitors = computed(
@@ -133,19 +152,20 @@ const hasAnyMonitors = computed(
     (uptimeData.value?.length ?? 0) > 0 ||
     (sslData.value?.length ?? 0) > 0 ||
     (domainData.value?.length ?? 0) > 0 ||
-    (portData.value?.length ?? 0) > 0,
+    (portData.value?.length ?? 0) > 0 ||
+    (dnsData.value?.length ?? 0) > 0,
 )
 
 // Filter chips
 const filter = ref<'all' | MonitorType>('all')
 const chips = computed(() => {
   const counts: Record<string, number> = { all: allRows.value.length }
-  ;(['cron', 'uptime', 'ssl', 'domain', 'port'] as MonitorType[]).forEach((t) => {
+  ;(['cron', 'uptime', 'ssl', 'domain', 'port', 'dns'] as MonitorType[]).forEach((t) => {
     counts[t] = allRows.value.filter((r) => r.type === t).length
   })
   return [
     { id: 'all', label: 'All' },
-    ...(['cron', 'uptime', 'ssl', 'domain', 'port'] as MonitorType[]).map((t) => ({
+    ...(['cron', 'uptime', 'ssl', 'domain', 'port', 'dns'] as MonitorType[]).map((t) => ({
       id: t,
       label: typeLabel[t],
     })),
@@ -163,7 +183,7 @@ const healthyPct = computed(() =>
 )
 
 const uptimeSamples = computed(() =>
-  [...uptimeRows.value, ...portRows.value]
+  [...uptimeRows.value, ...portRows.value, ...dnsRows.value]
     .map((r) => r.metricValue)
     .filter((v) => v !== '—')
     .map((v) => parseFloat(v)),
@@ -320,6 +340,7 @@ const monitorTypeLinks: { label: string; desc: string; routeName: string }[] = [
     routeName: 'domain-monitor-create',
   },
   { label: 'Port monitor', desc: 'Raw TCP connect checks', routeName: 'port-monitor-create' },
+  { label: 'DNS monitor', desc: 'Alert on an unexpected record change', routeName: 'dns-monitor-create' },
 ]
 function goToCreate(routeName: string) {
   addMenuOpen.value = false

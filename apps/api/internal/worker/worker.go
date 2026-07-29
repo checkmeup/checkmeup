@@ -50,6 +50,12 @@ type Notifiers struct {
 	// httptest server set these explicitly to an unguarded client/dialer.
 	HTTPClient *http.Client
 	TCPDialer  *net.Dialer
+
+	// DNSResolver backs the DNS record check. Unlike HTTPClient/TCPDialer, a
+	// DNS lookup never connects to the resolved address (only resolves it),
+	// so there's no SSRF surface to guard — nil defaults to net.DefaultResolver
+	// in production; tests inject a resolver pointed at a fake DNS server.
+	DNSResolver *net.Resolver
 }
 
 // Run starts the background worker loops. Returns when ctx is cancelled.
@@ -72,6 +78,7 @@ func Run(ctx context.Context, n Notifiers) {
 			checkSSLMonitors(ctx, n)
 			checkDomainMonitors(ctx, n)
 			checkPortMonitors(ctx, n)
+			checkDNSMonitors(ctx, n)
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, n.Queries, n.Logger)
 		}
@@ -450,6 +457,11 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 	} else {
 		logger.Info("worker: pruned port_checks older than 90 days")
 	}
+	if err := queries.DeleteOldDNSChecks(ctx); err != nil {
+		logger.Error("worker: prune old dns checks", "err", err)
+	} else {
+		logger.Info("worker: pruned dns_checks older than 90 days")
+	}
 	if err := queries.DeleteOldStatusPageIncidents(ctx); err != nil {
 		logger.Error("worker: prune old status page incidents", "err", err)
 	} else {
@@ -458,7 +470,7 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 }
 
 // The remaining monitor-type-specific check loops (cron, uptime, SSL, domain,
-// port) live in worker_<type>.go — split out of this file so each check loop
+// port, dns) live in worker_<type>.go — split out of this file so each check loop
 // is reviewable on its own (architecture-guardrails audit: this file alone
 // was ~1070 logical lines). checkConcurrency, Notifiers, AlertMessage,
 // MonitorRef, DispatchAlert, and the helpers above are shared by all of them.

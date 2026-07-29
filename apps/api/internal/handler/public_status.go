@@ -139,6 +139,36 @@ func (h *MonitorHandler) GetPortStatus(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, resp)
 }
 
+// GetDNSStatus handles GET /api/v1/public/monitors/dns/{id}/status.
+func (h *MonitorHandler) GetDNSStatus(w http.ResponseWriter, r *http.Request) {
+	orgID, monitorID, ok := publicMonitorIDs(w, r)
+	if !ok {
+		return
+	}
+
+	monitor, err := h.queries.GetDNSMonitor(r.Context(), db.GetDNSMonitorParams{ID: monitorID, OrgID: orgID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
+			return
+		}
+		respond.InternalError(w)
+		return
+	}
+
+	resp := monitorStatusResponse{
+		ID:     monitor.ID.String(),
+		Name:   monitor.Name,
+		Type:   "dns",
+		Status: string(monitor.Status),
+	}
+	if monitor.LastCheckedAt.Valid {
+		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		resp.LastCheckedAt = &t
+	}
+	respond.JSON(w, http.StatusOK, resp)
+}
+
 // GetSSLStatus handles GET /api/v1/public/monitors/ssl/{id}/status.
 func (h *MonitorHandler) GetSSLStatus(w http.ResponseWriter, r *http.Request) {
 	orgID, monitorID, ok := publicMonitorIDs(w, r)

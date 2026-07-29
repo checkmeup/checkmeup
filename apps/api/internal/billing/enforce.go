@@ -8,7 +8,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 )
 
-// EnforceMonitorLimit pauses the newest active monitors (across all 5
+// EnforceMonitorLimit pauses the newest active monitors (across all 6
 // types) beyond limit, leaving the oldest `limit` active — called after a
 // plan downgrade (ADR-019) so an org never has more than its new plan
 // allows actually running, even though nothing is deleted. limit == -1
@@ -42,6 +42,8 @@ func EnforceMonitorLimit(ctx context.Context, q *db.Queries, orgID uuid.UUID, li
 			_, err = q.PauseDomainMonitor(ctx, db.PauseDomainMonitorParams{ID: m.ID, OrgID: orgID})
 		case "port":
 			_, err = q.PausePortMonitor(ctx, db.PausePortMonitorParams{ID: m.ID, OrgID: orgID})
+		case "dns":
+			_, err = q.PauseDNSMonitor(ctx, db.PauseDNSMonitorParams{ID: m.ID, OrgID: orgID})
 		}
 		if err != nil {
 			return err

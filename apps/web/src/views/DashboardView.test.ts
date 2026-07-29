@@ -26,6 +26,7 @@ const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
 const domainData = ref<unknown[] | null>(null)
 const portData = ref<unknown[] | null>(null)
+const dnsData = ref<unknown[] | null>(null)
 
 vi.mock('@/composables/useCronMonitors', () => ({
   useCronMonitors: () => ({ data: cronData }),
@@ -41,6 +42,9 @@ vi.mock('@/composables/useDomainMonitors', () => ({
 }))
 vi.mock('@/composables/usePortMonitors', () => ({
   usePortMonitors: () => ({ data: portData }),
+}))
+vi.mock('@/composables/useDNSMonitors', () => ({
+  useDNSMonitors: () => ({ data: dnsData }),
 }))
 
 const billingData = ref<{ smsCreditsUsed: number; smsCreditsLimit: number } | null>(null)
@@ -110,6 +114,19 @@ function portMonitor(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function dnsMonitor(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'd1',
+    name: 'Apex A record',
+    hostname: 'checkmeup.net',
+    recordType: 'A',
+    status: 'up',
+    uptime24h: 100,
+    lastCheckedAt: '2026-07-06T12:00:00Z',
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   authStoreMock.user = null
   cronData.value = null
@@ -117,6 +134,7 @@ beforeEach(() => {
   sslData.value = null
   domainData.value = null
   portData.value = null
+  dnsData.value = null
   billingData.value = null
 })
 
@@ -209,12 +227,14 @@ describe('DashboardView', () => {
     sslData.value = [sslMonitor()]
     domainData.value = [domainMonitor()]
     portData.value = [portMonitor()]
+    dnsData.value = [dnsMonitor()]
     const wrapper = mount(DashboardView)
 
     expect(wrapper.text()).toContain('checkmeup.net')
     expect(wrapper.text()).toContain('Nightly Backup')
     expect(wrapper.text()).toContain('db-primary')
-    expect(wrapper.findAll('tbody tr').length).toBe(5)
+    expect(wrapper.text()).toContain('Apex A record')
+    expect(wrapper.findAll('tbody tr').length).toBe(6)
   })
 
   it('filters the monitors table when a type chip is clicked', async () => {

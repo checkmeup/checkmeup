@@ -246,6 +246,18 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
+			r.Route("/monitors/dns", func(r chi.Router) {
+				r.Get("/", monitors.ListDNSMonitors)
+				r.Post("/", monitors.CreateDNSMonitor)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", monitors.GetDNSMonitor)
+					r.Patch("/", monitors.UpdateDNSMonitor)
+					r.Delete("/", monitors.DeleteDNSMonitor)
+					r.Post("/pause", monitors.PauseDNSMonitor)
+					r.Post("/resume", monitors.ResumeDNSMonitor)
+				})
+			})
+
 			r.Route("/maintenance-windows", func(r chi.Router) {
 				r.Get("/", maintenance.ListMaintenanceWindows)
 				r.Post("/", maintenance.CreateMaintenanceWindow)
@@ -283,6 +295,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Get("/monitors/ssl/{id}/status", monitors.GetSSLStatus)
 			r.Get("/monitors/domain/{id}/status", monitors.GetDomainStatus)
 			r.Get("/monitors/port/{id}/status", monitors.GetPortStatus)
+			r.Get("/monitors/dns/{id}/status", monitors.GetDNSStatus)
 		})
 	})
 

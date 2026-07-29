@@ -182,9 +182,11 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		sslMon := createSSLMonitor(t, monitorH, u.access, "Cert")
 		domainMon := createDomainMonitor(t, monitorH, u.access, "Domain")
 		portMon := createPortMonitor(t, monitorH, u.access, "Port")
+		dnsMon := createDNSMonitor(t, monitorH, u.access, "DNS")
 
 		// Cron: up. Uptime: down (drives the overall status to "Major outage").
-		// SSL and domain: expiring soon, with a real expiry date each. Port: up.
+		// SSL and domain: expiring soon, with a real expiry date each. Port
+		// and DNS: up.
 		mustExec(t, pool, "UPDATE cron_monitors SET status = 'up' WHERE id = $1", cron.ID)
 		mustExec(t, pool, "UPDATE uptime_monitors SET status = 'down' WHERE id = $1", uptimeMon.ID)
 		expiresAt := time.Now().Add(10 * 24 * time.Hour)
@@ -192,6 +194,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		domainExpiresAt := time.Now().Add(20 * 24 * time.Hour)
 		mustExec(t, pool, "UPDATE domain_monitors SET status = 'expiring_soon', expires_at = $2 WHERE id = $1", domainMon.ID, domainExpiresAt)
 		mustExec(t, pool, "UPDATE port_monitors SET status = 'up' WHERE id = $1", portMon.ID)
+		mustExec(t, pool, "UPDATE dns_monitors SET status = 'up' WHERE id = $1", dnsMon.ID)
 
 		slug := uniqueSlug(t)
 		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Multi Co"})
@@ -203,6 +206,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 				{MonitorType: "ssl", MonitorID: sslMon.ID, DisplayName: "Certificate", DisplayOrder: 2},
 				{MonitorType: "domain", MonitorID: domainMon.ID, DisplayName: "Domain expiry", DisplayOrder: 3},
 				{MonitorType: "port", MonitorID: portMon.ID, DisplayName: "Port check", DisplayOrder: 4},
+				{MonitorType: "dns", MonitorID: dnsMon.ID, DisplayName: "DNS record", DisplayOrder: 5},
 			},
 		})
 		if setW.Code != http.StatusOK {
@@ -215,7 +219,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 		body := w.Body.String()
 
-		for _, want := range []string{"Backups", "API", "Certificate", "Domain expiry", "Port check"} {
+		for _, want := range []string{"Backups", "API", "Certificate", "Domain expiry", "Port check", "DNS record"} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("want display name %q in body", want)
 			}

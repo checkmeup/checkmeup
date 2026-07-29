@@ -13,6 +13,7 @@
 **Revised:** 2026-07-04 — SMS credit quotas added (Hobby 0 / Solo 10 / Startup 30 / Enterprise 100 per month), see [ADR-032](032-sms-credit-quotas.md)
 **Revised:** 2026-07-04 — downgrade behavior changed for monitors and notification channels: resources beyond the new plan's limit are now auto-paused/disabled (newest-created first), not just blocked from further creation — see "Downgrade" under Enforcement below
 **Revised:** 2026-07-12 — status page "hide branding" toggle ([ADR-035](035-status-page-hide-branding.md)) gated to paid plans (Solo and above); Hobby excluded
+**Revised:** 2026-07-29 — DNS record monitoring ([EP-39](../stories/ep-39-dns-monitoring.md)) added to the aggregate monitor count
 
 ---
 
@@ -20,7 +21,7 @@
 
 Four pricing tiers: Hobby ($0) / Solo ($9) / Startup ($29) / Enterprise ($99). Limits must be enforced server-side at the API level; the UI reflects them with inline upgrade prompts.
 
-Monitors are counted in aggregate across all types (cron + uptime + SSL + domain + port) because users care about "how many things am I watching", not the internal type split.
+Monitors are counted in aggregate across all types (cron + uptime + SSL + domain + port + DNS) because users care about "how many things am I watching", not the internal type split.
 
 ---
 
@@ -28,7 +29,7 @@ Monitors are counted in aggregate across all types (cron + uptime + SSL + domain
 
 | | Hobby | Solo | Startup | Enterprise |
 |---|---|---|---|---|
-| Total monitors (cron + uptime + SSL + domain + port) | 10 | 30 | 100 | 1000 |
+| Total monitors (cron + uptime + SSL + domain + port + DNS) | 10 | 30 | 100 | 1000 |
 | Status pages | 1 | 3 | 10 | 100 |
 | Notification channels | 5 | 20 | 50 | 100 |
 | Min uptime check interval | 5 min | 1 min | 1 min | 1 min |

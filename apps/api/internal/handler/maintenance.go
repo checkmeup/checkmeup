@@ -139,6 +139,10 @@ var monitorNameLookups = map[string]func(ctx context.Context, q *db.Queries, id,
 		m, err := q.GetPortMonitor(ctx, db.GetPortMonitorParams{ID: id, OrgID: orgID})
 		return m.Name, err
 	},
+	"dns": func(ctx context.Context, q *db.Queries, id, orgID uuid.UUID) (string, error) {
+		m, err := q.GetDNSMonitor(ctx, db.GetDNSMonitorParams{ID: id, OrgID: orgID})
+		return m.Name, err
+	},
 }
 
 // resolveMonitorName verifies a monitor belongs to the org and returns its display name.

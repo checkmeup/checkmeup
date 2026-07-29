@@ -102,6 +102,17 @@ func createPortMonitor(t *testing.T, h *MonitorHandler, access *http.Cookie, nam
 	return decodeBody[monitorRef](t, w)
 }
 
+func createDNSMonitor(t *testing.T, h *MonitorHandler, access *http.Cookie, name string) monitorRef {
+	t.Helper()
+	w := doAuthed(t, http.MethodPost, h.CreateDNSMonitor, access, map[string]any{
+		"name": name, "hostname": "example.com", "recordType": "A", "intervalMins": 10,
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create dns monitor: want 201, got %d: %s", w.Code, w.Body.String())
+	}
+	return decodeBody[monitorRef](t, w)
+}
+
 func withURLParam(r *http.Request, key, value string) *http.Request {
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add(key, value)

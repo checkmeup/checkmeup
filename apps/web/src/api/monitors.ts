@@ -288,6 +288,79 @@ export interface UpdatePortMonitorInput {
   channelIds: string[]
 }
 
+export type DNSRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS'
+
+export interface DNSMonitor {
+  id: string
+  name: string
+  hostname: string
+  recordType: DNSRecordType
+  expectedValue: string | null
+  baselineCaptured: boolean
+  lastResolvedValue: string | null
+  intervalMins: number
+  status: 'waiting' | 'up' | 'down' | 'paused'
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  lastCheckedAt: string | null
+  createdAt: string
+  uptime24h: number | null
+  channelIds?: string[]
+}
+
+export interface DNSCheck {
+  id: string
+  checkedAt: string
+  responseTimeMs: number
+  isUp: boolean
+  resolvedValue: string | null
+  failureReason: string | null
+}
+
+export interface DNSIncident {
+  id: string
+  startedAt: string
+  resolvedAt: string | null
+}
+
+export interface DNSStats {
+  uptime24h: number | null
+  uptime7d: number | null
+  uptime30d: number | null
+}
+
+export interface DNSMonitorDetail {
+  monitor: DNSMonitor
+  chartData: DNSCheck[]
+  checks: DNSCheck[]
+  incidents: DNSIncident[]
+  stats: DNSStats
+}
+
+export interface CreateDNSMonitorInput {
+  name: string
+  hostname: string
+  recordType: DNSRecordType
+  expectedValue?: string
+  intervalMins: number
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  channelIds?: string[]
+}
+
+export interface UpdateDNSMonitorInput {
+  name: string
+  hostname: string
+  recordType: DNSRecordType
+  expectedValue: string
+  intervalMins: number
+  alertsEnabled: boolean
+  maxAlertsPerIncident: number
+  alertAfterNFailures: number
+  channelIds: string[]
+}
+
 export const monitorsApi = {
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
@@ -339,4 +412,13 @@ export const monitorsApi = {
   pausePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/pause`, {}),
   resumePort: (id: string) => api.post<PortMonitor>(`/api/v1/monitors/port/${id}/resume`, {}),
   deletePort: (id: string) => api.delete(`/api/v1/monitors/port/${id}/`),
+
+  listDns: () => api.get<DNSMonitor[]>('/api/v1/monitors/dns/'),
+  getDns: (id: string) => api.get<DNSMonitorDetail>(`/api/v1/monitors/dns/${id}/`),
+  createDns: (input: CreateDNSMonitorInput) => api.post<DNSMonitor>('/api/v1/monitors/dns/', input),
+  updateDns: (id: string, input: UpdateDNSMonitorInput) =>
+    api.patch<DNSMonitor>(`/api/v1/monitors/dns/${id}/`, input),
+  pauseDns: (id: string) => api.post<DNSMonitor>(`/api/v1/monitors/dns/${id}/pause`, {}),
+  resumeDns: (id: string) => api.post<DNSMonitor>(`/api/v1/monitors/dns/${id}/resume`, {}),
+  deleteDns: (id: string) => api.delete(`/api/v1/monitors/dns/${id}/`),
 }

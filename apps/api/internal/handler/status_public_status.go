@@ -27,6 +27,8 @@ func (h *StatusPublicHandler) buildRow(ctx context.Context, m db.StatusPageMonit
 		h.fillDomainRow(ctx, m.MonitorID, &row)
 	case "port":
 		h.fillPortRow(ctx, m.MonitorID, &row)
+	case "dns":
+		h.fillDNSRow(ctx, m.MonitorID, &row)
 	}
 	return row
 }
@@ -105,6 +107,26 @@ func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row
 	}
 
 	dailyRows, err := h.queries.GetPortDailyStatus90d(ctx, id)
+	downDays := map[string]bool{}
+	hasData := false
+	if err == nil && len(dailyRows) > 0 {
+		hasData = true
+		for _, d := range dailyRows {
+			if d.DownCount > 0 {
+				downDays[d.Day.Time.Format("2006-01-02")] = true
+			}
+		}
+	}
+	row.Bar = build90DayBar(downDays, hasData)
+}
+
+func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
+	mon, err := h.queries.GetDNSMonitorPublic(ctx, id)
+	if err == nil {
+		row.StatusLabel, row.StatusColor = monitorStatusDisplay(string(mon.Status))
+	}
+
+	dailyRows, err := h.queries.GetDNSDailyStatus90d(ctx, id)
 	downDays := map[string]bool{}
 	hasData := false
 	if err == nil && len(dailyRows) > 0 {
