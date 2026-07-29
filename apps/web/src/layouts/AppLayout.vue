@@ -176,6 +176,24 @@ async function signOut() {
           Port
         </RouterLink>
 
+        <RouterLink
+          to="/monitors/dns"
+          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          DNS
+        </RouterLink>
+
         <div
           class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider"
           style="color: var(--text-muted)"
