@@ -99,6 +99,46 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 	})
 
+	t.Run("ADR-038: grid layout renders the sidebar/content-grid wrapper with monitors and incidents", func(t *testing.T) {
+		incidentH := NewIncidentHandler(pool)
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "API")
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Grid Co", Layout: "grid"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "uptime", MonitorID: mon.ID, DisplayName: "API", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+		createIncident(t, incidentH, u.access, createIncidentRequest{
+			Title: "Grid incident", Message: "Looking into it", Severity: "major",
+			Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		})
+
+		w := doPublicStatusPage(publicH, slug)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, `class="page layout-grid"`) {
+			t.Fatal("want the layout-grid page class")
+		}
+		if !strings.Contains(body, `class="content-grid"`) {
+			t.Fatal("want the content-grid wrapper")
+		}
+		if !strings.Contains(body, `class="sidebar"`) {
+			t.Fatal("want the sidebar wrapper")
+		}
+		if !strings.Contains(body, "API") {
+			t.Fatal("want the monitor rendered inside the grid")
+		}
+		if !strings.Contains(body, "Grid incident") {
+			t.Fatal("want the active incident rendered inside the sidebar")
+		}
+	})
+
 	t.Run("ADR-035: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)

@@ -40,6 +40,7 @@ type statusPageResponse struct {
 	Description  string `json:"description"`
 	LogoURL      string `json:"logoUrl"`
 	HideBranding bool   `json:"hideBranding"`
+	Layout       string `json:"layout"`
 	PublicURL    string `json:"publicUrl"`
 	CreatedAt    string `json:"createdAt"`
 }
@@ -65,6 +66,7 @@ func toStatusPageResponse(p db.StatusPage, baseURL string) statusPageResponse {
 		Description:  p.Description,
 		LogoURL:      p.LogoUrl,
 		HideBranding: p.HideBranding,
+		Layout:       p.Layout,
 		PublicURL:    baseURL + "/status/" + p.Slug,
 		CreatedAt:    p.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
 	}
@@ -85,6 +87,15 @@ func toStatusPageMonitorResponse(m db.StatusPageMonitor) statusPageMonitorRespon
 func validateSlug(s string) error {
 	if !slugRe.MatchString(s) {
 		return errors.New("slug must be 3–48 lowercase letters, numbers, or hyphens (not starting/ending with a hyphen)")
+	}
+	return nil
+}
+
+// validateLayout rejects anything but the two layouts the public template
+// (status_public.go) knows how to render — ADR-038.
+func validateLayout(s string) error {
+	if s != "classic" && s != "grid" {
+		return errors.New("layout must be \"classic\" or \"grid\"")
 	}
 	return nil
 }
@@ -282,6 +293,7 @@ type createStatusPageRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	LogoURL     string `json:"logoUrl"`
+	Layout      string `json:"layout"`
 }
 
 // CreateStatusPage POST /api/v1/status-pages
@@ -305,6 +317,13 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 	if !validateStatusPageTitleAndLogo(w, &req.Title, &req.LogoURL) {
 		return
 	}
+	if req.Layout == "" {
+		req.Layout = "classic"
+	}
+	if err := validateLayout(req.Layout); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
 	if !h.checkStatusPageCreateLimit(w, r, orgID) {
 		return
 	}
@@ -315,6 +334,7 @@ func (h *StatusPageHandler) CreateStatusPage(w http.ResponseWriter, r *http.Requ
 		Title:       req.Title,
 		Description: strings.TrimSpace(req.Description),
 		LogoUrl:     req.LogoURL,
+		Layout:      req.Layout,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
@@ -358,6 +378,7 @@ type updateStatusPageRequest struct {
 	Description  string `json:"description"`
 	LogoURL      string `json:"logoUrl"`
 	HideBranding bool   `json:"hideBranding"`
+	Layout       string `json:"layout"`
 }
 
 // UpdateStatusPage PATCH /api/v1/status-pages/:id
@@ -372,6 +393,13 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if !validateStatusPageTitleAndLogo(w, &req.Title, &req.LogoURL) {
+		return
+	}
+	if req.Layout == "" {
+		req.Layout = "classic"
+	}
+	if err := validateLayout(req.Layout); err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
 	}
 
@@ -395,6 +423,7 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		Description:  strings.TrimSpace(req.Description),
 		LogoUrl:      req.LogoURL,
 		HideBranding: req.HideBranding,
+		Layout:       req.Layout,
 	})
 	if respondStatusPageNotFoundOrInternal(w, err) {
 		return

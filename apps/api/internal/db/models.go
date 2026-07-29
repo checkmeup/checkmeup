@@ -754,6 +754,7 @@ type StatusPage struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	HideBranding bool               `json:"hide_branding"`
+	Layout       string             `json:"layout"`
 }
 
 type StatusPageIncident struct {

@@ -214,6 +214,7 @@ func TestCreateStatusPage(t *testing.T) {
 			{"missing title", createStatusPageRequest{Slug: uniqueSlug(t)}},
 			{"javascript: logo URL", createStatusPageRequest{Slug: uniqueSlug(t), Title: "x", LogoURL: "javascript:alert(1)"}},
 			{"relative logo URL", createStatusPageRequest{Slug: uniqueSlug(t), Title: "x", LogoURL: "/evil"}},
+			{"invalid layout", createStatusPageRequest{Slug: uniqueSlug(t), Title: "x", Layout: "sidebar"}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -241,6 +242,23 @@ func TestCreateStatusPage(t *testing.T) {
 		wantSuffix := "/status/" + slug
 		if len(resp.PublicURL) < len(wantSuffix) || resp.PublicURL[len(resp.PublicURL)-len(wantSuffix):] != wantSuffix {
 			t.Fatalf("want public URL ending in %q, got %q", wantSuffix, resp.PublicURL)
+		}
+		if resp.Layout != "classic" {
+			t.Fatalf("want layout to default to classic, got %q", resp.Layout)
+		}
+	})
+
+	t.Run("layout can be set to grid on create (ADR-038)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{
+			Slug: uniqueSlug(t), Title: "Grid Co", Layout: "grid",
+		})
+		if w.Code != http.StatusCreated {
+			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
+		}
+		resp := decodeBody[statusPageResponse](t, w)
+		if resp.Layout != "grid" {
+			t.Fatalf("want layout grid, got %q", resp.Layout)
 		}
 	})
 
@@ -415,6 +433,39 @@ func TestUpdateStatusPage(t *testing.T) {
 		}
 		if resp.Slug != page.Slug {
 			t.Fatalf("want slug unchanged (no slug field in update request), got %q vs %q", resp.Slug, page.Slug)
+		}
+		if resp.Layout != "classic" {
+			t.Fatalf("want layout to default to classic when omitted, got %q", resp.Layout)
+		}
+	})
+
+	t.Run("sets layout to grid (ADR-038)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: uniqueSlug(t), Title: "x"})
+		page := decodeBody[statusPageResponse](t, createW)
+
+		w := doStatusPageRequest(t, http.MethodPatch, statusH.UpdateStatusPage, u.access, page.ID, updateStatusPageRequest{
+			Title: "x", Layout: "grid",
+		})
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		resp := decodeBody[statusPageResponse](t, w)
+		if resp.Layout != "grid" {
+			t.Fatalf("want layout grid, got %q", resp.Layout)
+		}
+	})
+
+	t.Run("rejects an invalid layout value", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: uniqueSlug(t), Title: "x"})
+		page := decodeBody[statusPageResponse](t, createW)
+
+		w := doStatusPageRequest(t, http.MethodPatch, statusH.UpdateStatusPage, u.access, page.ID, updateStatusPageRequest{
+			Title: "x", Layout: "sidebar",
+		})
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 

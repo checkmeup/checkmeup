@@ -1,5 +1,7 @@
 import { api } from './client'
 
+export type StatusPageLayout = 'classic' | 'grid'
+
 export interface StatusPage {
   id: string
   slug: string
@@ -7,13 +9,14 @@ export interface StatusPage {
   description: string
   logoUrl: string
   hideBranding: boolean
+  layout: StatusPageLayout
   publicUrl: string
   createdAt: string
 }
 
 export interface StatusPageMonitorItem {
   id: string
-  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
+  monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port' | 'dns'
   monitorId: string
   displayName: string
   displayOrder: number
@@ -35,11 +38,12 @@ export interface UpdateStatusPageInput {
   description: string
   logoUrl: string
   hideBranding: boolean
+  layout: StatusPageLayout
 }
 
 export interface SetMonitorsInput {
   monitors: {
-    monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'
+    monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port' | 'dns'
     monitorId: string
     displayName: string
     displayOrder: number

@@ -375,13 +375,13 @@ func TestWebhook(t *testing.T) {
 		// ADR-035: a status page with hide_branding set on Solo should have it
 		// cleared once the downgrade below drops the org to Hobby.
 		page, err := billH.queries.CreateStatusPage(context.Background(), db.CreateStatusPageParams{
-			OrgID: orgID, Slug: "downgrade-branding-" + uuid.NewString(), Title: "x",
+			OrgID: orgID, Slug: "downgrade-branding-" + uuid.NewString(), Title: "x", Layout: "classic",
 		})
 		if err != nil {
 			t.Fatalf("create status page: %v", err)
 		}
 		if _, err := billH.queries.UpdateStatusPage(context.Background(), db.UpdateStatusPageParams{
-			ID: page.ID, OrgID: orgID, Title: "x", HideBranding: true,
+			ID: page.ID, OrgID: orgID, Title: "x", HideBranding: true, Layout: "classic",
 		}); err != nil {
 			t.Fatalf("set hide_branding: %v", err)
 		}

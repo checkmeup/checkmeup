@@ -53,6 +53,7 @@ const updateInput = {
   description: 'Live status of our services',
   logoUrl: 'https://checkmeup.net/logo.png',
   hideBranding: false,
+  layout: 'classic' as const,
 }
 
 const setMonitorsInput = {

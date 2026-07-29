@@ -252,13 +252,13 @@ func TestEnforceHideBrandingLimit(t *testing.T) {
 	createPage := func(t *testing.T, orgID uuid.UUID, hideBranding bool) db.StatusPage {
 		t.Helper()
 		p, err := queries.CreateStatusPage(context.Background(), db.CreateStatusPageParams{
-			OrgID: orgID, Slug: "sp-" + uuid.NewString(), Title: "x",
+			OrgID: orgID, Slug: "sp-" + uuid.NewString(), Title: "x", Layout: "classic",
 		})
 		if err != nil {
 			t.Fatalf("create status page: %v", err)
 		}
 		p, err = queries.UpdateStatusPage(context.Background(), db.UpdateStatusPageParams{
-			ID: p.ID, OrgID: orgID, Title: p.Title, HideBranding: hideBranding,
+			ID: p.ID, OrgID: orgID, Title: p.Title, HideBranding: hideBranding, Layout: "classic",
 		})
 		if err != nil {
 			t.Fatalf("set hide_branding: %v", err)

@@ -1,8 +1,8 @@
 -- ─── status_pages ────────────────────────────────────────────────────────────
 
 -- name: CreateStatusPage :one
-INSERT INTO status_pages (org_id, slug, title, description, logo_url)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO status_pages (org_id, slug, title, description, logo_url, layout)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetStatusPage :one
@@ -16,7 +16,7 @@ SELECT * FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateStatusPage :one
 UPDATE status_pages
-SET title = $3, description = $4, logo_url = $5, hide_branding = $6, updated_at = NOW()
+SET title = $3, description = $4, logo_url = $5, hide_branding = $6, layout = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 

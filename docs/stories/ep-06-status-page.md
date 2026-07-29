@@ -52,6 +52,7 @@ Public status pages served at `checkmeup.net/status/{slug}`. No subdomain, no cu
 
 - [x] Editable: page title, description (shown below the title)
 - [x] Logo: URL input on MVP; file upload post-MVP
+- [x] Layout: choice of "classic" (single-column) or "grid" (monitor grid + incident sidebar), per page — see [ADR-038](../decisions/038-status-page-layout-option.md)
 
 ---
 

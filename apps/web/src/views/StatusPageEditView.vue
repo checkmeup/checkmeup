@@ -18,6 +18,7 @@ const description = ref('')
 const logoUrl = ref('')
 const slug = ref('')
 const hideBranding = ref(false)
+const layout = ref<'classic' | 'grid'>('classic')
 const submitting = ref(false)
 const error = ref('')
 
@@ -31,6 +32,7 @@ watch(
     logoUrl.value = p.logoUrl
     slug.value = p.slug
     hideBranding.value = p.hideBranding
+    layout.value = p.layout
   },
   { immediate: true },
 )
@@ -55,6 +57,7 @@ async function submit() {
       description: description.value.trim(),
       logoUrl: logoUrl.value.trim(),
       hideBranding: hideBranding.value,
+      layout: layout.value,
     })
     router.push({ name: 'status-page-detail', params: { id } })
   } catch (e: unknown) {
@@ -108,6 +111,20 @@ async function submit() {
         <div>
           <Label for="logoUrl">Logo URL <span style="color: var(--text-muted)">(optional)</span></Label>
           <Input id="logoUrl" v-model="logoUrl" placeholder="https://example.com/logo.png" class="mt-1" />
+        </div>
+
+        <div>
+          <Label>Layout</Label>
+          <div class="mt-1 flex flex-col gap-2">
+            <label class="flex items-center gap-2 text-sm" style="color: var(--text)">
+              <input v-model="layout" type="radio" value="classic" name="layout" />
+              Classic — single-column, monitors and incidents stacked
+            </label>
+            <label class="flex items-center gap-2 text-sm" style="color: var(--text)">
+              <input v-model="layout" type="radio" value="grid" name="layout" />
+              Grid — monitor cards in a wide grid with an incident sidebar
+            </label>
+          </div>
         </div>
 
         <div>

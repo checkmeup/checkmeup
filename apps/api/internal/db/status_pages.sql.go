@@ -24,9 +24,9 @@ func (q *Queries) ClearHideBrandingForOrg(ctx context.Context, orgID uuid.UUID) 
 
 const createStatusPage = `-- name: CreateStatusPage :one
 
-INSERT INTO status_pages (org_id, slug, title, description, logo_url)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding
+INSERT INTO status_pages (org_id, slug, title, description, logo_url, layout)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding, layout
 `
 
 type CreateStatusPageParams struct {
@@ -35,6 +35,7 @@ type CreateStatusPageParams struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	LogoUrl     string    `json:"logo_url"`
+	Layout      string    `json:"layout"`
 }
 
 // ─── status_pages ────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ func (q *Queries) CreateStatusPage(ctx context.Context, arg CreateStatusPagePara
 		arg.Title,
 		arg.Description,
 		arg.LogoUrl,
+		arg.Layout,
 	)
 	var i StatusPage
 	err := row.Scan(
@@ -57,6 +59,7 @@ func (q *Queries) CreateStatusPage(ctx context.Context, arg CreateStatusPagePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HideBranding,
+		&i.Layout,
 	)
 	return i, err
 }
@@ -284,7 +287,7 @@ func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMon
 }
 
 const getStatusPage = `-- name: GetStatusPage :one
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE id = $1 AND org_id = $2
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding, layout FROM status_pages WHERE id = $1 AND org_id = $2
 `
 
 type GetStatusPageParams struct {
@@ -305,12 +308,13 @@ func (q *Queries) GetStatusPage(ctx context.Context, arg GetStatusPageParams) (S
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HideBranding,
+		&i.Layout,
 	)
 	return i, err
 }
 
 const getStatusPageBySlug = `-- name: GetStatusPageBySlug :one
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE slug = $1
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding, layout FROM status_pages WHERE slug = $1
 `
 
 func (q *Queries) GetStatusPageBySlug(ctx context.Context, slug string) (StatusPage, error) {
@@ -326,6 +330,7 @@ func (q *Queries) GetStatusPageBySlug(ctx context.Context, slug string) (StatusP
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HideBranding,
+		&i.Layout,
 	)
 	return i, err
 }
@@ -491,7 +496,7 @@ func (q *Queries) ListStatusPageMonitors(ctx context.Context, pageID uuid.UUID) 
 }
 
 const listStatusPages = `-- name: ListStatusPages :many
-SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding, layout FROM status_pages WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListStatusPages(ctx context.Context, orgID uuid.UUID) ([]StatusPage, error) {
@@ -513,6 +518,7 @@ func (q *Queries) ListStatusPages(ctx context.Context, orgID uuid.UUID) ([]Statu
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.HideBranding,
+			&i.Layout,
 		); err != nil {
 			return nil, err
 		}
@@ -537,9 +543,9 @@ func (q *Queries) SlugAvailable(ctx context.Context, slug string) (bool, error) 
 
 const updateStatusPage = `-- name: UpdateStatusPage :one
 UPDATE status_pages
-SET title = $3, description = $4, logo_url = $5, hide_branding = $6, updated_at = NOW()
+SET title = $3, description = $4, logo_url = $5, hide_branding = $6, layout = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding
+RETURNING id, org_id, slug, title, description, logo_url, created_at, updated_at, hide_branding, layout
 `
 
 type UpdateStatusPageParams struct {
@@ -549,6 +555,7 @@ type UpdateStatusPageParams struct {
 	Description  string    `json:"description"`
 	LogoUrl      string    `json:"logo_url"`
 	HideBranding bool      `json:"hide_branding"`
+	Layout       string    `json:"layout"`
 }
 
 func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPageParams) (StatusPage, error) {
@@ -559,6 +566,7 @@ func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPagePara
 		arg.Description,
 		arg.LogoUrl,
 		arg.HideBranding,
+		arg.Layout,
 	)
 	var i StatusPage
 	err := row.Scan(
@@ -571,6 +579,7 @@ func (q *Queries) UpdateStatusPage(ctx context.Context, arg UpdateStatusPagePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HideBranding,
+		&i.Layout,
 	)
 	return i, err
 }

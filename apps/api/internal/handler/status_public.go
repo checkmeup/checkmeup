@@ -97,6 +97,7 @@ type publicPageData struct {
 	HasNextIncidentsPage  bool
 	UpdatedAt             string
 	HideBranding          bool
+	Layout                string // "classic" or "grid" — ADR-038
 }
 
 // ─── ServeHTTP ───────────────────────────────────────────────────────────────
@@ -146,6 +147,7 @@ func (h *StatusPublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		HasNextIncidentsPage:  int64(resolvedPage*resolvedIncidentsPageSize) < resolvedTotal,
 		UpdatedAt:             time.Now().UTC().Format("2006-01-02 15:04 UTC"),
 		HideBranding:          page.HideBranding,
+		Layout:                page.Layout,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -400,6 +402,7 @@ const statusPageHTML = `<!DOCTYPE html>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
 .page{max-width:720px;margin:0 auto;padding:40px 20px 64px}
+.page.layout-grid{max-width:1040px}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}
 .head-left{display:flex;align-items:center;gap:12px}
 .logo{display:block;max-height:38px;width:auto;border-radius:10px}
@@ -448,10 +451,24 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
 .footer p+p{margin-top:6px}
 .footer a{color:var(--text-muted);text-decoration:none}
 .footer a:hover{text-decoration:underline}
+.content-grid{display:flex;gap:24px;align-items:flex-start;margin-bottom:8px}
+.content-grid .monitors{flex:1.6;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
+.content-grid .monitor{padding:15px 16px}
+.content-grid .monitor-name{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.content-grid .seg{height:18px}
+.content-grid .bar-labels{display:none}
+.sidebar{flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px}
+.sidebar-card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:16px 18px}
+.sidebar-incidents{display:flex;flex-direction:column;gap:16px}
+@media (max-width:860px){
+  .content-grid{flex-direction:column}
+  .content-grid .monitors{grid-template-columns:1fr}
+  .sidebar{min-width:0;width:100%}
+}
 </style>
 </head>
 <body>
-<div class="page">
+<div class="page {{if eq .Layout "grid"}}layout-grid{{end}}">
   <div class="head">
     <div class="head-left">
       {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="{{.Title}} logo">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
@@ -486,7 +503,70 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
     {{end}}
   </div>
 
-  {{range .ActiveIncidents}}
+  {{if eq .Layout "grid"}}
+  <div class="content-grid">
+    <div class="monitors">
+      {{range .Monitors}}{{template "monitorCard" .}}{{end}}
+      {{if not .Monitors}}
+      <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
+      {{end}}
+    </div>
+    <div class="sidebar">
+      {{if .ActiveIncidents}}
+      <div class="sidebar-incidents">
+        {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+      </div>
+      {{end}}
+      {{if .ResolvedIncidents}}
+      <div class="sidebar-card">
+        <h2 class="section-title">Past incidents</h2>
+        {{range .ResolvedIncidents}}{{template "historyRow" .}}{{end}}
+        {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
+        <div class="pagination">
+          {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
+          {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
+        </div>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{else}}
+  {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+
+  <div class="monitors">
+    {{range .Monitors}}{{template "monitorCard" .}}{{end}}
+    {{if not .Monitors}}
+    <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
+    {{end}}
+  </div>
+
+  {{if .ResolvedIncidents}}
+  <div class="incidents-history">
+    <h2 class="section-title">Past incidents</h2>
+    {{range .ResolvedIncidents}}{{template "historyRow" .}}{{end}}
+    {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
+    <div class="pagination">
+      {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
+      {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  {{end}}
+
+  <div class="footer">
+    <p>Last updated {{.UpdatedAt}}</p>
+    {{if not .HideBranding}}
+    <p>Powered by <a href="https://checkmeup.net">Checkmeup</a></p>
+    <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
+    {{end}}
+  </div>
+</div>
+</body>
+</html>
+
+{{define "incidentCard"}}
   <div class="incident" style="border:1px solid {{.SeverityColor}}4D;background:{{.SeverityColor}}14">
     <div class="incident-header">
       <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
@@ -508,10 +588,9 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
     </div>
     {{end}}
   </div>
-  {{end}}
+{{end}}
 
-  <div class="monitors">
-    {{range .Monitors}}
+{{define "monitorCard"}}
     <div class="monitor">
       <div class="monitor-header">
         <span class="monitor-name">{{.DisplayName}}</span>
@@ -531,16 +610,9 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
       </div>
       <div class="bar-labels"><span>90 days ago</span><span>Today</span></div>
     </div>
-    {{end}}
-    {{if not .Monitors}}
-    <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
-    {{end}}
-  </div>
+{{end}}
 
-  {{if .ResolvedIncidents}}
-  <div class="incidents-history">
-    <h2 class="section-title">Past incidents</h2>
-    {{range .ResolvedIncidents}}
+{{define "historyRow"}}
     <div class="history-row">
       <div class="history-head">
         <span class="history-title">{{.Title}}</span>
@@ -548,23 +620,4 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
       </div>
       {{if .LatestUpdateMessage}}<p class="history-summary">{{.LatestUpdateMessage}}</p>{{end}}
     </div>
-    {{end}}
-    {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
-    <div class="pagination">
-      {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
-      {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
-    </div>
-    {{end}}
-  </div>
-  {{end}}
-
-  <div class="footer">
-    <p>Last updated {{.UpdatedAt}}</p>
-    {{if not .HideBranding}}
-    <p>Powered by <a href="https://checkmeup.net">Checkmeup</a></p>
-    <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
-    {{end}}
-  </div>
-</div>
-</body>
-</html>`
+{{end}}`

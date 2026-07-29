@@ -48,6 +48,7 @@ const page = {
   description: 'Live status of Acme services',
   logoUrl: 'https://example.com/logo.png',
   hideBranding: false,
+  layout: 'classic' as const,
   publicUrl: 'https://checkmeup.net/status/acme',
   createdAt: '2026-06-01T00:00:00Z',
 }
@@ -123,10 +124,29 @@ describe('StatusPageEditView', () => {
       description: 'Live status of Acme services',
       logoUrl: 'https://example.com/logo.png',
       hideBranding: false,
+      layout: 'classic',
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'status-page-detail',
       params: { id: 'sp1' },
+    })
+  })
+
+  it('switches to the grid layout and submits it', async () => {
+    pageData.value = { ...page }
+    updateMock.mockResolvedValueOnce({ ...page, layout: 'grid' })
+    const wrapper = mount(StatusPageEditView)
+
+    await wrapper.get('input[type="radio"][value="grid"]').setValue()
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith('sp1', {
+      title: 'Acme Status',
+      description: 'Live status of Acme services',
+      logoUrl: 'https://example.com/logo.png',
+      hideBranding: false,
+      layout: 'grid',
     })
   })
 
@@ -171,6 +191,7 @@ describe('StatusPageEditView', () => {
       description: 'Live status of Acme services',
       logoUrl: 'https://example.com/logo.png',
       hideBranding: true,
+      layout: 'classic',
     })
   })
 
