@@ -21,6 +21,12 @@
       HTML snippet from the status page's detail view (each links back to the public page) and
       drop it in a README, wiki, or internal dashboard.
     </p>
+    <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+      Each status page also has a <strong style="color: var(--text-strong)">layout</strong>
+      choice in its edit settings: the original single-column layout, or a wider grid that lays
+      monitors out two-per-row with incidents in a sidebar — better suited to a page watching a
+      lot of monitors. Set per page and available on every plan.
+    </p>
     <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
       On Solo and above, each status page has a
       <strong style="color: var(--text-strong)">hide branding</strong> toggle in its edit
