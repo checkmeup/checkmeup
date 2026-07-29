@@ -8,7 +8,7 @@ import { useSeo } from '@/composables/useSeo'
 useSeo({
   title: 'Pricing — Checkmeup',
   description:
-    'Hobby $0, Solo $9, Startup $29, Enterprise $99 — cron, uptime, SSL, domain, and port monitoring plans for freelancers and agencies.',
+    'Hobby $0, Solo $9, Startup $29, Enterprise $99 — cron, uptime, SSL, domain, port, and DNS monitoring plans for freelancers and agencies.',
   path: '/pricing',
 })
 
@@ -107,6 +107,7 @@ const featureRows: TableRow[] = [
   { label: 'SSL expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Domain expiry monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Port (TCP) monitoring', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'DNS record monitoring', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Alerts (Telegram, email, Slack, webhook)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
@@ -293,7 +294,7 @@ const featureRows: TableRow[] = [
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Cron, uptime, SSL, domain &amp; port monitors
+              Cron, uptime, SSL, domain, port &amp; DNS monitors
             </li>
             <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
               <svg

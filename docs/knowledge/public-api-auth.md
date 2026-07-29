@@ -2,7 +2,7 @@
 title: Public API & API-Key Authentication
 type: knowledge
 status: current
-updated: 2026-07-10
+updated: 2026-07-29
 tags: [architecture, auth, security, backend]
 scope: apps/api/internal/middleware/apikey.go, internal/handler/api_keys.go, internal/handler/public_status.go, /api/v1/public route group
 superseded_by:
@@ -29,7 +29,7 @@ superseded_by:
 
 5. **Scope (read-only vs. read-write) is designed but not implemented.** ADR-028 describes a `scope` column and `403` enforcement for a read-only key hitting a non-`GET` route — the first shipped slice (EP-26 US-2601/2602/2604) skipped both because every current public-API route is a `GET`, so there was nothing to enforce yet. **This is a known, explicitly-flagged gap**: `RequireAPIKey` does not check scope at all right now, so if a write endpoint is ever added under `/api/v1/public` without first adding the `scope` column and enforcement, every existing key — including ones a user expects to be read-only — would be able to call it. The ADR's own "Implementation status" section and [`docs/decisions/backlog.md`](../decisions/backlog.md) both flag this must land *before*, not after, the first write endpoint.
 
-6. **Every public-API handler is a thin read**: `GetCronStatus`/`GetUptimeStatus`/`GetSSLStatus`/`GetDomainStatus`/`GetPortStatus` (`public_status.go`) each resolve the monitor by `id` + the API-key-derived `org_id` (same tenant-isolation pattern as everywhere else — `org-id-audit` skill would catch a regression here same as any other handler) and return its current status. No mutation, no list/enumerate-all-monitors endpoint exists yet — a caller needs to already know a monitor's ID.
+6. **Every public-API handler is a thin read**: `GetCronStatus`/`GetUptimeStatus`/`GetSSLStatus`/`GetDomainStatus`/`GetPortStatus`/`GetDNSStatus` (`public_status.go`) each resolve the monitor by `id` + the API-key-derived `org_id` (same tenant-isolation pattern as everywhere else — `org-id-audit` skill would catch a regression here same as any other handler) and return its current status. No mutation, no list/enumerate-all-monitors endpoint exists yet — a caller needs to already know a monitor's ID.
 
 ## Follow-ups
 

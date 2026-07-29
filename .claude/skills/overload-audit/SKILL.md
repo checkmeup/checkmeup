@@ -47,11 +47,11 @@ claims... still hold."
 
 ## What's checked
 
-- All five check loops (cron/uptime/SSL/domain/port) still bound
+- All six check loops (cron/uptime/SSL/domain/port/dns) still bound
   concurrent checks via the `checkConcurrency` semaphore
   (`sem := make(chan struct{}, checkConcurrency)` in each `worker_*.go`)
-- `cron_incidents`/`uptime_incidents`/`port_incidents` list queries still
-  cap at `LIMIT 200`
+- `cron_incidents`/`uptime_incidents`/`port_incidents`/`dns_incidents` list
+  queries still cap at `LIMIT 200`
 - `ListStatusPageIncidents`/`ListActiveStatusPageIncidentsForPage`/
   `ListStatusPageIncidentUpdates` (`queries/incidents.sql`),
   `ListMaintenanceWindows` (`queries/maintenance.sql`), and `ListAPIKeys`
@@ -61,9 +61,9 @@ claims... still hold."
   (`incidents.go`), `maxMaintenanceWindows` (`maintenance.go`), `maxAPIKeys`
   (`api_keys.go`) — each a constant plus a call site, not a `billing.Check*Limit`
   (nothing to upgrade past any of these)
-- `pruneOldPings` (`worker.go`) still calls all four retention-cleanup
+- `pruneOldPings` (`worker.go`) still calls all five retention-cleanup
   queries (`DeleteOldCronPings`/`DeleteOldUptimeChecks`/`DeleteOldPortChecks`/
-  `DeleteOldStatusPageIncidents`)
+  `DeleteOldDNSChecks`/`DeleteOldStatusPageIncidents`)
 - `loadActiveIncidents` (`status_public.go`) still fetches every active
   incident's updates in one batched query
   (`ListStatusPageIncidentUpdatesForIncidents`) rather than one query per
@@ -110,7 +110,7 @@ prospector .claude/skills/overload-audit/audit.py
 ## Scope
 
 Only covers the specific files `limits.md` cites
-(`internal/worker/worker_*.go`, `queries/{monitors,uptime,port,incidents,
+(`internal/worker/worker_*.go`, `queries/{monitors,uptime,port,dns,incidents,
 maintenance,api_keys}.sql`, `internal/handler/{incidents,maintenance,
 api_keys}.go`, `internal/server/server.go`, `internal/billing/plans.go`).
 If a check loop, query, or limit moves to a new file, update the

@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-37-to-v1-39-dns-monitoring',
+    slug: 'v1-37-to-v1-39-dns-monitoring',
+    title: 'v1.37–v1.39: DNS Record Monitoring',
+    date: 'July 29, 2026',
+    readTime: '3 min read',
+    excerpt:
+      "A sixth monitor type: watch a hostname's DNS record and get alerted the moment it changes or stops resolving — pin an expected value, or let the first check capture a baseline and alert on any later drift. Plus a couple of small internal-workflow and Codacy fixes from the two versions since the last post.",
+  },
+  {
     file: 'v1-33-to-v1-36-uptime-form-restyle',
     slug: 'v1-33-to-v1-36-uptime-form-restyle',
     title: 'v1.33–v1.36: The Design Reaches the Uptime Form',

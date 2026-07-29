@@ -27,7 +27,7 @@ export const plans: PricingPlan[] = [
       { value: '1', label: 'status page' },
       { value: '5', label: 'notification channels' },
     ],
-    extras: ['Cron, uptime, SSL, domain & port monitors', 'Telegram, Slack & email alerts'],
+    extras: ['Cron, uptime, SSL, domain, port & DNS monitors', 'Telegram, Slack & email alerts'],
   },
   {
     name: 'Solo',
@@ -42,7 +42,10 @@ export const plans: PricingPlan[] = [
       { value: '20', label: 'notification channels' },
       { value: '10', label: 'SMS credits / month' },
     ],
-    extras: ['Cron, uptime, SSL, domain & port monitors', 'Telegram, Slack, email & SMS alerts'],
+    extras: [
+      'Cron, uptime, SSL, domain, port & DNS monitors',
+      'Telegram, Slack, email & SMS alerts',
+    ],
   },
   {
     name: 'Startup',
@@ -57,7 +60,10 @@ export const plans: PricingPlan[] = [
       { value: '50', label: 'notification channels' },
       { value: '30', label: 'SMS credits / month' },
     ],
-    extras: ['Cron, uptime, SSL, domain & port monitors', 'Telegram, Slack, email & SMS alerts'],
+    extras: [
+      'Cron, uptime, SSL, domain, port & DNS monitors',
+      'Telegram, Slack, email & SMS alerts',
+    ],
   },
   {
     name: 'Enterprise',
@@ -72,7 +78,10 @@ export const plans: PricingPlan[] = [
       { value: '100', label: 'notification channels' },
       { value: '100', label: 'SMS credits / month' },
     ],
-    extras: ['Cron, uptime, SSL, domain & port monitors', 'Telegram, Slack, email & SMS alerts'],
+    extras: [
+      'Cron, uptime, SSL, domain, port & DNS monitors',
+      'Telegram, Slack, email & SMS alerts',
+    ],
   },
 ]
 

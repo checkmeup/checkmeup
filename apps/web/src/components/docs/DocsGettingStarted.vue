@@ -7,12 +7,13 @@
       first monitor.
     </p>
     <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
-      Checkmeup watches five kinds of things: scheduled jobs that should run on a cadence
+      Checkmeup watches six kinds of things: scheduled jobs that should run on a cadence
       (cron monitors), URLs that should always respond (uptime monitors), TLS certificates
       that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that
-      shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity for
-      anything that isn't HTTP (port monitors). Connect Telegram, Slack, email, a webhook, or
-      SMS (paid plans) — every monitor type alerts through whichever channels you enable.
+      shouldn't be allowed to lapse (domain monitors), raw host:port connectivity for
+      anything that isn't HTTP (port monitors), and DNS records that shouldn't change
+      unexpectedly (DNS monitors). Connect Telegram, Slack, email, a webhook, or SMS (paid
+      plans) — every monitor type alerts through whichever channels you enable.
     </p>
   </section>
 </template>

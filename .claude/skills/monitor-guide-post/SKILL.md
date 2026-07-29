@@ -15,7 +15,7 @@ this file describes the shape, not the prose voice.
 ## Steps
 
 **1. Pick the topic, if not already named.** Cross-reference CLAUDE.md's
-monitor list (cron, uptime, SSL expiry, domain expiry, port/TCP) against
+monitor list (cron, uptime, SSL expiry, domain expiry, port/TCP, DNS record) against
 existing `*-guide` slugs in `apps/web/src/blog/postsMeta.ts` to find the gap.
 If more than one gap exists, ask the user which one — don't guess.
 

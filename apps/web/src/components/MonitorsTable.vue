@@ -53,7 +53,7 @@ const router = useRouter()
 
     <div v-if="!hasAnyMonitors" class="p-10 text-center">
       <p class="text-sm mb-4" style="color: var(--text-muted)">
-        No monitors yet. Add a cron, uptime, SSL, domain, or port monitor to get started.
+        No monitors yet. Add a cron, uptime, SSL, domain, port, or DNS monitor to get started.
       </p>
       <Button @click="router.push({ name: 'uptime-monitor-create' })"
         >Add your first monitor</Button

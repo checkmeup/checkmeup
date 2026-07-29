@@ -24,7 +24,7 @@ const effectiveDate = '2026-06-17'
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. The service</h2>
           <p>
             Checkmeup is operated by Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel.
-            Checkmeup ("we", "us") provides cron, uptime, SSL certificate, domain, and port monitoring with alerting and
+            Checkmeup ("we", "us") provides cron, uptime, SSL certificate, domain, port, and DNS record monitoring with alerting and
             public status pages ("the Service"). By creating an account you agree to these Terms and to our
             <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)">Privacy Policy</RouterLink>.
           </p>

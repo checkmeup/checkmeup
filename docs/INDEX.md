@@ -24,7 +24,7 @@ Do not move files — lifecycle is metadata, not filesystem position.
 **Controlled tag vocabulary** (reuse these, don't invent new ones): `billing`, `paddle`, `twilio`,
 `ops`, `deployment`, `kamal`, `hetzner`, `design`, `tokens`, `colors`, `logo`, `security`, `dos`,
 `audit`, `architecture`, `maintainability`, `backend`, `frontend`, `vue3`, `auth`, `monitoring`,
-`cron`, `uptime`, `ssl`, `domain`, `port`, `alerts`, `telegram`, `sms`, `email`, `webhook`,
+`cron`, `uptime`, `ssl`, `domain`, `port`, `dns`, `alerts`, `telegram`, `sms`, `email`, `webhook`,
 `status-page`, `features`, `competitors`, `backlog`, `history`, `planning`.
 
 ## reference/ — living, update-on-change

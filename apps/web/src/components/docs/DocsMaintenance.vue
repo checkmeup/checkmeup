@@ -6,7 +6,7 @@
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Schedule a maintenance window from the
       <strong style="color: var(--text-strong)">Maintenance</strong> page and pick any
-      combination of cron, uptime, SSL, domain, and port monitors to cover. While a window is
+      combination of cron, uptime, SSL, domain, port, and DNS monitors to cover. While a window is
       active, those monitors aren't checked at all — no alerts, no incidents, and your uptime
       stats stay untouched.
     </p>

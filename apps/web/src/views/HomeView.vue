@@ -16,7 +16,7 @@ const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 useSeo({
   title: 'Checkmeup — monitoring for freelancers & client sites',
   description:
-    'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
+    'Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
   path: '/',
 })
 
@@ -42,7 +42,7 @@ const softwareApplicationSchema = {
   operatingSystem: 'Web',
   url: 'https://checkmeup.net',
   description:
-    'Cron, uptime, SSL, domain expiry, and port (TCP) monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
+    'Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
   offers: plans.map((plan) => ({
     '@type': 'Offer',
     name: plan.name,
@@ -126,7 +126,7 @@ useHead({
           Everything you need to stay on top.
         </h2>
         <p class="text-base" style="color: var(--text-dim)">
-          Five monitor types, one dashboard, zero blind spots.
+          Six monitor types, one dashboard, zero blind spots.
         </p>
       </div>
 
@@ -230,6 +230,26 @@ useHead({
               <rect x="2" y="9" width="6" height="6" rx="1" />
               <rect x="16" y="9" width="6" height="6" rx="1" />
               <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+          </template>
+        </FeatureCard>
+
+        <FeatureCard
+          title="DNS record monitoring"
+          description="Watch a hostname's A, AAAA, CNAME, MX, TXT, or NS record and get alerted the moment it changes or stops resolving — a hijack or a migration gone sideways doesn't fail the way a downed server does."
+          :bullets="['Pin a value or auto-capture a baseline', 'Old value → new value in every alert', 'Lookup errors read differently than a change']"
+        >
+          <template #icon>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--accent)"
+              stroke-width="1.75"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </template>
         </FeatureCard>

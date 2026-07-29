@@ -130,7 +130,7 @@ const mobileMenuOpen = ref(false)
           <div class="flex-shrink-0 sm:min-w-[190px]">
             <img :src="logoGrey" alt="Checkmeup" class="h-6 mb-2" />
             <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
-              Cron, uptime, SSL, domain, and port monitoring for freelancers and solo devs.
+              Cron, uptime, SSL, domain, port, and DNS monitoring for freelancers and solo devs.
             </p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-10 sm:gap-x-14 gap-y-6 sm:ml-auto">

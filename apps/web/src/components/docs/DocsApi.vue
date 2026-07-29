@@ -39,6 +39,9 @@ https://checkmeup.net/api/v1/public/monitors/cron/&lt;monitor-id&gt;/status</cod
       >, or
       <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
         >port</code
+      >, or
+      <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+        >dns</code
       >
       to match the monitor type. A cron monitor's response looks like:
     </p>

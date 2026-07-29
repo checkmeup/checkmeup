@@ -20,11 +20,11 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What can I monitor?',
-        a: "Five things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), TLS certificates that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that shouldn't be allowed to lapse (domain monitors), and raw host:port connectivity for anything that isn't HTTP — mail servers, databases, custom daemons (port monitors).",
+        a: "Six things: scheduled jobs that should run on a cadence (cron monitors), URLs that should always respond (uptime monitors), TLS certificates that shouldn't be allowed to quietly expire (SSL monitors), domain registrations that shouldn't be allowed to lapse (domain monitors), raw host:port connectivity for anything that isn't HTTP — mail servers, databases, custom daemons (port monitors), and DNS records that shouldn't change unexpectedly (DNS monitors).",
       },
       {
         q: 'Do I need to install anything?',
-        a: 'No. Cron monitors work by calling a ping URL at the end of your job (a single curl line). Uptime, SSL, domain, and port monitors just need a URL, hostname, domain, or host:port — nothing runs on your servers.',
+        a: 'No. Cron monitors work by calling a ping URL at the end of your job (a single curl line). Uptime, SSL, domain, port, and DNS monitors just need a URL, hostname, domain, host:port, or DNS record — nothing runs on your servers.',
       },
     ],
   },
@@ -38,7 +38,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What counts as a "monitor"?',
-        a: 'Each cron job, uptime URL, SSL certificate, domain, or port you track counts as one monitor. The limit applies to the total across all types.',
+        a: 'Each cron job, uptime URL, SSL certificate, domain, port, or DNS record you track counts as one monitor. The limit applies to the total across all types.',
       },
       {
         q: 'Can I change plans later?',
@@ -72,7 +72,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: "What's the minimum check interval?",
-        a: "5 minutes for uptime and port monitors on Hobby, 1 minute on paid plans. SSL certificates and domains are both checked once a day. Cron monitors alert based on your job's own schedule plus a grace period you choose.",
+        a: "5 minutes for uptime, port, and DNS monitors on Hobby, 1 minute on paid plans. SSL certificates and domains are both checked once a day. Cron monitors alert based on your job's own schedule plus a grace period you choose.",
       },
       {
         q: 'Can a port monitor alert me if a port becomes reachable, not just unreachable?',

@@ -6,6 +6,7 @@ import DocsUptime from '@/components/docs/DocsUptime.vue'
 import DocsSsl from '@/components/docs/DocsSsl.vue'
 import DocsDomain from '@/components/docs/DocsDomain.vue'
 import DocsPort from '@/components/docs/DocsPort.vue'
+import DocsDns from '@/components/docs/DocsDns.vue'
 import DocsTelegram from '@/components/docs/DocsTelegram.vue'
 import DocsEmail from '@/components/docs/DocsEmail.vue'
 import DocsWebhook from '@/components/docs/DocsWebhook.vue'
@@ -23,7 +24,7 @@ import { useSeo } from '@/composables/useSeo'
 useSeo({
   title: 'Docs — Checkmeup',
   description:
-    'How to set up cron, uptime, SSL, domain, and port monitors, alerts, status pages, and the public API on Checkmeup.',
+    'How to set up cron, uptime, SSL, domain, port, and DNS monitors, alerts, status pages, and the public API on Checkmeup.',
   path: '/docs',
 })
 
@@ -34,6 +35,7 @@ const sections = [
   { id: 'ssl', label: 'SSL expiry monitoring' },
   { id: 'domain', label: 'Domain expiry monitoring' },
   { id: 'port', label: 'Port (TCP) monitoring' },
+  { id: 'dns', label: 'DNS record monitoring' },
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'email', label: 'Email alerts' },
   { id: 'webhook', label: 'Webhook alerts' },
@@ -96,6 +98,8 @@ const sections = [
         <DocsDomain />
 
         <DocsPort />
+
+        <DocsDns />
 
         <DocsTelegram />
 

@@ -34,6 +34,7 @@ describe('DocsView', () => {
       '#ssl',
       '#domain',
       '#port',
+      '#dns',
       '#telegram',
       '#email',
       '#webhook',
