@@ -11,6 +11,7 @@ export interface CronMonitor {
   alertsEnabled: boolean
   maxAlertsPerIncident: number
   alertAfterNFailures: number
+  maxDurationMins: number | null
   lastPingAt: string | null
   nextPingAt: string | null
   createdAt: string
@@ -22,6 +23,7 @@ export interface CronPing {
   receivedAt: string
   sourceIp: string
   metadata?: Record<string, string>
+  runStartedAt: string | null
 }
 
 export interface CronIncident {
@@ -42,6 +44,7 @@ export interface CreateCronMonitorInput {
   gracePeriodMins: number
   maxAlertsPerIncident: number
   alertAfterNFailures: number
+  maxDurationMins: number | null
   channelIds?: string[]
 }
 
@@ -52,6 +55,7 @@ export interface UpdateCronMonitorInput {
   alertsEnabled: boolean
   maxAlertsPerIncident: number
   alertAfterNFailures: number
+  maxDurationMins: number | null
   channelIds: string[]
 }
 

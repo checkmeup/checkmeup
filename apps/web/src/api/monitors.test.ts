@@ -30,6 +30,7 @@ const cronMonitor = {
   status: 'up' as const,
   alertsEnabled: true,
   maxAlertsPerIncident: 3,
+  maxDurationMins: null,
   lastPingAt: '2026-06-21T02:00:00Z',
   nextPingAt: '2026-06-22T02:00:00Z',
   createdAt: '2026-06-01T00:00:00Z',
@@ -41,6 +42,7 @@ const createCronInput = {
   gracePeriodMins: 5,
   alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
+  maxDurationMins: null,
 }
 
 const updateCronInput = {
@@ -50,6 +52,7 @@ const updateCronInput = {
   alertsEnabled: true,
   alertAfterNFailures: 1,
   maxAlertsPerIncident: 3,
+  maxDurationMins: null,
   channelIds: ['ch1'],
 }
 

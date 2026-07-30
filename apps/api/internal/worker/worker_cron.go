@@ -74,6 +74,74 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	}
 }
 
+// checkStuckCronRuns implements EP-34 US-3403 — detecting a cron run that
+// started but has exceeded its monitor's max_duration_mins without a
+// completion ping ("zombie job"). Distinct from checkOverdue: this fires on
+// an in-progress run exceeding a duration budget, not a missed ping.
+func checkStuckCronRuns(ctx context.Context, n Notifiers) {
+	runs, err := n.Queries.ListStuckCronRuns(ctx)
+	if err != nil {
+		n.Logger.Error("worker: list stuck cron runs", "err", err)
+		return
+	}
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, checkConcurrency)
+	for _, run := range runs {
+		run := run
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			processStuckCronRun(ctx, n, run)
+		}()
+	}
+	wg.Wait()
+}
+
+// processStuckCronRun marks the run alerted (so the next tick doesn't
+// re-fire — "once per run" per US-3403) before dispatching, mirroring
+// processOverdueMonitor's mark-then-alert order.
+func processStuckCronRun(ctx context.Context, n Notifiers, run db.ListStuckCronRunsRow) {
+	if _, err := n.Queries.MarkCronRunAlerted(ctx, run.ID); err != nil {
+		n.Logger.Error("worker: mark cron run alerted", "run_id", run.ID, "err", err)
+		return
+	}
+	if !run.MonitorAlertsEnabled {
+		return
+	}
+	msg := buildStuckRunAlert(run)
+	DispatchAlert(ctx, n, run.MonitorOrgID, MonitorRef{Type: "cron", ID: run.MonitorID}, msg)
+}
+
+func buildStuckRunAlert(run db.ListStuckCronRunsRow) AlertMessage {
+	startedAt := run.StartedAt.Time
+	runningFor := FormatDuration(time.Since(startedAt))
+	maxDuration := FormatDuration(time.Duration(run.MonitorMaxDurationMins.Int32) * time.Minute)
+	reason := fmt.Sprintf("stuck run — started at %s, running for %s (max %s)", startedAt.Format("15:04:05 MST"), runningFor, maxDuration)
+	return AlertMessage{
+		Telegram: fmt.Sprintf(
+			"🐛 <b>%s</b> has a stuck run\n\nStarted at: %s\nRunning for: %s\nMax expected: %s",
+			run.MonitorName, startedAt.Format("15:04:05 MST"), runningFor, maxDuration,
+		),
+		EmailSubject: fmt.Sprintf("STUCK: %s run exceeded max duration", run.MonitorName),
+		EmailHTML: fmt.Sprintf(
+			"<p>🐛 <b>%s</b> has a stuck run</p><p>Started at: %s<br>Running for: %s<br>Max expected: %s</p>",
+			run.MonitorName, startedAt.Format("15:04:05 MST"), runningFor, maxDuration,
+		),
+		Webhook: &webhook.Event{
+			EventType:   "down",
+			MonitorName: run.MonitorName,
+			MonitorType: "cron",
+			Reason:      reason,
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		},
+		Slack: slackMsg(slack.DownMessage(run.MonitorName, "cron", reason)),
+		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s stuck run (%s)", run.MonitorName, runningFor)),
+	}
+}
+
 func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 	missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
 	expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")

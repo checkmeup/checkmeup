@@ -255,8 +255,11 @@ function copyPingUrl() {
                   ></span>
                   <span style="color: var(--text)">{{ fmt(ping.receivedAt) }}</span>
                 </div>
-                <div class="text-xs font-mono" style="color: var(--text-muted)">
-                  {{ ping.sourceIp || '—' }}
+                <div class="flex items-center gap-3 text-xs font-mono" style="color: var(--text-muted)">
+                  <span :title="ping.runStartedAt ? 'Start ping to completion ping' : 'No start ping received'">
+                    {{ ping.runStartedAt ? duration(ping.runStartedAt, ping.receivedAt) : '—' }}
+                  </span>
+                  <span>{{ ping.sourceIp || '—' }}</span>
                 </div>
               </div>
               <div v-if="ping.metadata" class="flex flex-wrap gap-1.5 mt-1.5 ml-3.5">

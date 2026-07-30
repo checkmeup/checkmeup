@@ -116,6 +116,7 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	// No-auth public endpoints
 	r.With(httprate.LimitBy(60, time.Minute, pingTokenKey)).Get("/ping/{token}", ping.ReceivePing)
+	r.With(httprate.LimitBy(60, time.Minute, pingTokenKey)).Get("/ping/{token}/start", ping.ReceivePingStart)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/paddle", billing.Webhook)
 

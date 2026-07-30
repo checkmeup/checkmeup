@@ -68,6 +68,7 @@ const monitor = {
   status: 'up' as const,
   alertsEnabled: true,
   maxAlertsPerIncident: 3,
+  maxDurationMins: 30,
   lastPingAt: null,
   nextPingAt: null,
   createdAt: '2026-01-01T00:00:00Z',
@@ -127,6 +128,8 @@ describe('CronMonitorEditView', () => {
     expect((wrapper.find('#schedule').element as HTMLInputElement).value).toBe('0 0 * * *')
     expect((wrapper.find('select#grace').element as HTMLSelectElement).value).toBe('5')
     expect((wrapper.find('#alerts').element as HTMLInputElement).checked).toBe(true)
+    const maxDurationSelect = wrapper.find('select#maxDuration').element as HTMLSelectElement
+    expect(maxDurationSelect.options[maxDurationSelect.selectedIndex].text).toBe('30 min')
   })
 
   it('shows a validation error when name is cleared', async () => {
@@ -166,6 +169,7 @@ describe('CronMonitorEditView', () => {
       gracePeriodMins: 5,
       alertsEnabled: true,
       maxAlertsPerIncident: 3,
+      maxDurationMins: 30,
       channelIds: ['ch1'],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({

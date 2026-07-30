@@ -280,6 +280,239 @@ func TestReceivePing(t *testing.T) {
 	})
 }
 
+func doPingStart(t *testing.T, h *PingHandler, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/ping/"+token+"/start", nil)
+	req = withURLParam(req, "token", token)
+	w := httptest.NewRecorder()
+	h.ReceivePingStart(w, req)
+	return w
+}
+
+// seedCronRun inserts a cron_runs row directly, simulating a run the worker
+// has already flagged stuck (alerted=true) without needing a real 30s tick.
+func seedCronRun(t *testing.T, pool *pgxpool.Pool, monitorID string, startedAt time.Time, alerted bool) {
+	t.Helper()
+	var alertedAt any
+	if alerted {
+		alertedAt = time.Now()
+	}
+	if _, err := pool.Exec(context.Background(),
+		"INSERT INTO cron_runs (monitor_id, started_at, alerted_at) VALUES ($1, $2, $3)",
+		monitorID, startedAt, alertedAt,
+	); err != nil {
+		t.Fatalf("seed cron run: %v", err)
+	}
+}
+
+// attachWebhookChannel creates a webhook notification channel pointed at url
+// and attaches it to the given cron monitor, so a test can assert on the
+// dispatched alert's content.
+func attachWebhookChannel(t *testing.T, pool *pgxpool.Pool, u signedUpUser, monitorID, url string) {
+	t.Helper()
+	orgID, err := uuid.Parse(u.resp.OrgID)
+	if err != nil {
+		t.Fatalf("parse org id: %v", err)
+	}
+	monID, err := uuid.Parse(monitorID)
+	if err != nil {
+		t.Fatalf("parse monitor id: %v", err)
+	}
+	queries := db.New(pool)
+	channel, err := queries.CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+		OrgID: orgID, Type: db.NotificationChannelTypeWebhook, Name: "Hook",
+		Config: []byte(`{"url":"` + url + `","secret":"shh"}`),
+	})
+	if err != nil {
+		t.Fatalf("create webhook channel: %v", err)
+	}
+	if err := queries.InsertMonitorNotificationChannel(context.Background(), db.InsertMonitorNotificationChannelParams{
+		ChannelID: channel.ID, MonitorType: "cron", MonitorID: monID,
+	}); err != nil {
+		t.Fatalf("attach webhook channel: %v", err)
+	}
+}
+
+func TestReceivePingStart(t *testing.T) {
+	authH, monitorH, pingH, pool := testPingHandler(t)
+
+	t.Run("unknown token returns 404", func(t *testing.T) {
+		w := doPingStart(t, pingH, "no-such-token")
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("records a run without touching monitor ping state (ADR-039)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Start ping job")
+		token := cronPingToken(t, pool, mon.ID)
+
+		w := doPingStart(t, pingH, token)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var runCount int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&runCount); err != nil {
+			t.Fatalf("count runs: %v", err)
+		}
+		if runCount != 1 {
+			t.Fatalf("want 1 run recorded, got %d", runCount)
+		}
+
+		row := getCronMonitorRow(t, pool, mon.ID)
+		if row.Status != db.MonitorStatusWaiting {
+			t.Fatalf("want status to remain untouched (waiting), got %q", row.Status)
+		}
+		if row.LastPingAt.Valid {
+			t.Fatal("want last_ping_at untouched by the start ping")
+		}
+		if row.NextPingAt.Valid {
+			t.Fatal("want next_ping_at untouched by the start ping")
+		}
+	})
+
+	t.Run("completion ping closes the open run and stamps run_started_at (US-3401/US-3404)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Round trip job")
+		token := cronPingToken(t, pool, mon.ID)
+
+		if w := doPingStart(t, pingH, token); w.Code != http.StatusOK {
+			t.Fatalf("start: want 200, got %d", w.Code)
+		}
+		if w := doPing(t, pingH, token, nil); w.Code != http.StatusOK {
+			t.Fatalf("complete: want 200, got %d", w.Code)
+		}
+
+		var completedCount int
+		if err := pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM cron_runs WHERE monitor_id = $1 AND completed_at IS NOT NULL", mon.ID,
+		).Scan(&completedCount); err != nil {
+			t.Fatalf("count completed runs: %v", err)
+		}
+		if completedCount != 1 {
+			t.Fatalf("want 1 completed run, got %d", completedCount)
+		}
+
+		var hasRunStartedAt bool
+		if err := pool.QueryRow(context.Background(),
+			"SELECT run_started_at IS NOT NULL FROM cron_pings WHERE monitor_id = $1", mon.ID,
+		).Scan(&hasRunStartedAt); err != nil {
+			t.Fatalf("query ping run_started_at: %v", err)
+		}
+		if !hasRunStartedAt {
+			t.Fatal("want the completion ping to record run_started_at")
+		}
+	})
+
+	t.Run("completion ping with no open run is accepted as-is (US-3401)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "No start ping job")
+		token := cronPingToken(t, pool, mon.ID)
+
+		w := doPing(t, pingH, token, nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var runStartedAtIsNull bool
+		if err := pool.QueryRow(context.Background(),
+			"SELECT run_started_at IS NULL FROM cron_pings WHERE monitor_id = $1", mon.ID,
+		).Scan(&runStartedAtIsNull); err != nil {
+			t.Fatalf("query ping run_started_at: %v", err)
+		}
+		if !runStartedAtIsNull {
+			t.Fatal("want run_started_at to stay null with no preceding start ping")
+		}
+	})
+
+	t.Run("recovery alert fires on completion when the closed run had already been flagged stuck (US-3403)", func(t *testing.T) {
+		var gotEvent webhook.Event
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Stuck then completes")
+		attachWebhookChannel(t, pool, u, mon.ID, srv.URL)
+
+		token := cronPingToken(t, pool, mon.ID)
+		seedCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), true)
+
+		w := doPing(t, pingH, token, nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if gotEvent.EventType != "recovery" {
+			t.Fatalf("want a recovery webhook event, got %+v", gotEvent)
+		}
+	})
+
+	t.Run("recovery alert fires when a new start ping supersedes an already-alerted open run (US-3403)", func(t *testing.T) {
+		var gotEvent webhook.Event
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Superseded run")
+		attachWebhookChannel(t, pool, u, mon.ID, srv.URL)
+
+		token := cronPingToken(t, pool, mon.ID)
+		seedCronRun(t, pool, mon.ID, time.Now().Add(-3*time.Hour), true)
+
+		w := doPingStart(t, pingH, token)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		if gotEvent.EventType != "recovery" {
+			t.Fatalf("want a recovery webhook event on supersede, got %+v", gotEvent)
+		}
+
+		var runCount int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&runCount); err != nil {
+			t.Fatalf("count runs: %v", err)
+		}
+		if runCount != 2 {
+			t.Fatalf("want both the superseded run and the new run present, got %d", runCount)
+		}
+	})
+
+	t.Run("no recovery alert when the open run was never flagged stuck", func(t *testing.T) {
+		var gotEvent webhook.Event
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Never flagged")
+		attachWebhookChannel(t, pool, u, mon.ID, srv.URL)
+
+		token := cronPingToken(t, pool, mon.ID)
+		if w := doPingStart(t, pingH, token); w.Code != http.StatusOK {
+			t.Fatalf("start: want 200, got %d", w.Code)
+		}
+
+		w := doPing(t, pingH, token, nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("complete: want 200, got %d", w.Code)
+		}
+
+		if gotEvent.EventType != "" {
+			t.Fatalf("want no alert for a run that was never flagged stuck, got %+v", gotEvent)
+		}
+	})
+}
+
 func TestComputeNextPing(t *testing.T) {
 	now := time.Date(2026, 6, 19, 12, 0, 0, 0, time.UTC)
 

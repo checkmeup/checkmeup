@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/robfig/cron/v3"
@@ -61,10 +63,21 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	sourceIP := realIP(r)
 
+	// Close a matching open run (ADR-039/US-3401) before recording the ping,
+	// so run_started_at can be stamped on the same row. ErrNoRows just means
+	// this monitor never sent a start ping (or this completion has none to
+	// match) — accepted as-is, not an error (US-3401's opt-in requirement).
+	var runStartedAt pgtype.Timestamptz
+	closedRun, closeErr := h.queries.CompleteCronRun(r.Context(), monitor.ID)
+	if closeErr == nil {
+		runStartedAt = closedRun.StartedAt
+	}
+
 	if _, err := h.queries.CreateCronPing(r.Context(), db.CreateCronPingParams{
-		MonitorID: monitor.ID,
-		SourceIp:  sourceIP,
-		Metadata:  buildPingMetadata(r),
+		MonitorID:    monitor.ID,
+		SourceIp:     sourceIP,
+		Metadata:     buildPingMetadata(r),
+		RunStartedAt: runStartedAt,
 	}); err != nil {
 		// Log but don't fail — the job must always get 200.
 		w.WriteHeader(http.StatusOK)
@@ -89,7 +102,72 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		h.sendCronRecoveryAlert(r.Context(), monitor, now)
 	}
 
+	// Zombie recovery (US-3403): this completion closed a run that had
+	// already crossed max_duration_mins and fired a stuck-run alert.
+	if closeErr == nil && closedRun.AlertedAt.Valid {
+		h.sendStuckRunRecoveryAlert(r.Context(), monitor, closedRun, "completed")
+	}
+
 	w.WriteHeader(http.StatusOK)
+}
+
+// ReceivePingStart handles GET /ping/{token}/start (ADR-039, US-3401).
+// Always returns 200, same "must never fail the caller" rule as the
+// completion ping. Deliberately does not touch last_ping_at/next_ping_at/
+// status — those stay owned entirely by the completion ping, so a monitor
+// that never calls this endpoint keeps exactly today's single-ping behavior.
+func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+
+	monitor, err := h.queries.GetCronMonitorByToken(r.Context(), token)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	// Supersede (US-3403): an already-open run means this start ping is
+	// superseding it. If that old run had already fired a stuck-run alert,
+	// resolve it now rather than waiting on a completion ping that may
+	// never arrive.
+	if prevRun, err := h.queries.GetOpenCronRun(r.Context(), monitor.ID); err == nil && prevRun.AlertedAt.Valid {
+		h.sendStuckRunRecoveryAlert(r.Context(), monitor, prevRun, "superseded by a new run")
+	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		slog.Default().Error("ping: get open cron run", "monitor_id", monitor.ID, "err", err)
+	}
+
+	if _, err := h.queries.CreateCronRun(r.Context(), monitor.ID); err != nil {
+		slog.Default().Error("ping: create cron run", "monitor_id", monitor.ID, "err", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// sendStuckRunRecoveryAlert dispatches a recovery alert for a cron run that
+// had previously crossed max_duration_mins and been flagged stuck (US-3403).
+// reason distinguishes whether it finally completed or was superseded by a
+// new start ping — either way the stuck state is no longer current.
+func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.CronMonitor, run db.CronRun, reason string) {
+	if !monitor.AlertsEnabled {
+		return
+	}
+	ranFor := worker.FormatDuration(time.Since(run.StartedAt.Time))
+	slackRecovery := slack.RecoveryMessage(monitor.Name, "cron", fmt.Sprintf("%s (ran for %s)", reason, ranFor))
+	msg := worker.AlertMessage{
+		Telegram:     fmt.Sprintf("✅ <b>%s</b> stuck run recovered — %s\n\nRan for: %s", monitor.Name, reason, ranFor),
+		EmailSubject: fmt.Sprintf("%s stuck run recovered", monitor.Name),
+		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> stuck run recovered — %s</p><p>Ran for: %s</p>", monitor.Name, reason, ranFor),
+		Webhook: &webhook.Event{
+			EventType:        "recovery",
+			MonitorName:      monitor.Name,
+			MonitorType:      "cron",
+			DowntimeDuration: ranFor,
+			Timestamp:        time.Now().UTC().Format(time.RFC3339),
+		},
+		Slack: &slackRecovery,
+		SMS:   worker.TruncateSMS(fmt.Sprintf("Checkmeup: %s stuck run recovered (%s)", monitor.Name, reason)),
+	}
+	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
+	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)
 }
 
 // sendCronRecoveryAlert dispatches a recovery alert now that a

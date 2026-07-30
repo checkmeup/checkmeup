@@ -532,14 +532,25 @@ type CronMonitor struct {
 	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
 	ConsecutiveFailures  int32              `json:"consecutive_failures"`
+	MaxDurationMins      pgtype.Int4        `json:"max_duration_mins"`
 }
 
 type CronPing struct {
-	ID         uuid.UUID          `json:"id"`
-	MonitorID  uuid.UUID          `json:"monitor_id"`
-	ReceivedAt pgtype.Timestamptz `json:"received_at"`
-	SourceIp   string             `json:"source_ip"`
-	Metadata   []byte             `json:"metadata"`
+	ID           uuid.UUID          `json:"id"`
+	MonitorID    uuid.UUID          `json:"monitor_id"`
+	ReceivedAt   pgtype.Timestamptz `json:"received_at"`
+	SourceIp     string             `json:"source_ip"`
+	Metadata     []byte             `json:"metadata"`
+	RunStartedAt pgtype.Timestamptz `json:"run_started_at"`
+}
+
+type CronRun struct {
+	ID          uuid.UUID          `json:"id"`
+	MonitorID   uuid.UUID          `json:"monitor_id"`
+	StartedAt   pgtype.Timestamptz `json:"started_at"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	AlertedAt   pgtype.Timestamptz `json:"alerted_at"`
+	Overlap     bool               `json:"overlap"`
 }
 
 type DnsCheck struct {

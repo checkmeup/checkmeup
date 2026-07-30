@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/billing"
@@ -44,6 +45,7 @@ type cronMonitorResponse struct {
 	AlertsEnabled        bool     `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
 	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxDurationMins      *int32   `json:"maxDurationMins"`
 	LastPingAt           *string  `json:"lastPingAt"`
 	NextPingAt           *string  `json:"nextPingAt"`
 	CreatedAt            string   `json:"createdAt"`
@@ -51,10 +53,11 @@ type cronMonitorResponse struct {
 }
 
 type cronPingResponse struct {
-	ID         string            `json:"id"`
-	ReceivedAt string            `json:"receivedAt"`
-	SourceIP   string            `json:"sourceIp"`
-	Metadata   map[string]string `json:"metadata,omitempty"`
+	ID           string            `json:"id"`
+	ReceivedAt   string            `json:"receivedAt"`
+	SourceIP     string            `json:"sourceIp"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
+	RunStartedAt *string           `json:"runStartedAt"`
 }
 
 func cronPingToResponse(p db.CronPing) cronPingResponse {
@@ -68,6 +71,10 @@ func cronPingToResponse(p db.CronPing) cronPingResponse {
 		if json.Unmarshal(p.Metadata, &meta) == nil {
 			r.Metadata = meta
 		}
+	}
+	if p.RunStartedAt.Valid {
+		t := p.RunStartedAt.Time.Format("2006-01-02T15:04:05Z")
+		r.RunStartedAt = &t
 	}
 	return r
 }
@@ -91,6 +98,10 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+	}
+	if m.MaxDurationMins.Valid {
+		v := m.MaxDurationMins.Int32
+		r.MaxDurationMins = &v
 	}
 	if m.LastPingAt.Valid {
 		t := m.LastPingAt.Time.Format("2006-01-02T15:04:05Z")
@@ -183,7 +194,7 @@ func (h *MonitorHandler) loadNotificationChannelIDs(ctx context.Context, monitor
 // create and update requests, responding with the first validation failure
 // and returning false — same "respond internally, return ok" idiom as
 // validateUptimeMonitorRequest.
-func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, gracePeriodMins, maxAlertsPerIncident *int32) bool {
+func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, gracePeriodMins, maxAlertsPerIncident *int32, maxDurationMins *int32) bool {
 	*name = strings.TrimSpace(*name)
 	*schedule = strings.TrimSpace(*schedule)
 	if *name == "" {
@@ -200,7 +211,22 @@ func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, g
 	if *maxAlertsPerIncident < 0 {
 		*maxAlertsPerIncident = 3
 	}
+	// Unset (nil) means zombie detection is inactive (US-3402) — only a
+	// provided-but-non-positive value is rejected, distinct from "disabled".
+	if maxDurationMins != nil && *maxDurationMins <= 0 {
+		respond.Error(w, http.StatusBadRequest, "maxDurationMins must be positive", "bad_request")
+		return false
+	}
 	return true
+}
+
+// int32PtrToPgInt4 converts a nullable request field to sqlc's nullable
+// int column type — nil stays NULL (US-3402's "disabled" state).
+func int32PtrToPgInt4(v *int32) pgtype.Int4 {
+	if v == nil {
+		return pgtype.Int4{}
+	}
+	return pgtype.Int4{Int32: *v, Valid: true}
 }
 
 // checkCronMonitorCreateLimit checks whether orgID can create another cron
@@ -252,6 +278,7 @@ type createCronMonitorRequest struct {
 	GracePeriodMins      int32    `json:"gracePeriodMins"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
 	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxDurationMins      *int32   `json:"maxDurationMins"`
 	ChannelIDs           []string `json:"channelIds"`
 }
 
@@ -269,7 +296,7 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident) {
+	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident, req.MaxDurationMins) {
 		return
 	}
 	if !h.checkCronMonitorCreateLimit(w, r, orgID) {
@@ -291,6 +318,7 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		PingToken:            token,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
+		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
@@ -412,6 +440,7 @@ type updateCronMonitorRequest struct {
 	AlertsEnabled        bool     `json:"alertsEnabled"`
 	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
 	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
+	MaxDurationMins      *int32   `json:"maxDurationMins"`
 	ChannelIDs           []string `json:"channelIds"`
 }
 
@@ -428,7 +457,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident) {
+	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident, req.MaxDurationMins) {
 		return
 	}
 
@@ -441,6 +470,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		AlertsEnabled:        req.AlertsEnabled,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
+		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
 	})
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return

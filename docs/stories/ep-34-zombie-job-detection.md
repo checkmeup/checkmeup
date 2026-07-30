@@ -14,10 +14,10 @@ Today a cron monitor only ever receives one kind of ping — `GET /ping/{token}`
 
 **Acceptance criteria:**
 
-- [ ] New endpoint distinct from the existing completion ping (e.g. `GET /ping/{token}/start`) records a run-start timestamp
-- [ ] Opt-in: a monitor that never receives a start ping behaves exactly as it does today — zero change for existing jobs
-- [ ] A run is considered "in progress" from the start ping until the next completion ping for that token
-- [ ] A completion ping with no preceding start ping is accepted as-is (today's behavior), not treated as an error
+- [x] New endpoint distinct from the existing completion ping (e.g. `GET /ping/{token}/start`) records a run-start timestamp
+- [x] Opt-in: a monitor that never receives a start ping behaves exactly as it does today — zero change for existing jobs
+- [x] A run is considered "in progress" from the start ping until the next completion ping for that token
+- [x] A completion ping with no preceding start ping is accepted as-is (today's behavior), not treated as an error
 
 ---
 
@@ -29,9 +29,9 @@ Today a cron monitor only ever receives one kind of ping — `GET /ping/{token}`
 
 **Acceptance criteria:**
 
-- [ ] Optional `max_duration_mins` field on create/edit, only meaningful for monitors using the start ping (US-3401)
-- [ ] Left unset, zombie detection stays inactive for that monitor — no behavior change
-- [ ] Editable independently of schedule and grace period
+- [x] Optional `max_duration_mins` field on create/edit, only meaningful for monitors using the start ping (US-3401)
+- [x] Left unset, zombie detection stays inactive for that monitor — no behavior change
+- [x] Editable independently of schedule and grace period
 
 ---
 
@@ -43,10 +43,10 @@ Today a cron monitor only ever receives one kind of ping — `GET /ping/{token}`
 
 **Acceptance criteria:**
 
-- [ ] Existing overdue-check worker ticker (EP-02 US-0203, 30s) also checks in-progress runs against `max_duration_mins`
-- [ ] Alert fires once when a run first exceeds its max duration, not repeatedly on every subsequent tick
-- [ ] Alert message distinguishes "stuck run" (started at X, still running after Y) from a standard missed-ping alert
-- [ ] Recovery: alert clears once the completion ping arrives, or the run is superseded by a new start ping
+- [x] Existing overdue-check worker ticker (EP-02 US-0203, 30s) also checks in-progress runs against `max_duration_mins`
+- [x] Alert fires once when a run first exceeds its max duration, not repeatedly on every subsequent tick
+- [x] Alert message distinguishes "stuck run" (started at X, still running after Y) from a standard missed-ping alert
+- [x] Recovery: alert clears once the completion ping arrives, or the run is superseded by a new start ping
 
 ---
 
@@ -58,5 +58,5 @@ Today a cron monitor only ever receives one kind of ping — `GET /ping/{token}`
 
 **Acceptance criteria:**
 
-- [ ] Execution log (EP-02 US-0205) shows duration per completed run (start ping to completion ping) for monitors using US-3401
-- [ ] Runs without a start ping show duration as "n/a", not zero or blank
+- [x] Execution log (EP-02 US-0205) shows duration per completed run (start ping to completion ping) for monitors using US-3401
+- [x] Runs without a start ping show duration as "n/a", not zero or blank (rendered as `—`, matching this codebase's existing missing-value convention)

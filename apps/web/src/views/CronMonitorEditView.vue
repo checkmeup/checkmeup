@@ -21,6 +21,7 @@ const gracePeriodMins = ref(5)
 const alertsEnabled = ref(true)
 const maxAlertsPerIncident = ref(3)
 const alertAfterNFailures = ref(0)
+const maxDurationMins = ref<number | null>(null)
 const channelIds = ref<string[]>([])
 const submitting = ref(false)
 const error = ref('')
@@ -50,6 +51,15 @@ const alertFilterOptions = [
   { label: 'Skip first 5 failures', value: 5 },
 ]
 
+const maxDurationOptions: { label: string; value: number | null }[] = [
+  { label: 'Off (default)', value: null },
+  { label: '5 min', value: 5 },
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '1 hour', value: 60 },
+  { label: '2 hours', value: 120 },
+]
+
 const { data: detail, isPending: loading, error: loadError } = useCronMonitor(id)
 watch(
   detail,
@@ -62,6 +72,7 @@ watch(
     alertsEnabled.value = m.alertsEnabled
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
     alertAfterNFailures.value = m.alertAfterNFailures
+    maxDurationMins.value = m.maxDurationMins
     channelIds.value = m.channelIds ?? []
   },
   { immediate: true },
@@ -91,6 +102,7 @@ async function submit() {
       alertsEnabled: alertsEnabled.value,
       maxAlertsPerIncident: maxAlertsPerIncident.value,
       alertAfterNFailures: alertAfterNFailures.value,
+      maxDurationMins: maxDurationMins.value,
       channelIds: channelIds.value,
     })
     router.push({ name: 'cron-monitor-detail', params: { id } })
@@ -207,6 +219,24 @@ async function submit() {
           </select>
           <p class="text-xs mt-1" style="color: var(--text-muted)">
             Suppress alerts until N consecutive failures are detected. Resets on success.
+          </p>
+        </div>
+
+        <div>
+          <Label for="maxDuration">Max run duration</Label>
+          <select
+            id="maxDuration"
+            v-model="maxDurationMins"
+            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+          >
+            <option v-for="opt in maxDurationOptions" :key="opt.label" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <p class="text-xs mt-1" style="color: var(--text-muted)">
+            Alert if a run doesn't finish within this time — only applies if your job also pings
+            <code>{{ detail?.monitor.pingUrl }}/start</code> when it begins.
           </p>
         </div>
 

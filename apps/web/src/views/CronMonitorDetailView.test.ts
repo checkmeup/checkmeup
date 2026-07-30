@@ -138,6 +138,32 @@ describe('CronMonitorDetailView', () => {
     expect(wrapper.text()).toContain('Execution log')
   })
 
+  it('shows a run duration for a completion ping with a matching start ping (US-3404)', () => {
+    const receivedAt = new Date(Date.now() - 5 * 60000).toISOString()
+    const runStartedAt = new Date(Date.now() - 15 * 60000).toISOString()
+    detailData.value = {
+      ...detail,
+      monitor: { ...monitor },
+      pings: [{ id: 'p1', receivedAt, sourceIp: '1.2.3.4', runStartedAt }],
+    }
+    const wrapper = mount(CronMonitorDetailView)
+
+    expect(wrapper.text()).toContain('10m')
+  })
+
+  it("shows '—' for a ping with no matching start ping", () => {
+    detailData.value = {
+      ...detail,
+      monitor: { ...monitor },
+      pings: [
+        { id: 'p1', receivedAt: new Date().toISOString(), sourceIp: '1.2.3.4', runStartedAt: null },
+      ],
+    }
+    const wrapper = mount(CronMonitorDetailView)
+
+    expect(wrapper.text()).toContain('—')
+  })
+
   it("renders a ping's metadata as key: value chips", () => {
     detailData.value = {
       ...detail,

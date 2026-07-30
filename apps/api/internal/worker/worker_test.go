@@ -1264,6 +1264,188 @@ func TestCheckOverdue(t *testing.T) {
 	})
 }
 
+// ─── checkStuckCronRuns (EP-34 US-3403) ───────────────────────────────────
+
+// testCronRun inserts a cron_runs row directly with a controllable
+// started_at (CreateCronRun always defaults started_at to NOW(), which
+// can't express "started 2 hours ago" for these tests).
+func testCronRun(t *testing.T, pool *pgxpool.Pool, monitorID uuid.UUID, startedAt time.Time, alerted bool) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	var alertedAt any
+	if alerted {
+		alertedAt = time.Now()
+	}
+	if err := pool.QueryRow(context.Background(),
+		"INSERT INTO cron_runs (monitor_id, started_at, alerted_at) VALUES ($1, $2, $3) RETURNING id",
+		monitorID, startedAt, alertedAt,
+	).Scan(&id); err != nil {
+		t.Fatalf("seed cron run: %v", err)
+	}
+	return id
+}
+
+func TestCheckStuckCronRuns(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	tg := telegram.NewClient("")
+	mailer := email.NewSender("")
+	// Same unguarded-client reasoning as TestCheckOverdue's webhook subtest —
+	// these POST to a local httptest server, which webhook.NewClient's SSRF
+	// protections (loopback blocked) would refuse to dial.
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	logger := testLogger()
+	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
+
+	t.Run("alerts once on a run that exceeded max_duration_mins, then marks it alerted", func(t *testing.T) {
+		var gotEvent webhook.Event
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30 WHERE id = $1", mon.ID)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		checkStuckCronRuns(context.Background(), n)
+
+		if gotEvent.EventType != "down" {
+			t.Fatalf("want a down-style stuck-run alert, got %+v", gotEvent)
+		}
+		if !strings.Contains(gotEvent.Reason, "stuck") {
+			t.Fatalf("want reason to mention 'stuck' (distinct from a missed-ping alert), got %q", gotEvent.Reason)
+		}
+
+		var alertedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
+			t.Fatalf("query run: %v", err)
+		}
+		if !alertedAt.Valid {
+			t.Fatal("want alerted_at set after firing")
+		}
+	})
+
+	t.Run("does not re-alert a run that was already flagged", func(t *testing.T) {
+		var callCount int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30 WHERE id = $1", mon.ID)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), true) // already alerted
+
+		checkStuckCronRuns(context.Background(), n)
+
+		if callCount != 0 {
+			t.Fatalf("want no alert for a run already flagged, got %d calls", callCount)
+		}
+	})
+
+	t.Run("a monitor without max_duration_mins set is never selected", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h") // max_duration_mins left NULL
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		checkStuckCronRuns(context.Background(), n)
+
+		var alertedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
+			t.Fatalf("query run: %v", err)
+		}
+		if alertedAt.Valid {
+			t.Fatal("want alerted_at to stay unset when max_duration_mins is disabled")
+		}
+	})
+
+	t.Run("a run still within its max_duration_mins budget is left alone", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30 WHERE id = $1", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now(), false)
+
+		checkStuckCronRuns(context.Background(), n)
+
+		var alertedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
+			t.Fatalf("query run: %v", err)
+		}
+		if alertedAt.Valid {
+			t.Fatal("want alerted_at to stay unset for a run still within budget")
+		}
+	})
+
+	t.Run("a monitor under an active maintenance window is excluded", func(t *testing.T) {
+		var callCount int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30 WHERE id = $1", mon.ID)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		var windowID uuid.UUID
+		if err := pool.QueryRow(context.Background(),
+			"INSERT INTO maintenance_windows (org_id, title, message, starts_at) VALUES ($1, 'Scheduled', '', NOW() - INTERVAL '1 minute') RETURNING id",
+			org.ID,
+		).Scan(&windowID); err != nil {
+			t.Fatalf("seed maintenance window: %v", err)
+		}
+		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'cron', $2)", windowID, mon.ID)
+
+		checkStuckCronRuns(context.Background(), n)
+
+		if callCount != 0 {
+			t.Fatalf("want no alert under an active maintenance window, got %d calls", callCount)
+		}
+	})
+
+	t.Run("alerts_enabled=false still marks the run alerted (so it isn't re-evaluated) but sends no alert", func(t *testing.T) {
+		var callCount int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30, alerts_enabled = false WHERE id = $1", mon.ID)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL})
+		attachNotificationChannel(t, queries, channel.ID, "cron", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		checkStuckCronRuns(context.Background(), n)
+
+		if callCount != 0 {
+			t.Fatalf("want no alert with alerts disabled, got %d calls", callCount)
+		}
+		var alertedAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
+			t.Fatalf("query run: %v", err)
+		}
+		if !alertedAt.Valid {
+			t.Fatal("want alerted_at set even with alerts disabled, matching processOverdueMonitor's pattern")
+		}
+	})
+}
+
 // ─── checkUptimeMonitors / checkOneUptimeMonitor ──────────────────────────
 
 func TestCheckUptimeMonitors(t *testing.T) {

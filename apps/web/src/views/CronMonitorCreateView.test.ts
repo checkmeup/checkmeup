@@ -67,6 +67,8 @@ describe('CronMonitorCreateView', () => {
     expect(wrapper.text()).toContain('New cron monitor')
     expect((wrapper.find('select#grace').element as HTMLSelectElement).value).toBe('5')
     expect((wrapper.find('select#alertLimit').element as HTMLSelectElement).value).toBe('3')
+    const maxDurationSelect = wrapper.find('select#maxDuration').element as HTMLSelectElement
+    expect(maxDurationSelect.options[maxDurationSelect.selectedIndex].text).toBe('Off (default)')
   })
 
   it('fills the schedule field when a quick example is clicked', async () => {
@@ -121,6 +123,7 @@ describe('CronMonitorCreateView', () => {
       gracePeriodMins: 5,
       maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
+      maxDurationMins: null,
       channelIds: [],
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({

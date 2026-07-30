@@ -128,6 +128,8 @@ func TestCreateCronMonitor(t *testing.T) {
 			{"missing name", createCronMonitorRequest{Schedule: "every 1h"}},
 			{"missing schedule", createCronMonitorRequest{Name: "x"}},
 			{"invalid schedule", createCronMonitorRequest{Name: "x", Schedule: "not a valid schedule at all"}},
+			{"zero maxDurationMins", createCronMonitorRequest{Name: "x", Schedule: "every 1h", MaxDurationMins: int32Ptr(0)}},
+			{"negative maxDurationMins", createCronMonitorRequest{Name: "x", Schedule: "every 1h", MaxDurationMins: int32Ptr(-5)}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -163,6 +165,23 @@ func TestCreateCronMonitor(t *testing.T) {
 		wantURL := "http://localhost:8080/ping/" + resp.PingToken
 		if resp.PingURL != wantURL {
 			t.Fatalf("want ping URL %q, got %q", wantURL, resp.PingURL)
+		}
+		if resp.MaxDurationMins != nil {
+			t.Fatalf("want maxDurationMins unset (zombie detection inactive) by default, got %v", resp.MaxDurationMins)
+		}
+	})
+
+	t.Run("success with maxDurationMins set (US-3402)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, monitorH.CreateCronMonitor, u.access, createCronMonitorRequest{
+			Name: "Zombie-checked job", Schedule: "every 1h", MaxDurationMins: int32Ptr(30),
+		})
+		if w.Code != http.StatusCreated {
+			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
+		}
+		resp := decodeBody[cronMonitorResponse](t, w)
+		if resp.MaxDurationMins == nil || *resp.MaxDurationMins != 30 {
+			t.Fatalf("want maxDurationMins 30, got %v", resp.MaxDurationMins)
 		}
 	})
 
@@ -373,6 +392,7 @@ func TestUpdateCronMonitor(t *testing.T) {
 		}{
 			{"missing name", updateCronMonitorRequest{Schedule: "every 1h"}},
 			{"invalid schedule", updateCronMonitorRequest{Name: "x", Schedule: "garbage"}},
+			{"zero maxDurationMins", updateCronMonitorRequest{Name: "x", Schedule: "every 1h", MaxDurationMins: int32Ptr(0)}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -433,8 +453,29 @@ func TestUpdateCronMonitor(t *testing.T) {
 		if resp.MaxAlertsPerIncident != 3 {
 			t.Fatalf("want default max alerts 3, got %d", resp.MaxAlertsPerIncident)
 		}
+		if resp.MaxDurationMins != nil {
+			t.Fatalf("want maxDurationMins to stay unset, got %v", resp.MaxDurationMins)
+		}
+	})
+
+	t.Run("success sets maxDurationMins (US-3402)", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Original name")
+
+		w := doMonitorRequest(t, http.MethodPatch, monitorH.UpdateCronMonitor, u.access, mon.ID, updateCronMonitorRequest{
+			Name: "Renamed", Schedule: "every 1h", MaxDurationMins: int32Ptr(45),
+		})
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		resp := decodeBody[cronMonitorResponse](t, w)
+		if resp.MaxDurationMins == nil || *resp.MaxDurationMins != 45 {
+			t.Fatalf("want maxDurationMins 45, got %v", resp.MaxDurationMins)
+		}
 	})
 }
+
+func int32Ptr(v int32) *int32 { return &v }
 
 func TestPauseResumeCronMonitor(t *testing.T) {
 	authH, monitorH, pool := testMonitorHandler(t)

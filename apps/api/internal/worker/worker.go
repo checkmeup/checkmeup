@@ -74,6 +74,7 @@ func Run(ctx context.Context, n Notifiers) {
 			return
 		case <-ticker.C:
 			checkOverdue(ctx, n)
+			checkStuckCronRuns(ctx, n)
 			checkUptimeMonitors(ctx, n)
 			checkSSLMonitors(ctx, n)
 			checkDomainMonitors(ctx, n)
@@ -446,6 +447,11 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 		logger.Error("worker: prune old pings", "err", err)
 	} else {
 		logger.Info("worker: pruned cron_pings older than 30 days")
+	}
+	if err := queries.DeleteOldCronRuns(ctx); err != nil {
+		logger.Error("worker: prune old cron runs", "err", err)
+	} else {
+		logger.Info("worker: pruned cron_runs older than 30 days")
 	}
 	if err := queries.DeleteOldUptimeChecks(ctx); err != nil {
 		logger.Error("worker: prune old uptime checks", "err", err)
