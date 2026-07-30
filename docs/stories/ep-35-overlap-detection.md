@@ -2,7 +2,7 @@
 
 Nothing today tracks whether a previous run finished before a new one started — a cron ping is a single instantaneous event with no run-in-progress state (same gap [EP-34](ep-34-zombie-job-detection.md) is built to close). Overlap detection alerts when a job's next scheduled run begins while the prior run is still going — the race-condition/resource-exhaustion risk called out alongside zombie detection as one of the differentiators that actually matters, versus another plain heartbeat check.
 
-**Depends on [EP-34](ep-34-zombie-job-detection.md) US-3401 shipping first** — overlap has nothing to compare against without the start-of-run ping that epic introduces. Covered by the same ping-model design decision noted there.
+**Depends on [EP-34](ep-34-zombie-job-detection.md) US-3401 shipping first** — overlap has nothing to compare against without the start-of-run ping that epic introduces. Ping model decided in [ADR-039](../decisions/039-cron-ping-model.md): each start ping checks for an already-open row in `cron_runs` for that monitor and flags `overlap = TRUE` if one exists, so a third overlapping start is still caught independently of the first two (US-3501).
 
 ---
 
