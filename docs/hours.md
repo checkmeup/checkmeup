@@ -142,3 +142,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-29 | Wed | Security/architecture/overload review of the status page layout change — all three audits clean | 0.5 h |
 | 2026-07-29 | Wed | Fixed a pre-existing DNS monitorType gap in statusPages.ts, surfaced by this feature's typecheck (root cause was EP-39, not this feature) | 0.25 h |
 | 2026-07-29 | Wed | v1.40 release notes blog post (status page grid layout) | 0.5 h |
+| 2026-07-30 | Thu | SessionEnd hook (.claude/hooks/session_summary.py): researched Stop/SessionEnd's command-only hook-type restriction, live-tested headless `claude -p` permission scoping (Edit(path) vs Write(path), dontAsk vs acceptEdits) to find a config that actually restricts file writes to docs/, wrote + pipe-tested the detached-spawn script end to end, bandit/prospector cleanup | 1.5 h |
