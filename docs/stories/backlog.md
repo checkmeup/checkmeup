@@ -39,7 +39,7 @@
 | [EP-31](ep-31-assertion-checks.md)    | Assertion-based API checks      | 4/5           |
 | [EP-32](ep-32-multi-region-checking.md) | Multi-region checking         | 0/4           |
 | [EP-33](ep-33-port-monitoring.md)     | Port (TCP) monitoring           | 4/5******     |
-| [EP-34](ep-34-zombie-job-detection.md) | Zombie (stuck) job detection   | 0/4           |
+| [EP-34](ep-34-zombie-job-detection.md) | Zombie (stuck) job detection   | 4/4           |
 | [EP-35](ep-35-overlap-detection.md)   | Overlap detection               | 0/3           |
 | [EP-36](ep-36-blog-prerendering.md)   | Prerender public routes for crawlers/social previews | 1/1 |
 | [EP-37](ep-37-configurable-uptime-checks.md) | Configurable uptime check parameters     | 3/3 |

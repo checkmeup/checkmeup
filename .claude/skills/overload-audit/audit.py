@@ -31,6 +31,7 @@ INCIDENT_QUERIES = {
 
 PRUNE_QUERIES = [
     "DeleteOldCronPings",
+    "DeleteOldCronRuns",
     "DeleteOldUptimeChecks",
     "DeleteOldPortChecks",
     "DeleteOldDNSChecks",

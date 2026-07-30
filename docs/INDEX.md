@@ -80,6 +80,7 @@ Do not move files — lifecycle is metadata, not filesystem position.
 | [036-flat-safety-caps.md](decisions/036-flat-safety-caps.md) | accepted | Flat 100-per-org caps on incident updates, maintenance windows, API keys |
 | [037-prerender-public-routes.md](decisions/037-prerender-public-routes.md) | accepted | Build-time prerender of public routes via vite-node + vue/server-renderer |
 | [038-status-page-layout-option.md](decisions/038-status-page-layout-option.md) | accepted | Per-page layout choice — classic vs. grid |
+| [039-cron-ping-model.md](decisions/039-cron-ping-model.md) | accepted | Cron start-of-run ping (`/ping/{token}/start`) backed by a new `cron_runs` table |
 | [backlog.md](decisions/backlog.md) | — | Open questions not yet resolved into ADRs |
 
 ## knowledge/ — architectural snapshots, versioned not frozen

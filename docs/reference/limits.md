@@ -18,7 +18,8 @@ The concrete, file/line-cited claims below are now re-checked mechanically by th
 
 ## Things that are fine
 
-- All six check loops (cron overdue, uptime, SSL, domain, port, dns) bounded via a 50-goroutine semaphore (`checkConcurrency`, `worker.go:33`) ✓ — fixed 2026-07-04, cron's `checkOverdue` was the last one still processing sequentially; dns added 2026-07-29 (EP-39) following the same pattern
+- All six check loops (cron overdue, uptime, SSL, domain, port, dns) bounded via a 50-goroutine semaphore (`checkConcurrency`, `worker.go:33`) ✓ — fixed 2026-07-04, cron's `checkOverdue` was the last one still processing sequentially; dns added 2026-07-29 (EP-39) following the same pattern; `checkStuckCronRuns` (EP-34, 2026-07-30) added as a seventh loop, same bounded pattern
+- `cron_runs` (ADR-039, EP-34's start-ping/stuck-run table) pruned after 30 days by `DeleteOldCronRuns`, alongside the existing `cron_pings` cleanup (`worker.go`'s `pruneOldPings`) ✓ — added 2026-07-30
 - Incident list queries capped at `LIMIT 200` (`queries/monitors.sql:93`, `queries/uptime.sql:107`, `queries/port.sql:103`, `queries/dns.sql`'s `ListDNSIncidents`) ✓
 - Manual (status-page) incident list queries also capped at `LIMIT 200` (`queries/incidents.sql`'s `ListStatusPageIncidents` and `ListActiveStatusPageIncidentsForPage`) ✓ — fixed 2026-07-12; the public status page's resolved-incidents section was already paginated (`LIMIT $2 OFFSET $3`), but the private dashboard list and the public page's active-incidents section had no cap until this pass
 - `uptime_checks`, `port_checks`, and `dns_checks` pruned after 90 days by `DeleteOldUptimeChecks`/`DeleteOldPortChecks`/`DeleteOldDNSChecks`, alongside the existing `cron_pings` cleanup (`worker.go`'s `pruneOldPings`) ✓ — dns added 2026-07-29 (EP-39)

@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-41-zombie-job-detection',
+    slug: 'v1-41-zombie-job-detection',
+    title: 'v1.41: Zombie (Stuck) Job Detection',
+    date: 'July 30, 2026',
+    readTime: '3 min read',
+    excerpt:
+      'Cron monitors can now report when a job starts, not just when it finishes — set a max run duration and get a distinct alert if a job gets stuck instead of waiting on the normal missed-ping schedule. Fully opt-in: monitors that never send a start ping behave exactly as they always have.',
+  },
+  {
     file: 'v1-40-status-page-grid-layout',
     slug: 'v1-40-status-page-grid-layout',
     title: 'v1.40: A Second Status Page Layout',

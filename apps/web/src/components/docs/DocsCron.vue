@@ -15,6 +15,11 @@
         color: var(--color-green-300);
       "
     ><code># Add this to the end of any cron job, script, or pipeline step
+curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;
+
+# Optional: also ping /start when the job begins, to detect a stuck run
+curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;/start
+...
 curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
     <ul class="space-y-2 text-sm" style="color: var(--text-dim)">
       <li class="flex items-start gap-2">
@@ -47,7 +52,21 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
         <span
           ><strong style="color: var(--text-strong)">Execution history</strong> — every ping
           is logged, so you can see exactly when a job ran and how that compares to its
-          schedule.</span
+          schedule. If the job also sends a start ping, the log shows how long that run
+          took.</span
+        >
+      </li>
+      <li class="flex items-start gap-2">
+        <span
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
+          style="background-color: var(--color-green-500)"
+        ></span>
+        <span
+          ><strong style="color: var(--text-strong)">Stuck run detection</strong> — send a
+          start ping when the job begins, set a max run duration on the monitor, and you'll
+          get a distinct alert if a run is still going once that time is up — instead of
+          waiting on the completion ping that a stuck job will never send. Off by default;
+          monitors that only send the completion ping are unaffected.</span
         >
       </li>
       <li class="flex items-start gap-2">

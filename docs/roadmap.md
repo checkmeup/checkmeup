@@ -24,8 +24,7 @@ Ordered by how easy the blocker is to clear — internal decisions first, extern
 - [EP-31](stories/ep-31-assertion-checks.md) US-3105 — Multi-step (chained) API checks — **5 h**. US-3101–3104 shipped in v1.9; this is the request-chaining follow-on — story flags it as a good candidate for its own epic during grooming
 - [EP-20](stories/ep-20-viber-alerts.md) — Viber alerts — **4 h**.
 
-- [EP-34](stories/ep-34-zombie-job-detection.md) — Zombie (stuck) job detection — **5 h**. Blocked on the start/completion ping design decision in [decision backlog](decisions/backlog.md) — internal schema design.
-- [EP-35](stories/ep-35-overlap-detection.md) — Overlap detection — **3.5 h**. Same decision as EP-34, plus depends on EP-34's start-ping endpoint shipping first.
+- [EP-35](stories/ep-35-overlap-detection.md) — Overlap detection — **3.5 h**. Ping-model decision made ([ADR-039](decisions/039-cron-ping-model.md)), and EP-34's start-ping endpoint + `cron_runs` table have shipped — ready to implement.
 - [EP-18](stories/ep-18-teams-alerts.md) — Microsoft Teams alerts — **3.5 h**. Postponed: needs a Microsoft 365 work/school (business) account to build and test against, which doesn't exist yet — no cost to the API itself, just a founder-side tenant setup step (e.g. the free Microsoft 365 Developer Program) before work can resume.
 - [EP-15](stories/ep-15-whatsapp-alerts.md) — WhatsApp alerts — **4 h**. Blocked on the provider decision in [decision backlog](decisions/backlog.md) — external: provider choice, cost, Meta template approval lead time.
 - [EP-16](stories/ep-16-signal-alerts.md) — Signal alerts — **5 h**. Blocked on a go/no-go decision in [decision backlog](decisions/backlog.md) — least certain to proceed at all; no official API, self-hosting `signal-cli` would be a real infra/operational commitment.
