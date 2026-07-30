@@ -39,6 +39,18 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session_summary.py",
+            "async": true,
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

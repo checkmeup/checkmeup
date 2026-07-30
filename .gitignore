@@ -1,6 +1,7 @@
 # OS
 .DS_Store
 Thumbs.db
+.log
 
 # Editors
 .vscode/
@@ -45,3 +46,6 @@ __pycache__/
 
 # Claude Code local machine settings (skills/commands ARE committed)
 .claude/settings.local.json
+
+# session_summary.py's SessionEnd log + per-session marker files
+.claude/logs/
