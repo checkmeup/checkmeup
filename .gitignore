@@ -44,6 +44,10 @@ __pycache__/
 # Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
 
+# Codacy CLI's remote-fetched tool/pattern config, regenerated on every analyze run
+.codacy/codacy.config.json
+.codacy/codacy.config.baseline.json
+
 # Claude Code local machine settings (skills/commands ARE committed)
 .claude/settings.local.json
 
