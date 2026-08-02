@@ -149,3 +149,4 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-30 | Thu | Security/architecture/rate-limit/overload-audit skills for EP-34 (all clean) + live smoke-test verification (start ping → worker-flagged stuck run → completion-ping recovery, backdated via psql to avoid a real wait) | 1 h |
 | 2026-07-30 | Thu | v1.41 release notes blog post (EP-34 zombie job detection) | 0.5 h |
 | 2026-07-30 | Thu | EP-34 docs drift sweep: DocsCron.vue (start-ping example, stuck-run-detection bullet), docs/knowledge/worker-architecture.md, docs/reference/limits.md + overload-audit's DeleteOldCronRuns check, docs/INDEX.md missing ADR-039 row, roadmap.md/stories backlog.md progress | 0.75 h |
+| 2026-08-02 | Sun | `.gitignore` fix: `*.log` glob instead of a literal `.log` path (matched nothing) | 0.25 h |
