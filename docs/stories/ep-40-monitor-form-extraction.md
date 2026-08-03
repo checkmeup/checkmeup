@@ -64,20 +64,40 @@ files that both change often.
 
 **Acceptance criteria:**
 
-- [ ] `apps/web/src/components/UptimeMonitorForm.vue` holds the shared
+- [x] `apps/web/src/components/UptimeMonitorForm.vue` holds the shared
       fields: URL, check interval, keyword + keyword mode + case
       sensitivity, JSON assertions, HTTP method, accepted status codes,
       max response time, alert settings, and the
       `NotificationChannelPicker`
-- [ ] Both views render it and keep their own data loading, submit
+- [x] Both views render it and keep their own data loading, submit
       handler, page title, and cancel destination
-- [ ] Create's plan-limit handling (`UpgradePrompt` on
+- [x] Create's plan-limit handling (`UpgradePrompt` on
       `plan_limit_reached`) and Edit's load-error handling both still
       work — neither moves into the shared component
-- [ ] `minIntervalMins` from `useBilling()` still gates the interval
+- [x] `minIntervalMins` from `useBilling()` still gates the interval
       options on both views
-- [ ] No visual or behavioral change to either screen
-- [ ] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+- [x] No visual or behavioral change to either screen — with one
+      deliberate exception, below
+- [x] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+
+**Implementation note.** The shared form came to ~290 lines, over the
+250-line component threshold `architecture-guardrails` enforces, so it
+ships as three components rather than one: `UptimeMonitorForm.vue`
+(154), `UptimeAdvancedSettings.vue` (119), and
+`UptimeJsonAssertionsField.vue` (56). Static helpers, the form-state
+type, and validation live in `lib/uptimeMonitorForm.ts` (147), matching
+the existing `lib/notificationChannelTypes.ts` /
+`useNotificationChannelForm.ts` split. The two views went from 439 + 488
+= 927 lines to 97 + 122 = 219.
+
+**One deliberate behavior change.** The two copies of
+`validateUptimeMonitorForm` had already drifted: create returned "URL is
+required" then "URL must start with http:// or https://" as separate
+messages, while edit collapsed both into the second. The shared version
+uses create's more specific pair, so submitting the edit form with an
+empty URL now says "URL is required" instead of "URL must start with
+http://". This is the duplication's own cost showing up — the fix picks
+the better message rather than preserving the drift.
 
 ---
 
