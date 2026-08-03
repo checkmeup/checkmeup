@@ -150,5 +150,5 @@ Raw log of hours worked, by epic or story reference (`EP-XX` or `US-XXXX`). Esti
 | 2026-07-30 | Thu | v1.41 release notes blog post (EP-34 zombie job detection) | 0.5 h |
 | 2026-07-30 | Thu | EP-34 docs drift sweep: DocsCron.vue (start-ping example, stuck-run-detection bullet), docs/knowledge/worker-architecture.md, docs/reference/limits.md + overload-audit's DeleteOldCronRuns check, docs/INDEX.md missing ADR-039 row, roadmap.md/stories backlog.md progress | 0.75 h |
 | 2026-08-02 | Sun | `.gitignore` fix: `*.log` glob instead of a literal `.log` path (matched nothing) | 0.25 h |
-| 2026-08-02 | Sun | Search engine site-verification key file served from `apps/web/public/` (IndexNow-style `<key>.txt`) | 0.25 h |
-| 2026-08-02 | Sun | `.gitignore` the Codacy CLI's generated `codacy.config.json`/`.baseline.json` (163 KB of identical remote-fetched config, rewritten every analyze run) | 0.25 h |
+| 2026-08-02 | Sun | Site-verification key file (IndexNow-style `<key>.txt`) + `.gitignore` for the Codacy CLI's generated config | 0.25 h |
+| 2026-08-03 | Mon | "Why monitoring matters" SEO guide blog post — general/top-of-funnel companion to the per-monitor-type guides, with product claims verified against worker types, `plans.go` limits, and the keyword/JSON assertion migrations | 0.25 h |
