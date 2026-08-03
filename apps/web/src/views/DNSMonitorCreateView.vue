@@ -1,44 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MonitorFormPage from '@/components/MonitorFormPage.vue'
-import Input from '@/components/ui/Input.vue'
-import Label from '@/components/ui/Label.vue'
-import { monitorsApi, type DNSRecordType } from '@/api/monitors'
+import DNSMonitorForm from '@/components/DNSMonitorForm.vue'
+import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
-import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useBilling } from '@/composables/useBilling'
+import {
+  createDNSMonitorFormState,
+  dnsMonitorFormPayload,
+  validateDNSMonitorForm,
+} from '@/lib/dnsMonitorForm'
 
 const router = useRouter()
 
-const name = ref('')
-const hostname = ref('')
-const recordType = ref<DNSRecordType>('A')
-const expectedValue = ref('')
-const intervalMins = ref(10)
-const maxAlertsPerIncident = ref(3)
-const alertAfterNFailures = ref(0)
-const channelIds = ref<string[]>([])
+const form = ref(createDNSMonitorFormState())
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
 const minIntervalMins = ref(5)
-
-const recordTypeOptions: { label: string; value: DNSRecordType }[] = [
-  { label: 'A — IPv4 address', value: 'A' },
-  { label: 'AAAA — IPv6 address', value: 'AAAA' },
-  { label: 'CNAME — canonical name', value: 'CNAME' },
-  { label: 'MX — mail exchange', value: 'MX' },
-  { label: 'TXT — text record', value: 'TXT' },
-  { label: 'NS — nameserver', value: 'NS' },
-]
-
-const intervalOptions = computed(() => [
-  ...(minIntervalMins.value === 1 ? [{ label: '1 minute', value: 1 }] : []),
-  { label: '5 minutes', value: 5 },
-  { label: '10 minutes', value: 10 },
-  { label: '30 minutes', value: 30 },
-])
 
 const { data: billingInfo } = useBilling()
 watch(
@@ -50,50 +30,18 @@ watch(
   { immediate: true },
 )
 
-const alertLimitOptions = [
-  { label: '1 time', value: 1 },
-  { label: '2 times', value: 2 },
-  { label: '3 times (default)', value: 3 },
-  { label: '5 times', value: 5 },
-  { label: '10 times', value: 10 },
-]
-
-const alertFilterOptions = [
-  { label: 'Alert immediately (default)', value: 0 },
-  { label: 'Skip first 1 failure', value: 1 },
-  { label: 'Skip first 2 failures', value: 2 },
-  { label: 'Skip first 3 failures', value: 3 },
-  { label: 'Skip first 5 failures', value: 5 },
-]
-
-// validateDNSForm returns the first validation error, or null if the form
-// is ready to submit — kept separate from submit() to keep its complexity down.
-function validateDNSForm(): string | null {
-  if (!name.value.trim()) return 'Name is required'
-  if (!hostname.value.trim()) return 'Hostname is required'
-  return null
-}
-
 async function submit() {
-  error.value = ''
   limitReached.value = false
-  const validationError = validateDNSForm()
-  if (validationError) {
-    error.value = validationError
-    return
-  }
+  error.value = validateDNSMonitorForm(form.value)
+  if (error.value) return
 
   submitting.value = true
   try {
     const monitor = await monitorsApi.createDns({
-      name: name.value.trim(),
-      hostname: hostname.value.trim(),
-      recordType: recordType.value,
-      expectedValue: expectedValue.value.trim() || undefined,
-      intervalMins: intervalMins.value,
-      maxAlertsPerIncident: maxAlertsPerIncident.value,
-      alertAfterNFailures: alertAfterNFailures.value,
-      channelIds: channelIds.value,
+      ...dnsMonitorFormPayload(form.value),
+      // Blank is omitted, not sent as '': the worker then captures whatever
+      // the record resolves to on first check as the baseline.
+      expectedValue: form.value.expectedValue.trim() || undefined,
     })
     router.push({ name: 'dns-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -120,103 +68,12 @@ async function submit() {
     :limit-reached="limitReached"
     @submit="submit"
   >
-    <div>
-      <Label for="name">Name</Label>
-      <Input
-        id="name"
-        v-model="name"
-        placeholder="Apex A record"
-        class="mt-1"
-        required
-      />
-    </div>
-
-    <div class="grid grid-cols-3 gap-3">
-      <div class="col-span-2">
-        <Label for="hostname">Hostname</Label>
-        <Input
-          id="hostname"
-          v-model="hostname"
-          placeholder="example.com"
-          class="mt-1"
-        />
-      </div>
-      <div>
-        <Label for="recordType">Record type</Label>
-        <select
-          id="recordType"
-          v-model="recordType"
-          class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-        >
-          <option v-for="opt in recordTypeOptions" :key="opt.value" :value="opt.value">
-            {{ opt.value }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <Label for="expectedValue">Expected value (optional)</Label>
-      <Input
-        id="expectedValue"
-        v-model="expectedValue"
-        placeholder="e.g. 203.0.113.10"
-        class="mt-1"
-      />
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
-        Leave blank to auto-detect the current value on first check and alert on any later change. Set a value to pin it and alert on any mismatch from creation onward.
-      </p>
-    </div>
-
-    <div>
-      <Label for="interval">Check interval</Label>
-      <select
-        id="interval"
-        v-model="intervalMins"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-      >
-        <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-    </div>
-
-    <div>
-      <Label for="alertLimit">Alert limit per incident</Label>
-      <select
-        id="alertLimit"
-        v-model="maxAlertsPerIncident"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-      >
-        <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
-        Stop alerting after this many notifications per incident.
-      </p>
-    </div>
-
-    <div>
-      <Label for="alertFilter">Alert filter</Label>
-      <select
-        id="alertFilter"
-        v-model="alertAfterNFailures"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-      >
-        <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
-        Suppress alerts until N consecutive failures are detected. Resets on success.
-      </p>
-    </div>
-
-    <NotificationChannelPicker v-model="channelIds" />
+    <DNSMonitorForm v-model="form" :min-interval-mins="minIntervalMins">
+      <template #expectedValueHelp>
+        <p class="text-xs mt-1" style="color: var(--text-muted)">
+          Leave blank to auto-detect the current value on first check and alert on any later change. Set a value to pin it and alert on any mismatch from creation onward.
+        </p>
+      </template>
+    </DNSMonitorForm>
   </MonitorFormPage>
 </template>

@@ -37,6 +37,12 @@ VUE_COMPONENT_LINE_THRESHOLD = 250
 # current pairs sit well under VUE_VIEW_LINE_THRESHOLD).
 SIBLING_TOKENS = [("Create", "Edit")]
 SIBLING_DUP_THRESHOLD = 50  # percent of normalized lines in common
+# Percentage alone stops meaning anything once the real duplication is gone:
+# two thin views still score ~65% on `<script setup>`, `try {`, `} finally {`
+# and their ref declarations, because the denominator shrank with the
+# numerator. The absolute count is what separates "same screen written twice"
+# from "two files of the same shape" — see SKILL.md for the measured gap.
+SIBLING_DUP_MIN_SHARED_LINES = 100
 
 CHURN_COMMITS = 150  # how far back to look for hot spots
 CHURN_TOP_N = 10
@@ -125,9 +131,11 @@ def sibling_duplication(directory: Path) -> list[tuple[str, str, int, int]]:
             if not right.exists() or str(left) in KNOWN_EXCEPTIONS:
                 continue
             a, b = _normalized(left), _normalized(right)
-            pct = round(difflib.SequenceMatcher(None, a, b).ratio() * 100)
-            if pct > SIBLING_DUP_THRESHOLD:
-                findings.append((str(left), str(right), pct, len(a) + len(b)))
+            matcher = difflib.SequenceMatcher(None, a, b)
+            pct = round(matcher.ratio() * 100)
+            shared = sum(block.size for block in matcher.get_matching_blocks())
+            if pct > SIBLING_DUP_THRESHOLD and shared >= SIBLING_DUP_MIN_SHARED_LINES:
+                findings.append((str(left), str(right), pct, shared))
     return findings
 
 
@@ -195,9 +203,10 @@ def report() -> int:
         exit_code = 1
 
     if print_section(
-        f"Sibling near-duplicates ({VUE_VIEW_DIR}, >{SIBLING_DUP_THRESHOLD}% shared lines)",
+        f"Sibling near-duplicates ({VUE_VIEW_DIR}, >{SIBLING_DUP_THRESHOLD}% "
+        f"and >={SIBLING_DUP_MIN_SHARED_LINES} shared lines)",
         sorted(sibling_duplication(VUE_VIEW_DIR), key=lambda f: -f[3]),
-        lambda r: f"{r[0]} / {Path(r[1]).name}: {r[2]}% shared across {r[3]} lines",
+        lambda r: f"{r[0]} / {Path(r[1]).name}: {r[3]} shared lines ({r[2]}%)",
     ):
         exit_code = 1
 

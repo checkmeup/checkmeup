@@ -161,12 +161,17 @@ flagging routine files:
   `DocsView`/`DashboardView`/`HomeView`. 600 sits in that gap.
 - Vue components (excl. `ui/`) run 34–170 lines, then jump to 570 for
   `NotificationChannelsCard.vue`. 250 sits in that gap.
-- Sibling duplication is set at **50%** and is *not* a distribution gap
-  — unlike the size checks, this one isn't outlier detection. Past half,
-  the pair is more the same screen than two screens, and every change
-  has to be made twice regardless of how the rest of the repo looks.
-  All seven current pairs measure 54–87%, so the number that matters is
-  the ranking, not the cutoff.
+- Sibling duplication needs **both** >50% shared *and* >=100 shared
+  lines. The percentage alone is not enough: once the real duplication
+  is extracted, the numerator and denominator shrink together, so two
+  thin views still score ~65% on `<script setup>`, `try {`,
+  `} finally {`, and their `ref` declarations. The absolute count is
+  what separates "the same screen written twice" from "two files of the
+  same shape". 100 sits in a measured gap — when EP-40 opened, the five
+  pairs that turned out to be real findings shared 117/189/190/192/369
+  lines, the two judged not-real (SSL, Domain) shared 74 each, and after
+  the extraction every pair's residue fell to 35–57. Nothing has ever
+  landed between 74 and 117.
 
 ## Known exceptions
 

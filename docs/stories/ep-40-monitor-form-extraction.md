@@ -1,7 +1,7 @@
 ---
 title: "EP-40: Extract shared monitor form components"
 type: story
-status: in-progress        # planned | in-progress | shipped | cancelled
+status: shipped            # planned | in-progress | shipped | cancelled
 updated: 2026-08-03
 tags: [architecture, tech-debt, frontend]
 ---
@@ -42,6 +42,14 @@ maze, and the create/edit split is also the route structure.
 Same shape as [EP-38](ep-38-status-public-handler-split.md), which
 split `status_public.go` after the same skill's size threshold fired:
 pure extraction, no behavior change, verified by the audit going quiet.
+
+**Shipped 2026-08-03.** All six stories landed. The 14 create/edit views went
+from 3,821 lines to 1,206; five form components, one page shell, and five
+`lib/*Form.ts` modules now hold what was duplicated. `architecture-guardrails`
+exits 0 with every section clean. The full Vue suite (683 tests) passes
+unchanged throughout — no test was edited to accommodate the refactor, which
+is what caught the two DNS regressions in US-4004 and the maintenance
+window's delete button in US-4002.
 
 **SSL and Domain are out of scope for form extraction.** Both scored
 54%, but reading them shows two genuinely different screens: the edit
@@ -166,12 +174,20 @@ the schedule, grace period, and max-duration fields have one definition.
 
 **Acceptance criteria:**
 
-- [ ] `apps/web/src/components/CronMonitorForm.vue` holds the shared
+- [x] `apps/web/src/components/CronMonitorForm.vue` holds the shared
       fields, including the max run duration field added in
       [EP-34](ep-34-zombie-job-detection.md)
-- [ ] Both views render it, keeping their own loading/submit/title/cancel
-- [ ] No visual or behavioral change to either screen
-- [ ] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+- [x] Both views render it, keeping their own loading/submit/title/cancel
+- [x] No visual or behavioral change to either screen, except the grace-period
+      hint noted below
+- [x] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+
+**Note.** Create and edit genuinely differ in two places — create offers
+clickable schedule examples, edit explains the ping URL is stable and renders
+the monitor's real `/start` URL — so those come from `scheduleHelp` and
+`maxDurationHelp` slots rather than mode flags. The grace-period hint ("How
+long to wait after the expected time before alerting") existed only on create;
+it now shows on both, a one-line addition to the edit screen.
 
 ---
 
@@ -185,15 +201,32 @@ the same drift as the older ones.
 
 **Acceptance criteria:**
 
-- [ ] `apps/web/src/components/PortMonitorForm.vue` and
+- [x] `apps/web/src/components/PortMonitorForm.vue` and
       `DNSMonitorForm.vue` hold their respective shared fields
-- [ ] DNS's record type, expected value, and baseline-mode fields
+- [x] DNS's record type, expected value, and baseline-mode fields
       ([EP-39](ep-39-dns-monitoring.md)) live in the shared component
-- [ ] Port's host/port fields are editable on create and read-only on
-      edit if that is the current behavior — verify against the views
-      before assuming, and keep whichever behavior ships today
-- [ ] No visual or behavioral change to any of the four screens
-- [ ] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+- [x] Port's host/port fields — **verified: editable on both screens.** The
+      guess in this criterion (read-only on edit) was wrong; current behavior
+      kept as-is
+- [x] No visual or behavioral change to any of the four screens, except the
+      two port hints noted below
+- [x] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+
+**Two DNS behaviors the tests caught.** The first pass lost both, and both
+were real:
+
+1. **Blank expected value means different things per screen.** Create sends
+   `undefined` (omit, so the worker captures a baseline on first check); edit
+   sends `''` (actively re-arm that baseline). Collapsing them into one payload
+   builder broke create. `expectedValue` is now deliberately *excluded* from
+   `dnsMonitorFormPayload` and supplied per view.
+2. **Changing the record type clears a stale expected value.** An edit-only
+   watcher, guarded by the record type fetched at load, so an A record's
+   address doesn't linger into a TXT lookup. Dropped entirely in the first
+   pass; restored.
+
+Port's two hints ("Raw TCP connect…" and the "Closed is a security check…"
+note) existed only on create and now show on both.
 
 ---
 
@@ -206,11 +239,15 @@ the same drift as the older ones.
 
 **Acceptance criteria:**
 
-- [ ] `apps/web/src/components/MaintenanceWindowForm.vue` holds the
+- [x] `apps/web/src/components/MaintenanceWindowForm.vue` holds the
       shared fields, including the `MaintenanceMonitorPicker`
-- [ ] Both views render it, keeping their own loading/submit/title/cancel
-- [ ] No visual or behavioral change to either screen
-- [ ] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+- [x] Both views render it, keeping their own loading/submit/title/cancel
+- [x] No visual or behavioral change to either screen
+- [x] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+
+**Note.** The cleanest of the five: once US-4002 removed the shell, the two
+views' fields were byte-identical, so this component takes no mode props and
+no slots at all.
 
 ---
 
@@ -224,14 +261,36 @@ was opened for rather than moving markup around without checking.
 
 **Acceptance criteria:**
 
-- [ ] `python3 .claude/skills/architecture-guardrails/audit.py` reports
-      no sibling pair over the 50% threshold
-- [ ] `KNOWN_EXCEPTIONS` stays empty. US-4002 dropped SSL and Domain
+- [x] `python3 .claude/skills/architecture-guardrails/audit.py` reports
+      no sibling pair over threshold — the whole run now exits 0
+- [x] `KNOWN_EXCEPTIONS` stays empty. US-4002 dropped SSL and Domain
       under the threshold on their own, so the exception this story
       originally planned for them is no longer needed — prefer no
       suppression over a justified one
-- [ ] No new finding appears in the Vue component size check — a shared
+- [x] No new finding appears in the Vue component size check — a shared
       form larger than the 250-line component threshold needs splitting
       further, not an exception
-- [ ] `make test` passes (Go + Vue suites, lint)
-- [ ] Each of the five extracted forms is rendered by exactly two views
+- [x] `make test` passes (Go + Vue suites, lint)
+- [x] Each of the five extracted forms is rendered by exactly two views
+
+**The check needed a second dimension, not a suppression.** After all five
+extractions the four remaining pairs still scored 62–69%, but reading them
+showed the shared lines were `<script setup>`, `try {`, `} finally {`, and
+`ref` declarations — structure, not duplicated content. Extracting *that*
+would have required branching on create vs edit inside a shared composable,
+the exact conditional maze this epic rules out.
+
+The cause is that percentage alone degrades as it succeeds: fixing the
+duplication shrinks the numerator and denominator together. Measuring absolute
+shared lines separates the two cases cleanly, and the numbers gave a real gap
+to put a threshold in:
+
+| | Shared lines |
+| --- | --- |
+| Real findings, before the fix | 117, 189, 190, 192, 369 |
+| Judged not real (SSL, Domain) | 74, 74 |
+| Residue after the fix | 35, 50, 51, 51, 53, 53, 57 |
+
+`audit.py` now requires >50% **and** >=100 shared lines. Nothing has ever
+landed between 74 and 117. The floor also mechanizes the SSL/Domain call that
+previously needed a human read.
