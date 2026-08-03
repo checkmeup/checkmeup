@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import AppLayout from '@/layouts/AppLayout.vue'
-import Button from '@/components/ui/Button.vue'
+import MonitorFormPage from '@/components/MonitorFormPage.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useCronMonitor } from '@/composables/useCronMonitors'
 
@@ -120,144 +118,116 @@ async function submit() {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8 max-w-xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button
-          class="text-sm transition-colors"
-          style="color: var(--text-muted)"
-          @click="router.push({ name: 'cron-monitor-detail', params: { id } })"
-        >
-          ← Back
-        </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">Edit monitor</h1>
-      </div>
-
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
-
-      <form
-        v-else
-        class="rounded-xl border p-6 space-y-5"
-        style="background-color: var(--surface); border-color: var(--border)"
-        @submit.prevent="submit"
-      >
-        <div>
-          <Label for="name">Name</Label>
-          <Input
-            id="name"
-            v-model="name"
-            class="mt-1"
-            required
-          />
-        </div>
-
-        <div>
-          <Label for="schedule">Schedule</Label>
-          <Input
-            id="schedule"
-            v-model="schedule"
-            placeholder="every 1h  or  0 * * * *"
-            class="mt-1"
-          />
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            The ping URL never changes when you edit the schedule.
-          </p>
-        </div>
-
-        <div>
-          <Label for="grace">Grace period</Label>
-          <select
-            id="grace"
-            v-model="gracePeriodMins"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in graceOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <input
-            id="alerts"
-            v-model="alertsEnabled"
-            type="checkbox"
-            class="rounded"
-          />
-          <Label for="alerts" class="cursor-pointer">Send alerts</Label>
-        </div>
-
-        <div>
-          <Label for="alertLimit">Alert limit per incident</Label>
-          <select
-            id="alertLimit"
-            v-model="maxAlertsPerIncident"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Stop alerting after this many notifications per incident.
-          </p>
-        </div>
-
-        <div>
-          <Label for="alertFilter">Alert filter</Label>
-          <select
-            id="alertFilter"
-            v-model="alertAfterNFailures"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Suppress alerts until N consecutive failures are detected. Resets on success.
-          </p>
-        </div>
-
-        <div>
-          <Label for="maxDuration">Max run duration</Label>
-          <select
-            id="maxDuration"
-            v-model="maxDurationMins"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in maxDurationOptions" :key="opt.label" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Alert if a run doesn't finish within this time — only applies if your job also pings
-            <code>{{ detail?.monitor.pingUrl }}/start</code> when it begins.
-          </p>
-        </div>
-
-        <NotificationChannelPicker v-model="channelIds" />
-
-        <UpgradePrompt v-if="limitReached" :message="error" />
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
-
-        <div class="flex gap-3 pt-1">
-          <Button type="submit" :disabled="submitting">
-            {{ submitting ? 'Saving…' : 'Save changes' }}
-          </Button>
-          <Button
-            variant="secondary"
-            type="button"
-            @click="router.push({ name: 'cron-monitor-detail', params: { id } })"
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+  <MonitorFormPage
+    title="Edit monitor"
+    :back-to="{ name: 'cron-monitor-detail', params: { id } }"
+    submit-label="Save changes"
+    submitting-label="Saving…"
+    :error="error"
+    :submitting="submitting"
+    :limit-reached="limitReached"
+    :loading="loading"
+    @submit="submit"
+  >
+    <div>
+      <Label for="name">Name</Label>
+      <Input
+        id="name"
+        v-model="name"
+        class="mt-1"
+        required
+      />
     </div>
-  </AppLayout>
+
+    <div>
+      <Label for="schedule">Schedule</Label>
+      <Input
+        id="schedule"
+        v-model="schedule"
+        placeholder="every 1h  or  0 * * * *"
+        class="mt-1"
+      />
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        The ping URL never changes when you edit the schedule.
+      </p>
+    </div>
+
+    <div>
+      <Label for="grace">Grace period</Label>
+      <select
+        id="grace"
+        v-model="gracePeriodMins"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in graceOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <input
+        id="alerts"
+        v-model="alertsEnabled"
+        type="checkbox"
+        class="rounded"
+      />
+      <Label for="alerts" class="cursor-pointer">Send alerts</Label>
+    </div>
+
+    <div>
+      <Label for="alertLimit">Alert limit per incident</Label>
+      <select
+        id="alertLimit"
+        v-model="maxAlertsPerIncident"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Stop alerting after this many notifications per incident.
+      </p>
+    </div>
+
+    <div>
+      <Label for="alertFilter">Alert filter</Label>
+      <select
+        id="alertFilter"
+        v-model="alertAfterNFailures"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Suppress alerts until N consecutive failures are detected. Resets on success.
+      </p>
+    </div>
+
+    <div>
+      <Label for="maxDuration">Max run duration</Label>
+      <select
+        id="maxDuration"
+        v-model="maxDurationMins"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in maxDurationOptions" :key="opt.label" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Alert if a run doesn't finish within this time — only applies if your job also pings
+        <code>{{ detail?.monitor.pingUrl }}/start</code> when it begins.
+      </p>
+    </div>
+
+    <NotificationChannelPicker v-model="channelIds" />
+  </MonitorFormPage>
 </template>

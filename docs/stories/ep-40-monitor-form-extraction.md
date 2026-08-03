@@ -1,7 +1,7 @@
 ---
 title: "EP-40: Extract shared monitor form components"
 type: story
-status: planned            # planned | in-progress | shipped | cancelled
+status: in-progress        # planned | in-progress | shipped | cancelled
 updated: 2026-08-03
 tags: [architecture, tech-debt, frontend]
 ---
@@ -43,14 +43,26 @@ Same shape as [EP-38](ep-38-status-public-handler-split.md), which
 split `status_public.go` after the same skill's size threshold fired:
 pure extraction, no behavior change, verified by the audit going quiet.
 
-**SSL and Domain are deliberately out of scope.** Both scored 54%, but
-reading them shows two genuinely different screens: the edit views add
-alert settings (`alertsEnabled`, `alertAfterNFailures`,
+**SSL and Domain are out of scope for form extraction.** Both scored
+54%, but reading them shows two genuinely different screens: the edit
+views add alert settings (`alertsEnabled`, `alertAfterNFailures`,
 `maxAlertsPerIncident`), render hostname read-only with a "delete and
 recreate to change the domain" note, and add a loading state. Only ~41
 markup lines actually coincide, and those are the page shell and the
 name field. Extracting a shared form there would abstract over a
-difference that is real.
+difference that is real. They do still get the shared page shell
+(US-4002), which applies to all seven pairs.
+
+**Scope correction, added after US-4001.** Extracting the uptime form
+took that pair from 87% to 72% — still flagging, because what remained
+shared was no longer form fields but the *page shell*: `AppLayout`, back
+link, title, `<form>` element, error row, and button row. That shell is
+near-identical across every monitor type (each differs from uptime's by
+4 lines: route name and title), so every form story would have landed at
+~72% and US-4006 could never have passed. US-4002 extracts the shell,
+and is sequenced before the remaining form stories so each of those is
+done against an already-thin view instead of touching all 14 views
+twice.
 
 ---
 
@@ -101,7 +113,51 @@ the better message rather than preserving the drift.
 
 ---
 
-### US-4002: Extract the cron monitor form
+### US-4002: Extract the shared monitor form page shell
+
+**As a** maintainer, **I want** the page chrome every monitor
+create/edit screen shares defined once **so that** the remaining
+duplication in each pair is actually about that monitor's fields.
+
+**Estimate:** 3h
+
+**Acceptance criteria:**
+
+- [x] `apps/web/src/components/MonitorFormPage.vue` owns `AppLayout`,
+      the back link, the title, the `<form>` element, the loading state,
+      the error / `UpgradePrompt` row, and the submit/cancel buttons
+- [x] All 14 create/edit views render it, passing title, back route,
+      button labels, and their own error/submitting/loading state
+- [x] The component owns no form state and never branches on create vs
+      edit — the only mode-shaped input is `loading`, which edit views
+      set because they fetch and create views don't
+- [x] `MaintenanceWindowEditView`'s delete-with-confirm survives, via an
+      `actions` slot rather than a prop
+- [x] No visual change: with the `actions` slot empty, `justify-between`
+      leaves the single button group left-aligned as before
+- [x] `npx vue-tsc --noEmit` and the existing Vitest suite pass
+
+**Implementation note.** `MonitorFormPage.vue` is 82 lines and takes 8
+props, which is the upper end of what a layout component should carry —
+the deletion test is what justified it: removing the component would
+scatter ~45 lines of identical chrome back across 14 views, so it
+concentrates complexity rather than moving it. If it ever needs a
+per-monitor-type conditional, that's the signal to stop rather than add
+a ninth prop.
+
+The delete-with-confirm block was nearly lost: the first generated pass
+dropped it, because the extraction assumed every view's footer was just
+save + cancel. A content check comparing every non-blank line of each
+original against its rewrite caught it before the files were applied.
+
+**Result:** SSL and Domain dropped off the audit's finding list
+entirely, falling under the 50% threshold on their own — so US-4006 no
+longer needs a `KNOWN_EXCEPTIONS` entry for them. Uptime went from 72%
+across 199 lines to 67% across 152.
+
+---
+
+### US-4003: Extract the cron monitor form
 
 **As a** maintainer, **I want** the cron form defined once **so that**
 the schedule, grace period, and max-duration fields have one definition.
@@ -119,7 +175,7 @@ the schedule, grace period, and max-duration fields have one definition.
 
 ---
 
-### US-4003: Extract the port and DNS monitor forms
+### US-4004: Extract the port and DNS monitor forms
 
 **As a** maintainer, **I want** the port and DNS forms defined once
 **so that** the two most recently added monitor types don't accumulate
@@ -141,7 +197,7 @@ the same drift as the older ones.
 
 ---
 
-### US-4004: Extract the maintenance window form
+### US-4005: Extract the maintenance window form
 
 **As a** maintainer, **I want** the maintenance window form defined once
 **so that** the schedule and monitor-picker fields have one definition.
@@ -158,7 +214,7 @@ the same drift as the older ones.
 
 ---
 
-### US-4005: Verify the extraction closes the guardrail finding
+### US-4006: Verify the extraction closes the guardrail finding
 
 **As a** maintainer, **I want** confirmation the extraction actually
 resolves what the audit flagged **so that** this epic closes the gap it
@@ -169,10 +225,11 @@ was opened for rather than moving markup around without checking.
 **Acceptance criteria:**
 
 - [ ] `python3 .claude/skills/architecture-guardrails/audit.py` reports
-      no sibling pair over the 50% threshold except SSL and Domain
-- [ ] SSL and Domain are added to `KNOWN_EXCEPTIONS` in `audit.py` with
-      the rationale above, so the audit stops re-reporting a pair that
-      has been read and deliberately left alone
+      no sibling pair over the 50% threshold
+- [ ] `KNOWN_EXCEPTIONS` stays empty. US-4002 dropped SSL and Domain
+      under the threshold on their own, so the exception this story
+      originally planned for them is no longer needed — prefer no
+      suppression over a justified one
 - [ ] No new finding appears in the Vue component size check — a shared
       form larger than the 250-line component threshold needs splitting
       further, not an exception

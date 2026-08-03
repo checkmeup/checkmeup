@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AppLayout from '@/layouts/AppLayout.vue'
-import Button from '@/components/ui/Button.vue'
+import MonitorFormPage from '@/components/MonitorFormPage.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 
 const router = useRouter()
@@ -53,62 +51,40 @@ async function submit() {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8 max-w-xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button
-          class="text-sm transition-colors"
-          style="color: var(--text-muted)"
-          @click="router.push({ name: 'ssl-monitors' })"
-        >
-          ← Back
-        </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">New SSL monitor</h1>
-      </div>
-
-      <form
-        class="rounded-xl border p-6 space-y-5"
-        style="background-color: var(--surface); border-color: var(--border)"
-        @submit.prevent="submit"
-      >
-        <div>
-          <Label for="name">Name</Label>
-          <Input
-            id="name"
-            v-model="name"
-            placeholder="Production API"
-            class="mt-1"
-            required
-          />
-        </div>
-
-        <div>
-          <Label for="hostname">Hostname</Label>
-          <Input
-            id="hostname"
-            v-model="hostname"
-            placeholder="example.com"
-            class="mt-1"
-          />
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Domain name only — no https:// or path. Checked daily on port 443.
-          </p>
-        </div>
-
-        <NotificationChannelPicker v-model="channelIds" />
-
-        <UpgradePrompt v-if="limitReached" :message="error" />
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
-
-        <div class="flex gap-3 pt-1">
-          <Button type="submit" :disabled="submitting">
-            {{ submitting ? 'Creating…' : 'Create monitor' }}
-          </Button>
-          <Button variant="secondary" type="button" @click="router.push({ name: 'ssl-monitors' })">
-            Cancel
-          </Button>
-        </div>
-      </form>
+  <MonitorFormPage
+    title="New SSL monitor"
+    :back-to="{ name: 'ssl-monitors' }"
+    submit-label="Create monitor"
+    submitting-label="Creating…"
+    :error="error"
+    :submitting="submitting"
+    :limit-reached="limitReached"
+    @submit="submit"
+  >
+    <div>
+      <Label for="name">Name</Label>
+      <Input
+        id="name"
+        v-model="name"
+        placeholder="Production API"
+        class="mt-1"
+        required
+      />
     </div>
-  </AppLayout>
+
+    <div>
+      <Label for="hostname">Hostname</Label>
+      <Input
+        id="hostname"
+        v-model="hostname"
+        placeholder="example.com"
+        class="mt-1"
+      />
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Domain name only — no https:// or path. Checked daily on port 443.
+      </p>
+    </div>
+
+    <NotificationChannelPicker v-model="channelIds" />
+  </MonitorFormPage>
 </template>

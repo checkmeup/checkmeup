@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import AppLayout from '@/layouts/AppLayout.vue'
-import Button from '@/components/ui/Button.vue'
+import MonitorFormPage from '@/components/MonitorFormPage.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { monitorsApi, type DNSRecordType } from '@/api/monitors'
 import { ApiError } from '@/api/client'
-import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
 import { useDNSMonitor } from '@/composables/useDNSMonitors'
 import { useBilling } from '@/composables/useBilling'
@@ -154,136 +152,108 @@ async function submit() {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8 max-w-xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button
-          class="text-sm transition-colors"
-          style="color: var(--text-muted)"
-          @click="router.push({ name: 'dns-monitor-detail', params: { id } })"
-        >
-          ← Back
-        </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">Edit monitor</h1>
-      </div>
-
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
-
-      <form
-        v-else
-        class="rounded-xl border p-6 space-y-5"
-        style="background-color: var(--surface); border-color: var(--border)"
-        @submit.prevent="submit"
-      >
-        <div>
-          <Label for="name">Name</Label>
-          <Input id="name" v-model="name" class="mt-1" required />
-        </div>
-
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <Label for="hostname">Hostname</Label>
-            <Input id="hostname" v-model="hostname" class="mt-1" />
-          </div>
-          <div>
-            <Label for="recordType">Record type</Label>
-            <select
-              id="recordType"
-              v-model="recordType"
-              class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-            >
-              <option v-for="opt in recordTypeOptions" :key="opt.value" :value="opt.value">
-                {{ opt.value }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <Label for="expectedValue">Expected value (optional)</Label>
-          <Input
-            id="expectedValue"
-            v-model="expectedValue"
-            placeholder="e.g. 203.0.113.10"
-            class="mt-1"
-          />
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Clear this to re-arm baseline mode — the next check re-captures whatever the record currently resolves to. Save a new value to acknowledge an intentional change.
-          </p>
-        </div>
-
-        <div>
-          <Label for="interval">Check interval</Label>
-          <select
-            id="interval"
-            v-model="intervalMins"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <input id="alerts" v-model="alertsEnabled" type="checkbox" class="rounded" />
-          <Label for="alerts" class="cursor-pointer">Send alerts</Label>
-        </div>
-
-        <div>
-          <Label for="alertLimit">Alert limit per incident</Label>
-          <select
-            id="alertLimit"
-            v-model="maxAlertsPerIncident"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Stop alerting after this many notifications per incident.
-          </p>
-        </div>
-
-        <div>
-          <Label for="alertFilter">Alert filter</Label>
-          <select
-            id="alertFilter"
-            v-model="alertAfterNFailures"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
-          >
-            <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-          <p class="text-xs mt-1" style="color: var(--text-muted)">
-            Suppress alerts until N consecutive failures are detected. Resets on success.
-          </p>
-        </div>
-
-        <NotificationChannelPicker v-model="channelIds" />
-
-        <UpgradePrompt v-if="limitReached" :message="error" />
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
-
-        <div class="flex gap-3 pt-1">
-          <Button type="submit" :disabled="submitting">
-            {{ submitting ? 'Saving…' : 'Save changes' }}
-          </Button>
-          <Button
-            variant="secondary"
-            type="button"
-            @click="router.push({ name: 'dns-monitor-detail', params: { id } })"
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+  <MonitorFormPage
+    title="Edit monitor"
+    :back-to="{ name: 'dns-monitor-detail', params: { id } }"
+    submit-label="Save changes"
+    submitting-label="Saving…"
+    :error="error"
+    :submitting="submitting"
+    :limit-reached="limitReached"
+    :loading="loading"
+    @submit="submit"
+  >
+    <div>
+      <Label for="name">Name</Label>
+      <Input id="name" v-model="name" class="mt-1" required />
     </div>
-  </AppLayout>
+
+    <div class="grid grid-cols-3 gap-3">
+      <div class="col-span-2">
+        <Label for="hostname">Hostname</Label>
+        <Input id="hostname" v-model="hostname" class="mt-1" />
+      </div>
+      <div>
+        <Label for="recordType">Record type</Label>
+        <select
+          id="recordType"
+          v-model="recordType"
+          class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        >
+          <option v-for="opt in recordTypeOptions" :key="opt.value" :value="opt.value">
+            {{ opt.value }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <Label for="expectedValue">Expected value (optional)</Label>
+      <Input
+        id="expectedValue"
+        v-model="expectedValue"
+        placeholder="e.g. 203.0.113.10"
+        class="mt-1"
+      />
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Clear this to re-arm baseline mode — the next check re-captures whatever the record currently resolves to. Save a new value to acknowledge an intentional change.
+      </p>
+    </div>
+
+    <div>
+      <Label for="interval">Check interval</Label>
+      <select
+        id="interval"
+        v-model="intervalMins"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <input id="alerts" v-model="alertsEnabled" type="checkbox" class="rounded" />
+      <Label for="alerts" class="cursor-pointer">Send alerts</Label>
+    </div>
+
+    <div>
+      <Label for="alertLimit">Alert limit per incident</Label>
+      <select
+        id="alertLimit"
+        v-model="maxAlertsPerIncident"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Stop alerting after this many notifications per incident.
+      </p>
+    </div>
+
+    <div>
+      <Label for="alertFilter">Alert filter</Label>
+      <select
+        id="alertFilter"
+        v-model="alertAfterNFailures"
+        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+      >
+        <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs mt-1" style="color: var(--text-muted)">
+        Suppress alerts until N consecutive failures are detected. Resets on success.
+      </p>
+    </div>
+
+    <NotificationChannelPicker v-model="channelIds" />
+  </MonitorFormPage>
 </template>
