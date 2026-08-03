@@ -13,8 +13,10 @@
 #     A big file isn't proof of a violation, but every one found here is
 #     worth a look — see SKILL.md for how to read a finding.
 import csv
+import difflib
 import io
-import subprocess  # nosec B404 - only ever invoked with a fixed lizard argv below, never a shell
+import re
+import subprocess  # nosec B404 - only ever invoked with a fixed lizard/git argv below, never a shell
 import sys
 from pathlib import Path
 
@@ -26,6 +28,20 @@ VUE_VIEW_DIR = Path("apps/web/src/views")
 VUE_VIEW_LINE_THRESHOLD = 600
 VUE_COMPONENT_DIR = Path("apps/web/src/components")
 VUE_COMPONENT_LINE_THRESHOLD = 250
+
+# Sibling near-duplicates: two files whose names differ only by one of these
+# tokens are the same screen in two modes, so they drift together and every
+# change has to be made twice. Unlike the size checks above this isn't
+# outlier detection — a majority-duplicated pair is a finding at any size,
+# which is exactly the class the line-count thresholds can't see (all six
+# current pairs sit well under VUE_VIEW_LINE_THRESHOLD).
+SIBLING_TOKENS = [("Create", "Edit")]
+SIBLING_DUP_THRESHOLD = 50  # percent of normalized lines in common
+
+CHURN_COMMITS = 150  # how far back to look for hot spots
+CHURN_TOP_N = 10
+CHURN_PATHS = re.compile(r"^(apps/api/internal|apps/web/src)/.*\.(go|ts|vue)$")
+CHURN_EXCLUDE = re.compile(r"(_test\.go|\.test\.ts)$")
 
 # file -> rationale, verified by reading the file, not accepted on size
 # alone. Empty until a finding is deliberately triaged as "large but
@@ -95,6 +111,40 @@ def vue_file_size(directory: Path, threshold: int, exclude_dirs: tuple = ()) -> 
     return findings
 
 
+def _normalized(path: Path) -> list[str]:
+    """Lines with whitespace stripped and blanks dropped — reformatting shouldn't move the number."""
+    return [s for s in ("".join(line.split()) for line in path.read_text(errors="ignore").splitlines()) if s]
+
+
+def sibling_duplication(directory: Path) -> list[tuple[str, str, int, int]]:
+    """Pairs of same-screen files (Create/Edit) sharing more than the threshold of their lines."""
+    findings = []
+    for left_token, right_token in SIBLING_TOKENS:
+        for left in sorted(directory.rglob(f"*{left_token}*.vue")):
+            right = left.with_name(left.name.replace(left_token, right_token, 1))
+            if not right.exists() or str(left) in KNOWN_EXCEPTIONS:
+                continue
+            a, b = _normalized(left), _normalized(right)
+            pct = round(difflib.SequenceMatcher(None, a, b).ratio() * 100)
+            if pct > SIBLING_DUP_THRESHOLD:
+                findings.append((str(left), str(right), pct, len(a) + len(b)))
+    return findings
+
+
+def churn_hot_spots() -> list[tuple[str, int]]:
+    """Most-touched source files in recent history — where deepening pays off first."""
+    # Fixed argv, no shell, no external input.
+    out = subprocess.run(  # nosec B603 B607
+        ["git", "log", "--format=", "--name-only", f"-{CHURN_COMMITS}"],
+        capture_output=True, text=True, check=False,
+    ).stdout
+    counts: dict[str, int] = {}
+    for line in out.splitlines():
+        if CHURN_PATHS.match(line) and not CHURN_EXCLUDE.search(line):
+            counts[line] = counts.get(line, 0) + 1
+    return sorted(counts.items(), key=lambda kv: -kv[1])[:CHURN_TOP_N]
+
+
 def print_section(title: str, findings: list, fmt) -> bool:
     # CodeQL py/clear-text-logging-sensitive-data false positive: title is
     # always one of the 4 hardcoded audit-section descriptions built in
@@ -143,6 +193,21 @@ def report() -> int:
         lambda r: f"{r[0]}: {r[1]} lines",
     ):
         exit_code = 1
+
+    if print_section(
+        f"Sibling near-duplicates ({VUE_VIEW_DIR}, >{SIBLING_DUP_THRESHOLD}% shared lines)",
+        sorted(sibling_duplication(VUE_VIEW_DIR), key=lambda f: -f[3]),
+        lambda r: f"{r[0]} / {Path(r[1]).name}: {r[2]}% shared across {r[3]} lines",
+    ):
+        exit_code = 1
+
+    # Context, never a failure: churn says which findings to fix first, and a
+    # hot file with no finding is not a defect.
+    print_section(
+        f"Churn hot spots (last {CHURN_COMMITS} commits — prioritize findings that overlap)",
+        churn_hot_spots(),
+        lambda r: f"{r[0]}: {r[1]} commits",
+    )
 
     if exit_code:
         print("Findings above are candidates for a closer look, not automatic failures — see SKILL.md.")
