@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'why-monitoring-matters',
+    slug: 'why-monitoring-matters',
+    title: 'Why Monitoring Matters: Finding Out Before Users Do',
+    date: 'August 3, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "Monitoring doesn't keep anything running — what it buys you is the interval between something breaking and you finding out, which is where almost all of an outage's cost lives. A look at the failure modes that produce no signal at all, and why a green dashboard proves less than most people assume.",
+  },
+  {
     file: 'v1-41-zombie-job-detection',
     slug: 'v1-41-zombie-job-detection',
     title: 'v1.41: Zombie (Stuck) Job Detection',
