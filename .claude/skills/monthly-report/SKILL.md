@@ -7,8 +7,8 @@ description: Build or update this month's docs/reports/YYYY-MM.md snapshot — a
 
 `docs/reports/YYYY-MM.md` is a monthly snapshot of what shipped and how
 much effort it took — see `docs/reports/2026-07.md` for the current
-format. It complements `docs/hours.md` (daily log) and `docs/decisions/`
-(ADR log) rather than duplicating either.
+format. It complements `docs/reports/hours/` (daily log, one file per
+month) and `docs/decisions/` (ADR log) rather than duplicating either.
 
 ## Steps
 
@@ -22,7 +22,7 @@ from the previous month's structure:
 
 ## Notes
 
-**Total effort this month: 0 h**. Day-by-day breakdown in [hours.md](../hours.md) — not duplicated here.
+**Total effort this month: 0 h**. Day-by-day breakdown in [hours/YYYY-MM.md](hours/YYYY-MM.md) — not duplicated here.
 
 **Cumulative total since project start: N h** across N logged days — average N.NN h/day.
 ```
@@ -43,10 +43,14 @@ same grouping judgment as the log-hours skill. Each bullet:
 
 **3. Update `## Notes`** — this is where the log-hours skill rolls in its daily
 total; if you're writing this section standalone, recompute both numbers
-from `docs/hours.md` rather than incrementing by feel:
+from the hours logs rather than incrementing by feel — one file per month
+under `docs/reports/hours/`:
 
 ```bash
-grep -c '^| <YYYY-MM>' docs/hours.md   # days logged this month, e.g. '^| 2026-07'
+# this month's total, and distinct days logged
+awk -F'|' '/^\| 20[0-9][0-9]-/ {gsub(/ |h/,"",$5); s+=$5; d[$2]=1} END {printf "%.2f h across %d days\n", s, length(d)}' docs/reports/hours/<YYYY-MM>.md
+# cumulative since project start (every month)
+awk -F'|' '/^\| 20[0-9][0-9]-/ {gsub(/ |h/,"",$5); s+=$5; d[$2]=1} END {printf "%.2f h across %d days\n", s, length(d)}' docs/reports/hours/*.md
 ```
 
 **4. Don't re-derive from git blindly** — cross-check against

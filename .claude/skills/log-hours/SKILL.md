@@ -1,6 +1,6 @@
 ---
 name: log-hours
-description: Log hours worked for a day into docs/hours.md and roll the new total into that month's docs/reports/YYYY-MM.md Notes section, based on that day's git commit history. Use when asked to "log hours", "log today's hours", "update hours for <date>", or "log hours for yesterday/Thursday/etc".
+description: Log hours worked for a day into that month's docs/reports/hours/YYYY-MM.md and roll the new total into docs/reports/YYYY-MM.md's Notes section, based on that day's git commit history. Use when asked to "log hours", "log today's hours", "update hours for <date>", or "log hours for yesterday/Thursday/etc".
 ---
 
 # Log hours
@@ -9,10 +9,12 @@ Reconstructs a day's effort from git history rather than asked-for
 estimates, per CLAUDE.md's hours-logging convention.
 
 A `PreToolUse` hook (`.claude/hooks/require_log_hours.py`) blocks
-`gh pr create` until `docs/hours.md` has been touched by a commit on the
-current branch — hours ship in the *same* PR as the work, not a
-follow-up `docs/hours-*` PR. Run this skill and commit the result on the
-current branch before creating the PR, not after.
+`gh pr create` until a `docs/reports/hours/YYYY-MM.md` log has been
+touched by a commit on the current branch — hours ship in the *same* PR
+as the work, not a follow-up `docs/hours-*` PR. Run this skill and commit
+the result on the current branch before creating the PR, not after.
+(`docs/reports/hours/README.md` is the month index, not a log — touching
+only it does not satisfy the hook.)
 
 ## Steps
 
@@ -42,8 +44,11 @@ short one — a genuinely 15-minute fix gets its own 0.25 h row.
 conversation — copywriting, launch/marketing text, doc corrections made
 directly without a commit — each gets its own line.
 
-**5. Append to `docs/hours.md`'s Log table**, matching the exact existing
-row format:
+**5. Append to that month's `docs/reports/hours/YYYY-MM.md` Log table**,
+matching the exact existing row format. If the month's file doesn't exist
+yet, create it from the previous month's header (title, intro paragraph,
+`## Log`, table header) and add a row for it to
+`docs/reports/hours/README.md`'s month index:
 
 ```text
 | Date       | Day | Epic/Story                                      | Hours |
@@ -61,13 +66,21 @@ section** — update both the month's total and the cumulative
 since-project-start total:
 
 ```text
-**Total effort this month: N h**. Day-by-day breakdown in [hours.md](../hours.md) — not duplicated here.
+**Total effort this month: N h**. Day-by-day breakdown in [hours/YYYY-MM.md](hours/YYYY-MM.md) — not duplicated here.
 
 **Cumulative total since project start: N h** across N logged days — average N.NN h/day.
 ```
 
-Recompute both totals from `docs/hours.md` rather than just adding —
-cheapest way to catch a prior arithmetic slip. The rolled-up totals and
+The month total comes from that month's own hours file; the cumulative
+total spans every `docs/reports/hours/*.md`. Recompute both from the
+files rather than just adding — cheapest way to catch a prior arithmetic
+slip:
+
+```bash
+# month total, and cumulative across all months
+awk -F'|' '/^\| 20[0-9][0-9]-/ {gsub(/ |h/,"",$5); s+=$5} END {print s}' docs/reports/hours/<YYYY-MM>.md
+awk -F'|' '/^\| 20[0-9][0-9]-/ {gsub(/ |h/,"",$5); s+=$5; d[$2]=1} END {printf "%.2f h across %d days\n", s, length(d)}' docs/reports/hours/*.md
+``` The rolled-up totals and
 the average-per-day figure are derived arithmetic and can land on any
 decimal (e.g. "9.55 h/day"), unlike the per-row Hours column, which
 stays on quarter-hour steps.

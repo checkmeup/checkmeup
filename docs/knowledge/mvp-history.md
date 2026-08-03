@@ -233,7 +233,7 @@ The phase/estimate practice ended with the MVP — post-MVP work has no hour bud
 | 7 — Maintenance windows       | 25 h      | 5 h      | 0 h        |
 | **Total**                     | **259 h** | **29 h** | **-230 h** |
 
-Per-day log (now using epic/story references): [hours.md](../hours.md).
+Per-day log (now using epic/story references): [reports/hours/](../reports/hours/README.md).
 
 ---
 
