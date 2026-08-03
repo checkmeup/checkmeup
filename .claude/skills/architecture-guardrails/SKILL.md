@@ -70,6 +70,25 @@ same PR as whatever work touched the file. If it's a larger untangling
 (e.g. `worker.go`), don't do a drive-by refactor — use `new-story` to
 scope it as its own piece of work instead of expanding an unrelated PR.
 
+**4. Report each confirmed finding in this shape**, so the decision in
+step 3 is reviewable rather than a bare threshold number:
+
+```text
+Issue:          <what the file/function is doing that's more than one job>
+Location:       <path:line>
+Impact:         <what this costs — review difficulty, test surface, blast radius>
+Recommendation: <the specific split, per step 2's per-category guidance>
+Effort:         low | medium | high
+Priority:       high | medium | low
+```
+
+Only emit this for findings you confirmed by *reading* the file in step
+2 — a threshold hit you haven't read is not a finding yet. Never attach
+a numeric quality score to a file, a package, or the codebase (no
+"structure: 8/10"): this skill measures two things, size and complexity,
+and anything beyond those two is not derivable from what it ran. State
+what was measured, or say the run was clean.
+
 ## Threshold rationale (why these numbers)
 
 Picked by finding the actual gap in this repo's size distribution, not
