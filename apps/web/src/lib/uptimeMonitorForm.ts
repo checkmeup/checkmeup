@@ -61,11 +61,14 @@ export function uptimeMonitorToFormState(m: UptimeMonitor): UptimeMonitorFormSta
     keyword: m.keyword ?? '',
     keywordMode: m.keywordMode,
     keywordCaseSensitive: m.keywordCaseSensitive,
-    jsonAssertions: [...(m.jsonAssertions ?? [])],
+    // Cloned per element, not just the array: the form binds v-model straight
+    // to each assertion's fields, so a shallow copy would write the user's
+    // edits through into the monitor object TanStack Query has cached.
+    jsonAssertions: (m.jsonAssertions ?? []).map((a) => ({ ...a })),
     httpMethod: m.httpMethod,
     acceptedStatusCodes: [...m.acceptedStatusCodes],
     maxResponseTimeMs: m.maxResponseTimeMs,
-    channelIds: m.channelIds ?? [],
+    channelIds: [...(m.channelIds ?? [])],
   }
 }
 

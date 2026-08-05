@@ -35,7 +35,7 @@ export function cronMonitorToFormState(m: CronMonitor): CronMonitorFormState {
     maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     maxDurationMins: m.maxDurationMins,
-    channelIds: m.channelIds ?? [],
+    channelIds: [...(m.channelIds ?? [])],
   }
 }
 

@@ -38,7 +38,7 @@ export function dnsMonitorToFormState(m: DNSMonitor): DNSMonitorFormState {
     alertsEnabled: m.alertsEnabled,
     maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
-    channelIds: m.channelIds ?? [],
+    channelIds: [...(m.channelIds ?? [])],
   }
 }
 

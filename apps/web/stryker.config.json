@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation-testing experiment. Scoped to src/lib/ \u2014 pure, framework-free logic where a surviving mutant is unambiguous. Vue SFCs are deliberately out of scope: Stryker cannot mutate inside <template>, so a .vue score would measure only the <script> block and read misleadingly low.",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "_comment_plugins": "Explicit rather than auto-discovered: bun installs into a hoisted node_modules/.bun/ layout, and Stryker's default glob over node_modules/@stryker-mutator/* does not resolve the runner through it.",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "reporters": ["json", "clear-text"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/lib/uptimeMonitorForm.ts",
+    "src/lib/cronMonitorForm.ts",
+    "src/lib/portMonitorForm.ts",
+    "src/lib/dnsMonitorForm.ts",
+    "src/lib/maintenanceWindowForm.ts",
+    "src/lib/notificationChannelTypes.ts"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  },
+  "timeoutMS": 20000,
+  "concurrency": 4,
+  "_comment_ignoreStatic": "Static mutants (module-level const option lists) re-run the entire suite each, 223 of 541 here, and a full run exceeded 20 minutes without finishing. They also measure the least: a surviving mutant in a label array says nothing about test quality. Excluded to keep the score behavioral.",
+  "ignoreStatic": true,
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  }
+}

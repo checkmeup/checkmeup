@@ -27,7 +27,7 @@ make migrate-create name=foo  # create a new goose migration file
 **Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
 > `typescript` is pinned to `^6.0.3`, not "latest" — TypeScript 7 is a restructured Go-based rewrite that `vue-tsc` can't bootstrap against yet (`ERR_PACKAGE_PATH_NOT_EXPORTED` on `typescript/lib/tsc`), despite `vue-tsc`'s own peerDeps claiming `>=5.0.0` support. A `bun update --latest` will try to float this to 7.x again — re-pin to the latest 6.x if that happens.  
 **Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
-**Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest
+**Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest · Stryker (mutation testing on `apps/web/src/lib/`, ad hoc via the `mutation-testing` skill — never in CI)
 
 > `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).
 
@@ -62,7 +62,7 @@ make migrate-create name=foo  # create a new goose migration file
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)). Docs navigation: [`docs/INDEX.md`](docs/INDEX.md) — living how-to in [`docs/reference/`](docs/reference/), architectural snapshots in [`docs/knowledge/`](docs/knowledge/), feature gap analysis in [`docs/proposals/`](docs/proposals/), technical investigations in [`docs/investigations/`](docs/investigations/).
 
-Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, hours logging, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code, and a `secrets-scan` gate before every `git push` — wired up in [`.claude/settings.json`](.claude/settings.json).
+Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, hours logging, mutation testing, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code, and a `secrets-scan` gate before every `git push` — wired up in [`.claude/settings.json`](.claude/settings.json).
 
 **Hours:** [`docs/reports/hours/`](docs/reports/hours/README.md) holds the raw daily log, one file per month; [`docs/reports/`](docs/reports/) holds monthly rollups. Use the `log-hours` and `monthly-report` skills for these — they already encode the reconstruction rules (git-history grouping, stash-artifact exclusion, quarter-hour granularity). A `PreToolUse` hook blocks `gh pr create` until hours are logged and committed on the current branch, so they ship in the same PR as the work.
 

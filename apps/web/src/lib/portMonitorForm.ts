@@ -38,7 +38,7 @@ export function portMonitorToFormState(m: PortMonitor): PortMonitorFormState {
     alertsEnabled: m.alertsEnabled,
     maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
-    channelIds: m.channelIds ?? [],
+    channelIds: [...(m.channelIds ?? [])],
   }
 }
 

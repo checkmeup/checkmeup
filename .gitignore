@@ -53,3 +53,8 @@ __pycache__/
 
 # session_summary.py's SessionEnd log + per-session marker files
 .claude/logs/
+
+# Stryker mutation testing: sandbox copies of the whole app (Vitest will scan
+# them as real tests if left behind) and generated reports
+apps/web/.stryker-tmp/
+apps/web/reports/
