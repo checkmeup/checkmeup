@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Minimal `ps` replacement for containers that ship without procps.
-
-Stryker's process cleanup (via tree-kill) only ever calls
-`ps -o pid --no-headers --ppid <pid>` to find a test runner's children, so
-answering exactly that from /proc is enough. Installed onto PATH as `ps` by
-run.sh when the real one is missing.
-"""
+"""Minimal `ps` replacement for containers that ship without procps."""
+# Stryker's process cleanup (via tree-kill) only ever calls
+# `ps -o pid --no-headers --ppid <pid>` to find a test runner's children, so
+# answering exactly that from /proc is enough. Installed onto PATH as `ps` by
+# run.sh when the real one is missing.
 import os
 import sys
 
 
 def child_pids(ppid: str) -> list[str]:
-    """PIDs whose parent is ppid, read straight from /proc."""
+    """Return every pid whose parent is ppid, read straight from /proc."""
     found = []
     for entry in os.listdir("/proc"):
         if not entry.isdigit():
