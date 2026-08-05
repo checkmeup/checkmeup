@@ -8,7 +8,7 @@
   "vitest": {
     "configFile": "vitest.config.ts"
   },
-  "reporters": ["json", "clear-text"],
+  "reporters": ["html", "json", "clear-text"],
   "htmlReporter": {
     "fileName": "reports/mutation/index.html"
   },

@@ -45,6 +45,15 @@ Narrow it while iterating:
 .claude/skills/mutation-testing/run.sh --mutate src/lib/uptimeMonitorForm.ts
 ```
 
+Each run writes two reports to `apps/web/reports/mutation/` (gitignored, and
+**overwritten every run** — a `--mutate` run leaves a single-file report
+behind, not the full picture):
+
+| File | Use |
+|---|---|
+| `index.html` | Clickable source view, each mutant highlighted in place. Open it directly; it's one self-contained file. |
+| `mutation.json` | Machine-readable — what step 2 below queries. |
+
 **2. Separate behavioral survivors from cosmetic ones.** Most survivors in
 this repo are `StringLiteral`/`ObjectLiteral` mutants inside the exported
 option tables (`{ label: '10 minutes', value: 10 }` → `{ label: '', ... }`).
