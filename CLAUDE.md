@@ -29,6 +29,8 @@ make migrate-create name=foo  # create a new goose migration file
 **Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest · Stryker (mutation testing on `apps/web/src/lib/`, ad hoc via the `mutation-testing` skill — never in CI)
 
+> **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual. Auto-deploy landed 2026-07-18 (`5bb3292`); docs written before then can still say deploys are manual and are simply stale.
+
 > `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).
 
 **Key env vars (`apps/api/.env`):**
@@ -90,7 +92,7 @@ CI uploads coverage to Codacy after every push (`CODACY_API_TOKEN`, account-leve
 ## Don't
 
 - Use Playwright (or `npx playwright`) to drive a browser for UI verification — not wanted in this environment. If a UI change needs visual/browser verification and no project run-skill covers it, say so explicitly instead of reaching for Playwright.
-- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine. `-n` (dry run) is not a safe way to preview `make deploy`: it has actually triggered a real deploy before — see [the incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md) for why. A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) now blocks all of these for Claude at the tool-call level, dry-run flags included.
+- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. `-n` (dry run) is not a safe way to preview `make deploy`: it has actually triggered a real deploy before — see [the incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md) for why. A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) now blocks all of these for Claude at the tool-call level, dry-run flags included.
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR-001](docs/decisions/001-worker-model.md))
 - Use an ORM — sqlc only ([ADR-004](docs/decisions/004-sqlc-over-orm.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants

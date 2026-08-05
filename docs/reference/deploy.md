@@ -2,7 +2,7 @@
 title: Deployment Guide
 type: reference
 status: active
-updated: 2026-07-05
+updated: 2026-08-05
 tags: [ops, deployment, kamal, hetzner]
 ---
 
@@ -38,6 +38,17 @@ The two `.env` files are intentionally separate:
 ---
 
 ## How to deploy
+
+**You don't — CI does.** Since 2026-07-18 (`5bb3292`), merging to `main` deploys
+production automatically: CI runs on `main`, then
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml) cuts a
+semantic-release version and runs `kamal deploy` with secrets held in GitHub.
+Check it with `gh run list --workflow=release.yml`.
+
+Everything below is the **manual/break-glass path** — first-ever setup, a
+rollback, or deploying when CI can't. It is also the only path this doc
+described before auto-deploy existed, so treat any "you must run this to ship"
+framing below as historical.
 
 ### Every deploy (after `kamal setup` is done)
 

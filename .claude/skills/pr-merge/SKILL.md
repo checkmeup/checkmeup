@@ -121,11 +121,23 @@ Confirm `state` is `MERGED`.
 
 ## After merging
 
-Merging to `main` does **not** deploy. This repo deploys via `make
-deploy` (Kamal, targets the real production server) — that command is
-human-operator-only; never run it yourself. If the change is
-user-visible, mention that it still needs a deploy to take effect on
-`checkmeup.net`.
+Merging to `main` **deploys to production automatically.** CI runs on the
+pushed `main`, and on success `.github/workflows/release.yml` cuts a
+semantic-release version and runs `kamal deploy` with production secrets
+from GitHub — no human step. Report a user-visible change as shipping on
+its own, and confirm it if you want certainty:
+
+```bash
+gh run list --workflow=release.yml --limit 1   # release + "Deploy to production" jobs
+```
+
+Never tell the user a merged change "still needs a deploy" — this
+section said exactly that until 2026-08-05 and it was wrong. The
+`make deploy`/`kamal` prohibition in CLAUDE.md scopes *who runs the
+command locally* (never Claude); it is not a claim that deploys are
+manual. That was true when this skill was written (2026-07-07) and
+stopped being true when auto-deploy landed (2026-07-18, `5bb3292`)
+without this section being updated.
 
 ## Cleanup (optional)
 
