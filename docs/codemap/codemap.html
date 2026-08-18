@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>checkmeup — code map</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-panel: #111820;
+    --bg-elev: #17212c;
+    --line: #24313f;
+    --text: #dfe7ef;
+    --text-dim: #8fa1b3;
+    --text-faint: #5d7085;
+    --accent: #4fc3f7;
+    --up: #ffb454;
+    --down: #7ee787;
+    --flow: #f778ba;
+    --g-frontend: #4fc3f7;
+    --g-backend: #a78bfa;
+    --g-datastore: #7ee787;
+    --g-external: #ffb454;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  a { color: var(--accent); }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  header {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    background: var(--bg-panel); flex: 0 0 auto;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  header .meta { font-size: 11.5px; color: var(--text-dim); display: flex; gap: 14px; flex-wrap: wrap; }
+  header .meta b { color: var(--text); font-weight: 500; }
+
+  main { flex: 1 1 auto; display: flex; min-height: 0; }
+
+  aside {
+    width: 268px; flex: 0 0 268px; border-right: 1px solid var(--line);
+    background: var(--bg-panel); overflow-y: auto; padding: 12px;
+  }
+  aside h2 {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--text-faint); margin: 18px 0 7px; font-weight: 650;
+  }
+  aside h2:first-child { margin-top: 0; }
+  #search {
+    width: 100%; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--bg-elev); color: var(--text); font-size: 12.5px;
+  }
+  #search:focus { outline: none; border-color: var(--accent); }
+  .chk { display: flex; align-items: center; gap: 7px; padding: 3px 0; cursor: pointer; font-size: 12.5px; }
+  .chk input { accent-color: var(--accent); margin: 0; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+  .flow-btn {
+    display: block; width: 100%; text-align: left; padding: 7px 9px; margin-bottom: 5px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--bg-elev);
+    color: var(--text); cursor: pointer; font-size: 12.5px; font-family: inherit;
+  }
+  .flow-btn:hover { border-color: var(--flow); }
+  .flow-btn.on { border-color: var(--flow); background: #2a1622; color: #fff; }
+  .flow-btn small { display: block; color: var(--text-faint); font-size: 11px; margin-top: 2px; }
+  .flow-btn.on small { color: #d9a8c0; }
+  .legend-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; font-size: 12px; color: var(--text-dim); }
+  .legend-line { width: 20px; height: 0; border-top: 2px solid; flex: 0 0 auto; }
+
+  #canvas-wrap { flex: 1 1 auto; position: relative; min-width: 0; }
+  svg { width: 100%; height: 100%; display: block; cursor: grab; background:
+    radial-gradient(circle at 22% 18%, #121a24 0%, var(--bg) 62%); }
+  svg.dragging { cursor: grabbing; }
+
+  .controls { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 5px; }
+  .controls button {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--bg-elev); color: var(--text); cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .controls button.wide { width: auto; padding: 0 10px; font-size: 11.5px; }
+  .controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .hint {
+    position: absolute; left: 12px; bottom: 12px; color: var(--text-faint);
+    font-size: 11px; pointer-events: none;
+  }
+
+  .boundary { fill: none; stroke-dasharray: 5 5; stroke-width: 1.2; opacity: .5; }
+  .boundary-label { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; }
+
+  .node { cursor: pointer; }
+  .node rect.body { stroke-width: 1.4; rx: 8; }
+  .node .title { font-size: 12.5px; font-weight: 600; fill: var(--text); }
+  .node .role { font-size: 10px; fill: var(--text-faint); }
+  .node .badge { font-size: 9.5px; fill: var(--text-faint); }
+  .node.dim { opacity: .16; }
+  .node.hidden { display: none; }
+  .node.sel rect.body { stroke-width: 2.6; }
+  .node.up rect.body { stroke: var(--up); stroke-width: 2.2; }
+  .node.down rect.body { stroke: var(--down); stroke-width: 2.2; }
+  .node.inflow rect.body { stroke: var(--flow); stroke-width: 2.4; }
+  .node.match rect.body { stroke: #fff; }
+
+  path.edge { fill: none; stroke-width: 1.3; opacity: .5; }
+  path.edge.dim { opacity: .05; }
+  path.edge.hidden { display: none; }
+  path.edge.up { stroke: var(--up); stroke-width: 2.2; opacity: 1; }
+  path.edge.down { stroke: var(--down); stroke-width: 2.2; opacity: 1; }
+  .edge-label { font-size: 9px; fill: var(--text-faint); opacity: 0; pointer-events: none; }
+  .edge-label.show { opacity: .95; }
+
+  #flowpath { fill: none; stroke: var(--flow); stroke-width: 2.6; stroke-dasharray: 8 6; opacity: .9; }
+  .stepnum circle { fill: var(--flow); }
+  .stepnum text { fill: #17070f; font-size: 10px; font-weight: 700; text-anchor: middle; }
+
+  #detail {
+    width: 340px; flex: 0 0 340px; border-left: 1px solid var(--line);
+    background: var(--bg-panel); overflow-y: auto; padding: 14px; display: none;
+  }
+  #detail.open { display: block; }
+  #detail h3 { margin: 0 0 2px; font-size: 15px; }
+  #detail .sub { color: var(--text-dim); font-size: 11.5px; margin-bottom: 12px; }
+  #detail .path { color: var(--accent); font-size: 11.5px; word-break: break-all; }
+  #detail section { margin-top: 15px; }
+  #detail section > h4 {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--text-faint); margin: 0 0 6px; font-weight: 650;
+  }
+  #detail p { margin: 0 0 8px; color: var(--text-dim); }
+  #detail ul { margin: 0; padding-left: 16px; color: var(--text-dim); }
+  #detail li { margin-bottom: 4px; word-break: break-word; }
+  #detail li .mono { color: var(--text); font-size: 11.5px; }
+  .pill {
+    display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 10.5px;
+    border: 1px solid var(--line); color: var(--text-dim); margin: 0 4px 4px 0; cursor: pointer;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.up { border-color: var(--up); color: var(--up); }
+  .pill.down { border-color: var(--down); color: var(--down); }
+  .pill.flow { border-color: var(--flow); color: var(--flow); }
+  #close { float: right; background: none; border: 0; color: var(--text-faint); cursor: pointer; font-size: 17px; line-height: 1; }
+  #close:hover { color: var(--text); }
+  .empty { color: var(--text-faint); font-style: italic; font-size: 12px; }
+
+  @media (max-width: 1100px) {
+    aside { width: 210px; flex-basis: 210px; }
+    #detail { width: 280px; flex-basis: 280px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>checkmeup <span style="color:var(--text-faint);font-weight:400">code map</span></h1>
+  <div class="meta">
+    <span>commit <b class="mono" id="m-commit"></b></span>
+    <span>generated <b id="m-time"></b></span>
+    <span>scope <b class="mono" id="m-scope"></b></span>
+    <span><b id="m-counts"></b></span>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <h2>Search</h2>
+    <input id="search" type="search" placeholder="module, path, symbol…" autocomplete="off">
+
+    <h2>Module types</h2>
+    <div id="groups"></div>
+
+    <h2>Relationships</h2>
+    <div id="etypes"></div>
+
+    <h2>End-to-end flows</h2>
+    <div id="flows"></div>
+
+    <h2>Legend</h2>
+    <div class="legend-row"><span class="legend-line" style="border-color:var(--up)"></span> upstream caller</div>
+    <div class="legend-row"><span class="legend-line" style="border-color:var(--down)"></span> downstream dependency</div>
+    <div class="legend-row"><span class="legend-line" style="border-color:var(--flow);border-top-style:dashed"></span> selected flow path</div>
+    <div class="legend-row" style="margin-top:6px">Click a module to trace it. Click empty space to reset.</div>
+  </aside>
+
+  <div id="canvas-wrap">
+    <svg id="svg">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5d7085"/>
+        </marker>
+        <marker id="ah-up" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#ffb454"/>
+        </marker>
+        <marker id="ah-down" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#7ee787"/>
+        </marker>
+      </defs>
+      <g id="viewport">
+        <g id="g-boundaries"></g>
+        <g id="g-edges"></g>
+        <g id="g-flow"></g>
+        <g id="g-nodes"></g>
+      </g>
+    </svg>
+    <div class="controls">
+      <button id="zin" title="Zoom in">+</button>
+      <button id="zout" title="Zoom out">&minus;</button>
+      <button id="zfit" class="wide" title="Fit to screen">Fit</button>
+    </div>
+    <div class="hint">scroll to zoom · drag background to pan · drag a module to move it</div>
+  </div>
+
+  <div id="detail"></div>
+</main>
+
+<script type="application/json" id="codemap-data">{"generated_at":"2026-08-08T13:16:58Z","generated_from_commit":"319ae0c0a6a8e329d156640d32649c9087e5daca","scope":["apps/api","apps/web"],"nodes":[{"id":"web-spa","path":"apps/web/src/main.ts","role":"frontend-bootstrap","label":"Web SPA shell","group":"frontend","summary":"Vue 3 entrypoint: mounts App.vue with Pinia, vue-router, unhead and TanStack Query. App.vue hosts RouterView plus the consent banner and GTM bootstrap.","members":["apps/web/src/main.ts","apps/web/src/App.vue","apps/web/src/style.css","apps/web/index.html"],"entrypoints":["createApp(App).mount('#app')","App.vue onMounted -> loadGtm"],"tests":["apps/web/src/main.test.ts"],"constraints":["TanStack Query defaults pin retry:false and refetchOnWindowFocus:false to match the pre-migration fetch-once-on-mount behavior"],"evidence":[{"path":"apps/web/src/main.ts","symbol":"createApp"},{"path":"apps/web/src/main.ts","symbol":"QueryClient"},{"path":"apps/web/src/App.vue","symbol":"loadGtm"}]},{"id":"web-router","path":"apps/web/src/router","role":"frontend-routing","label":"Router & guards","group":"frontend","summary":"createWebHistory router plus a side-effect-free route table. beforeEach runs auth.init() once, enforces requiresAuth/guest/needsTermsAcceptance; afterEach fires a consented pageview.","members":["apps/web/src/router/index.ts","apps/web/src/router/routes.ts"],"entrypoints":["router.beforeEach","router.afterEach","routes"],"tests":["apps/web/src/router/index.test.ts"],"constraints":["routes.ts must stay side-effect free so scripts/prerender.mts can build a guard-free router without touching window or calling auth.init()"],"evidence":[{"path":"apps/web/src/router/index.ts","symbol":"router.beforeEach"},{"path":"apps/web/src/router/index.ts","symbol":"createWebHistory"},{"path":"apps/web/src/router/routes.ts","symbol":"routes"}]},{"id":"web-views","path":"apps/web/src/views","role":"frontend-ui","label":"Views, components & layouts","group":"frontend","summary":"53 lazily-imported route views (per-monitor-type list/create/edit/detail sets, dashboard, billing, settings, docs, marketing pages) plus shared components, docs partials and the three layouts.","members":["apps/web/src/views","apps/web/src/components","apps/web/src/components/docs","apps/web/src/components/ui","apps/web/src/layouts"],"entrypoints":["CronMonitorListView.vue","DashboardView.vue","BillingView.vue","SettingsView.vue"],"tests":["apps/web/src/views/DashboardView.test.ts","apps/web/src/views/BillingView.test.ts","apps/web/src/views/CronMonitorListView.test.ts","apps/web/src/components/ApiKeysCard.test.ts","apps/web/src/components/NotificationChannelsCard.test.ts"],"constraints":["Never hardcode hex colors \u2014 use design tokens from docs/reference/design.md","Tailwind CSS variables must be written bg-[var(--token)], never bg-[--token] (compiles to invalid CSS in this Tailwind v4 setup)"],"evidence":[{"path":"apps/web/src/views/CronMonitorListView.vue","symbol":"useCronMonitors"},{"path":"apps/web/src/views/BillingView.vue","symbol":"initializePaddle"},{"path":"apps/web/src/views/HomeView.vue","symbol":"statusRows"}]},{"id":"web-state","path":"apps/web/src/composables","role":"frontend-state","label":"Stores & query composables","group":"frontend","summary":"Pinia auth store (session status/user) and one useQuery composable per resource (cron/uptime/ssl/domain/port/dns monitors, billing, incidents, maintenance, status pages, channels, API keys).","members":["apps/web/src/composables","apps/web/src/stores/auth.ts"],"entrypoints":["useAuthStore","useCronMonitors","useBilling","useStatusPages"],"tests":["apps/web/src/stores/auth.test.ts"],"constraints":["auth.init() must use plain fetch, never api.get \u2014 the 401 interceptor would treat 'not logged in' as a session error and redirect (ADR-003)"],"evidence":[{"path":"apps/web/src/stores/auth.ts","symbol":"useAuthStore"},{"path":"apps/web/src/stores/auth.ts","symbol":"init"},{"path":"apps/web/src/composables/useBilling.ts","symbol":"billingApi"},{"path":"apps/web/src/composables/useCronMonitors.ts","symbol":"monitorsApi"}]},{"id":"web-api","path":"apps/web/src/api","role":"frontend-http-client","label":"API client","group":"frontend","summary":"Cookie-credentialed fetch wrapper with an ApiError type and a single-flight 401 -> /auth/refresh -> retry interceptor, plus one typed resource module per REST surface.","members":["apps/web/src/api/client.ts","apps/web/src/api/monitors.ts","apps/web/src/api/billing.ts","apps/web/src/api/incidents.ts","apps/web/src/api/maintenance.ts","apps/web/src/api/statusPages.ts","apps/web/src/api/notificationChannels.ts","apps/web/src/api/apiKeys.ts","apps/web/src/api/suggestions.ts"],"entrypoints":["api.get","api.post","api.patch","api.delete","attemptRefresh"],"tests":["apps/web/src/api/client.test.ts","apps/web/src/api/monitors.test.ts","apps/web/src/api/billing.test.ts","apps/web/src/api/incidents.test.ts","apps/web/src/api/maintenance.test.ts","apps/web/src/api/statusPages.test.ts","apps/web/src/api/notificationChannels.test.ts","apps/web/src/api/suggestions.test.ts"],"constraints":["Browser session auth is the access_token httpOnly cookie only \u2014 never an Authorization header (ADR-003); every request sends credentials: 'include'"],"evidence":[{"path":"apps/web/src/api/client.ts","symbol":"request"},{"path":"apps/web/src/api/client.ts","symbol":"attemptRefresh"},{"path":"apps/web/src/api/client.ts","symbol":"ApiError"},{"path":"apps/web/src/api/billing.ts","symbol":"billingApi"}]},{"id":"web-lib","path":"apps/web/src/lib","role":"frontend-lib","label":"Client libs & content","group":"frontend","summary":"Pure logic (monitor form validation, notification channel types, theme, consent, analytics, version) plus the static marketing content set: blog posts with split lazy metadata, FAQ and home copy.","members":["apps/web/src/lib","apps/web/src/blog","apps/web/src/blog/posts","apps/web/src/content/home.ts","apps/web/src/faq/faqs.ts"],"entrypoints":["loadGtm","trackPageview","useConsent","postsMeta","getPost"],"tests":["apps/web/src/lib/analytics.test.ts","apps/web/src/lib/consent.test.ts","apps/web/src/lib/notificationChannelTypes.test.ts","apps/web/src/lib/uptimeMonitorForm.test.ts","apps/web/src/lib/version.test.ts"],"constraints":["blog/postsMeta.ts must never be eagerly imported from posts/*.ts \u2014 Rollup would bundle the whole post module into the eager chunk (INEFFECTIVE_DYNAMIC_IMPORT)","GTM only loads after consent is granted"],"evidence":[{"path":"apps/web/src/lib/analytics.ts","symbol":"loadGtm"},{"path":"apps/web/src/lib/analytics.ts","symbol":"trackPageview"},{"path":"apps/web/src/blog/postsMeta.ts","symbol":"postsMeta"},{"path":"apps/web/src/faq/faqs.ts","symbol":"faqCategories"}]},{"id":"api-main","path":"apps/api/cmd/api/main.go","role":"backend-entrypoint","label":"API binary (main)","group":"backend","summary":"Loads config, runs goose migrations, opens the pgx pool (MaxConns pinned to 25), constructs every outbound client, registers the Telegram webhook, starts the worker goroutine, then blocks on the HTTP server.","members":["apps/api/cmd/api/main.go"],"entrypoints":["main","runMigrations","registerTelegramWebhook"],"tests":["apps/api/cmd/api/main_test.go"],"constraints":["dbMaxConns = 25 caps the pool explicitly rather than using pgx's max(4, NumCPU) default \u2014 the pool is shared by the worker and all live traffic","The worker runs as an in-process goroutine \u2014 no Redis, no job queue, no external broker (ADR-001)"],"evidence":[{"path":"apps/api/cmd/api/main.go","symbol":"main"},{"path":"apps/api/cmd/api/main.go","symbol":"dbMaxConns"},{"path":"apps/api/cmd/api/main.go","symbol":"runMigrations"}]},{"id":"api-server","path":"apps/api/internal/server","role":"backend-http-router","label":"HTTP server & routes","group":"backend","summary":"chi router: www redirect, CORS, security headers, 64 KB body cap, compression, per-route httprate limits, the public status page and badge routes, the SPA catch-all, /api/v1 session routes and the X-API-Key-only /api/v1/public group.","members":["apps/api/internal/server/server.go"],"entrypoints":["New","buildRouter","Start","handleSPA","handleHealth"],"tests":["apps/api/internal/server/server_test.go"],"constraints":["Status pages live at /status/{slug} on the same domain \u2014 no subdomains (ADR-005)","/api/v1/public is a separate route group from the RequireAuth group so cookie auth and X-API-Key can never be conflated (ADR-028)","Every route needs rate-limit coverage, either its own httprate wrapper or an enclosing r.Use"],"evidence":[{"path":"apps/api/internal/server/server.go","symbol":"buildRouter"},{"path":"apps/api/internal/server/server.go","symbol":"handleSPA"},{"path":"apps/api/internal/server/server.go","symbol":"clientIPKey"},{"path":"apps/api/internal/server/server.go","symbol":"authOrgKey"}]},{"id":"api-middleware","path":"apps/api/internal/middleware","role":"backend-auth","label":"Auth middleware","group":"backend","summary":"Two mutually exclusive authenticators: RequireAuth validates the access_token httpOnly cookie into Claims, RequireAPIKey hashes an X-API-Key header, looks it up and stamps the org onto the context.","members":["apps/api/internal/middleware/auth.go","apps/api/internal/middleware/apikey.go"],"entrypoints":["RequireAuth","RequireAPIKey","ClaimsFrom","OrgIDFromAPIKey"],"tests":["apps/api/internal/middleware/auth_test.go","apps/api/internal/middleware/apikey_test.go"],"constraints":["Browser session auth is the access_token httpOnly cookie only, never an Authorization header (ADR-003)","The public API authenticates via X-API-Key, deliberately never Authorization (ADR-028)"],"evidence":[{"path":"apps/api/internal/middleware/auth.go","symbol":"RequireAuth"},{"path":"apps/api/internal/middleware/apikey.go","symbol":"RequireAPIKey"},{"path":"apps/api/internal/middleware/apikey.go","symbol":"hashAPIKey"}]},{"id":"api-handlers","path":"apps/api/internal/handler","role":"backend-handlers","label":"HTTP handlers","group":"backend","summary":"Request/response layer: auth & terms, the six monitor types, cron ping receipt, notification channels, status pages (private CRUD and public render/badges), incidents, maintenance windows, billing + Paddle webhook, API keys, settings and suggestions.","members":["apps/api/internal/handler/auth.go","apps/api/internal/handler/monitors.go","apps/api/internal/handler/uptime_monitors.go","apps/api/internal/handler/ssl_monitors.go","apps/api/internal/handler/domain_monitors.go","apps/api/internal/handler/port_monitors.go","apps/api/internal/handler/dns_monitors.go","apps/api/internal/handler/ping.go","apps/api/internal/handler/notification_channels.go","apps/api/internal/handler/status_pages.go","apps/api/internal/handler/status_public.go","apps/api/internal/handler/status_public_badges.go","apps/api/internal/handler/incidents.go","apps/api/internal/handler/maintenance.go","apps/api/internal/handler/billing.go","apps/api/internal/handler/api_keys.go","apps/api/internal/handler/settings.go","apps/api/internal/handler/suggestions.go"],"entrypoints":["NewAuthHandler","NewMonitorHandler","NewPingHandler","NewBillingHandler","NewStatusPublicHandler","ReceivePing","Webhook"],"tests":["apps/api/internal/handler/auth_test.go","apps/api/internal/handler/monitors_test.go","apps/api/internal/handler/ping_test.go","apps/api/internal/handler/billing_test.go","apps/api/internal/handler/status_public_test.go","apps/api/internal/handler/api_keys_test.go","apps/api/internal/handler/incidents_test.go","apps/api/internal/handler/maintenance_test.go","apps/api/internal/handler/notification_channels_test.go","apps/api/internal/handler/status_pages_test.go","apps/api/internal/handler/suggestions_test.go","apps/api/internal/handler/settings_test.go","apps/api/internal/handler/dns_monitors_test.go","apps/api/internal/handler/domain_monitors_test.go","apps/api/internal/handler/port_monitors_test.go","apps/api/internal/handler/ssl_monitors_test.go","apps/api/internal/handler/uptime_monitors_test.go","apps/api/internal/handler/public_status_test.go"],"constraints":["Every tenant-scoped query must filter by org_id \u2014 a missing filter is a silent cross-tenant data leak","Paddle is the merchant of record; do not switch payment providers (ADR-026)","ping.go routes cron recovery through worker.DispatchAlert rather than duplicating channel dispatch"],"evidence":[{"path":"apps/api/internal/handler/ping.go","symbol":"ReceivePing"},{"path":"apps/api/internal/handler/ping.go","symbol":"sendCronRecoveryAlert"},{"path":"apps/api/internal/handler/billing.go","symbol":"CreateCheckout"},{"path":"apps/api/internal/handler/status_public.go","symbol":"ServeHTTP"}]},{"id":"api-worker","path":"apps/api/internal/worker","role":"backend-worker","label":"Background worker","group":"backend","summary":"In-process goroutine: a 30 s ticker runs overdue-cron, stuck-run, uptime, SSL, domain, port and DNS checks (bounded to 50 concurrent outbound checks); a 24 h ticker prunes old data. Owns DispatchAlert, the shared per-channel fan-out with an org-email fallback.","members":["apps/api/internal/worker/worker.go","apps/api/internal/worker/worker_cron.go","apps/api/internal/worker/worker_uptime.go","apps/api/internal/worker/worker_ssl.go","apps/api/internal/worker/worker_domain.go","apps/api/internal/worker/worker_port.go","apps/api/internal/worker/worker_dns.go"],"entrypoints":["Run","DispatchAlert","checkOverdue","checkUptimeMonitors","checkSSLMonitors","checkDomainMonitors","checkPortMonitors","checkDNSMonitors","pruneOldPings"],"tests":["apps/api/internal/worker/worker_test.go","apps/api/internal/worker/worker_dns_test.go"],"constraints":["Goroutine workers are intentional \u2014 no Redis, job queue or external broker (ADR-001)","checkConcurrency = 50 bounds concurrent outbound checks per tick","Nil HTTPClient/TCPDialer is the production default and wires through httpsafe to block SSRF to loopback/private/link-local/metadata targets","A monitor always has somewhere to send an alert \u2014 an org-wide email fallback fires when no channel delivered (ADR-023)"],"evidence":[{"path":"apps/api/internal/worker/worker.go","symbol":"Run"},{"path":"apps/api/internal/worker/worker.go","symbol":"DispatchAlert"},{"path":"apps/api/internal/worker/worker.go","symbol":"checkConcurrency"},{"path":"apps/api/internal/worker/worker.go","symbol":"dispatchFallbackEmail"},{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"performHTTPCheck"}]},{"id":"api-notify","path":"apps/api/internal/deliver","role":"backend-integration","label":"Alert channel clients","group":"backend","summary":"One client per delivery channel \u2014 Telegram bot API, Resend email, outbound signed webhooks, Slack incoming webhooks, Twilio SMS \u2014 over deliver.Do, the shared one-attempt, no-retry send-and-classify helper.","members":["apps/api/internal/deliver/deliver.go","apps/api/internal/telegram/telegram.go","apps/api/internal/email/email.go","apps/api/internal/email/founder.go","apps/api/internal/webhook/webhook.go","apps/api/internal/slack/slack.go","apps/api/internal/twilio/twilio.go"],"entrypoints":["Do","telegram.SendMessage","email.SendAlertEmail","webhook.Send","slack.Send","twilio.Send"],"tests":["apps/api/internal/deliver/deliver_test.go","apps/api/internal/telegram/telegram_test.go","apps/api/internal/email/email_test.go","apps/api/internal/email/founder_test.go","apps/api/internal/webhook/webhook_test.go","apps/api/internal/slack/slack_test.go","apps/api/internal/twilio/twilio_test.go"],"constraints":["One attempt, no retry \u2014 callers record delivery status from (statusCode, err) without inspecting err's type","Telegram is deliberately outside deliver.Do: it returns HTTP 200 and signals failure via a JSON 'ok' field","Twilio auth uses a scoped API Key SID/secret, never the primary Account Auth Token","Outbound webhook and Slack sends dial through httpsafe (user-supplied URLs)"],"evidence":[{"path":"apps/api/internal/deliver/deliver.go","symbol":"Do"},{"path":"apps/api/internal/telegram/telegram.go","symbol":"SendMessage"},{"path":"apps/api/internal/webhook/webhook.go","symbol":"Sign"},{"path":"apps/api/internal/twilio/twilio.go","symbol":"messagesPathFormat"}]},{"id":"api-billing","path":"apps/api/internal/billing","role":"backend-domain-logic","label":"Plan limits & enforcement","group":"backend","summary":"Pure plan table (monitor/status-page/channel caps, min check interval, SMS credits) plus the enforcement pass that pauses over-limit monitors and channels after a downgrade.","members":["apps/api/internal/billing/plans.go","apps/api/internal/billing/enforce.go"],"entrypoints":["GetLimits","CheckMonitorLimit","CheckStatusPageLimit","CheckNotificationChannelLimit","ClampInterval","EnforceMonitorLimit","EnforceNotificationChannelLimit","EnforceHideBrandingLimit"],"tests":["apps/api/internal/billing/plans_test.go","apps/api/internal/billing/enforce_test.go"],"constraints":["Plans are Hobby $0 / Solo $9 / Startup $29 / Enterprise $99","Enforcement pauses excess resources on downgrade rather than deleting them"],"evidence":[{"path":"apps/api/internal/billing/plans.go","symbol":"planLimits"},{"path":"apps/api/internal/billing/plans.go","symbol":"CheckMonitorLimit"},{"path":"apps/api/internal/billing/enforce.go","symbol":"EnforceMonitorLimit"}]},{"id":"api-db","path":"apps/api/internal/db","role":"backend-data-access","label":"sqlc query layer","group":"backend","summary":"sqlc-generated Queries over a pgx pool \u2014 one .sql.go per domain (auth, orgs, monitors, uptime, ssl, domain, port, dns, incidents, maintenance, status pages, notifications, billing, api keys, suggestions) plus shared models.","members":["apps/api/internal/db/db.go","apps/api/internal/db/models.go","apps/api/internal/db/monitors.sql.go","apps/api/internal/db/uptime.sql.go","apps/api/internal/db/ssl.sql.go","apps/api/internal/db/domain.sql.go","apps/api/internal/db/port.sql.go","apps/api/internal/db/dns.sql.go","apps/api/internal/db/auth.sql.go","apps/api/internal/db/orgs.sql.go","apps/api/internal/db/billing.sql.go","apps/api/internal/db/incidents.sql.go","apps/api/internal/db/maintenance.sql.go","apps/api/internal/db/status_pages.sql.go","apps/api/internal/db/notifications.sql.go","apps/api/internal/db/api_keys.sql.go","apps/api/internal/db/suggestions.sql.go","apps/api/queries"],"entrypoints":["New","Queries","DBTX"],"tests":[],"constraints":["sqlc only \u2014 no ORM (ADR-004)","Generated code is never hand-edited; regenerate from queries/*.sql (hook-enforced)","Every tenant-scoped query must filter by org_id"],"evidence":[{"path":"apps/api/internal/db/db.go","symbol":"Queries"},{"path":"apps/api/internal/db/db.go","symbol":"DBTX"},{"path":"apps/api/sqlc.yaml","symbol":"emit_prepared_queries"}]},{"id":"api-support","path":"apps/api/internal/config","role":"backend-shared","label":"Config & shared utilities","group":"backend","summary":"Cross-cutting packages: env config loading, the JSON response helpers, the httpsafe SSRF guard (restricted-IP dial blocking, redirect refusal), the terms-version tracker, and the RDAP registry client used for domain expiry lookups.","members":["apps/api/internal/config/config.go","apps/api/internal/respond/respond.go","apps/api/internal/httpsafe/httpsafe.go","apps/api/internal/legal/legal.go","apps/api/internal/rdap/rdap.go"],"entrypoints":["config.Load","respond.JSON","respond.Error","httpsafe.Dialer","httpsafe.BlockPrivateDial","rdap.Lookup"],"tests":["apps/api/internal/config/config_test.go","apps/api/internal/respond/respond_test.go","apps/api/internal/httpsafe/httpsafe_test.go","apps/api/internal/legal/legal_test.go","apps/api/internal/rdap/rdap_test.go"],"constraints":["httpsafe.BlockPrivateDial must reject loopback/private/link-local/cloud-metadata addresses on every user-supplied outbound target","httpsafe.RefuseRedirects stops a permitted host redirecting into a restricted one"],"evidence":[{"path":"apps/api/internal/config/config.go","symbol":"PaddleEnvironment"},{"path":"apps/api/internal/respond/respond.go","symbol":"JSON"},{"path":"apps/api/internal/httpsafe/httpsafe.go","symbol":"BlockPrivateDial"},{"path":"apps/api/internal/rdap/rdap.go","symbol":"Lookup"}]},{"id":"postgres","path":"apps/api/migrations","role":"datastore","label":"PostgreSQL","group":"datastore","summary":"The single datastore. 36 goose migrations define orgs/users, the six monitor tables with their check/ping/incident history, notification channels, status pages and incidents, maintenance windows, billing state and API keys.","members":["apps/api/migrations","apps/api/queries"],"entrypoints":["migrations/001_initial.sql","migrations/036_cron_runs.sql","DATABASE_URL"],"tests":["apps/api/internal/worker/worker_test.go"],"constraints":["Migrations run automatically at boot via goose.Up \u2014 no separate deploy step","Schema is the sqlc source of truth (sqlc.yaml schema: migrations/)","Old pings/checks/incidents are pruned on the 24 h worker tick (ADR-015)"],"evidence":[{"path":"apps/api/migrations/001_initial.sql","symbol":"CREATE TABLE"},{"path":"apps/api/sqlc.yaml","symbol":"schema"},{"path":"apps/api/cmd/api/main.go","symbol":"goose.Up"}]},{"id":"ext-paddle","path":"apps/api/internal/handler/billing.go","role":"external-service","label":"Paddle (billing)","group":"external","summary":"Merchant of record. Server side calls api.paddle.com (or sandbox-api) for transactions, subscription updates/cancels and portal sessions; the browser opens the Paddle.js overlay; Paddle posts signed subscription events back to /webhook/paddle.","members":["apps/api/internal/handler/billing.go","apps/web/src/views/BillingView.vue"],"entrypoints":["POST /webhook/paddle","paddleAPIBase","initializePaddle"],"tests":["apps/api/internal/handler/billing_test.go","apps/web/src/views/BillingView.test.ts"],"constraints":["Paddle is the MoR and handles global tax \u2014 do not switch payment providers (ADR-026, supersedes ADR-018 LemonSqueezy)","PADDLE_ENVIRONMENT selects api.paddle.com vs sandbox-api.paddle.com; unset in production","Webhook signatures are verified before any state change"],"evidence":[{"path":"apps/api/internal/handler/billing.go","symbol":"paddleAPIBase"},{"path":"apps/api/internal/handler/billing.go","symbol":"createPaddleTransaction"},{"path":"apps/web/src/views/BillingView.vue","symbol":"initializePaddle"}]},{"id":"ext-alert-providers","path":"apps/api/internal/telegram/telegram.go","role":"external-service","label":"Alert providers","group":"external","summary":"The outbound delivery destinations: api.telegram.org, Resend, api.twilio.com, Slack incoming webhooks and customer-owned HTTP webhook endpoints.","members":["apps/api/internal/telegram/telegram.go","apps/api/internal/email/email.go","apps/api/internal/twilio/twilio.go","apps/api/internal/slack/slack.go","apps/api/internal/webhook/webhook.go"],"entrypoints":["https://api.telegram.org/bot{token}/sendMessage","https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json","Resend SDK","hooks.slack.com incoming webhook","customer webhook URL"],"tests":["apps/api/internal/telegram/telegram_test.go","apps/api/internal/twilio/twilio_test.go","apps/api/internal/slack/slack_test.go","apps/api/internal/webhook/webhook_test.go"],"constraints":["All optional \u2014 an unset TELEGRAM_BOT_TOKEN / RESEND_API_KEY / TWILIO_* just disables that channel","Customer webhook payloads are HMAC-signed with X-Checkmeup-Signature"],"evidence":[{"path":"apps/api/internal/telegram/telegram.go","symbol":"SendMessage"},{"path":"apps/api/internal/twilio/twilio.go","symbol":"messagesPathFormat"},{"path":"apps/api/internal/email/email.go","symbol":"fromAddress"},{"path":"apps/api/internal/webhook/webhook.go","symbol":"SignatureHeader"}]},{"id":"ext-check-targets","path":"apps/api/internal/worker/worker_uptime.go","role":"external-target","label":"Monitored targets & registries","group":"external","summary":"Everything the worker reaches out to on a customer's behalf: HTTP endpoints (uptime, keyword and JSON assertions), TLS handshakes for certificate expiry, TCP ports, DNS records, and rdap.org for domain registration expiry.","members":["apps/api/internal/worker/worker_uptime.go","apps/api/internal/worker/worker_ssl.go","apps/api/internal/worker/worker_port.go","apps/api/internal/worker/worker_dns.go","apps/api/internal/rdap/rdap.go"],"entrypoints":["performHTTPCheck","performTLSCheck","performTCPCheck","performDNSLookup","https://rdap.org/domain/"],"tests":["apps/api/internal/worker/worker_test.go","apps/api/internal/worker/worker_dns_test.go","apps/api/internal/rdap/rdap_test.go"],"constraints":["Targets are user-supplied \u2014 HTTP and TCP checks dial through httpsafe to block SSRF into loopback/private/link-local/metadata ranges","DNS lookups need no SSRF guard: they resolve but never connect","SSL and domain monitors check once per 24 h; uptime is configurable 1/5/10/30 min; the cron worker ticks every 30 s"],"evidence":[{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"performHTTPCheck"},{"path":"apps/api/internal/worker/worker_ssl.go","symbol":"performTLSCheck"},{"path":"apps/api/internal/worker/worker_port.go","symbol":"performTCPCheck"},{"path":"apps/api/internal/worker/worker_dns.go","symbol":"performDNSLookup"}]},{"id":"ext-analytics","path":"apps/web/src/lib/analytics.ts","role":"external-service","label":"Google Tag Manager","group":"external","summary":"GTM container loaded only after the consent banner records a grant; SPA route changes are pushed to dataLayer explicitly since GTM's own pageview trigger only fires on hard load.","members":["apps/web/src/lib/analytics.ts","apps/web/src/lib/consent.ts","apps/web/src/components/ConsentBanner.vue"],"entrypoints":["https://www.googletagmanager.com/gtm.js","loadGtm","trackPageview"],"tests":["apps/web/src/lib/analytics.test.ts","apps/web/src/lib/consent.test.ts"],"constraints":["Never loads without granted consent","Skips silently when VITE_GTM_ID is unset (local dev)"],"evidence":[{"path":"apps/web/src/lib/analytics.ts","symbol":"loadGtm"},{"path":"apps/web/src/lib/analytics.ts","symbol":"trackPageview"},{"path":"apps/web/src/lib/consent.ts","symbol":"useConsent"}]}],"edges":[{"from":"web-spa","to":"web-router","type":"imports","evidence":{"path":"apps/web/src/main.ts","symbol":"router"}},{"from":"web-spa","to":"web-lib","type":"calls","evidence":{"path":"apps/web/src/App.vue","symbol":"loadGtm"}},{"from":"web-router","to":"web-views","type":"imports","evidence":{"path":"apps/web/src/router/routes.ts","symbol":"routes"}},{"from":"web-router","to":"web-state","type":"calls","evidence":{"path":"apps/web/src/router/index.ts","symbol":"useAuthStore"}},{"from":"web-router","to":"web-lib","type":"calls","evidence":{"path":"apps/web/src/router/index.ts","symbol":"trackPageview"}},{"from":"web-views","to":"web-state","type":"imports","evidence":{"path":"apps/web/src/views/CronMonitorListView.vue","symbol":"useCronMonitors"}},{"from":"web-views","to":"web-lib","type":"imports","evidence":{"path":"apps/web/src/views/HomeView.vue","symbol":"statusRows"}},{"from":"web-views","to":"ext-paddle","type":"calls","evidence":{"path":"apps/web/src/views/BillingView.vue","symbol":"initializePaddle"}},{"from":"web-state","to":"web-api","type":"imports","evidence":{"path":"apps/web/src/composables/useBilling.ts","symbol":"billingApi"}},{"from":"web-state","to":"api-server","type":"calls","evidence":{"path":"apps/web/src/stores/auth.ts","symbol":"init"}},{"from":"web-api","to":"api-server","type":"calls","evidence":{"path":"apps/web/src/api/client.ts","symbol":"request"}},{"from":"web-lib","to":"ext-analytics","type":"calls","evidence":{"path":"apps/web/src/lib/analytics.ts","symbol":"loadGtm"}},{"from":"api-main","to":"api-support","type":"calls","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"config.Load"}},{"from":"api-main","to":"postgres","type":"writes","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"goose.Up"}},{"from":"api-main","to":"api-db","type":"calls","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"db.New"}},{"from":"api-main","to":"api-worker","type":"calls","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"worker.Run"}},{"from":"api-main","to":"api-server","type":"calls","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"server.New"}},{"from":"api-main","to":"api-notify","type":"calls","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"telegram.NewClient"}},{"from":"api-server","to":"api-middleware","type":"calls","evidence":{"path":"apps/api/internal/server/server.go","symbol":"apimiddleware.RequireAuth"}},{"from":"api-server","to":"api-handlers","type":"calls","evidence":{"path":"apps/api/internal/server/server.go","symbol":"handler.NewMonitorHandler"}},{"from":"api-server","to":"api-db","type":"calls","evidence":{"path":"apps/api/internal/server/server.go","symbol":"db.New"}},{"from":"api-server","to":"api-support","type":"calls","evidence":{"path":"apps/api/internal/server/server.go","symbol":"respond.Error"}},{"from":"api-server","to":"web-spa","type":"reads","evidence":{"path":"apps/api/internal/server/server.go","symbol":"handleSPA"}},{"from":"api-middleware","to":"api-db","type":"reads","evidence":{"path":"apps/api/internal/middleware/apikey.go","symbol":"RequireAPIKey"}},{"from":"api-handlers","to":"api-db","type":"calls","evidence":{"path":"apps/api/internal/handler/ping.go","symbol":"NewPingHandler"}},{"from":"api-handlers","to":"api-billing","type":"calls","evidence":{"path":"apps/api/internal/handler/monitors.go","symbol":"billing.CheckMonitorLimit"}},{"from":"api-handlers","to":"api-worker","type":"calls","evidence":{"path":"apps/api/internal/handler/ping.go","symbol":"worker.DispatchAlert"}},{"from":"api-handlers","to":"api-notify","type":"calls","evidence":{"path":"apps/api/internal/handler/ping.go","symbol":"NewPingHandler"}},{"from":"api-handlers","to":"api-support","type":"calls","evidence":{"path":"apps/api/internal/handler/monitors.go","symbol":"respond.Error"}},{"from":"api-handlers","to":"ext-paddle","type":"calls","evidence":{"path":"apps/api/internal/handler/billing.go","symbol":"createPaddleTransaction"}},{"from":"api-worker","to":"api-db","type":"reads","evidence":{"path":"apps/api/internal/worker/worker.go","symbol":"ListMonitorNotificationChannels"}},{"from":"api-worker","to":"api-db","type":"writes","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"recordUptimeCheck"}},{"from":"api-worker","to":"api-notify","type":"calls","evidence":{"path":"apps/api/internal/worker/worker.go","symbol":"sendToChannel"}},{"from":"api-worker","to":"api-billing","type":"calls","evidence":{"path":"apps/api/internal/worker/worker.go","symbol":"billing.GetLimits"}},{"from":"api-worker","to":"api-support","type":"calls","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"httpsafe.Dialer"}},{"from":"api-worker","to":"ext-check-targets","type":"calls","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"performHTTPCheck"}},{"from":"api-notify","to":"ext-alert-providers","type":"calls","evidence":{"path":"apps/api/internal/deliver/deliver.go","symbol":"Do"}},{"from":"api-billing","to":"api-db","type":"reads","evidence":{"path":"apps/api/internal/billing/enforce.go","symbol":"ListActiveMonitorsForOrg"}},{"from":"api-billing","to":"api-db","type":"writes","evidence":{"path":"apps/api/internal/billing/enforce.go","symbol":"PauseCronMonitor"}},{"from":"api-db","to":"postgres","type":"reads","evidence":{"path":"apps/api/internal/db/db.go","symbol":"DBTX"}},{"from":"api-db","to":"postgres","type":"writes","evidence":{"path":"apps/api/internal/db/db.go","symbol":"Queries"}},{"from":"api-support","to":"ext-check-targets","type":"calls","evidence":{"path":"apps/api/internal/rdap/rdap.go","symbol":"Lookup"}},{"from":"ext-paddle","to":"api-server","type":"publishes","evidence":{"path":"apps/api/internal/server/server.go","symbol":"billing.Webhook"}},{"from":"ext-alert-providers","to":"api-server","type":"publishes","evidence":{"path":"apps/api/internal/server/server.go","symbol":"settings.HandleTelegramWebhook"}}],"flows":[{"id":"flow-cron-ping","name":"Cron ping received","trigger":"A customer's cron job GETs /ping/{token} (or /ping/{token}/start) when it runs","steps":[{"node":"api-server","action":"Matches /ping/{token}, rate-limited 60/min keyed by ping token","evidence":{"path":"apps/api/internal/server/server.go","symbol":"pingTokenKey"}},{"node":"api-handlers","action":"ReceivePing resolves the monitor by token and computes the next expected ping","evidence":{"path":"apps/api/internal/handler/ping.go","symbol":"ReceivePing"}},{"node":"api-db","action":"Records the ping, closes any open incident and advances next_ping_at","evidence":{"path":"apps/api/internal/db/monitors.sql.go","symbol":"CreateCronPing"}},{"node":"postgres","action":"Persists the ping row and updated monitor status","evidence":{"path":"apps/api/migrations/003_cron_monitors.sql","symbol":"cron_pings"}},{"node":"api-worker","action":"If the monitor was down, sendCronRecoveryAlert routes through DispatchAlert","evidence":{"path":"apps/api/internal/handler/ping.go","symbol":"sendCronRecoveryAlert"}},{"node":"api-notify","action":"Fans the recovery message out to every attached channel, or the org-email fallback","evidence":{"path":"apps/api/internal/worker/worker.go","symbol":"sendToChannel"}},{"node":"ext-alert-providers","action":"Telegram / Resend / Slack / webhook / Twilio deliver the recovery notice","evidence":{"path":"apps/api/internal/deliver/deliver.go","symbol":"Do"}}],"outcome":"The monitor is marked healthy with a fresh next_ping_at; if it had been alerting, one recovery notification goes out per attached channel."},{"id":"flow-uptime-down","name":"Uptime check detects an outage","trigger":"The worker's 30 s ticker fires and picks up uptime monitors that are due","steps":[{"node":"api-main","action":"Starts the worker goroutine at boot with the shared Notifiers bundle","evidence":{"path":"apps/api/cmd/api/main.go","symbol":"worker.Run"}},{"node":"api-worker","action":"checkUptimeMonitors claims due monitors and runs up to 50 checks concurrently","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"checkUptimeMonitors"}},{"node":"ext-check-targets","action":"performHTTPCheck requests the URL through the httpsafe dialer and applies status/keyword/JSON assertions","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"performHTTPCheck"}},{"node":"api-db","action":"recordUptimeCheck stores the result and opens an incident once the failure threshold is crossed","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"recordUptimeCheck"}},{"node":"postgres","action":"Persists the check row, monitor status and incident","evidence":{"path":"apps/api/migrations/006_uptime_monitors.sql","symbol":"uptime_checks"}},{"node":"api-worker","action":"alertUptimeIncident builds the down alert and calls DispatchAlert","evidence":{"path":"apps/api/internal/worker/worker_uptime.go","symbol":"alertUptimeIncident"}},{"node":"api-notify","action":"Sends per channel; an org-wide email fires if nothing delivered","evidence":{"path":"apps/api/internal/worker/worker.go","symbol":"dispatchFallbackEmail"}},{"node":"ext-alert-providers","action":"Providers deliver the down alert","evidence":{"path":"apps/api/internal/telegram/telegram.go","symbol":"SendMessage"}}],"outcome":"A down incident is open in Postgres and one alert event has gone out across every attached channel, subject to the per-incident alert cap."},{"id":"flow-sign-in","name":"Sign in and load the dashboard","trigger":"A visitor submits the sign-in form at /sign-in","steps":[{"node":"web-views","action":"SignInView's submit() posts the credentials","evidence":{"path":"apps/web/src/views/SignInView.vue","symbol":"submit"}},{"node":"web-api","action":"api.post('/api/v1/auth/sign-in') with credentials: 'include'","evidence":{"path":"apps/web/src/api/client.ts","symbol":"request"}},{"node":"api-server","action":"Routes to auth.SignIn behind a 10-per-10-minutes per-IP limit","evidence":{"path":"apps/api/internal/server/server.go","symbol":"auth.SignIn"}},{"node":"api-handlers","action":"Verifies the password and sets the access_token httpOnly cookie","evidence":{"path":"apps/api/internal/handler/auth.go","symbol":"SignIn"}},{"node":"api-db","action":"Looks up the user and their org","evidence":{"path":"apps/api/internal/db/auth.sql.go","symbol":"GetUserByEmail"}},{"node":"postgres","action":"Returns the stored password hash and org membership","evidence":{"path":"apps/api/migrations/001_initial.sql","symbol":"users"}},{"node":"web-state","action":"auth store records the user; router guards now allow requiresAuth routes","evidence":{"path":"apps/web/src/stores/auth.ts","symbol":"setUser"}},{"node":"web-router","action":"beforeEach redirects to the dashboard (or accept-terms when terms are stale)","evidence":{"path":"apps/web/src/router/index.ts","symbol":"router.beforeEach"}},{"node":"api-middleware","action":"RequireAuth validates the cookie on every subsequent dashboard fetch","evidence":{"path":"apps/api/internal/middleware/auth.go","symbol":"RequireAuth"}}],"outcome":"The browser holds an httpOnly session cookie, the auth store is authenticated, and the dashboard's monitor queries resolve behind RequireAuth."},{"id":"flow-upgrade-plan","name":"Upgrade a plan through Paddle","trigger":"A signed-in user picks a paid plan in the billing screen","steps":[{"node":"web-views","action":"BillingView requests a checkout, then opens the Paddle.js overlay","evidence":{"path":"apps/web/src/views/BillingView.vue","symbol":"initializePaddle"}},{"node":"web-api","action":"POST /api/v1/billing/checkout with the plan and cycle","evidence":{"path":"apps/web/src/api/billing.ts","symbol":"billingApi"}},{"node":"api-server","action":"Routes to billing.CreateCheckout under a 20-per-hour per-org limit","evidence":{"path":"apps/api/internal/server/server.go","symbol":"billing.CreateCheckout"}},{"node":"api-handlers","action":"createPaddleTransaction calls the Paddle API for a transaction id","evidence":{"path":"apps/api/internal/handler/billing.go","symbol":"createPaddleTransaction"}},{"node":"ext-paddle","action":"Paddle runs checkout in the overlay, then posts a signed subscription event to /webhook/paddle","evidence":{"path":"apps/api/internal/handler/billing.go","symbol":"paddleAPIBase"}},{"node":"api-handlers","action":"Webhook verifies the signature and writes the new plan, cycle and Paddle ids","evidence":{"path":"apps/api/internal/handler/billing.go","symbol":"Webhook"}},{"node":"api-db","action":"Updates the org's plan and billing state","evidence":{"path":"apps/api/internal/db/billing.sql.go","symbol":"UpdateOrgPlan"}},{"node":"api-billing","action":"On a downgrade, enforcement pauses monitors and channels above the new caps","evidence":{"path":"apps/api/internal/billing/enforce.go","symbol":"EnforceMonitorLimit"}},{"node":"postgres","action":"Persists plan, subscription ids and any paused resources","evidence":{"path":"apps/api/migrations/026_paddle_billing.sql","symbol":"paddle_subscription_id"}}],"outcome":"The org's plan reflects the Paddle subscription and plan limits are re-enforced; the billing view polls until the webhook lands."},{"id":"flow-public-status","name":"Public status page render","trigger":"Anyone (no session) opens /status/{slug} or embeds /status/{slug}/badge.svg","steps":[{"node":"api-server","action":"Handles /status/{slug} in Go before the SPA catch-all, at 300 req/min per IP","evidence":{"path":"apps/api/internal/server/server.go","symbol":"statusPublic.ServeHTTP"}},{"node":"api-handlers","action":"Loads the page, its monitor rows, and active plus paginated resolved incidents","evidence":{"path":"apps/api/internal/handler/status_public.go","symbol":"loadRows"}},{"node":"api-db","action":"Reads status page config, attached monitors and incident history","evidence":{"path":"apps/api/internal/db/status_pages.sql.go","symbol":"GetStatusPageBySlug"}},{"node":"postgres","action":"Returns page, monitor and incident rows","evidence":{"path":"apps/api/migrations/031_status_page_incidents.sql","symbol":"status_page_incidents"}},{"node":"api-handlers","action":"Renders server-side HTML, or an SVG badge for the badge routes","evidence":{"path":"apps/api/internal/handler/status_public_badges.go","symbol":"renderBadgeSVG"}}],"outcome":"A branded status page (or cache-controlled SVG badge) is served from the same domain, with no authentication and no subdomain."}]}</script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById("codemap-data").textContent);
+  var NODES = DATA.nodes, EDGES = DATA.edges, FLOWS = DATA.flows;
+
+  var GROUPS = [
+    { id: "frontend",  label: "Browser / SPA",   color: "#4fc3f7" },
+    { id: "backend",   label: "Go API process",  color: "#a78bfa" },
+    { id: "datastore", label: "Data",            color: "#7ee787" },
+    { id: "external",  label: "External",        color: "#ffb454" }
+  ];
+  var GCOLOR = {}; GROUPS.forEach(function (g) { GCOLOR[g.id] = g.color; });
+  var ETYPES = ["imports", "calls", "reads", "writes", "publishes", "subscribes"];
+
+  var byId = {}; NODES.forEach(function (n) { byId[n.id] = n; });
+  var idx = {}; NODES.forEach(function (n, i) { idx[n.id] = i; });
+
+  // ---------- header ----------
+  document.getElementById("m-commit").textContent = DATA.generated_from_commit.slice(0, 12);
+  document.getElementById("m-time").textContent = DATA.generated_at;
+  document.getElementById("m-scope").textContent = DATA.scope.join(", ");
+  document.getElementById("m-counts").textContent =
+    NODES.length + " modules · " + EDGES.length + " relationships · " + FLOWS.length + " flows";
+
+  // ---------- layered layout (layering + barycenter ordering) ----------
+  // Layers run TOP-TO-BOTTOM: the dependency chain here is 11 deep but at most
+  // 4 wide, so laying layers out as columns produced a 2800x230 strip that had
+  // to shrink to ~0.45 zoom to fit. Rows give a ~900x1050 shape that fits far
+  // better, and it reads the way the system works: browser at the top, Postgres
+  // and the external services at the bottom.
+  var NW = 196, NH = 56, COLGAP = 222, ROWGAP = 96;
+
+  // Layers run left-to-right. MAXW caps how many modules share a layer: a pure
+  // longest-path layering makes this graph an 11-column, 3-row strip that has to
+  // shrink to ~0.35 zoom to fit, so list-scheduling into a bounded width keeps
+  // the whole system legible on the first screen instead.
+  var MAXW = 4;
+
+  function buildLayers(maxWidth) {
+    // break cycles with a DFS so layering runs on a DAG
+    var out = {}, inc = {};
+    NODES.forEach(function (n) { out[n.id] = []; inc[n.id] = []; });
+    var state = {}, keep = [];
+    NODES.forEach(function (n) { state[n.id] = 0; });
+    var adj = {}; NODES.forEach(function (n) { adj[n.id] = []; });
+    EDGES.forEach(function (e) { adj[e.from].push(e); });
+    function dfs(id) {
+      state[id] = 1;
+      adj[id].forEach(function (e) {
+        if (state[e.to] === 1) return;            // back edge -> drop for layering
+        keep.push(e);
+        if (state[e.to] === 0) dfs(e.to);
+      });
+      state[id] = 2;
+    }
+    NODES.forEach(function (n) { if (state[n.id] === 0) dfs(n.id); });
+    keep.forEach(function (e) { out[e.from].push(e.to); inc[e.to].push(e.from); });
+
+    // topological order, group-stable
+    var gi = {}; NODES.forEach(function (n) {
+      gi[n.id] = GROUPS.findIndex(function (g) { return g.id === n.group; });
+    });
+    function cmp(a, b) { return gi[a] - gi[b] || a.localeCompare(b); }
+    var indeg = {}; NODES.forEach(function (n) { indeg[n.id] = 0; });
+    keep.forEach(function (e) { indeg[e.to]++; });
+    var q = NODES.filter(function (n) { return indeg[n.id] === 0; }).map(function (n) { return n.id; });
+    var topo = [];
+    while (q.length) {
+      q.sort(cmp);
+      var id = q.shift();
+      topo.push(id);
+      out[id].forEach(function (t) { if (--indeg[t] === 0) q.push(t); });
+    }
+
+    // list-schedule into layers no wider than maxWidth, never above a predecessor
+    var layer = {}, load = {};
+    topo.forEach(function (id) {
+      var min = 0;
+      inc[id].forEach(function (p) {
+        if (layer[p] !== undefined) min = Math.max(min, layer[p] + 1);
+      });
+      var l = min;
+      while ((load[l] || 0) >= maxWidth) l++;
+      layer[id] = l;
+      load[l] = (load[l] || 0) + 1;
+    });
+    NODES.forEach(function (n) { if (layer[n.id] === undefined) layer[n.id] = 0; });
+    return { layer: layer, out: out, inc: inc };
+  }
+
+  var L = buildLayers(MAXW);
+  var layerOf = L.layer;
+  var maxLayer = 0;
+  NODES.forEach(function (n) { maxLayer = Math.max(maxLayer, layerOf[n.id]); });
+
+  var cols = [];
+  for (var i = 0; i <= maxLayer; i++) cols.push([]);
+  NODES.slice()
+    .sort(function (a, b) {
+      var ga = GROUPS.findIndex(function (g) { return g.id === a.group; });
+      var gb = GROUPS.findIndex(function (g) { return g.id === b.group; });
+      return ga - gb || a.id.localeCompare(b.id);
+    })
+    .forEach(function (n) { cols[layerOf[n.id]].push(n.id); });
+
+  function crossings() {
+    var c = 0;
+    for (var l = 0; l < cols.length - 1; l++) {
+      var pairs = [];
+      EDGES.forEach(function (e) {
+        var a = cols[l].indexOf(e.from), b = cols[l + 1].indexOf(e.to);
+        if (a >= 0 && b >= 0) pairs.push([a, b]);
+      });
+      for (var i = 0; i < pairs.length; i++)
+        for (var j = i + 1; j < pairs.length; j++)
+          if ((pairs[i][0] - pairs[j][0]) * (pairs[i][1] - pairs[j][1]) < 0) c++;
+    }
+    return c;
+  }
+
+  function order(sweepDown) {
+    var range = sweepDown
+      ? cols.map(function (_, i) { return i; })
+      : cols.map(function (_, i) { return cols.length - 1 - i; });
+    range.forEach(function (l) {
+      var ref = sweepDown ? l - 1 : l + 1;
+      if (ref < 0 || ref >= cols.length) return;
+      var bary = {};
+      cols[l].forEach(function (id, pos) {
+        var acc = [], gi = GROUPS.findIndex(function (g) { return g.id === byId[id].group; });
+        EDGES.forEach(function (e) {
+          var other = e.from === id ? e.to : (e.to === id ? e.from : null);
+          if (!other) return;
+          var p = cols[ref].indexOf(other);
+          if (p >= 0) acc.push(p);
+        });
+        var m = acc.length ? acc.reduce(function (a, b) { return a + b; }, 0) / acc.length : pos;
+        // Group index dominates so each group occupies its own vertical band and
+        // the boundary boxes never overlap; barycenter only breaks ties inside a
+        // group. Trading a few crossings for legible system boundaries.
+        bary[id] = gi * 1000 + m;
+      });
+      cols[l].sort(function (a, b) { return bary[a] - bary[b] || a.localeCompare(b); });
+    });
+  }
+
+  var best = cols.map(function (c) { return c.slice(); }), bestC = crossings();
+  for (var it = 0; it < 24; it++) {
+    order(it % 2 === 0);
+    var c = crossings();
+    if (c < bestC) { bestC = c; best = cols.map(function (x) { return x.slice(); }); }
+  }
+  cols = best;
+
+  // Columns are allocated per group, not per row position, so every group gets a
+  // contiguous vertical band and the boundary boxes stay disjoint.
+  var bandWidth = {}, bandStart = {}, used = 0;
+  GROUPS.forEach(function (g) {
+    var w = 0;
+    cols.forEach(function (row) {
+      var c = row.filter(function (id) { return byId[id].group === g.id; }).length;
+      if (c > w) w = c;
+    });
+    bandWidth[g.id] = w;
+    bandStart[g.id] = used;
+    used += w;
+  });
+
+  var pos = {};
+  cols.forEach(function (row, l) {
+    var seen = {};
+    row.forEach(function (id) {
+      var g = byId[id].group;
+      var k = seen[g] || 0;
+      seen[g] = k + 1;
+      pos[id] = { x: 60 + (bandStart[g] + k) * COLGAP, y: 60 + l * ROWGAP };
+    });
+  });
+
+  // ---------- render ----------
+  var svg = document.getElementById("svg");
+  var vp = document.getElementById("viewport");
+  var gB = document.getElementById("g-boundaries");
+  var gE = document.getElementById("g-edges");
+  var gF = document.getElementById("g-flow");
+  var gN = document.getElementById("g-nodes");
+  var NS = "http://www.w3.org/2000/svg";
+  function el(t, a) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); return e; }
+
+  // boundaries
+  var boundaryEls = {};
+  GROUPS.forEach(function (g) {
+    var r = el("rect", { class: "boundary", stroke: g.color, rx: 14 });
+    var t = el("text", { class: "boundary-label", fill: g.color });
+    t.textContent = g.label;
+    gB.appendChild(r); gB.appendChild(t);
+    boundaryEls[g.id] = { rect: r, text: t };
+  });
+  function layoutBoundaries() {
+    GROUPS.forEach(function (g) {
+      var ns = NODES.filter(function (n) { return n.group === g.id && !hiddenNodes[n.id]; });
+      var b = boundaryEls[g.id];
+      if (!ns.length) { b.rect.style.display = "none"; b.text.style.display = "none"; return; }
+      b.rect.style.display = ""; b.text.style.display = "";
+      var x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9;
+      ns.forEach(function (n) {
+        x1 = Math.min(x1, pos[n.id].x); y1 = Math.min(y1, pos[n.id].y);
+        x2 = Math.max(x2, pos[n.id].x + NW); y2 = Math.max(y2, pos[n.id].y + NH);
+      });
+      var p = 11;   // must stay under half the inter-band gap (COLGAP - NW) or boxes collide
+      b.rect.setAttribute("x", x1 - p); b.rect.setAttribute("y", y1 - p - 12);
+      b.rect.setAttribute("width", x2 - x1 + p * 2); b.rect.setAttribute("height", y2 - y1 + p * 2 + 12);
+      b.text.setAttribute("x", x1 - p + 10); b.text.setAttribute("y", y1 - p - 18);
+    });
+  }
+
+  // edges
+  var edgeEls = [];
+  EDGES.forEach(function (e, i) {
+    var p = el("path", { class: "edge", stroke: "#3f5266", "marker-end": "url(#ah)" });
+    var lab = el("text", { class: "edge-label", fill: "#8fa1b3" });
+    lab.textContent = e.type;
+    gE.appendChild(p); gE.appendChild(lab);
+    edgeEls.push({ e: e, path: p, label: lab, i: i });
+  });
+
+  function edgeGeom(o) {
+    var a = pos[o.e.from], b = pos[o.e.to];
+    var down = b.y >= a.y;
+    var x1 = a.x + NW / 2, y1 = down ? a.y + NH : a.y;
+    var x2 = b.x + NW / 2, y2 = down ? b.y : b.y + NH;
+    var dy = Math.max(38, Math.abs(y2 - y1) * 0.45) * (down ? 1 : -1);
+    o.path.setAttribute("d", "M" + x1 + "," + y1 + " C" + x1 + "," + (y1 + dy) + " " + x2 + "," + (y2 - dy) + " " + x2 + "," + y2);
+    o.label.setAttribute("x", (x1 + x2) / 2);
+    o.label.setAttribute("y", (y1 + y2) / 2);
+    o.label.setAttribute("text-anchor", "middle");
+  }
+
+  // nodes
+  var nodeEls = {};
+  NODES.forEach(function (n) {
+    var g = el("g", { class: "node", "data-id": n.id });
+    var col = GCOLOR[n.group] || "#8fa1b3";
+    var r = el("rect", { class: "body", width: NW, height: NH, fill: "#141d27", stroke: col });
+    var t1 = el("text", { class: "title", x: 12, y: 22 });
+    t1.textContent = n.label;
+    var t2 = el("text", { class: "role", x: 12, y: 38 });
+    t2.textContent = n.role;
+    var t3 = el("text", { class: "badge", x: NW - 12, y: 38, "text-anchor": "end" });
+    t3.textContent = (n.tests && n.tests.length ? n.tests.length + " tests" : "no tests");
+    var dot = el("circle", { cx: NW - 13, cy: 17, r: 4, fill: col, opacity: .9 });
+    g.appendChild(r); g.appendChild(dot); g.appendChild(t1); g.appendChild(t2); g.appendChild(t3);
+    gN.appendChild(g);
+    nodeEls[n.id] = g;
+  });
+
+  function place() {
+    NODES.forEach(function (n) {
+      nodeEls[n.id].setAttribute("transform", "translate(" + pos[n.id].x + "," + pos[n.id].y + ")");
+    });
+    edgeEls.forEach(edgeGeom);
+    layoutBoundaries();
+    if (selFlow) drawFlow(selFlow);
+  }
+
+  // ---------- pan / zoom ----------
+  var view = { x: 0, y: 0, k: 1 };
+  function applyView() {
+    vp.setAttribute("transform", "translate(" + view.x + "," + view.y + ") scale(" + view.k + ")");
+  }
+  function fit() {
+    var xs = [], ys = [];
+    NODES.forEach(function (n) { xs.push(pos[n.id].x, pos[n.id].x + NW); ys.push(pos[n.id].y, pos[n.id].y + NH); });
+    var x1 = Math.min.apply(null, xs) - 70, x2 = Math.max.apply(null, xs) + 70;
+    var y1 = Math.min.apply(null, ys) - 70, y2 = Math.max.apply(null, ys) + 70;
+    var r = svg.getBoundingClientRect();
+    // A zero-size canvas (hidden tab, pre-layout) would otherwise set k to 0 and
+    // collapse the whole map to a point.
+    if (!r.width || !r.height) return;
+    view.k = Math.max(0.15, Math.min(r.width / (x2 - x1), r.height / (y2 - y1), 1.5));
+    view.x = (r.width - (x2 - x1) * view.k) / 2 - x1 * view.k;
+    view.y = (r.height - (y2 - y1) * view.k) / 2 - y1 * view.k;
+    applyView();
+  }
+  svg.addEventListener("wheel", function (ev) {
+    ev.preventDefault();
+    var r = svg.getBoundingClientRect();
+    var mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    var f = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+    var k = Math.min(3, Math.max(0.2, view.k * f));
+    view.x = mx - (mx - view.x) * (k / view.k);
+    view.y = my - (my - view.y) * (k / view.k);
+    view.k = k; applyView();
+  }, { passive: false });
+  document.getElementById("zin").onclick = function () { view.k = Math.min(3, view.k * 1.2); applyView(); };
+  document.getElementById("zout").onclick = function () { view.k = Math.max(0.2, view.k / 1.2); applyView(); };
+  document.getElementById("zfit").onclick = fit;
+
+  var drag = null;
+  svg.addEventListener("mousedown", function (ev) {
+    var g = ev.target.closest ? ev.target.closest(".node") : null;
+    if (g) {
+      drag = { kind: "node", id: g.getAttribute("data-id"), sx: ev.clientX, sy: ev.clientY,
+               ox: pos[g.getAttribute("data-id")].x, oy: pos[g.getAttribute("data-id")].y, moved: false };
+    } else {
+      drag = { kind: "pan", sx: ev.clientX, sy: ev.clientY, ox: view.x, oy: view.y, moved: false };
+      svg.classList.add("dragging");
+    }
+  });
+  window.addEventListener("mousemove", function (ev) {
+    if (!drag) return;
+    var dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    if (drag.kind === "pan") { view.x = drag.ox + dx; view.y = drag.oy + dy; applyView(); }
+    else { pos[drag.id].x = drag.ox + dx / view.k; pos[drag.id].y = drag.oy + dy / view.k; place(); }
+  });
+  window.addEventListener("mouseup", function (ev) {
+    svg.classList.remove("dragging");
+    if (drag && !drag.moved) {
+      if (drag.kind === "node") select(drag.id);
+      else { select(null); selectFlow(null); }
+    }
+    drag = null;
+  });
+
+  // ---------- filters / search ----------
+  var hiddenGroups = {}, hiddenTypes = {}, query = "";
+  var hiddenNodes = {};
+
+  var gWrap = document.getElementById("groups");
+  GROUPS.forEach(function (g) {
+    var n = NODES.filter(function (x) { return x.group === g.id; }).length;
+    var l = document.createElement("label"); l.className = "chk";
+    l.innerHTML = '<input type="checkbox" checked><span class="swatch" style="background:' + g.color + '"></span>' +
+      g.label + ' <span style="color:var(--text-faint)">(' + n + ')</span>';
+    l.querySelector("input").onchange = function () { hiddenGroups[g.id] = !this.checked; apply(); };
+    gWrap.appendChild(l);
+  });
+
+  var tWrap = document.getElementById("etypes");
+  ETYPES.forEach(function (t) {
+    var n = EDGES.filter(function (e) { return e.type === t; }).length;
+    if (!n) return;
+    var l = document.createElement("label"); l.className = "chk";
+    l.innerHTML = '<input type="checkbox" checked>' + t + ' <span style="color:var(--text-faint)">(' + n + ')</span>';
+    l.querySelector("input").onchange = function () { hiddenTypes[t] = !this.checked; apply(); };
+    tWrap.appendChild(l);
+  });
+
+  document.getElementById("search").addEventListener("input", function () {
+    query = this.value.trim().toLowerCase(); apply();
+  });
+
+  function haystack(n) {
+    return [n.id, n.label, n.role, n.path, n.summary,
+            (n.members || []).join(" "), (n.entrypoints || []).join(" "),
+            (n.tests || []).join(" "), (n.constraints || []).join(" "),
+            (n.evidence || []).map(function (e) { return e.path + " " + e.symbol; }).join(" ")]
+      .join(" ").toLowerCase();
+  }
+
+  // ---------- selection ----------
+  var selNode = null, selFlow = null;
+
+  function upstream(id) { return EDGES.filter(function (e) { return e.to === id; }); }
+  function downstream(id) { return EDGES.filter(function (e) { return e.from === id; }); }
+  function flowsWith(id) {
+    return FLOWS.filter(function (f) { return f.steps.some(function (s) { return s.node === id; }); });
+  }
+
+  function apply() {
+    hiddenNodes = {};
+    NODES.forEach(function (n) { if (hiddenGroups[n.group]) hiddenNodes[n.id] = true; });
+
+    var matched = null;
+    if (query) {
+      matched = {};
+      NODES.forEach(function (n) { if (haystack(n).indexOf(query) >= 0) matched[n.id] = true; });
+    }
+
+    var up = {}, down = {}, inflow = {};
+    if (selNode) {
+      upstream(selNode).forEach(function (e) { up[e.from] = true; });
+      downstream(selNode).forEach(function (e) { down[e.to] = true; });
+    }
+    if (selFlow) selFlow.steps.forEach(function (s) { inflow[s.node] = true; });
+
+    NODES.forEach(function (n) {
+      var g = nodeEls[n.id];
+      g.classList.toggle("hidden", !!hiddenNodes[n.id]);
+      g.classList.toggle("match", !!(matched && matched[n.id]));
+      g.classList.toggle("sel", n.id === selNode);
+      g.classList.toggle("up", !!up[n.id]);
+      g.classList.toggle("down", !!down[n.id]);
+      g.classList.toggle("inflow", !!inflow[n.id]);
+      var dim = false;
+      if (matched && !matched[n.id]) dim = true;
+      if (selNode && n.id !== selNode && !up[n.id] && !down[n.id]) dim = true;
+      if (selFlow && !inflow[n.id]) dim = true;
+      g.classList.toggle("dim", dim);
+    });
+
+    edgeEls.forEach(function (o) {
+      var e = o.e;
+      var hide = hiddenTypes[e.type] || hiddenNodes[e.from] || hiddenNodes[e.to];
+      o.path.classList.toggle("hidden", hide);
+      o.label.classList.toggle("hidden", hide);
+      var isUp = selNode && e.to === selNode;
+      var isDown = selNode && e.from === selNode;
+      o.path.classList.toggle("up", !!isUp);
+      o.path.classList.toggle("down", !!isDown);
+      o.path.setAttribute("marker-end", isUp ? "url(#ah-up)" : isDown ? "url(#ah-down)" : "url(#ah)");
+      var dim = (selNode && !isUp && !isDown) || (selFlow != null) || (matched != null);
+      o.path.classList.toggle("dim", !!dim);
+      o.label.classList.toggle("show", !!(isUp || isDown));
+    });
+
+    layoutBoundaries();
+  }
+
+  function drawFlow(f) {
+    gF.innerHTML = "";
+    if (!f) return;
+    var pts = f.steps.map(function (s) {
+      return [pos[s.node].x + NW / 2, pos[s.node].y + NH / 2];
+    });
+    var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0] + "," + p[1]; }).join(" ");
+    gF.appendChild(el("path", { id: "flowpath", d: d }));
+    pts.forEach(function (p, i) {
+      var g = el("g", { class: "stepnum", transform: "translate(" + p[0] + "," + (p[1] - NH / 2 - 12) + ")" });
+      g.appendChild(el("circle", { r: 9 }));
+      var t = el("text", { y: 3.5 }); t.textContent = String(i + 1);
+      g.appendChild(t); gF.appendChild(g);
+    });
+  }
+
+  function select(id) {
+    selNode = (id === selNode) ? null : id;
+    if (selNode) selFlow = null, drawFlow(null), markFlowBtns();
+    apply();
+    renderDetail();
+  }
+
+  function selectFlow(f) {
+    selFlow = (selFlow && f && selFlow.id === f.id) ? null : f;
+    if (selFlow) selNode = null;
+    drawFlow(selFlow);
+    markFlowBtns();
+    apply();
+    renderDetail();
+  }
+
+  // flow buttons
+  var fWrap = document.getElementById("flows");
+  var flowBtns = {};
+  FLOWS.forEach(function (f) {
+    var b = document.createElement("button");
+    b.className = "flow-btn";
+    b.innerHTML = "<span></span><small></small>";
+    b.querySelector("span").textContent = f.name;
+    b.querySelector("small").textContent = f.steps.length + " steps · " + f.trigger;
+    b.onclick = function () { selectFlow(f); };
+    fWrap.appendChild(b);
+    flowBtns[f.id] = b;
+  });
+  function markFlowBtns() {
+    FLOWS.forEach(function (f) {
+      flowBtns[f.id].classList.toggle("on", !!(selFlow && selFlow.id === f.id));
+    });
+  }
+
+  // ---------- detail panel ----------
+  var detail = document.getElementById("detail");
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function list(items, cls) {
+    if (!items || !items.length) return '<p class="empty">none</p>';
+    return "<ul>" + items.map(function (i) { return "<li>" + i + "</li>"; }).join("") + "</ul>";
+  }
+
+  function renderDetail() {
+    if (selFlow) return renderFlowDetail(selFlow);
+    if (!selNode) { detail.classList.remove("open"); detail.innerHTML = ""; return; }
+    var n = byId[selNode];
+    var ups = upstream(n.id), downs = downstream(n.id), fl = flowsWith(n.id);
+    var html = '<button id="close">&times;</button>';
+    html += "<h3>" + esc(n.label) + "</h3>";
+    html += '<div class="sub"><span class="mono">' + esc(n.id) + "</span> · " + esc(n.role) + "</div>";
+    html += '<div class="path mono">' + esc(n.path) + "</div>";
+    html += "<section><p>" + esc(n.summary) + "</p></section>";
+
+    html += "<section><h4>Upstream callers (" + ups.length + ")</h4>" +
+      (ups.length ? ups.map(function (e) {
+        return '<span class="pill up" data-go="' + e.from + '">' + esc(byId[e.from].label) + " · " + e.type + "</span>";
+      }).join("") : '<p class="empty">none — entrypoint</p>') + "</section>";
+
+    html += "<section><h4>Downstream dependencies (" + downs.length + ")</h4>" +
+      (downs.length ? downs.map(function (e) {
+        return '<span class="pill down" data-go="' + e.to + '">' + esc(byId[e.to].label) + " · " + e.type + "</span>";
+      }).join("") : '<p class="empty">none — leaf</p>') + "</section>";
+
+    html += "<section><h4>Flows (" + fl.length + ")</h4>" +
+      (fl.length ? fl.map(function (f) {
+        return '<span class="pill flow" data-flow="' + f.id + '">' + esc(f.name) + "</span>";
+      }).join("") : '<p class="empty">none</p>') + "</section>";
+
+    html += "<section><h4>Entrypoints</h4>" +
+      list((n.entrypoints || []).map(function (e) { return '<span class="mono">' + esc(e) + "</span>"; })) + "</section>";
+
+    html += "<section><h4>Tests (" + (n.tests || []).length + ")</h4>" +
+      list((n.tests || []).map(function (t) { return '<span class="mono">' + esc(t) + "</span>"; })) + "</section>";
+
+    html += "<section><h4>Constraints</h4>" + list((n.constraints || []).map(esc)) + "</section>";
+
+    html += "<section><h4>Evidence</h4>" +
+      list((n.evidence || []).map(function (e) {
+        return e === "unknown" ? "<em>unknown</em>"
+          : '<span class="mono">' + esc(e.path) + "</span> → <span class=\"mono\">" + esc(e.symbol) + "</span>";
+      })) + "</section>";
+
+    html += "<section><h4>Grouped files (" + (n.members || []).length + ")</h4>" +
+      list((n.members || []).map(function (m) { return '<span class="mono">' + esc(m) + "</span>"; })) + "</section>";
+
+    detail.innerHTML = html;
+    detail.classList.add("open");
+    wireDetail();
+  }
+
+  function renderFlowDetail(f) {
+    var html = '<button id="close">&times;</button>';
+    html += "<h3>" + esc(f.name) + "</h3>";
+    html += '<div class="sub">' + f.steps.length + " steps</div>";
+    html += "<section><h4>Trigger</h4><p>" + esc(f.trigger) + "</p></section>";
+    html += "<section><h4>Path</h4><ul>" + f.steps.map(function (s, i) {
+      var ev = s.evidence && s.evidence !== "unknown"
+        ? '<br><span class="mono" style="color:var(--text-faint);font-size:11px">' +
+          esc(s.evidence.path) + " → " + esc(s.evidence.symbol) + "</span>"
+        : '<br><em style="color:var(--text-faint)">unknown</em>';
+      return "<li><b>" + (i + 1) + ". </b>" +
+        '<span class="pill" data-go="' + s.node + '">' + esc(byId[s.node].label) + "</span><br>" +
+        esc(s.action) + ev + "</li>";
+    }).join("") + "</ul></section>";
+    html += "<section><h4>Outcome</h4><p>" + esc(f.outcome) + "</p></section>";
+    detail.innerHTML = html;
+    detail.classList.add("open");
+    wireDetail();
+  }
+
+  function wireDetail() {
+    var c = document.getElementById("close");
+    if (c) c.onclick = function () { selNode = null; selFlow = null; drawFlow(null); markFlowBtns(); apply(); renderDetail(); };
+    Array.prototype.forEach.call(detail.querySelectorAll("[data-go]"), function (p) {
+      p.onclick = function () { selFlow = null; drawFlow(null); markFlowBtns(); selNode = null; select(p.getAttribute("data-go")); };
+    });
+    Array.prototype.forEach.call(detail.querySelectorAll("[data-flow]"), function (p) {
+      p.onclick = function () {
+        var f = FLOWS.filter(function (x) { return x.id === p.getAttribute("data-flow"); })[0];
+        selFlow = null; selectFlow(f);
+      };
+    });
+  }
+
+  // ---------- boot ----------
+  place();
+  apply();
+  fit();
+  window.addEventListener("resize", fit);
+})();
+</script>
+</body>
+</html>
