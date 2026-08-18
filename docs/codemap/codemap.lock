@@ -1,0 +1,130 @@
+{
+  "lock_version": 1,
+  "generated_at": "2026-08-08T13:16:58Z",
+  "commit": "319ae0c0a6a8e329d156640d32649c9087e5daca",
+  "working_tree_dirty": true,
+  "working_tree_dirty_note": "True here reflects docs/codemap/ itself being uncommitted at generation time; the three files were generated from the committed state of `commit` above.",
+  "scope": [
+    "apps/api",
+    "apps/web"
+  ],
+  "excluded_dirs": [
+    "node_modules",
+    "dist",
+    "coverage",
+    ".turbo",
+    ".git",
+    ".codacy",
+    "build",
+    "vendor",
+    ".cache",
+    "apps/web/public",
+    "assets"
+  ],
+  "fingerprint": {
+    "algorithm": "sha256",
+    "method": "sha256 over newline-joined, path-sorted '<tracked-path>:<sha256(file bytes)>' entries for every tracked file under the module's path and members"
+  },
+  "modules": {
+    "api-billing": {
+      "path": "apps/api/internal/billing",
+      "file_count": 4,
+      "fingerprint": "68cb0d583be759861f0f734b076fc43e35cd3e3673b0556f3fcad0a47ec4cfba"
+    },
+    "api-db": {
+      "path": "apps/api/internal/db",
+      "file_count": 32,
+      "fingerprint": "aa3344e7f5a1cdf2680b7146308920837f2e9caa945d2f5b55dabbb73f407018"
+    },
+    "api-handlers": {
+      "path": "apps/api/internal/handler",
+      "file_count": 40,
+      "fingerprint": "ec992e0aa56c02d4afb04311409aa5e3df74889c0ca9427b8fb60b334b5c4d27"
+    },
+    "api-main": {
+      "path": "apps/api/cmd/api/main.go",
+      "file_count": 1,
+      "fingerprint": "3c3c69504afc98b01c5eac9a2a795eefd3575fbc5c02ed55d3a484f1efe89133"
+    },
+    "api-middleware": {
+      "path": "apps/api/internal/middleware",
+      "file_count": 4,
+      "fingerprint": "2b44f7dedea9891b1e2006a508bbe34ff33b4db88efe2ebaefec222acad9589f"
+    },
+    "api-notify": {
+      "path": "apps/api/internal/deliver",
+      "file_count": 8,
+      "fingerprint": "6dd7ee721b4e25b836bef74c08ce280bb67a60708bc62392e5c305eb427cba14"
+    },
+    "api-server": {
+      "path": "apps/api/internal/server",
+      "file_count": 2,
+      "fingerprint": "0019def04e7e006ca1b6d0287d7ecb8349620695022f6726e214d097e109dd7d"
+    },
+    "api-support": {
+      "path": "apps/api/internal/config",
+      "file_count": 6,
+      "fingerprint": "428161009be83d5503586b6cb980b07fa240d65daf38c51820b1298fa4de84f3"
+    },
+    "api-worker": {
+      "path": "apps/api/internal/worker",
+      "file_count": 9,
+      "fingerprint": "a7076631af71873870602697f598ce37c101bc31e43bf21ee05f2405dd5cfc0c"
+    },
+    "ext-alert-providers": {
+      "path": "apps/api/internal/telegram/telegram.go",
+      "file_count": 5,
+      "fingerprint": "033bef6d98dd7e77bc3d1e52b33f911659afcb8d57a6064ba2bb21a1f14c594a"
+    },
+    "ext-analytics": {
+      "path": "apps/web/src/lib/analytics.ts",
+      "file_count": 3,
+      "fingerprint": "4021315f5ebe0aaba64d82946e1c6f1f20377bb6a1f68b7b55245b09663ad11a"
+    },
+    "ext-check-targets": {
+      "path": "apps/api/internal/worker/worker_uptime.go",
+      "file_count": 5,
+      "fingerprint": "b21554263cb458be6438409d5b04ca41bb16c34c44bbac317dfd1d7874b65983"
+    },
+    "ext-paddle": {
+      "path": "apps/api/internal/handler/billing.go",
+      "file_count": 2,
+      "fingerprint": "d913bfe407639213737a80f1fccfaa57b44b690559aaba9eed1490519daa462a"
+    },
+    "postgres": {
+      "path": "apps/api/migrations",
+      "file_count": 50,
+      "fingerprint": "1a65f752c455960ed8e30722f929719f98ad74f2adb498d839d40301ac6b0c5c"
+    },
+    "web-api": {
+      "path": "apps/web/src/api",
+      "file_count": 17,
+      "fingerprint": "00138e0767644491272acc11978ebfbc2bc8159e5c7eabd0e9f926b3cb2de546"
+    },
+    "web-lib": {
+      "path": "apps/web/src/lib",
+      "file_count": 64,
+      "fingerprint": "5812c6889461d89260e90742bb2f449c4fb839c372dcaf64d8de9a0a09f6c018"
+    },
+    "web-router": {
+      "path": "apps/web/src/router",
+      "file_count": 3,
+      "fingerprint": "60591d74859e7459a6d761961f5bbc74a7673efad914c89d9e8370128dfdb114"
+    },
+    "web-spa": {
+      "path": "apps/web/src/main.ts",
+      "file_count": 4,
+      "fingerprint": "bfe54fe995f12e5f2c3d5f9a118e455f921c3df49a6822a4640f1755e9d06aaa"
+    },
+    "web-state": {
+      "path": "apps/web/src/composables",
+      "file_count": 15,
+      "fingerprint": "bf4782560e637028cf0ac7c8aec1c347f7380b6bd6a17bd3057023e94eead7e0"
+    },
+    "web-views": {
+      "path": "apps/web/src/views",
+      "file_count": 158,
+      "fingerprint": "e5c57bd7fa5c3484093ab44085f129063e5f616a56ec8e4ed8253392f2350848"
+    }
+  }
+}
