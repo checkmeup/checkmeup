@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'dns-record-monitoring-guide',
+    slug: 'dns-record-monitoring-guide',
+    title: 'DNS Record Monitoring: Beyond the Uptime Check',
+    date: 'August 25, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "A hijacked DNS record can serve a convincing fake site while your uptime check stays green — it never looks at the record itself. Here's how DNS record monitoring works, why a single lookup isn't the whole internet's view, and the one habit that turns it back into noise.",
+  },
+  {
     file: 'why-monitoring-matters',
     slug: 'why-monitoring-matters',
     title: 'Why Monitoring Matters: Finding Out Before Users Do',
