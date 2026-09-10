@@ -15,6 +15,15 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-42-to-v1-45-monitor-forms',
+    slug: 'v1-42-to-v1-45-monitor-forms',
+    title: 'v1.42–v1.45: One Form Instead of Fourteen',
+    date: 'September 10, 2026',
+    readTime: '4 min read',
+    excerpt:
+      'Four releases that mostly moved code around: the 14 monitor create/edit screens each carried their own copy of the same form, and they now share five components instead — 3,821 lines of views down to 1,206. Pulling that logic into the open made it testable, which is how a bug surfaced where editing a JSON assertion and walking away without saving left the app showing the unsaved edit as if it were real.',
+  },
+  {
     file: 'dns-record-monitoring-guide',
     slug: 'dns-record-monitoring-guide',
     title: 'DNS Record Monitoring: Beyond the Uptime Check',
