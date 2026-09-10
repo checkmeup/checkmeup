@@ -45,9 +45,11 @@ jobs:
 
       - name: Install Go tools
         run: |
-          go install github.com/jandelgado/gcov2lcov@latest
-          # Pinned to go.mod's goose version, not @latest: v3.28.0 requires
-          # Go >= 1.26 and broke every CI run against the pinned 1.25.12 toolchain.
+          # Every tool is pinned rather than @latest: a floating version against
+          # this workflow's pinned Go toolchain breaks CI the moment upstream
+          # raises its minimum — goose v3.28.0 (needs Go >= 1.26) did exactly
+          # that. goose tracks the version apps/api/go.mod already depends on.
+          go install github.com/jandelgado/gcov2lcov@v1.1.1
           go install github.com/pressly/goose/v3/cmd/goose@v3.27.2
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 
