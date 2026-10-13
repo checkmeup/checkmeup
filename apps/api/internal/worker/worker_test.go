@@ -2,7 +2,7 @@ package worker
 
 // Integration tests for the background worker (goroutine-per-tick scheduler,
 // ADR workers). Same conventions as the handler package's tests: real Postgres
-// (ADR testing), DATABASE_URL from the environment with a devcontainer-matching
+// (ADR testing), DATABASE_URL from the environment with a `make db`-matching
 // fallback. This is a different package from internal/handler, so fixtures
 // are created directly via db.Queries rather than through the HTTP handlers
 // — that's also more honest about what the worker actually depends on.
@@ -54,7 +54,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		url = "postgres://checkmeup:checkmeup@db:5432/checkmeup?sslmode=disable"
+		url = "postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable"
 	}
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {

@@ -10,6 +10,8 @@ Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execu
 ## Commands
 
 ```bash
+make setup           # one-time: mise install + bun install + starter apps/api/.env
+make db              # start local Postgres (docker compose) on localhost:5432
 make dev             # start all apps (hot reload)
 make test            # lint + test + merge coverage
 make lint            # lint only
@@ -31,7 +33,9 @@ make migrate-create name=foo  # create a new goose migration file
 
 > **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual. Auto-deploy landed 2026-07-18 (`5bb3292`); docs written before then can still say deploys are manual and are simply stale.
 
-> `make test` requires PostgreSQL running (`docker-compose up db` or inside the devcontainer).
+> **Local setup:** no devcontainer — tools run on the host, pinned in [`mise.toml`](mise.toml) (Go, Bun, Node, golangci-lint, sqlc, goose, air, gcov2lcov, and the Codacy-matching Python linters). `make setup` once (`mise install` + `bun install` + a starter `apps/api/.env`), then `make db` to start Postgres from [`docker-compose.yml`](docker-compose.yml) on `localhost:5432` — same image, creds, and port as CI, so one `DATABASE_URL` works in both. When bumping a tool version, change `mise.toml` and `.github/workflows/ci.yml` together. See [ADR dev-environment](.about/adr/dev-environment.md).
+
+> `make test` requires PostgreSQL running (`make db`).
 
 **Key env vars (`apps/api/.env`):**
 

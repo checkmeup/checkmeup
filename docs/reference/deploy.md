@@ -32,7 +32,7 @@ What is new:
 
 The two `.env` files are intentionally separate:
 
-- **`apps/api/.env`** — local dev only; `DATABASE_URL` points to `db:5432` (devcontainer service); committed as `.env.example` template, real file gitignored
+- **`apps/api/.env`** — local dev only; `DATABASE_URL` points to `localhost:5432` (`make db`, repo-root `docker-compose.yml`); committed as `.env.example` template, real file gitignored
 - **`.env`** (repo root) — Kamal/prod secrets only; never touches the running dev server; always gitignored
 
 ---
@@ -49,6 +49,11 @@ Everything below is the **manual/break-glass path** — first-ever setup, a
 rollback, or deploying when CI can't. It is also the only path this doc
 described before auto-deploy existed, so treat any "you must run this to ship"
 framing below as historical.
+
+The break-glass path runs on the host Mac (there is no devcontainer anymore),
+so it needs a Docker daemon with buildx and the Kamal gem
+(`gem install kamal`) — neither is in `mise.toml`, since only the operator
+ever runs them.
 
 ### Every deploy (after `kamal setup` is done)
 
@@ -143,7 +148,7 @@ CX23 includes **20 TB/month** outbound. At MVP scale this is effectively unlimit
 
 ### Hidden cost: build time
 
-Every `kamal deploy` builds the Docker image on your **local machine** (devcontainer). The build takes 1–3 minutes. This is CPU and energy on your Mac, not a monetary cost, but worth knowing — especially since:
+Every `kamal deploy` builds the Docker image on your **local machine**. The build takes 1–3 minutes. This is CPU and energy on your Mac, not a monetary cost, but worth knowing — especially since:
 
 - Go dependency layer is cached between deploys (only rebuilt when `go.mod` changes)
 - Bun dependency layer is cached between deploys (only rebuilt when `package.json` changes)
@@ -188,28 +193,6 @@ ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw enable
 ```
 
 Add your SSH public key to `/home/deploy/.ssh/authorized_keys`.
-
-### Devcontainer Docker socket
-
-The devcontainer mounts `/var/run/docker.sock` from the Mac host (`docker-compose.yml`).
-Docker Desktop (re)creates that socket as `root:root 660` — not root:docker, since its VM
-has no group that maps to a container's non-root user — so `dev` gets `permission denied`
-running `docker`/`kamal` commands until it's chmod'd wide open.
-
-This isn't a one-time fix: the socket resets to `660` any time Docker Desktop restarts,
-the Mac reboots, or the devcontainer is rebuilt. `devcontainer.json`'s
-`postStartCommand: sudo chmod 666 /var/run/docker.sock` re-applies the fix on every
-container start (the `Dockerfile` pre-authorizes this exact `sudo chmod` via
-`/etc/sudoers.d/dev-docker` so it needs no password). If it's still broken, run that same
-command by hand inside the container: `sudo chmod 666 /var/run/docker.sock`.
-
-**It's a shared, host-wide resource.** The socket is one file on the host — every
-devcontainer across every project bind-mounts the *same* inode. Whichever container chmods
-it first fixes access for all of them until the next Docker Desktop restart. So this isn't
-checkmeup-specific: any other project's devcontainer hitting the same error needs its own
-copy of both pieces (the sudoers rule in its `Dockerfile`, the `postStartCommand` in its
-`devcontainer.json`) to self-heal independently, rather than depending on checkmeup's
-container happening to start first.
 
 ---
 

@@ -56,7 +56,7 @@ func TestNewLogger(t *testing.T) {
 func TestRunMigrations(t *testing.T) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		url = "postgres://checkmeup:checkmeup@db:5432/checkmeup?sslmode=disable"
+		url = "postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable"
 	}
 	// Sanity-check the DB is reachable before handing it to runMigrations,
 	// which os.Exit(1)s on a connection failure instead of returning an

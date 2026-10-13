@@ -44,7 +44,7 @@ make migrate
 ```
 
 Reads `DATABASE_URL` from `apps/api/.env` — requires Postgres running
-(`docker-compose up db` or inside the devcontainer).
+(`make db`).
 
 **4. Write/update the SQL queries** in `apps/api/queries/*.sql`, then
 regenerate:

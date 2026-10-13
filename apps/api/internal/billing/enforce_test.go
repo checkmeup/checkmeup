@@ -2,7 +2,7 @@ package billing
 
 // Integration tests for enforce.go: real Postgres (ADR testing), same
 // conventions as other packages' tests (testPool falls back to the
-// devcontainer DSN when DATABASE_URL isn't set).
+// local `make db` DSN when DATABASE_URL isn't set).
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		url = "postgres://checkmeup:checkmeup@db:5432/checkmeup?sslmode=disable"
+		url = "postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable"
 	}
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {

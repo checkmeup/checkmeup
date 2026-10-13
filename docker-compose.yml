@@ -1,0 +1,24 @@
+# Local Postgres for development and `make test` — start with `make db`.
+# Matches the service CI runs in .github/workflows/ci.yml (same image, creds,
+# and host port), so one DATABASE_URL works in both places:
+#   postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: checkmeup
+      POSTGRES_PASSWORD: checkmeup
+      POSTGRES_DB: checkmeup
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'checkmeup']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres-data:

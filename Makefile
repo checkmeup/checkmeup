@@ -1,4 +1,15 @@
-.PHONY: install update lint test dev build clean migrate migrate-create deploy ghcr-clean next
+.PHONY: setup db install update lint test dev build clean migrate migrate-create deploy ghcr-clean next
+
+# One-time local setup: toolchain from mise.toml, JS deps, and a starter
+# apps/api/.env (never overwrites an existing one).
+setup:
+	mise install
+	bun install
+	test -f apps/api/.env || cp apps/api/.env.example apps/api/.env
+
+# Start local Postgres (docker-compose.yml) and wait until it accepts connections.
+db:
+	docker compose up -d --wait db
 
 install:
 	bun install

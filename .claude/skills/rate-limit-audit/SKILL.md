@@ -60,9 +60,9 @@ a one-line justification — don't silently ignore a real finding instead.
 
 If you edit `audit.py`, Codacy runs `Lizard`/`Prospector`/`Bandit` on it
 in CI the same as any other file — including this repo's own complexity
-limits. `.devcontainer/Dockerfile` installs `lizard`, `prospector`, and
-`bandit` via `pipx` (rebuild the devcontainer to pick up a Dockerfile
-change), so check complexity locally before pushing instead of guessing:
+limits. `mise.toml` installs `lizard`, `prospector`, and `bandit` (`mise install`
+picks up a version change), so check complexity locally before pushing
+instead of guessing:
 
 ```bash
 lizard .claude/skills/rate-limit-audit/audit.py

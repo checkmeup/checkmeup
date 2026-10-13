@@ -15,12 +15,10 @@ reaching for Playwright.
 
 ## Prerequisites
 
-None beyond what the devcontainer already provides: `go`, `bun`, `goose`,
-and a Postgres reachable at `localhost:5432` (the devcontainer's `app`
-service runs with `network_mode: service:db`, so `db`'s port is directly
-reachable at `localhost` from inside the container — no extra setup).
-`apps/api/.env` and `apps/web/.env` must exist (copy from their
-`.env.example` if missing).
+`make setup` once (installs `go`, `bun`, `goose`, … from `mise.toml` and
+creates `apps/api/.env` from its example), then `make db` to start
+Postgres on `localhost:5432` (`docker-compose.yml`). `apps/web/.env` must
+also exist (copy from `apps/web/.env.example` if missing).
 
 ## Run (agent path)
 
@@ -67,11 +65,10 @@ normal local dev loop, not agent-drivable without a browser.
 
 ## Gotchas
 
-- **`DATABASE_URL` in `apps/api/.env` points at host `db`, not
-  `localhost`** — this only resolves because the devcontainer's `app`
-  service shares `db`'s network namespace (`network_mode: service:db` in
-  `.devcontainer/docker-compose.yml`). `localhost`, `db`, and `127.0.0.1`
-  all reach the same Postgres from inside this container.
+- **An `apps/api/.env` from before the devcontainer was removed still
+  points `DATABASE_URL` at host `db`**, which only resolved inside that
+  container's network. On the plain host it must be `localhost:5432` —
+  copy the line from `apps/api/.env.example`.
 - **Don't grep `/proc/*/cmdline` to find/kill a process you started with
   `&` in Bash.** Each Bash tool call runs your command through a wrapper
   shell whose own `cmdline` contains the literal text of the command you

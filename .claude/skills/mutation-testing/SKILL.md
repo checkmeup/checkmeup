@@ -146,11 +146,6 @@ runs Stryker by hand.
   `node_modules/.bun/` layout that defeats Stryker's `@stryker-mutator/*`
   glob, giving "no TestRunner plugins were loaded". `stryker.config.json`
   lists `plugins` explicitly.
-- **No `ps` in the devcontainer, and no sudo to install procps.** `run.sh`
-  puts `ps_shim.py` on PATH as `ps`. The shim **must exit non-zero when
-  nothing matches** — that is real `ps` behavior and `tree-kill` depends on
-  it (`code != 0` is its "no more children" branch). Exiting 0 with empty
-  output sends it into `"".match(/\d+/g).forEach` and kills the run.
 - **Leftover sandboxes corrupt the next run.** Stryker copies the whole app
   into `.stryker-tmp/sandbox-*/` per worker. A sandbox left behind by an
   interrupted run gets collected as real tests (683 became 3,422 once) and

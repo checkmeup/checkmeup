@@ -27,7 +27,7 @@ func testAPIKeyPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		url = "postgres://checkmeup:checkmeup@db:5432/checkmeup?sslmode=disable"
+		url = "postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable"
 	}
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
