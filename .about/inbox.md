@@ -53,3 +53,9 @@ Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-ro
 2026-10-13 · adr
 
 The notification-channel API returns each channel's `config` as stored (`toNotificationChannelResponse` in `apps/api/internal/handler/notification_channels.go`), including bearer-like secrets such as a Slack webhook URL. The webhook signing secret must stay visible so users can verify signatures. Settled by deciding whether to mask the bearer-like ones after creation, recorded in ADR alerting.
+
+## Drop the legacy org alert columns
+
+2026-10-13 · docs/stories/ep-28-notification-channels.md
+
+`orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Settled by a migration that drops them, or by deciding to keep them.

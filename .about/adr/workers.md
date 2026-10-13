@@ -8,7 +8,7 @@ An uptime check is one `GET` with the redirects followed; by default it is up on
 
 A maintenance window hides its monitors from the due/overdue queries, the same way `paused` does, so no check runs, no incident opens, no alert is sent and uptime stats stay clean without a separate exclusion step. Windows are one-off (`starts_at`, optional `ends_at` ended by hand) and cover monitors of any type through a polymorphic join table.
 
-A cron job may send `GET /ping/{token}/start` before it runs, as well as the completion ping `GET /ping/{token}`. Each start opens a row in `cron_runs`; a start while another run is open is marked as an overlap; the completion ping closes the latest open run and is a no-op when there is none. The start ping never touches `last_ping_at`, `next_ping_at` or `status`, so missed-ping detection works exactly as for a monitor that never sends a start ping.
+A cron job may send `GET /ping/{token}/start` before it runs, as well as the completion ping `GET /ping/{token}`. Each start opens a row in `cron_runs`; the completion ping closes the latest open run and is a no-op when there is none. A start while another run is open is to be marked as an overlap in the same table (its `overlap` column exists, unused until PRD overlap-detection is built). The start ping never touches `last_ping_at`, `next_ping_at` or `status`, so missed-ping detection works exactly as for a monitor that never sends a start ping.
 
 ## Considered options
 
