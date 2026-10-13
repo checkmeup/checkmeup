@@ -53,3 +53,13 @@ The notification-channel API returns each channel's `config` as stored (`toNotif
 2026-10-13 · notification channels epic
 
 `orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Settled by a migration that drops them, or by deciding to keep them.
+
+## Confirm where the PRDs follow the code over the old epics
+
+2026-10-13 · prd
+
+Rewriting the epics as PRDs found three places where the code had moved away from the epic, and each PRD now describes the code. Settled when each is confirmed, or the code is changed back:
+
+- SSL and domain monitors: the epics said the hostname can't be edited (delete and recreate); the API allows editing it (PRD ssl-monitoring, PRD domain-expiry-monitoring).
+- Telegram webhook with a wrong secret: the epic said `401`; the handler answers `200` and ignores the update, so scanners and Telegram never retry (PRD telegram-alerts, PRD security-hardening).
+- Uptime intervals: the epic's 10/30-minute MVP minimum was replaced by the plans' 5/1-minute minimums (PRD uptime-monitoring, ADR billing).
