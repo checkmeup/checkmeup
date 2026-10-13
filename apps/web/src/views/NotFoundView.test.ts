@@ -5,7 +5,7 @@ import NotFoundView from './NotFoundView.vue'
 
 vi.mock('vue-router', () => ({
   RouterLink: { name: 'RouterLink', props: ['to'], template: '<a><slot /></a>' },
-  useRoute: () => ({ fullPath: '/nonexistent-page' }),
+  useRoute: () => ({ path: '/nonexistent-page' }),
 }))
 
 vi.mock('@/layouts/LandingLayout.vue', () => ({

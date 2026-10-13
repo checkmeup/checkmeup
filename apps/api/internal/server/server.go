@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -366,8 +367,23 @@ func suggestionRateLimited(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
-	path := filepath.Join(s.cfg.StaticDir, filepath.Clean("/"+r.URL.Path))
-	info, err := os.Stat(path)
+	// One URL form per page: /blog/x/ 301s to /blog/x (query kept) — the
+	// form the sitemap, prerendered files, and every canonical tag use.
+	// Serving both with 200 made each trailing-slash variant a duplicate page
+	// in search indexes. path.Clean (rather than just trimming the slash)
+	// also collapses a leading "//", so "//evil.example/" can't turn into a
+	// protocol-relative open redirect.
+	if p := r.URL.Path; len(p) > 1 && strings.HasSuffix(p, "/") {
+		target := path.Clean(p)
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		return
+	}
+
+	name := filepath.Join(s.cfg.StaticDir, filepath.Clean("/"+r.URL.Path))
+	info, err := os.Stat(name)
 	if os.IsNotExist(err) {
 		// index.html is unhashed and must be revalidated every time, or
 		// deploys wouldn't reach clients holding a cached copy.
@@ -381,7 +397,7 @@ func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 		// file directly rather than passing the bare directory to
 		// http.ServeFile below, which would 301-redirect to a trailing-slash
 		// URL — an extra hop on every marketing/blog URL in the sitemap.
-		path = filepath.Join(path, "index.html")
+		name = filepath.Join(name, "index.html")
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		// Vite content-hashes every file under /assets/ (new hash per
@@ -392,7 +408,7 @@ func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 		// revalidate-every-time reasoning as index.html above.
 		w.Header().Set("Cache-Control", "no-cache")
 	}
-	http.ServeFile(w, r, path)
+	http.ServeFile(w, r, name)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

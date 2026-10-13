@@ -291,6 +291,40 @@ func TestHandleSPA(t *testing.T) {
 		}
 	})
 
+	t.Run("trailing slash 301s to the slash-less form, keeping the query", func(t *testing.T) {
+		cases := map[string]string{
+			"/pricing/":            "/pricing",
+			"/blog/some-post/":     "/blog/some-post",
+			"/blog/some-post/?a=1": "/blog/some-post?a=1",
+			"/blog//":              "/blog",
+			// A leading "//" must not survive into Location, where it would be
+			// a protocol-relative URL to another host (open redirect).
+			"//evil.example/": "/evil.example",
+		}
+		for reqPath, want := range cases {
+			req := httptest.NewRequest(http.MethodGet, reqPath, http.NoBody)
+			w := httptest.NewRecorder()
+			srv.handleSPA(w, req)
+
+			if w.Code != http.StatusMovedPermanently {
+				t.Fatalf("%s: status = %d, want %d", reqPath, w.Code, http.StatusMovedPermanently)
+			}
+			if got := w.Header().Get("Location"); got != want {
+				t.Fatalf("%s: Location = %q, want %q", reqPath, got, want)
+			}
+		}
+	})
+
+	t.Run("root path is served, not redirected", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+		}
+	})
+
 	t.Run("hashed asset under /assets/ gets a long-lived immutable cache header", func(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o750); err != nil {
 			t.Fatalf("mkdir assets: %v", err)

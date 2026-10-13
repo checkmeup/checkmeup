@@ -36,7 +36,7 @@ watch(() => route.params.slug, loadPost)
 useSeo({
   title: () => (post.value ? `${post.value.title} — Checkmeup blog` : 'Post not found — Checkmeup'),
   description: () => post.value?.excerpt ?? 'This blog post could not be found.',
-  path: () => route.fullPath,
+  path: () => route.path,
 })
 
 const isRelease = computed(() => post.value?.kind === 'release')

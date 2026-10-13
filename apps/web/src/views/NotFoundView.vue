@@ -10,7 +10,7 @@ const route = useRoute()
 useSeo({
   title: 'Page not found — Checkmeup',
   description: "The page you're looking for doesn't exist or may have moved.",
-  path: () => route.fullPath,
+  path: () => route.path,
 })
 
 // Any unmatched path lands here (see router's catch-all route) — always

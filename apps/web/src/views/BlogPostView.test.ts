@@ -8,7 +8,9 @@ const flushHead = () => new Promise((resolve) => setTimeout(resolve, 0))
 const routeParams = { slug: '' }
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: routeParams }),
+  // Trailing slash on purpose: the canonical tag must still come out
+  // slash-less (see the canonical test below).
+  useRoute: () => ({ params: routeParams, path: `/blog/${routeParams.slug}/` }),
   RouterLink: { name: 'RouterLink', props: ['to'], template: '<a><slot /></a>' },
 }))
 
@@ -127,6 +129,15 @@ describe('BlogPostView', () => {
 
   const robotsContent = () =>
     document.head.querySelector('meta[name="robots"]')?.getAttribute('content')
+
+  it('emits a slash-less canonical URL even when visited with a trailing slash', async () => {
+    const meta = postsMeta[0]
+    await mountLoaded(meta.slug)
+    await flushHead()
+
+    const canonical = document.head.querySelector('link[rel="canonical"]')
+    expect(canonical?.getAttribute('href')).toBe(`https://checkmeup.net/blog/${meta.slug}`)
+  })
 
   it('marks an article indexable', async () => {
     await mountLoaded(articlesMeta[0].slug)
