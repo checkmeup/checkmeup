@@ -716,17 +716,17 @@
 
     html += "<section><h4>Upstream callers (" + ups.length + ")</h4>" +
       (ups.length ? ups.map(function (e) {
-        return '<span class="pill up" data-go="' + e.from + '">' + esc(byId[e.from].label) + " · " + e.type + "</span>";
+        return '<span class="pill up" data-go="' + esc(e.from) + '">' + esc(byId[e.from].label) + " · " + esc(e.type) + "</span>";
       }).join("") : '<p class="empty">none — entrypoint</p>') + "</section>";
 
     html += "<section><h4>Downstream dependencies (" + downs.length + ")</h4>" +
       (downs.length ? downs.map(function (e) {
-        return '<span class="pill down" data-go="' + e.to + '">' + esc(byId[e.to].label) + " · " + e.type + "</span>";
+        return '<span class="pill down" data-go="' + esc(e.to) + '">' + esc(byId[e.to].label) + " · " + esc(e.type) + "</span>";
       }).join("") : '<p class="empty">none — leaf</p>') + "</section>";
 
     html += "<section><h4>Flows (" + fl.length + ")</h4>" +
       (fl.length ? fl.map(function (f) {
-        return '<span class="pill flow" data-flow="' + f.id + '">' + esc(f.name) + "</span>";
+        return '<span class="pill flow" data-flow="' + esc(f.id) + '">' + esc(f.name) + "</span>";
       }).join("") : '<p class="empty">none</p>') + "</section>";
 
     html += "<section><h4>Entrypoints</h4>" +
@@ -762,7 +762,7 @@
           esc(s.evidence.path) + " → " + esc(s.evidence.symbol) + "</span>"
         : '<br><em style="color:var(--text-faint)">unknown</em>';
       return "<li><b>" + (i + 1) + ". </b>" +
-        '<span class="pill" data-go="' + s.node + '">' + esc(byId[s.node].label) + "</span><br>" +
+        '<span class="pill" data-go="' + esc(s.node) + '">' + esc(byId[s.node].label) + "</span><br>" +
         esc(s.action) + ev + "</li>";
     }).join("") + "</ul></section>";
     html += "<section><h4>Outcome</h4><p>" + esc(f.outcome) + "</p></section>";
