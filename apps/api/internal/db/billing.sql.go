@@ -35,9 +35,9 @@ type ConsumeSMSCreditParams struct {
 	CreditLimit int32     `json:"credit_limit"`
 }
 
-// Atomically applies the lazy monthly reset (ADR-032/US-1907) and consumes
+// Atomically applies the lazy monthly reset (ADR billing/PRD sms-alerts) and consumes
 // credit_cost credits (1 in this pass — no destination weighting yet, see
-// ADR-032's "Implementation note"; a future per-destination cost band would
+// ADR billing's "Implementation note"; a future per-destination cost band would
 // just pass a computed cost here instead of a hardcoded 1), in the same
 // round trip, only if doing so wouldn't exceed the caller-supplied plan
 // limit — the WHERE clause re-evaluates the same would-be-reset CASE as the
@@ -213,7 +213,7 @@ type ListActiveMonitorsForOrgRow struct {
 }
 
 // Every non-paused monitor across all 5 types, newest first — used by
-// billing.EnforceMonitorLimit (ADR-019) to decide which of an org's active
+// billing.EnforceMonitorLimit (ADR billing) to decide which of an org's active
 // monitors to auto-pause after a downgrade, oldest-stays-active.
 func (q *Queries) ListActiveMonitorsForOrg(ctx context.Context, orgID uuid.UUID) ([]ListActiveMonitorsForOrgRow, error) {
 	rows, err := q.db.Query(ctx, listActiveMonitorsForOrg, orgID)

@@ -1,8 +1,8 @@
 package handler
 
-// Integration tests for the notification-channel handlers (EP-28 / ADR-023),
+// Integration tests for the notification-channel handlers (PRD notification-channels / ADR alerting),
 // which replaced the old single telegram/email settings fields. Same
-// conventions as the rest of this package: real Postgres (ADR-010), package
+// conventions as the rest of this package: real Postgres (ADR testing), package
 // handler so the unexported request/response types are reused directly, and
 // withURLParam (maintenance_test.go) injects the chi "id" route param these
 // handlers read.
@@ -10,7 +10,7 @@ package handler
 // TestNotificationChannel's actual-send paths mirror the old
 // TestTelegram/TestEmail boundary: telegram.Client with no bot token errors
 // before any network call, so only the resulting 502 is testable; email.Sender
-// with no Resend API key no-ops with a nil error (ADR-012), so a real 204 is
+// with no Resend API key no-ops with a nil error (ADR alerting), so a real 204 is
 // exercised for the email type.
 
 import (
@@ -93,7 +93,7 @@ func TestListNotificationChannels(t *testing.T) {
 }
 
 // upgradeOrgPlan bumps a signed-up user's org to plan — SMS channel creation
-// is blocked on the default Hobby plan (interim guard until ADR-032's credit
+// is blocked on the default Hobby plan (interim guard until ADR billing's credit
 // quotas ship), so most sms tests need a paid plan to exercise past that gate.
 func upgradeOrgPlan(t *testing.T, h *NotificationChannelHandler, u signedUpUser, plan db.Plan) {
 	t.Helper()
@@ -215,7 +215,7 @@ func TestCreateNotificationChannel(t *testing.T) {
 		}
 		secret, _ := c.Config["secret"].(string)
 		if secret == "" {
-			t.Fatal("want a non-empty signing secret generated automatically (US-1401)")
+			t.Fatal("want a non-empty signing secret generated automatically (PRD webhook-alerts)")
 		}
 	})
 
@@ -227,7 +227,7 @@ func TestCreateNotificationChannel(t *testing.T) {
 		}
 	})
 
-	t.Run("sms blocked on the Hobby plan (interim guard ahead of ADR-032 credit quotas)", func(t *testing.T) {
+	t.Run("sms blocked on the Hobby plan (interim guard ahead of ADR billing credit quotas)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, channelsH.CreateNotificationChannel, u.access, notificationChannelRequest{
 			Type: "sms", Name: "X", Config: map[string]any{"phone_number": "+15005550006", "consent": "true"},
@@ -453,7 +453,7 @@ func TestUpdateNotificationChannel(t *testing.T) {
 		}
 	})
 
-	t.Run("re-enabling a disabled channel is blocked once enabled channels are already at the plan limit (ADR-019)", func(t *testing.T) {
+	t.Run("re-enabling a disabled channel is blocked once enabled channels are already at the plan limit (ADR billing)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 
@@ -623,7 +623,7 @@ func TestTestNotificationChannel(t *testing.T) {
 		}
 	})
 
-	t.Run("email with no Resend API key configured no-ops successfully (ADR-012 dev behavior)", func(t *testing.T) {
+	t.Run("email with no Resend API key configured no-ops successfully (ADR alerting dev behavior)", func(t *testing.T) {
 		w := doJSON(t, channelsH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
 			Type: "email", Config: map[string]any{"email": "ops@example.com"},
 		})
@@ -642,7 +642,7 @@ func TestTestNotificationChannel(t *testing.T) {
 	})
 
 	t.Run("webhook posts a signed sample payload to a reachable endpoint", func(t *testing.T) {
-		// validateChannelConfig requires https:// (US-1401), so this needs a
+		// validateChannelConfig requires https:// (PRD webhook-alerts), so this needs a
 		// TLS test server — and a webhook.Client built around that server's
 		// own *http.Client (which trusts its self-signed cert), since the
 		// shared channelsH's client uses the default transport.

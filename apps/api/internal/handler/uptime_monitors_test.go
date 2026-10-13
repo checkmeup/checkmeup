@@ -4,7 +4,7 @@ package handler
 // Same conventions as monitors_test.go/ssl_monitors_test.go (which these
 // largely mirror, since uptime monitors share the MonitorHandler/
 // testMonitorHandler/createUptimeMonitor helpers already defined there and
-// in maintenance_test.go): real Postgres (ADR-010), package handler so
+// in maintenance_test.go): real Postgres (ADR testing), package handler so
 // unexported request/response types are reused directly.
 
 import (
@@ -466,7 +466,7 @@ func TestUpdateUptimeMonitor(t *testing.T) {
 	t.Run("a 1-minute interval is honored on a paid plan that allows it", func(t *testing.T) {
 		// UpdateUptimeMonitor uses the same plan-aware billing.ClampInterval
 		// as CreateUptimeMonitor — a Solo-plan org (1-minute minimum per
-		// ADR-019) setting a 1-minute interval via Update must get the 1
+		// ADR billing) setting a 1-minute interval via Update must get the 1
 		// minute they're paying for, not a hardcoded floor of 10.
 		u := signUpTestUser(t, authH, pool)
 		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)

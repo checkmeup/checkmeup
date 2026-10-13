@@ -1,5 +1,5 @@
-// Package twilio sends SMS alerts via Twilio's Messages REST API (EP-19,
-// ADR-029) — the eighth alert channel, alongside email/telegram/webhook/slack.
+// Package twilio sends SMS alerts via Twilio's Messages REST API (PRD sms-alerts,
+// ADR alerting) — the eighth alert channel, alongside email/telegram/webhook/slack.
 package twilio
 
 import (
@@ -28,7 +28,7 @@ type Client struct {
 
 // NewClient builds a Client authenticated with a scoped API Key (SID+Secret)
 // rather than the primary Account Auth Token — see docs/twilio-setup.md and
-// ADR-029 for why. accountSID is still required separately: it's part of the
+// ADR alerting for why. accountSID is still required separately: it's part of the
 // REST resource URL, not the auth pair.
 func NewClient(accountSID, apiKeySID, apiKeySecret, messagingServiceSID string) *Client {
 	return &Client{
@@ -49,9 +49,9 @@ type errorBody struct {
 // Messaging Service (so Twilio picks the right sender for the destination —
 // toll-free/10DLC for US/Canada, alphanumeric elsewhere). Reports the
 // response status code (0 if no response was ever received, e.g. timeout or
-// connection error) so the caller can record delivery status (US-1904)
+// connection error) so the caller can record delivery status (PRD sms-alerts)
 // without inspecting err's type. One attempt only — no retries, matching the
-// no-retry-storm requirement shared with webhook (US-1404).
+// no-retry-storm requirement shared with webhook (PRD webhook-alerts).
 func (c *Client) Send(to, body string) (statusCode int, err error) {
 	if c.accountSID == "" || c.apiKeySID == "" || c.apiKeySecret == "" {
 		return 0, fmt.Errorf("twilio not configured")

@@ -1,6 +1,6 @@
 package billing
 
-// Integration tests for enforce.go: real Postgres (ADR-010), same
+// Integration tests for enforce.go: real Postgres (ADR testing), same
 // conventions as other packages' tests (testPool falls back to the
 // devcontainer DSN when DATABASE_URL isn't set).
 

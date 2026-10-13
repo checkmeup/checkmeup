@@ -1,9 +1,9 @@
 -- +goose Up
 
--- EP-14: webhook becomes a real, deliverable notification_channel_type.
+-- PRD webhook-alerts: webhook becomes a real, deliverable notification_channel_type.
 ALTER TYPE notification_channel_type ADD VALUE 'webhook';
 
--- Delivery status (US-1404). Generic on the table rather than webhook-only —
+-- Delivery status (PRD webhook-alerts). Generic on the table rather than webhook-only —
 -- Telegram/email already log failures via slog, but only webhook's epic asks
 -- for this to be user-visible, so only sendToChannel's webhook branch writes
 -- it for now.

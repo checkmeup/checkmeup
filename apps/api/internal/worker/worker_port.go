@@ -205,7 +205,7 @@ func portCheckDialer() *net.Dialer {
 // performTCPCheck opens a raw TCP connection to the monitor's host:port —
 // no data sent or received, no protocol handshake. The dial outcome is
 // interpreted against the monitor's expected state: an "open" monitor wants
-// a successful connect, a "closed" monitor wants the opposite (US-3302).
+// a successful connect, a "closed" monitor wants the opposite (PRD port-monitoring).
 // dialer is injected so tests can pass an unguarded dialer to reach a local
 // listener — see portCheckDialer for the hardened dialer real checks use.
 func performTCPCheck(m db.PortMonitor, dialer *net.Dialer) (responseTimeMs int64, isUp bool, failureReason string) {

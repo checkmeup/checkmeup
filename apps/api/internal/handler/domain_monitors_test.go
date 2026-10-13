@@ -2,7 +2,7 @@ package handler
 
 // Integration tests for the domain monitor handlers in domain_monitors.go.
 // Mirrors ssl_monitors_test.go closely — same shape, same shared
-// testMonitorHandler/createDomainMonitor helpers. Real Postgres (ADR-010),
+// testMonitorHandler/createDomainMonitor helpers. Real Postgres (ADR testing),
 // package handler so unexported request/response types are reused directly.
 
 import (

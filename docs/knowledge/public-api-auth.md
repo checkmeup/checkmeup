@@ -11,11 +11,11 @@ superseded_by:
 # Public API & API-key authentication
 
 **Investigated:** 2026-07-10
-**Scope:** the `X-API-Key`-authenticated `/api/v1/public` route group (EP-26) — a second, independent auth mechanism alongside the browser session cookie.
+**Scope:** the `X-API-Key`-authenticated `/api/v1/public` route group (PRD public-api) — a second, independent auth mechanism alongside the browser session cookie.
 
 ## Summary
 
-`X-API-Key` is a deliberately separate mechanism from the `access_token` httpOnly cookie used everywhere else ([ADR-028](../decisions/028-api-key-auth-scope.md), amending [ADR-003](../decisions/003-auth-jwt-httponly-cookie.md)'s "no `Authorization` header" rule to scope it to browser sessions only). The two are kept visibly and mechanically distinct — different header name (never `Authorization`), different middleware, different route group, so a request can't be accidentally validated against the wrong one. As of 2026-07-10 the entire public API surface is five read-only `GET .../status` endpoints; there is no write endpoint yet.
+`X-API-Key` is a deliberately separate mechanism from the `access_token` httpOnly cookie used everywhere else ([ADR auth](../../.about/adr/auth.md), amending [ADR auth](../../.about/adr/auth.md)'s "no `Authorization` header" rule to scope it to browser sessions only). The two are kept visibly and mechanically distinct — different header name (never `Authorization`), different middleware, different route group, so a request can't be accidentally validated against the wrong one. As of 2026-07-10 the entire public API surface is five read-only `GET .../status` endpoints; there is no write endpoint yet.
 
 ## Findings
 
@@ -27,10 +27,10 @@ superseded_by:
 
 4. **The route group, not the middleware, is what makes API-key auth impossible to reach with a session cookie or vice versa.** `server.go:252`'s `/public` route group is a sibling of the `RequireAuth`-protected group, not nested inside it — `r.Use(apimiddleware.RequireAPIKey(...))` is the *only* auth middleware in that subtree. A session-cookie-only request has no `X-API-Key` header and gets `401`; an API-key request never passes through `RequireAuth` at all. Rate limiting is also key-scoped, not IP- or org-scoped: `apiKeyRateKey` (`server.go:293`) keys the limiter on the raw `X-API-Key` header value itself (60/min), so a single leaked or misbehaving key is bounded regardless of how many keys the org has or what network it's called from — deliberately different from `authOrgKey`'s org-scoped limiting used under `RequireAuth`.
 
-5. **Scope (read-only vs. read-write) is designed but not implemented.** ADR-028 describes a `scope` column and `403` enforcement for a read-only key hitting a non-`GET` route — the first shipped slice (EP-26 US-2601/2602/2604) skipped both because every current public-API route is a `GET`, so there was nothing to enforce yet. **This is a known, explicitly-flagged gap**: `RequireAPIKey` does not check scope at all right now, so if a write endpoint is ever added under `/api/v1/public` without first adding the `scope` column and enforcement, every existing key — including ones a user expects to be read-only — would be able to call it. The ADR's own "Implementation status" section and [`docs/decisions/backlog.md`](../decisions/backlog.md) both flag this must land *before*, not after, the first write endpoint.
+5. **Scope (read-only vs. read-write) is designed but not implemented.** ADR auth describes a `scope` column and `403` enforcement for a read-only key hitting a non-`GET` route — the first shipped slice (PRD public-api/2602/2604) skipped both because every current public-API route is a `GET`, so there was nothing to enforce yet. **This is a known, explicitly-flagged gap**: `RequireAPIKey` does not check scope at all right now, so if a write endpoint is ever added under `/api/v1/public` without first adding the `scope` column and enforcement, every existing key — including ones a user expects to be read-only — would be able to call it. The ADR's own "Implementation status" section and [`.about/inbox.md`](../../.about/inbox.md) both flag this must land *before*, not after, the first write endpoint.
 
 6. **Every public-API handler is a thin read**: `GetCronStatus`/`GetUptimeStatus`/`GetSSLStatus`/`GetDomainStatus`/`GetPortStatus`/`GetDNSStatus` (`public_status.go`) each resolve the monitor by `id` + the API-key-derived `org_id` (same tenant-isolation pattern as everywhere else — `org-id-audit` skill would catch a regression here same as any other handler) and return its current status. No mutation, no list/enumerate-all-monitors endpoint exists yet — a caller needs to already know a monitor's ID.
 
 ## Follow-ups
 
-- The `scope` column + read-only/`403` enforcement (finding 5) is real, tracked debt — not addressed here since it requires a migration and isn't triggered by anything in the current codebase (no write endpoint exists yet to expose the gap). Should land before EP-26's next slice adds one.
+- The `scope` column + read-only/`403` enforcement (finding 5) is real, tracked debt — not addressed here since it requires a migration and isn't triggered by anything in the current codebase (no write endpoint exists yet to expose the gap). Should land before PRD public-api's next slice adds one.

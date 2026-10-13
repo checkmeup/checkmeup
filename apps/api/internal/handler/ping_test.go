@@ -3,13 +3,13 @@ package handler
 // Tests for ping.go: the public, unauthenticated GET /ping/{token} endpoint
 // cron jobs hit to check in, plus its pure helper functions. Integration
 // tests follow the same conventions as the other *_test.go files in this
-// package (real Postgres, ADR-010); the pure functions (computeNextPing,
+// package (real Postgres, ADR testing); the pure functions (computeNextPing,
 // parseEveryDuration, realIP) are deterministic given their inputs (no
 // internal time.Now() — "now" is always passed in), so they're tested with
 // exact-value table tests, no tolerance windows needed. Downtime formatting
 // (formerly a local formatDuration here) moved to worker.FormatDuration —
 // see worker_test.go — once the cron-recovery path started sharing
-// worker.DispatchAlert instead of sending alerts directly (EP-14).
+// worker.DispatchAlert instead of sending alerts directly (PRD webhook-alerts).
 
 import (
 	"context"
@@ -343,7 +343,7 @@ func TestReceivePingStart(t *testing.T) {
 		}
 	})
 
-	t.Run("records a run without touching monitor ping state (ADR-039)", func(t *testing.T) {
+	t.Run("records a run without touching monitor ping state (ADR workers)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createCronMonitor(t, monitorH, u.access, "Start ping job")
 		token := cronPingToken(t, pool, mon.ID)
@@ -373,7 +373,7 @@ func TestReceivePingStart(t *testing.T) {
 		}
 	})
 
-	t.Run("completion ping closes the open run and stamps run_started_at (US-3401/US-3404)", func(t *testing.T) {
+	t.Run("completion ping closes the open run and stamps run_started_at (PRD zombie-job-detection)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createCronMonitor(t, monitorH, u.access, "Round trip job")
 		token := cronPingToken(t, pool, mon.ID)
@@ -406,7 +406,7 @@ func TestReceivePingStart(t *testing.T) {
 		}
 	})
 
-	t.Run("completion ping with no open run is accepted as-is (US-3401)", func(t *testing.T) {
+	t.Run("completion ping with no open run is accepted as-is (PRD zombie-job-detection)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createCronMonitor(t, monitorH, u.access, "No start ping job")
 		token := cronPingToken(t, pool, mon.ID)
@@ -427,7 +427,7 @@ func TestReceivePingStart(t *testing.T) {
 		}
 	})
 
-	t.Run("recovery alert fires on completion when the closed run had already been flagged stuck (US-3403)", func(t *testing.T) {
+	t.Run("recovery alert fires on completion when the closed run had already been flagged stuck (PRD zombie-job-detection)", func(t *testing.T) {
 		var gotEvent webhook.Event
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewDecoder(r.Body).Decode(&gotEvent)
@@ -452,7 +452,7 @@ func TestReceivePingStart(t *testing.T) {
 		}
 	})
 
-	t.Run("recovery alert fires when a new start ping supersedes an already-alerted open run (US-3403)", func(t *testing.T) {
+	t.Run("recovery alert fires when a new start ping supersedes an already-alerted open run (PRD zombie-job-detection)", func(t *testing.T) {
 		var gotEvent webhook.Event
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewDecoder(r.Body).Decode(&gotEvent)

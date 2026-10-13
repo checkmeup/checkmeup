@@ -36,12 +36,12 @@ A user routes a client's monitors to that client's Slack and their own Telegram 
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creates a telegram channel, enabled by default"
   → test: apps/web/src/components/NotificationChannelsCard.test.ts "toggles a channel's enabled state"
 - Re-enabling a channel past the plan's limit is refused with an upgrade prompt.
-  → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/re-enabling a disabled channel is blocked once enabled channels are already at the plan limit (ADR-019)"
+  → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/re-enabling a disabled channel is blocked once enabled channels are already at the plan limit (ADR billing)"
   → test: apps/web/src/components/NotificationChannelsCard.test.ts "shows an upgrade prompt instead of failing silently when re-enabling a channel is blocked by the plan limit"
 - A monitor with channels attached but alerts turned off sends nothing.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/an incident still opens when alerts are disabled, but no alert is sent"
 - A monitor with no channel attached emails every user in the org; with no user, nothing is sent and nothing breaks.
-  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/no channel attached falls back to emailing every org user (ADR-023)"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/no channel attached falls back to emailing every org user (ADR alerting)"
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/no channel attached and no org user falls back to nothing"
 - After the cap is reached, further down alerts for the incident are suppressed.
   → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/the per-incident alert cap suppresses further alerts"

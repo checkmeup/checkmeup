@@ -116,7 +116,7 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 
 // attachDefaultNotificationChannels attaches every enabled channel the org
 // currently has to a newly created monitor — a new monitor defaults to all
-// of the org's enabled channels (US-2802), matching the pre-EP-28 implicit
+// of the org's enabled channels (PRD notification-channels), matching the pre-PRD notification-channels implicit
 // behavior of every monitor alerting on every org-level channel.
 func (h *MonitorHandler) attachDefaultNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID) {
 	channels, err := h.queries.ListEnabledNotificationChannels(ctx, orgID)
@@ -164,7 +164,7 @@ func (h *MonitorHandler) setMonitorNotificationChannels(ctx context.Context, org
 
 // applyMonitorNotificationChannels sets channelIDs on a newly created
 // monitor, or falls back to every one of the org's enabled channels by
-// default (US-2802) when none were specified. Shared by every monitor
+// default (PRD notification-channels) when none were specified. Shared by every monitor
 // type's create handler.
 func (h *MonitorHandler) applyMonitorNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, channelIDs []string) error {
 	if len(channelIDs) > 0 {
@@ -211,7 +211,7 @@ func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, g
 	if *maxAlertsPerIncident < 0 {
 		*maxAlertsPerIncident = 3
 	}
-	// Unset (nil) means zombie detection is inactive (US-3402) — only a
+	// Unset (nil) means zombie detection is inactive (PRD zombie-job-detection) — only a
 	// provided-but-non-positive value is rejected, distinct from "disabled".
 	if maxDurationMins != nil && *maxDurationMins <= 0 {
 		respond.Error(w, http.StatusBadRequest, "maxDurationMins must be positive", "bad_request")
@@ -221,7 +221,7 @@ func validateCronMonitorRequest(w http.ResponseWriter, name, schedule *string, g
 }
 
 // int32PtrToPgInt4 converts a nullable request field to sqlc's nullable
-// int column type — nil stays NULL (US-3402's "disabled" state).
+// int column type — nil stays NULL (PRD zombie-job-detection's "disabled" state).
 func int32PtrToPgInt4(v *int32) pgtype.Int4 {
 	if v == nil {
 		return pgtype.Int4{}
@@ -503,7 +503,7 @@ func (h *MonitorHandler) PauseCronMonitor(w http.ResponseWriter, r *http.Request
 
 // checkMonitorResumeLimit returns billing.ErrMonitorLimit when resuming a
 // paused monitor would push the org's active-monitor count over its plan
-// limit (ADR-019) — after a downgrade, resuming doesn't create anything
+// limit (ADR billing) — after a downgrade, resuming doesn't create anything
 // new, but it does grow the active count, so it's gated the same way
 // creation is, just checked against CountActiveMonitorsForOrg (non-paused
 // only) rather than the raw total CreateXMonitor checks. A non-nil error

@@ -34,9 +34,9 @@ export function useNotificationChannelForm(opts: {
   const value = ref('')
   const enabled = ref(true)
   // Only populated when editing an existing webhook channel — the secret
-  // doesn't exist until the channel is first saved (US-1401).
+  // doesn't exist until the channel is first saved (PRD webhook-alerts).
   const secret = ref('')
-  // TCPA-style opt-in checkbox (US-1901, ADR-029) — required before any sms
+  // TCPA-style opt-in checkbox (PRD sms-alerts, ADR alerting) — required before any sms
   // channel can be saved or tested. Pre-checked when editing an existing
   // channel that already has consent on file (consentAt below).
   const smsConsent = ref(false)
@@ -44,7 +44,7 @@ export function useNotificationChannelForm(opts: {
   const consentedPhone = ref('')
   // True once the phone number has been edited away from the one consent_at
   // applies to — a changed number is a new recipient, so it needs fresh
-  // consent (ADR-029), same rule the backend enforces in
+  // consent (ADR alerting), same rule the backend enforces in
   // resolveUpdatedChannelConfig.
   const smsConsentOnFile = computed(
     () => !!consentAt.value && value.value.trim() === consentedPhone.value,
@@ -82,7 +82,7 @@ export function useNotificationChannelForm(opts: {
   const testSuccess = ref(false)
   const testError = ref('')
   // Set when the API rejects an sms save/test with plan_limit_reached (Hobby
-  // plan — interim guard ahead of ADR-032's credit quotas), same pattern as
+  // plan — interim guard ahead of ADR billing's credit quotas), same pattern as
   // the monitor/status-page create views' plan-limit handling.
   const limitReached = ref(false)
 

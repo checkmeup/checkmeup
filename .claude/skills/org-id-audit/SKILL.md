@@ -70,7 +70,7 @@ don't force-fit an exception.
 ## Scope
 
 Only covers `apps/api/queries/*.sql` — sqlc-generated raw SQL, per
-ADR-004 (no ORM). Doesn't check that handlers actually pass the
+ADR database (no ORM). Doesn't check that handlers actually pass the
 authenticated org's ID into a query that does filter by `org_id`
 correctly (e.g., a handler bug that passes the wrong variable) — that's
 a code-review concern, not something greppable from the SQL alone.

@@ -2,7 +2,7 @@
 // source through the same Vite pipeline/aliases as the app itself — a plain
 // `node` script can't parse SFCs or strip TypeScript). Renders each public,
 // indexable route to static HTML so crawlers that don't execute JS (Bingbot
-// flagged the homepage's missing <h1> — see ADR-037) see real content
+// flagged the homepage's missing <h1> — see ADR seo) see real content
 // instead of the empty `<div id="app"></div>` shell `vite build` produces.
 //
 // Auth-gated app routes (dashboard, monitors, etc.) are never crawled and

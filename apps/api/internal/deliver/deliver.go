@@ -1,7 +1,7 @@
 // Package deliver provides the HTTP send-and-classify mechanics shared by
 // every alert channel that POSTs directly to a REST endpoint (webhook,
 // Slack, Twilio): a shared request timeout and the one-attempt, no-retry
-// (statusCode, err) return convention (US-1404/US-1704/US-1904), so a
+// (statusCode, err) return convention (PRD webhook-alerts/PRD slack-alerts/PRD sms-alerts), so a
 // caller can record delivery status without inspecting err's type. Telegram
 // isn't included — its API always returns HTTP 200 and reports failure via
 // a JSON "ok" field instead of the status code, a different enough response

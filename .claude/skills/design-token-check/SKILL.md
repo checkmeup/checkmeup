@@ -5,13 +5,13 @@ description: Scan apps/web/src for the two recurring color-token mistakes in thi
 
 # Design token check
 
-Two known failure modes, both from CLAUDE.md's Don't section and EP-10:
+Two known failure modes, both from CLAUDE.md's Don't section and PRD theme:
 
 1. **`bg-[--token]` / `text-[--token]` / `border-[--token]`** — in this
    Tailwind v4 setup, this compiles to invalid CSS (`background-color:
    --token`, missing `var()`) and the style is silently dropped. The
    correct form is always `bg-[var(--token)]`. Found broken across
-   `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` during EP-10 —
+   `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` while building the light theme (PRD theme) —
    the sign-in button had no background in *either* theme until fixed.
 2. **Hardcoded hex instead of a token** — breaks automatically on theme
    switch (`data-theme` on `<html>`) since a literal hex doesn't flip
@@ -20,7 +20,7 @@ Two known failure modes, both from CLAUDE.md's Don't section and EP-10:
 ## Steps
 
 **1. Check for the `bg-[--token]` anti-pattern** (should always be zero
-hits — this was fully fixed in EP-10):
+hits — this was fully fixed while building the light theme):
 
 ```bash
 cd apps/web/src

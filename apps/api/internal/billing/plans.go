@@ -11,8 +11,8 @@ type Limits struct {
 	StatusPages          int // -1 = unlimited
 	NotificationChannels int // -1 = unlimited
 	MinIntervalMins      int // minimum uptime check interval
-	SMSCredits           int // monthly SMS sends allowed (ADR-032); 0 = sms unavailable on this plan
-	HideBrandingAllowed  bool // can set status_pages.hide_branding (ADR-035); false on Hobby
+	SMSCredits           int // monthly SMS sends allowed (ADR billing); 0 = sms unavailable on this plan
+	HideBrandingAllowed  bool // can set status_pages.hide_branding (ADR status-pages); false on Hobby
 }
 
 var planLimits = map[db.Plan]Limits{

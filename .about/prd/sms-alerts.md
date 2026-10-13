@@ -40,7 +40,7 @@ A user adds a number with consent and gets the next down alert as one text, with
   → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/updating an sms channel with the same number carries consent forward without re-requiring it"
 - On Hobby the SMS option is hidden and the API refuses SMS channels and test sends.
   → test: apps/web/src/components/NotificationChannelsCard.test.ts "hides the SMS option from the type picker on the Hobby plan"
-  → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/sms blocked on the Hobby plan (interim guard ahead of ADR-032 credit quotas)"
+  → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/sms blocked on the Hobby plan (interim guard ahead of ADR billing credit quotas)"
   → test: apps/api/internal/handler/notification_channels_test.go "TestTestNotificationChannel/sms test-send blocked on the Hobby plan (same guard as create)"
 - Test SMS sends are limited to 10 a minute, 10 an hour and 20 a day per org, and don't use credits.
   → test: apps/api/internal/handler/notification_channels_test.go "TestTestNotificationChannel/sms test-send is rate limited to 10 per minute per org"
@@ -57,7 +57,7 @@ A user adds a number with consent and gets the next down alert as one text, with
   → test: apps/api/internal/worker/worker_test.go "TestConsumeSMSCredit/lazily resets once the reset date has passed"
   → test: apps/api/internal/handler/billing_test.go "TestGetBillingInfo/displays 0 used once the reset date has passed, even before any send applies it"
 - When SMS was the only channel, or every channel failed, the alert goes to the org's users by email.
-  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/every attached channel failing falls back to org user email (generalized ADR-032 fallback)"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/every attached channel failing falls back to org user email (generalized ADR billing fallback)"
 - A Twilio rejection is recorded with Twilio's error message and shown in Settings; failures aren't retried.
   → test: apps/api/internal/twilio/twilio_test.go "TestSend/non-2xx response surfaces Twilio's error message"
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/sms channel attempts a send and records failure when Twilio isn't configured"

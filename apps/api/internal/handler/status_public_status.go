@@ -142,7 +142,7 @@ func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row 
 
 // computeOverallStatus drives both the page banner and the badge routes
 // (kept in sync so a badge always agrees with what the page shows). An
-// active major/critical incident (US-2403) escalates it exactly like a
+// active major/critical incident (PRD incidents) escalates it exactly like a
 // monitor outage would, independent of any monitor's own up/down state.
 func computeOverallStatus(rows []publicMonitorRow, activeIncidents []publicIncidentRow) (label, color string) {
 	anyDown, anyDegraded := false, false

@@ -1,8 +1,8 @@
 package worker
 
 // Integration tests for the background worker (goroutine-per-tick scheduler,
-// ADR-001). Same conventions as the handler package's tests: real Postgres
-// (ADR-010), DATABASE_URL from the environment with a devcontainer-matching
+// ADR workers). Same conventions as the handler package's tests: real Postgres
+// (ADR testing), DATABASE_URL from the environment with a devcontainer-matching
 // fallback. This is a different package from internal/handler, so fixtures
 // are created directly via db.Queries rather than through the HTTP handlers
 // — that's also more honest about what the worker actually depends on.
@@ -10,7 +10,7 @@ package worker
 // telegram.Client/email.Sender are constructed with no token/API key, same
 // as the handler tests: telegram.SendMessage errors immediately (no network
 // call) when there's no bot token, while email.Sender silently no-ops with a
-// nil error when there's no Resend key (ADR-012). dispatchAlert's tests
+// nil error when there's no Resend key (ADR alerting). dispatchAlert's tests
 // exploit that asymmetry deliberately — it's the only way to exercise a
 // real "alert delivered" code path without live credentials.
 //
@@ -74,7 +74,7 @@ func testLogger() *slog.Logger {
 // testOrg creates a bare org with no notification channels — tests that need
 // a deliverable channel create one explicitly via testNotificationChannel,
 // since dispatchAlert reads monitor_notification_channels, not org fields
-// (ADR-023).
+// (ADR alerting).
 func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 	t.Helper()
 	org, err := queries.CreateOrg(context.Background(), db.CreateOrgParams{
@@ -91,7 +91,7 @@ func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 
 // testNotificationChannel creates an enabled channel for orgID. Caller still
 // needs attachNotificationChannel to wire it to a specific monitor.
-// upgradeOrgPlan bumps a test org to plan — sms credit consumption (ADR-032)
+// upgradeOrgPlan bumps a test org to plan — sms credit consumption (ADR billing)
 // is 0 on the default Hobby plan, so tests exercising the actual Twilio send
 // path (rather than credit exhaustion itself) need a paid plan first.
 func upgradeOrgPlan(t *testing.T, queries *db.Queries, orgID uuid.UUID, plan db.Plan) {
@@ -128,7 +128,7 @@ func attachNotificationChannel(t *testing.T, queries *db.Queries, channelID uuid
 }
 
 // testUser creates a user for orgID, so dispatchAlert's no-channel fallback
-// (ADR-023: email every user in the org) has someone to email.
+// (ADR alerting: email every user in the org) has someone to email.
 func testUser(t *testing.T, queries *db.Queries, orgID uuid.UUID) db.User {
 	t.Helper()
 	u, err := queries.CreateUser(context.Background(), db.CreateUserParams{
@@ -722,7 +722,7 @@ func TestDispatchAlert(t *testing.T) {
 	pool := testPool(t)
 	queries := db.New(pool)
 	tg := telegram.NewClient("")  // no token: SendMessage always errors, no network call
-	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR-012)
+	mailer := email.NewSender("") // no API key: SendAlertEmail no-ops with a nil error (ADR alerting)
 	// Webhook/Slack subtests below POST to a local httptest server, which
 	// NewClient's SSRF protections (loopback blocked) would refuse to dial —
 	// not exercised here, see webhook_test.go.
@@ -741,7 +741,7 @@ func TestDispatchAlert(t *testing.T) {
 		}
 	})
 
-	t.Run("no channel attached falls back to emailing every org user (ADR-023)", func(t *testing.T) {
+	t.Run("no channel attached falls back to emailing every org user (ADR alerting)", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		testUser(t, queries, org.ID)
 		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: uuid.New()}, msg)
@@ -984,7 +984,7 @@ func TestDispatchAlert(t *testing.T) {
 	})
 
 	t.Run("sms channel on the Hobby plan is skipped for quota exhaustion without ever reaching Twilio", func(t *testing.T) {
-		org := testOrg(t, queries, pool) // default plan: Hobby, 0 sms credits (ADR-032)
+		org := testOrg(t, queries, pool) // default plan: Hobby, 0 sms credits (ADR billing)
 		monitorID := uuid.New()
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
 		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
@@ -1036,7 +1036,7 @@ func TestDispatchAlert(t *testing.T) {
 		}
 	})
 
-	t.Run("every attached channel failing falls back to org user email (generalized ADR-032 fallback)", func(t *testing.T) {
+	t.Run("every attached channel failing falls back to org user email (generalized ADR billing fallback)", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		testUser(t, queries, org.ID)
 		monitorID := uuid.New()
@@ -1264,7 +1264,7 @@ func TestCheckOverdue(t *testing.T) {
 	})
 }
 
-// ─── checkStuckCronRuns (EP-34 US-3403) ───────────────────────────────────
+// ─── checkStuckCronRuns (PRD zombie-job-detection) ───────────────────────────────────
 
 // testCronRun inserts a cron_runs row directly with a controllable
 // started_at (CreateCronRun always defaults started_at to NOW(), which
@@ -2046,7 +2046,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
 
 		org := testOrg(t, queries, pool)
-		testUser(t, queries, org.ID) // fallback email recipient (ADR-023)
+		testUser(t, queries, org.ID) // fallback email recipient (ADR alerting)
 		mon := testDomainMonitor(t, queries, org.ID, "example.com")
 
 		checkDomainMonitors(context.Background(), n)

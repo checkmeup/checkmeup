@@ -1,7 +1,7 @@
 package handler
 
 // Integration tests for the billing handlers. Same conventions as
-// auth_test.go: real Postgres (ADR-010), package handler (not handler_test)
+// auth_test.go: real Postgres (ADR testing), package handler (not handler_test)
 // so webhook payloads can be signed with the same HMAC logic the handler
 // itself uses, and the shared test helpers (testPool, doJSON, decodeBody,
 // findCookie, signUpTestUser, testJWTSecret) defined there are reused here.
@@ -321,7 +321,7 @@ func TestWebhook(t *testing.T) {
 		}
 	})
 
-	t.Run("downgrade to hobby auto-pauses the newest monitors and disables the newest channels beyond the new limit (ADR-019)", func(t *testing.T) {
+	t.Run("downgrade to hobby auto-pauses the newest monitors and disables the newest channels beyond the new limit (ADR billing)", func(t *testing.T) {
 		authH, billH, pool := testBillingHandler(t)
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
@@ -372,7 +372,7 @@ func TestWebhook(t *testing.T) {
 			}
 		}
 
-		// ADR-035: a status page with hide_branding set on Solo should have it
+		// ADR status-pages: a status page with hide_branding set on Solo should have it
 		// cleared once the downgrade below drops the org to Hobby.
 		page, err := billH.queries.CreateStatusPage(context.Background(), db.CreateStatusPageParams{
 			OrgID: orgID, Slug: "downgrade-branding-" + uuid.NewString(), Title: "x", Layout: "classic",
@@ -427,7 +427,7 @@ func TestWebhook(t *testing.T) {
 			t.Fatalf("get status page: %v", err)
 		}
 		if downgradedPage.HideBranding {
-			t.Fatal("want hide_branding cleared after downgrading to Hobby (ADR-035)")
+			t.Fatal("want hide_branding cleared after downgrading to Hobby (ADR status-pages)")
 		}
 	})
 }
@@ -470,7 +470,7 @@ func TestGetBillingInfo(t *testing.T) {
 			t.Fatalf("want no customer portal URL with no paddle_customer_id, got %q", resp.CustomerPortalURL)
 		}
 		if resp.SmsCreditsLimit != 0 {
-			t.Fatalf("want sms credits limit 0 on Hobby (ADR-032), got %d", resp.SmsCreditsLimit)
+			t.Fatalf("want sms credits limit 0 on Hobby (ADR billing), got %d", resp.SmsCreditsLimit)
 		}
 		if resp.SmsCreditsUsed != 0 {
 			t.Fatalf("want sms credits used 0 for a fresh org, got %d", resp.SmsCreditsUsed)
@@ -489,7 +489,7 @@ func TestGetBillingInfo(t *testing.T) {
 		w := doAuthed(t, http.MethodGet, billH.GetBillingInfo, u.access, nil)
 		resp := decodeBody[billingInfoResponse](t, w)
 		if resp.SmsCreditsLimit != 10 {
-			t.Fatalf("want sms credits limit 10 on Solo (ADR-032), got %d", resp.SmsCreditsLimit)
+			t.Fatalf("want sms credits limit 10 on Solo (ADR billing), got %d", resp.SmsCreditsLimit)
 		}
 	})
 

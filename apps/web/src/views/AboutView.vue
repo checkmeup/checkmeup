@@ -185,7 +185,7 @@ const values = [
 
       <p class="text-xs mt-8" style="color: var(--text-muted)">
         Architecture decisions are documented in the
-        <a href="https://github.com/checkmeup/checkmeup/tree/main/docs/decisions" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">ADR log</a>
+        <a href="https://github.com/checkmeup/checkmeup/tree/main/.about/adr/" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">ADR log</a>
         in the public repo — including the choices that weren't obvious.
       </p>
       <p class="text-xs mt-3" style="color: var(--text-muted)">

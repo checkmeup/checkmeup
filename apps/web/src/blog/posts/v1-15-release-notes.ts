@@ -11,7 +11,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: 'Same deal as before in every way that matters to a subscriber: Paddle is the legal seller on every transaction, invoices come from Paddle not Checkmeup, and Paddle handles tax collection and remittance worldwide. Checkmeup still operates as an Israeli sole proprietor (עוסק פטור) with no registered company, so a Merchant of Record staying in the picture at all was non-negotiable — see ADR-026, which supersedes the original LemonSqueezy decision (ADR-018).',
+    text: 'Same deal as before in every way that matters to a subscriber: Paddle is the legal seller on every transaction, invoices come from Paddle not Checkmeup, and Paddle handles tax collection and remittance worldwide. Checkmeup still operates as an Israeli sole proprietor (עוסק פטור) with no registered company, so a Merchant of Record staying in the picture at all was non-negotiable — see ADR billing, which supersedes the original LemonSqueezy decision (ADR billing).',
   },
   {
     type: 'p',

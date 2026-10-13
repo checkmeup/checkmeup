@@ -1,5 +1,5 @@
 // Package webhook sends signed event notifications to a user-configured URL
-// (EP-14) — the generic alert channel alongside telegram and email, for
+// (PRD webhook-alerts) — the generic alert channel alongside telegram and email, for
 // users who want to wire monitor events into their own automation.
 package webhook
 
@@ -18,7 +18,7 @@ import (
 )
 
 // SignatureHeader carries the hex-encoded HMAC-SHA256 signature of the raw
-// request body (US-1403), so the receiver can verify a request really came
+// request body (PRD webhook-alerts), so the receiver can verify a request really came
 // from checkmeup before acting on it.
 const SignatureHeader = "X-Checkmeup-Signature"
 
@@ -27,7 +27,7 @@ type Client struct {
 }
 
 // NewClient builds a Client hardened against SSRF: a webhook URL is
-// arbitrary, user-supplied data (US-1401), so the destination has to be
+// arbitrary, user-supplied data (PRD webhook-alerts), so the destination has to be
 // restricted to the public internet, not just "https" — otherwise a
 // customer could point a webhook at internal infrastructure (e.g. a cloud
 // metadata endpoint) and have checkmeup's own server make the request for
@@ -54,7 +54,7 @@ func NewClientWithHTTPClient(hc *http.Client) *Client {
 	return &Client{httpClient: hc}
 }
 
-// Event is the JSON body POSTed to a monitor's webhook URL (US-1402).
+// Event is the JSON body POSTed to a monitor's webhook URL (PRD webhook-alerts).
 type Event struct {
 	EventType        string `json:"eventType"` // "down" | "recovery" | "test"
 	MonitorName      string `json:"monitorName"`
@@ -66,9 +66,9 @@ type Event struct {
 
 // Send POSTs event to url, signed with secret. Reports the response status
 // code (0 if no response was ever received, e.g. timeout or connection
-// error) so the caller can record delivery status (US-1404) without
+// error) so the caller can record delivery status (PRD webhook-alerts) without
 // inspecting err's type. One attempt only — no retries, matching the
-// no-retry-storm requirement in US-1404.
+// no-retry-storm requirement in PRD webhook-alerts.
 func (c *Client) Send(url, secret string, event Event) (statusCode int, err error) {
 	body, err := json.Marshal(event)
 	if err != nil {
@@ -97,8 +97,8 @@ func Sign(body []byte, secret string) string {
 }
 
 // GenerateSecret returns a new random 256-bit signing secret, hex-encoded —
-// generated automatically the first time a webhook channel is saved (US-1401)
-// and on demand when the user regenerates it (US-1403).
+// generated automatically the first time a webhook channel is saved (PRD webhook-alerts)
+// and on demand when the user regenerates it (PRD webhook-alerts).
 func GenerateSecret() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

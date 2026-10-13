@@ -1,12 +1,12 @@
 package handler
 
 // Integration tests for SubmitSuggestion. Same conventions as the other
-// *_test.go files in this package: real Postgres (ADR-010).
+// *_test.go files in this package: real Postgres (ADR testing).
 //
 // SubmitSuggestion checks auth via apimiddleware.ClaimsFrom directly (like
 // Me/AcceptTerms in auth.go), not via the orgIDFrom helper most other
 // handlers use — see the orgIDFrom-ownership note in docs/tech-debts.md.
-// The per-IP/per-org rate limiting (EP-23: 5/hour per IP, 20/hour per org)
+// The per-IP/per-org rate limiting (PRD feedback-form: 5/hour per IP, 20/hour per org)
 // is wired as chi/httprate middleware in server.go, not in this handler, so
 // it's out of scope here — same boundary as the other handler test files.
 

@@ -70,7 +70,7 @@ const planLabel: Record<string, string> = {
   enterprise: 'Enterprise',
 }
 
-// Annual prices are each exactly 10x the monthly price (~2 months free, EP-27).
+// Annual prices are each exactly 10x the monthly price (~2 months free, PRD annual-billing).
 const monthlyPrice: Record<string, number> = { solo: 9, startup: 29, enterprise: 99 }
 const annualPrice: Record<string, number> = { solo: 90, startup: 290, enterprise: 990 }
 const planRank: Record<string, number> = { hobby: 0, solo: 1, startup: 2, enterprise: 3 }

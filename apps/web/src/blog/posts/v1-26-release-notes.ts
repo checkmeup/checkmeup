@@ -27,7 +27,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "Worth being honest about what this doesn't fix: none of it touches how a link looks when it's pasted into Slack or Twitter. Those previews come from bots that don't run JavaScript, so they still see the site's generic title and image no matter which post got shared — Article schema and the per-page meta tags from v1.24 only help search engines, which do execute JS. Fixing social previews needs the page's raw HTML to actually differ per post, which means prerendering at build time — real architectural work, filed as its own backlog item (EP-36) rather than rushed into this release.",
+    text: "Worth being honest about what this doesn't fix: none of it touches how a link looks when it's pasted into Slack or Twitter. Those previews come from bots that don't run JavaScript, so they still see the site's generic title and image no matter which post got shared — Article schema and the per-page meta tags from v1.24 only help search engines, which do execute JS. Fixing social previews needs the page's raw HTML to actually differ per post, which means prerendering at build time — real architectural work, filed as its own backlog item (PRD prerendering) rather than rushed into this release.",
   },
   {
     type: 'h3',

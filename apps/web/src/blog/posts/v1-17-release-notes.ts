@@ -11,7 +11,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "PostHog and Plausible were both on the table first. PostHog's free tier looks generous until you notice autocapture logs every click and scroll by default — a single visitor becomes 5-20 events, not one, and the bill scales with interactions rather than visits. Plausible and its peers are cleaner on privacy but have no free hosted tier, and self-hosting is the same infra burden this project has avoided since ADR-001. GA4 is free and unlimited regardless of traffic, which matters more than a nicer privacy story for a solo-founder, cost-sensitive product. The full comparison is in ADR-027 if you want the reasoning written out.",
+    text: "PostHog and Plausible were both on the table first. PostHog's free tier looks generous until you notice autocapture logs every click and scroll by default — a single visitor becomes 5-20 events, not one, and the bill scales with interactions rather than visits. Plausible and its peers are cleaner on privacy but have no free hosted tier, and self-hosting is the same infra burden this project has avoided since ADR workers. GA4 is free and unlimited regardless of traffic, which matters more than a nicer privacy story for a solo-founder, cost-sensitive product. The full comparison is in ADR frontend if you want the reasoning written out.",
   },
   {
     type: 'h3',

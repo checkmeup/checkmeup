@@ -29,7 +29,7 @@ type submitSuggestionRequest struct {
 }
 
 // SubmitSuggestion POST /api/v1/suggestions — stores the suggestion and emails
-// the founder directly. No ticket statuses, no public board (EP-23).
+// the founder directly. No ticket statuses, no public board (PRD feedback-form).
 func (h *SuggestionHandler) SubmitSuggestion(w http.ResponseWriter, r *http.Request) {
 	userID, err := userIDFrom(r)
 	if err != nil {

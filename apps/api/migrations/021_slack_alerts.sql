@@ -1,8 +1,8 @@
 -- +goose Up
 
--- EP-17: slack becomes a real, deliverable notification_channel_type.
+-- PRD slack-alerts: slack becomes a real, deliverable notification_channel_type.
 -- Slack Incoming Webhooks are plain HTTPS POSTs, so the config shape is
--- {"url": "https://hooks.slack.com/services/..."} — same key as webhook (EP-14)
+-- {"url": "https://hooks.slack.com/services/..."} — same key as webhook (PRD webhook-alerts)
 -- but validated against the hooks.slack.com domain pattern.
 ALTER TYPE notification_channel_type ADD VALUE 'slack';
 

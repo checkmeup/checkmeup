@@ -51,7 +51,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "Team management — inviting a teammate into your org — is next up. Releases land on this blog as they ship; the GitHub repo has the full commit history and architecture decision records if you want the why behind any of this, including ADR-035's reasoning for gating branding removal specifically to paid plans.",
+    text: "Team management — inviting a teammate into your org — is next up. Releases land on this blog as they ship; the GitHub repo has the full commit history and architecture decision records if you want the why behind any of this, including ADR status-pages's reasoning for gating branding removal specifically to paid plans.",
   },
   {
     type: 'signature',

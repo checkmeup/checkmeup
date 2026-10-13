@@ -175,7 +175,7 @@ func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage
 }
 
 // maxKeywordCheckBytes caps how much of the response body is read for a
-// keyword search or JSON assertion, regardless of Content-Length (US-1102).
+// keyword search or JSON assertion, regardless of Content-Length (PRD keyword-monitoring).
 const maxKeywordCheckBytes = 512 * 1024
 
 // sharedUptimeClient is the *http.Client used for every real (non-test)
@@ -188,7 +188,7 @@ const maxKeywordCheckBytes = 512 * 1024
 // clients), but each hop re-dials through the same Control-equipped Dialer,
 // so a redirect into a blocked range is caught too.
 //
-// No client-level Timeout: EP-37 US-3702 makes the request timeout
+// No client-level Timeout: PRD configurable-uptime-checks makes the request timeout
 // per-monitor (m.MaxResponseTimeMs), enforced via a context deadline in
 // performHTTPCheck instead — a fixed client.Timeout here would silently cap
 // every monitor at whatever that constant is, regardless of what the
@@ -215,7 +215,7 @@ func uptimeCheckClient() *http.Client {
 // m.MaxResponseTimeMs bounds the whole request (connect + response, via a
 // context deadline) rather than being checked post-hoc after a successful
 // response — a slow response now aborts the connection at the configured
-// ceiling instead of completing and then being judged (EP-37 US-3702).
+// ceiling instead of completing and then being judged (PRD configurable-uptime-checks).
 func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, responseTimeMs int64, isUp bool, failureReason string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.MaxResponseTimeMs)*time.Millisecond)
 	defer cancel()

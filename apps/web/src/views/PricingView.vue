@@ -14,7 +14,7 @@ useSeo({
 
 const billingFaqs = findFaqCategory('billing')?.entries ?? []
 
-// Annual price is always exactly 10x the monthly price — ~2 months free (EP-27).
+// Annual price is always exactly 10x the monthly price — ~2 months free (PRD annual-billing).
 const cycle = ref<'monthly' | 'annual'>('monthly')
 
 interface Plan {

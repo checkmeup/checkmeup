@@ -15,7 +15,7 @@ import (
 )
 
 // resolvedIncidentsPageSize is the page size for the public status page's
-// paginated "past incidents" history (US-2403) — plain query-param
+// paginated "past incidents" history (PRD incidents) — plain query-param
 // pagination since this page is server-rendered with no JS.
 const resolvedIncidentsPageSize = 10
 
@@ -66,7 +66,7 @@ type publicIncidentUpdateRow struct {
 	IsLast       bool // true for the oldest entry — suppresses the connecting line below it
 }
 
-// publicIncidentRow is a manually-declared incident (EP-24), independent of
+// publicIncidentRow is a manually-declared incident (PRD incidents), independent of
 // the automatic up/down monitor rows above.
 type publicIncidentRow struct {
 	Title               string
@@ -97,7 +97,7 @@ type publicPageData struct {
 	HasNextIncidentsPage  bool
 	UpdatedAt             string
 	HideBranding          bool
-	Layout                string // "classic" or "grid" — ADR-038
+	Layout                string // "classic" or "grid" — ADR status-pages
 }
 
 // ─── ServeHTTP ───────────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ func parseIncidentsPageParam(s string) int {
 	return n
 }
 
-// loadActiveIncidents fetches manually-declared incidents (EP-24) that are
+// loadActiveIncidents fetches manually-declared incidents (PRD incidents) that are
 // still open and affect at least one monitor on this page, each with its
 // full update timeline (design: CheckMeUp Status Page.dc.html, option 1a —
 // the timeline shows every update, not just the latest one). Update
@@ -260,7 +260,7 @@ func (h *StatusPublicHandler) loadActiveIncidents(ctx context.Context, page db.S
 }
 
 // loadResolvedIncidents fetches one page of this page's resolved-incident
-// history, separate from the existing 90-day uptime bars (US-2403).
+// history, separate from the existing 90-day uptime bars (PRD incidents).
 func (h *StatusPublicHandler) loadResolvedIncidents(ctx context.Context, page db.StatusPage, pageNum int) ([]publicIncidentRow, int64, error) {
 	offset := (pageNum - 1) * resolvedIncidentsPageSize
 	dbRows, err := h.queries.ListResolvedStatusPageIncidentsForPage(ctx, db.ListResolvedStatusPageIncidentsForPageParams{
@@ -293,7 +293,7 @@ func (h *StatusPublicHandler) loadResolvedIncidents(ctx context.Context, page db
 	return result, total, nil
 }
 
-// ─── badges (EP-30) ──────────────────────────────────────────────────────────
+// ─── badges (PRD status-badges) ──────────────────────────────────────────────────────────
 
 // ServePageBadge handles GET /status/:slug/badge.svg — an embeddable badge
 // showing the page's overall status, in the same three-tier wording as the

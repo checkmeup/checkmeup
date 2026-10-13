@@ -1,6 +1,6 @@
 // Public status page theme handling. Shares the 'theme' localStorage key
 // with src/lib/theme.ts so a visitor's preference carries over across the
-// whole site (same origin — ADR-005's same-domain /status/:slug). Runs
+// whole site (same origin — ADR status-pages' same-domain /status/:slug). Runs
 // before paint (script is in <head>, unhashed, same as /theme-init.js) to
 // avoid a flash of the wrong theme, then wires up the toggle button once
 // the DOM is ready.

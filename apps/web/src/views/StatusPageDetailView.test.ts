@@ -280,7 +280,7 @@ describe('StatusPageDetailView', () => {
     expect(findButtonByText(wrapper, 'Delete')).toBeTruthy()
   })
 
-  describe('Badges (EP-30)', () => {
+  describe('Badges (PRD status-badges)', () => {
     it('renders a page-level badge and one per attached monitor', () => {
       pageData.value = { ...detail, monitors: [...detail.monitors] }
       const wrapper = mount(StatusPageDetailView, {

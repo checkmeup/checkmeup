@@ -255,7 +255,7 @@ const maxActiveIncidents = 100
 
 // checkActiveIncidentCap rejects declaring a new incident once the org
 // already has maxActiveIncidents non-resolved ones. Complements the 90-day
-// retention on resolved incidents (ADR-015): that bounds long-term growth,
+// retention on resolved incidents (ADR limits): that bounds long-term growth,
 // this bounds how many can pile up before any of them are ever resolved.
 func (h *IncidentHandler) checkActiveIncidentCap(ctx context.Context, w http.ResponseWriter, orgID uuid.UUID) bool {
 	count, err := h.queries.CountActiveStatusPageIncidents(ctx, orgID)
@@ -298,7 +298,7 @@ func (h *IncidentHandler) checkUpdateCap(ctx context.Context, w http.ResponseWri
 	return true
 }
 
-// checkMaintenanceOverlap implements US-2405: warn (don't block) if a
+// checkMaintenanceOverlap implements PRD incidents: warn (don't block) if a
 // selected monitor is already under active maintenance. Returns false —
 // having written a 409 response — only when overlap exists and the caller
 // hasn't already confirmed it.

@@ -8,7 +8,7 @@ import (
 )
 
 // badgeStatusWord maps a status color to the short badge vocabulary
-// (US-3001: "operational" / "degraded" / "outage"). Gray covers paused,
+// (PRD status-badges: "operational" / "degraded" / "outage"). Gray covers paused,
 // under-maintenance, and not-yet-checked monitors — none of those are an
 // outage, but "operational" would overstate it, so badges call it "unknown".
 func badgeStatusWord(color string) string {
@@ -26,7 +26,7 @@ func badgeStatusWord(color string) string {
 
 func writeBadge(w http.ResponseWriter, label, value, color string) {
 	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
-	w.Header().Set("Cache-Control", "max-age=60") // US-3004: short TTL so embedders/CDNs don't hammer this on every page load
+	w.Header().Set("Cache-Control", "max-age=60") // PRD status-badges: short TTL so embedders/CDNs don't hammer this on every page load
 	_, _ = w.Write([]byte(renderBadgeSVG(label, value, color)))
 }
 

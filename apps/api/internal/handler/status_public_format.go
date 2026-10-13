@@ -74,7 +74,7 @@ func formatDuration(d time.Duration) string {
 }
 
 // incidentSeverityLabel/-Color mirror the minor/major/critical vocabulary
-// from US-2401 — minor is informational (blue) and doesn't escalate the
+// from PRD incidents — minor is informational (blue) and doesn't escalate the
 // overall banner; major/critical reuse the same red/amber tiers monitor
 // outages already use, so computeOverallStatus treats them identically.
 func incidentSeverityLabel(s db.IncidentSeverity) string {

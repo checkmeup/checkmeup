@@ -1,6 +1,6 @@
 // Package slack sends alert notifications to a Slack Incoming Webhook URL
-// (EP-17) — a thin Slack-specific formatter on top of the same HTTP delivery
-// mechanics used by the generic webhook channel (EP-14). Config shape:
+// (PRD slack-alerts) — a thin Slack-specific formatter on top of the same HTTP delivery
+// mechanics used by the generic webhook channel (PRD webhook-alerts). Config shape:
 // {"url": "https://hooks.slack.com/services/..."}.
 package slack
 
@@ -61,7 +61,7 @@ func RecoveryMessage(monitorName, monitorType, downtime string) Message {
 }
 
 // TestMessage returns a Slack message used by the "Send test message" button
-// (US-1701) before a channel is saved.
+// (PRD slack-alerts) before a channel is saved.
 func TestMessage() Message {
 	return Message{
 		Text:   "✅ Checkmeup is connected! You'll receive alerts here.",
@@ -78,7 +78,7 @@ type Client struct {
 // user-supplied, so the destination must be restricted to the public
 // internet even though the URL is validated against hooks.slack.com on save.
 // See package httpsafe for the dial-time IP check and redirect handling
-// shared with the generic webhook channel (US-1402 / EP-14).
+// shared with the generic webhook channel (PRD webhook-alerts).
 func NewClient() *Client {
 	dialer := httpsafe.Dialer(deliver.Timeout)
 	return &Client{httpClient: &http.Client{
@@ -97,7 +97,7 @@ func NewClientWithHTTPClient(hc *http.Client) *Client {
 
 // Send POSTs msg to the Slack Incoming Webhook at url. Returns the HTTP
 // status code (0 if no response was received) so the caller can record
-// delivery status (US-1704). One attempt only — no retries (US-1704).
+// delivery status (PRD slack-alerts). One attempt only — no retries (PRD slack-alerts).
 func (c *Client) Send(url string, msg Message) (statusCode int, err error) {
 	body, err := json.Marshal(msg)
 	if err != nil {

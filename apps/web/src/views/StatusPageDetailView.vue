@@ -161,7 +161,7 @@ async function deletePage() {
 
 const typeLabel: Record<string, string> = { cron: 'Cron', uptime: 'Uptime', ssl: 'SSL', domain: 'Domain', port: 'Port', dns: 'DNS' }
 
-// ─── badges (EP-30) ──────────────────────────────────────────────────────────
+// ─── badges (PRD status-badges) ──────────────────────────────────────────────────────────
 
 interface Badge {
   key: string
@@ -377,7 +377,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
           </div>
         </div>
 
-        <!-- Badges (EP-30) -->
+        <!-- Badges (PRD status-badges) -->
         <div
           class="rounded-xl border mt-6"
           style="background-color: var(--surface); border-color: var(--border)"

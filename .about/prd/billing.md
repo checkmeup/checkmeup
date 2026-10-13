@@ -49,9 +49,9 @@ A user upgrades from the billing page in one checkout, and their new limits appl
   → test: apps/api/internal/handler/billing_test.go "TestWebhook/cancellation downgrades to hobby and clears subscription fields"
   → test: apps/web/src/views/BillingView.test.ts "shows \"Access until\" wording when the subscription is cancelled"
 - On a downgrade, the newest active monitors and channels beyond the new limit are paused or disabled and the oldest stay on; hidden branding comes back.
-  → test: apps/api/internal/handler/billing_test.go "TestWebhook/downgrade to hobby auto-pauses the newest monitors and disables the newest channels beyond the new limit (ADR-019)"
+  → test: apps/api/internal/handler/billing_test.go "TestWebhook/downgrade to hobby auto-pauses the newest monitors and disables the newest channels beyond the new limit (ADR billing)"
   → test: apps/api/internal/billing/enforce_test.go "TestEnforceMonitorLimit/pauses the newest active monitors beyond limit, leaves the oldest active"
   → test: apps/api/internal/billing/enforce_test.go "TestEnforceHideBrandingLimit/clears hide_branding across every page in the org when not allowed"
 - Resuming a paused monitor past the limit is refused with an upgrade prompt.
-  → test: apps/api/internal/handler/monitors_test.go "TestPauseResumeCronMonitor/resume is blocked once active monitors are already at the plan limit (ADR-019)"
+  → test: apps/api/internal/handler/monitors_test.go "TestPauseResumeCronMonitor/resume is blocked once active monitors are already at the plan limit (ADR billing)"
   → test: apps/web/src/views/CronMonitorDetailView.test.ts "shows an upgrade prompt instead of a plain error when resume is blocked by the plan limit"

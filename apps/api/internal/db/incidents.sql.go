@@ -86,7 +86,7 @@ DELETE FROM status_page_incidents WHERE status = 'resolved' AND resolved_at < NO
 // Only resolved incidents age out — an incident still active (however
 // old) must stay visible on the status page, never silently vanish out
 // from under it. Same 90-day window as uptime_checks/port_checks, applied
-// uniformly across every plan (see ADR-015).
+// uniformly across every plan (see ADR limits).
 func (q *Queries) DeleteOldStatusPageIncidents(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, deleteOldStatusPageIncidents)
 	return err

@@ -1,6 +1,6 @@
 import type { NotificationChannelType } from '@/api/notificationChannels'
 
-// E.164 phone number pattern (US-1901): a leading +, no leading zero, up to
+// E.164 phone number pattern (PRD sms-alerts): a leading +, no leading zero, up to
 // 15 digits total — mirrors the backend's e164Pattern in
 // apps/api/internal/handler/notification_channels.go.
 const E164_PATTERN = /^\+[1-9]\d{1,14}$/

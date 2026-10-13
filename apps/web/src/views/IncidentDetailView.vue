@@ -47,7 +47,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-// ─── title editing (US-2404) ──────────────────────────────────────────────
+// ─── title editing (PRD incidents) ──────────────────────────────────────────────
 const editingTitle = ref(false)
 const titleDraft = ref('')
 const savingTitle = ref(false)
@@ -72,7 +72,7 @@ async function saveTitle() {
   }
 }
 
-// ─── post a new update (US-2402) ──────────────────────────────────────────
+// ─── post a new update (PRD incidents) ──────────────────────────────────────────
 const newMessage = ref('')
 const newStatus = ref<IncidentStatus>('identified')
 const posting = ref(false)
@@ -103,7 +103,7 @@ async function postUpdate() {
   }
 }
 
-// ─── edit an existing update's message (US-2404) ──────────────────────────
+// ─── edit an existing update's message (PRD incidents) ──────────────────────────
 const editingUpdateId = ref('')
 const editDraft = ref('')
 const savingUpdate = ref(false)
@@ -127,7 +127,7 @@ async function saveUpdateMessage(updateId: string) {
   }
 }
 
-// ─── delete (US-2404) ──────────────────────────────────────────────────────
+// ─── delete (PRD incidents) ──────────────────────────────────────────────────────
 const confirmDelete = ref(false)
 const deleting = ref(false)
 

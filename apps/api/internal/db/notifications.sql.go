@@ -274,7 +274,7 @@ const listOrgUserEmails = `-- name: ListOrgUserEmails :many
 SELECT email FROM users WHERE org_id = $1
 `
 
-// ─── fallback (ADR-023) ───────────────────────────────────────────────────────
+// ─── fallback (ADR alerting) ───────────────────────────────────────────────────────
 func (q *Queries) ListOrgUserEmails(ctx context.Context, orgID uuid.UUID) ([]string, error) {
 	rows, err := q.db.Query(ctx, listOrgUserEmails, orgID)
 	if err != nil {
@@ -349,7 +349,7 @@ type UpdateNotificationChannelConfigParams struct {
 }
 
 // Used for regenerating a webhook's signing secret in place, without
-// touching name/enabled (US-1403) — UpdateNotificationChannel always
+// touching name/enabled (PRD webhook-alerts) — UpdateNotificationChannel always
 // requires both, which would force the regenerate endpoint to re-send them.
 func (q *Queries) UpdateNotificationChannelConfig(ctx context.Context, arg UpdateNotificationChannelConfigParams) (NotificationChannel, error) {
 	row := q.db.QueryRow(ctx, updateNotificationChannelConfig, arg.ID, arg.OrgID, arg.Config)
@@ -382,7 +382,7 @@ type UpdateNotificationChannelDeliveryParams struct {
 	LastDeliveryDetail pgtype.Text `json:"last_delivery_detail"`
 }
 
-// Records the outcome of the most recent send attempt (US-1404). No org_id
+// Records the outcome of the most recent send attempt (PRD webhook-alerts). No org_id
 // filter — only called from the worker, which already scoped the channel via
 // ListMonitorNotificationChannels, not from a user-facing handler.
 func (q *Queries) UpdateNotificationChannelDelivery(ctx context.Context, arg UpdateNotificationChannelDeliveryParams) error {

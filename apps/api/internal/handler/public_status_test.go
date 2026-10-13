@@ -2,7 +2,7 @@ package handler
 
 // Integration tests for the public (X-API-Key authenticated) status
 // endpoints in public_status.go. Same conventions as monitors_test.go: real
-// Postgres (ADR-010), package handler so unexported helpers are reusable.
+// Postgres (ADR testing), package handler so unexported helpers are reusable.
 // Requests are routed through the real RequireAPIKey middleware (not a
 // context-injection shortcut) so these tests exercise the same auth path
 // production traffic does.

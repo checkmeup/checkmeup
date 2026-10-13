@@ -23,7 +23,7 @@ const ctxAPIKeyOrgID apiKeyCtxKey = iota
 
 // RequireAPIKey authenticates non-browser clients (the public API) via the
 // X-API-Key header — deliberately separate from RequireAuth's session-cookie
-// mechanism (ADR-028), so the two never silently accept each other's tokens.
+// mechanism (ADR auth), so the two never silently accept each other's tokens.
 func RequireAPIKey(queries *db.Queries) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -2,7 +2,7 @@ package handler
 
 // Integration tests for the API key management handlers (api_keys.go).
 // Same conventions as auth_test.go/monitors_test.go: real Postgres
-// (ADR-010), package handler so doAuthed/withURLParam/signUpTestUser can be
+// (ADR testing), package handler so doAuthed/withURLParam/signUpTestUser can be
 // reused directly.
 
 import (

@@ -92,7 +92,7 @@ func validateSlug(s string) error {
 }
 
 // validateLayout rejects anything but the two layouts the public template
-// (status_public.go) knows how to render — ADR-038.
+// (status_public.go) knows how to render — ADR status-pages.
 func validateLayout(s string) error {
 	if s != "classic" && s != "grid" {
 		return errors.New("layout must be \"classic\" or \"grid\"")
@@ -196,7 +196,7 @@ type resolvedStatusPageMonitor struct {
 // resolveMonitorName (shared with maintenance.go) scopes its lookup by
 // org_id, so this also confirms ownership — a status page can never
 // reference another org's monitor. It also supplies the real monitor name as
-// the displayName fallback (EP-06 US-0602: "defaults to monitor name"),
+// the displayName fallback (PRD status-pages: "defaults to monitor name"),
 // rather than falling back to the raw UUID string.
 func (h *StatusPageHandler) resolveStatusPageMonitors(ctx context.Context, orgID uuid.UUID, items []setMonitorItem) ([]resolvedStatusPageMonitor, error) {
 	resolved := make([]resolvedStatusPageMonitor, 0, len(items))
@@ -403,7 +403,7 @@ func (h *StatusPageHandler) UpdateStatusPage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ADR-035: hide_branding can only be turned on for orgs on a paid plan.
+	// ADR status-pages: hide_branding can only be turned on for orgs on a paid plan.
 	if req.HideBranding {
 		plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
 		if err != nil {

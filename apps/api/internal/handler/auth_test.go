@@ -1,6 +1,6 @@
 package handler
 
-// Integration tests for the auth handlers. Per ADR-010, these hit a real
+// Integration tests for the auth handlers. Per ADR testing, these hit a real
 // PostgreSQL instance (no DB mocks, to avoid hiding org_id-style bugs) —
 // DATABASE_URL must point at a reachable Postgres with migrations applied
 // (docker-compose db service locally, the CI service container in GitHub

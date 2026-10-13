@@ -65,7 +65,7 @@ numbers — re-derive if a threshold starts flagging routine files:
 - Vue components (excl. `ui/`) ran 34–170, then 570
   (`NotificationChannelsCard.vue`); 250 sat in the gap.
 - Sibling duplication needs **both** >50% shared **and** >=100 shared
-  lines: two thin views still score ~65% on boilerplate alone. When EP-40
+  lines: two thin views still score ~65% on boilerplate alone. When the monitor form extraction
   opened, the real pairs shared 117–369 lines, the false ones 74, and
   after the extraction every pair fell to 35–57.
 

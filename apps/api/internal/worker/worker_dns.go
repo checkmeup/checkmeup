@@ -48,7 +48,7 @@ func checkDNSMonitors(ctx context.Context, n Notifiers) {
 // or nothing to compare against yet), mismatch-down (resolved but differs —
 // failureReason stays empty), or lookup-error-down (failureReason set) —
 // this three-way split is what lets the alert text tell a hijacked/changed
-// record apart from one that's simply unreachable (US-3902).
+// record apart from one that's simply unreachable (PRD dns-monitoring).
 func checkOneDNSMonitor(ctx context.Context, n Notifiers, m db.DnsMonitor) {
 	resolver := n.DNSResolver
 	if resolver == nil {
@@ -136,7 +136,7 @@ func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) Aler
 
 func handleDNSDown(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus db.MonitorStatus, resolvedValue, failureReason string) {
 	// A lookup failure has no resolvedValue — keep the monitor's last known
-	// good value on display rather than blanking it out (US-3904); a
+	// good value on display rather than blanking it out (PRD dns-monitoring); a
 	// mismatch always carries a real resolvedValue to show instead.
 	lastResolved := m.LastResolvedValue
 	if resolvedValue != "" {
@@ -185,7 +185,7 @@ func alertDNSIncident(ctx context.Context, n Notifiers, m db.DnsMonitor, inc db.
 // buildDNSDownAlert branches on whether failureReason is set: a lookup
 // error (NXDOMAIN/SERVFAIL/timeout) reads as "can't resolve", while an empty
 // failureReason means the lookup succeeded but didn't match — a changed/
-// hijacked record, phrased as old value → new value (US-3902/US-3903).
+// hijacked record, phrased as old value → new value (PRD dns-monitoring).
 //
 // resolvedValue and a baseline-captured expectedValue both originate from
 // the monitored domain's own DNS records — not from anything the alerted
@@ -334,7 +334,7 @@ func trimTrailingDot(s string) string {
 
 // classifyLookupError turns a lookup error into the short, user-facing
 // reason shown in the check log and alert text — distinguishing "the name
-// doesn't exist" from "the lookup timed out" from anything else (US-3902).
+// doesn't exist" from "the lookup timed out" from anything else (PRD dns-monitoring).
 func classifyLookupError(err error) string {
 	var dnsErr *net.DNSError
 	if errors.As(err, &dnsErr) {

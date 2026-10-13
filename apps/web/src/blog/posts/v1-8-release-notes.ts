@@ -3,7 +3,7 @@ import type { ContentBlock } from '../types'
 export const content: ContentBlock[] = [
   {
     type: 'p',
-    text: "SSL monitoring (shipped back in EP-04) watches a certificate's expiry. That's a different failure from the domain registration itself lapsing — a cert renews on its own schedule, but if the domain isn't renewed, the whole site goes dark and the name is sometimes snapped up by a squatter before the owner notices. Domain monitors close that gap: same shape as SSL monitoring, different data source.",
+    text: "SSL monitoring (shipped back with the MVP) watches a certificate's expiry. That's a different failure from the domain registration itself lapsing — a cert renews on its own schedule, but if the domain isn't renewed, the whole site goes dark and the name is sometimes snapped up by a squatter before the owner notices. Domain monitors close that gap: same shape as SSL monitoring, different data source.",
   },
   {
     type: 'h3',

@@ -103,7 +103,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}", statusPublic.ServeHTTP)
 
-	// Badges (EP-30): embeddable SVGs, rate-limited per ADR-013 (not exempted
+	// Badges (PRD status-badges): embeddable SVGs, rate-limited per ADR limits (not exempted
 	// just because they're images — README/CDN embeds can hit these often,
 	// so the limit is generous relative to auth routes; Cache-Control on the
 	// response is the primary defense against repeat hits).
@@ -283,7 +283,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			})
 		})
 
-		// Public API (EP-26 / ADR-028): authenticated via X-API-Key, never
+		// Public API (PRD public-api / ADR auth): authenticated via X-API-Key, never
 		// the session cookie — deliberately its own route group rather than
 		// nested under the RequireAuth group above, so the two auth
 		// mechanisms can never be silently conflated.
@@ -376,7 +376,7 @@ func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err == nil && info.IsDir() {
-		// Prerendered routes (ADR-037) are directories containing their own
+		// Prerendered routes (ADR seo) are directories containing their own
 		// index.html (e.g. /pricing -> dist/pricing/index.html). Serve that
 		// file directly rather than passing the bare directory to
 		// http.ServeFile below, which would 301-redirect to a trailing-slash
@@ -409,8 +409,8 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // contentSecurityPolicy allow-lists the third parties actually loaded by the
-// SPA: Google Tag Manager/Analytics (ADR-027) and Paddle's checkout overlay
-// (ADR-026). Paddle's own JS dynamically pulls in more of *.paddle.com than
+// SPA: Google Tag Manager/Analytics (ADR frontend) and Paddle's checkout overlay
+// (ADR billing). Paddle's own JS dynamically pulls in more of *.paddle.com than
 // its cdn.paddle.com entry point, so those directives are host-wildcarded
 // per Paddle's own CSP guidance rather than enumerated.
 //

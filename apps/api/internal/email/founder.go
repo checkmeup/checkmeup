@@ -12,7 +12,7 @@ import (
 const founderAddress = "andrew@checkmeup.net"
 
 // FounderNotifier emails the founder directly for internal, non-tenant-facing
-// notifications — currently just in-app feature suggestions (EP-23, no public
+// notifications — currently just in-app feature suggestions (PRD feedback-form, no public
 // board: DocsView.vue's "Need help?" section). See Sender for the customer-
 // facing send methods.
 type FounderNotifier struct {

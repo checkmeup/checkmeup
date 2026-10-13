@@ -5,7 +5,7 @@ description: Audit apps/api/internal/server/server.go for routes with no rate-li
 
 # Rate-limit audit
 
-EP-08 established that every route gets rate-limit coverage — either its
+PRD security-hardening established that every route gets rate-limit coverage — either its
 own `.With(httprate...)` wrapper, or an enclosing `r.Group`/`r.Route`
 block's blanket `r.Use(httprate.Limit(...))` (chi propagates middleware
 down through nested route blocks even though `Route()` mounts a

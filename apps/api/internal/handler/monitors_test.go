@@ -2,7 +2,7 @@ package handler
 
 // Integration tests for the cron monitor handlers in monitors.go. Same
 // conventions as auth_test.go/billing_test.go/maintenance_test.go: real
-// Postgres (ADR-010), package handler so unexported request/response types
+// Postgres (ADR testing), package handler so unexported request/response types
 // and helpers (createCronMonitor et al. from maintenance_test.go,
 // withURLParam) can be reused directly.
 
@@ -171,7 +171,7 @@ func TestCreateCronMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("success with maxDurationMins set (US-3402)", func(t *testing.T) {
+	t.Run("success with maxDurationMins set (PRD zombie-job-detection)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, monitorH.CreateCronMonitor, u.access, createCronMonitorRequest{
 			Name: "Zombie-checked job", Schedule: "every 1h", MaxDurationMins: int32Ptr(30),
@@ -458,7 +458,7 @@ func TestUpdateCronMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("success sets maxDurationMins (US-3402)", func(t *testing.T) {
+	t.Run("success sets maxDurationMins (PRD zombie-job-detection)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createCronMonitor(t, monitorH, u.access, "Original name")
 
@@ -531,7 +531,7 @@ func TestPauseResumeCronMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("resume is blocked once active monitors are already at the plan limit (ADR-019)", func(t *testing.T) {
+	t.Run("resume is blocked once active monitors are already at the plan limit (ADR billing)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
 

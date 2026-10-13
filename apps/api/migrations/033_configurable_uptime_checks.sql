@@ -1,9 +1,9 @@
 -- +goose Up
 
--- EP-37 US-3701: request timeout is no longer a separate concept from
--- max_response_time_ms (EP-31) — it becomes the actual HTTP client
+-- PRD configurable-uptime-checks: request timeout is no longer a separate concept from
+-- max_response_time_ms (PRD assertion-checks) — it becomes the actual HTTP client
 -- deadline, so it must be required with a default matching today's
--- hardcoded 10s timeout (ADR-014), not optional.
+-- hardcoded 10s timeout (ADR workers), not optional.
 UPDATE uptime_monitors SET max_response_time_ms = 10000 WHERE max_response_time_ms IS NULL;
 ALTER TABLE uptime_monitors
     ALTER COLUMN max_response_time_ms SET NOT NULL,

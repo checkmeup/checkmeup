@@ -1,6 +1,6 @@
 package middleware_test
 
-// Integration tests for RequireAPIKey. Per ADR-010, these hit a real
+// Integration tests for RequireAPIKey. Per ADR testing, these hit a real
 // PostgreSQL instance (docker-compose db service locally, the CI service
 // container in GitHub Actions) — no DB mocks, to avoid hiding org_id-style
 // bugs. Keys are seeded directly via SQL rather than through the handler

@@ -1,6 +1,6 @@
 // Package rdap looks up domain registration data (registrar, expiry) via
 // RDAP (RFC 9082/9083) — the structured-JSON successor to WHOIS, used by the
-// domain expiry monitor (EP-29) the same way internal/webhook and
+// domain expiry monitor (PRD domain-expiry-monitoring) the same way internal/webhook and
 // internal/telegram wrap their respective external services.
 package rdap
 

@@ -2,7 +2,7 @@ package handler
 
 // Integration test for the Telegram bot's incoming webhook. The rest of the
 // old settings handlers (save/test Telegram/email) moved to
-// notification_channels_test.go — see EP-28 / ADR-023.
+// notification_channels_test.go — see PRD notification-channels / ADR alerting.
 
 import (
 	"bytes"

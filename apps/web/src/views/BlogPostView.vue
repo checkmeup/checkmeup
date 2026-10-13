@@ -25,9 +25,9 @@ async function loadPost() {
 // onServerPrefetch: awaited by @vue/server-renderer's renderToString before
 // it serializes HTML (see scripts/prerender.mts) — this is what gets a real
 // post's content into the prerendered page a crawler or a non-JS client
-// actually receives, same reasoning as ADR-037. onMounted covers the client
+// actually receives, same reasoning as ADR seo. onMounted covers the client
 // browser's own render pass (a fresh mount, not a hydration of the
-// prerendered HTML — ADR-037 again), and the watcher covers navigating
+// prerendered HTML — ADR seo again), and the watcher covers navigating
 // client-side from one post straight to another without a full reload.
 onServerPrefetch(loadPost)
 onMounted(loadPost)

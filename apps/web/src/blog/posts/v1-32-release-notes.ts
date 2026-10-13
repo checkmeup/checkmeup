@@ -3,7 +3,7 @@ import type { ContentBlock } from '../types'
 export const content: ContentBlock[] = [
   {
     type: 'p',
-    text: "An uptime monitor has always meant one specific thing here: a GET request, a 10-second timeout, and exactly HTTP 200 counted as healthy. That was a deliberate MVP simplification (ADR-014 called it out at the time, and even flagged the strict-200 rule as something to relax if it ever caused real false alarms) — and it did, eventually. A 201 from a create endpoint or a 204 from a delete endpoint is a perfectly healthy response that was quietly getting alerted on as down. v1.32 makes all three of those hardcoded assumptions configurable per monitor, defaulting to exactly today's behavior so nothing changes for a monitor that doesn't touch the new fields.",
+    text: "An uptime monitor has always meant one specific thing here: a GET request, a 10-second timeout, and exactly HTTP 200 counted as healthy. That was a deliberate MVP simplification (ADR workers called it out at the time, and even flagged the strict-200 rule as something to relax if it ever caused real false alarms) — and it did, eventually. A 201 from a create endpoint or a 204 from a delete endpoint is a perfectly healthy response that was quietly getting alerted on as down. v1.32 makes all three of those hardcoded assumptions configurable per monitor, defaulting to exactly today's behavior so nothing changes for a monitor that doesn't touch the new fields.",
   },
   {
     type: 'h3',

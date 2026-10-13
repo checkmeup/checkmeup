@@ -1,5 +1,5 @@
 // Package legal tracks the current version of the Terms of Service and
-// Privacy Policy. They're accepted together as a single version (EP-21) —
+// Privacy Policy. They're accepted together as a single version (PRD legal-pages) —
 // bump CurrentVersion whenever either document changes materially, which
 // re-prompts every user to accept again on next sign-in.
 package legal

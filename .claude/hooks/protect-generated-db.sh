@@ -1,6 +1,6 @@
 #!/bin/bash
 # PreToolUse guard for Edit|Write — apps/api/internal/db/ is sqlc-generated
-# code (ADR-004: no ORM, sqlc generates the query layer from
+# code (ADR database: no ORM, sqlc generates the query layer from
 # apps/api/queries/*.sql). Hand-editing it gets silently overwritten by the
 # next `sqlc generate` and masks the real place to make the change.
 INPUT=$(cat)

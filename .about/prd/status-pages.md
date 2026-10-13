@@ -48,11 +48,11 @@ A user publishes a page with their monitors in a few minutes and can send client
 - An unknown or deleted slug returns `404`.
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/unknown slug returns 404"
 - The grid layout puts monitors in a grid with incidents in a sidebar; it can be picked in the edit form.
-  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR-038: grid layout renders the sidebar/content-grid wrapper with monitors and incidents"
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR status-pages: grid layout renders the sidebar/content-grid wrapper with monitors and incidents"
   → test: apps/web/src/views/StatusPageEditView.test.ts "switches to the grid layout and submits it"
 - On a paid plan, hiding branding removes the "Powered by Checkmeup" footer and its links; on Hobby the option is disabled with an upgrade hint and the API refuses it.
-  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR-035: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links"
-  → test: apps/api/internal/handler/status_pages_test.go "TestUpdateStatusPage/ADR-035: hideBranding requires a paid plan"
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR status-pages: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links"
+  → test: apps/api/internal/handler/status_pages_test.go "TestUpdateStatusPage/ADR status-pages: hideBranding requires a paid plan"
   → test: apps/web/src/views/StatusPageEditView.test.ts "disables the hide-branding checkbox on Hobby and shows an upgrade hint"
 - Deleting a page asks for confirmation and leaves its monitors in place.
   → test: apps/web/src/views/StatusPageDetailView.test.ts "deletes the page and navigates back to the list on confirm"

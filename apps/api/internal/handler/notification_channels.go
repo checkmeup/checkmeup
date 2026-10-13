@@ -79,10 +79,10 @@ type notificationChannelResponse struct {
 }
 
 // toNotificationChannelResponse round-trips config verbatim, including a
-// webhook channel's signing secret. ADR-023 flags secrets in config JSONB
+// webhook channel's signing secret. ADR alerting flags secrets in config JSONB
 // as something that "should never round-trip unmasked" in general (Slack
 // webhook URLs, future OAuth tokens) — but a checkmeup-issued HMAC signing
-// secret is different from a bearer credential: US-1403 requires it stay
+// secret is different from a bearer credential: PRD webhook-alerts requires it stay
 // "viewable... in Settings" so the user can configure their endpoint to
 // verify X-Checkmeup-Signature. Masking it would break that requirement.
 func toNotificationChannelResponse(c db.NotificationChannel) notificationChannelResponse {
@@ -110,7 +110,7 @@ func formatDeliveryAt(t pgtype.Timestamptz) string {
 
 // validateChannelConfig checks config has the field(s) required for type.
 // Other notification_channel_type values get added (their own migration +
-// their own case here) when their epic actually ships (ADR-023).
+// their own case here) when their epic actually ships (ADR alerting).
 func validateChannelConfig(channelType string, config map[string]any) error {
 	switch channelType {
 	case "telegram":
@@ -135,13 +135,13 @@ func validateChannelConfig(channelType string, config map[string]any) error {
 	return nil
 }
 
-// e164Pattern matches E.164 phone numbers (US-1901): a leading +, no leading
+// e164Pattern matches E.164 phone numbers (PRD sms-alerts): a leading +, no leading
 // zero, up to 15 digits total.
 var e164Pattern = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 
-// validateSMSConfig enforces US-1901: a valid E.164 phone number, and an
+// validateSMSConfig enforces PRD sms-alerts: a valid E.164 phone number, and an
 // explicit opt-in checkbox — a TCPA-style regulatory requirement for
-// automated texts, not satisfied just by providing a number (ADR-029).
+// automated texts, not satisfied just by providing a number (ADR alerting).
 // consent is required true on every request that reaches here; callers that
 // want to carry an existing consent forward without re-prompting the user
 // (see resolveUpdatedChannelConfig, for an unchanged phone number on update)
@@ -188,7 +188,7 @@ func finalizeSMSConsent(config map[string]any) {
 	delete(config, "consent")
 }
 
-// validateWebhookURL enforces the US-1401 AC that a webhook URL must be
+// validateWebhookURL enforces the PRD webhook-alerts AC that a webhook URL must be
 // https://. Doesn't require config["secret"] — that's generated server-side
 // (see ensureWebhookSecret), never supplied by the client.
 func validateWebhookURL(config map[string]any) error {
@@ -203,9 +203,9 @@ func validateWebhookURL(config map[string]any) error {
 	return nil
 }
 
-// validateSlackURL enforces US-1701: the URL must match the Slack Incoming
+// validateSlackURL enforces PRD slack-alerts: the URL must match the Slack Incoming
 // Webhook pattern (https://hooks.slack.com/...). The URL itself is the
-// credential — no separate secret like the generic webhook channel (US-1401).
+// credential — no separate secret like the generic webhook channel (PRD webhook-alerts).
 func validateSlackURL(config map[string]any) error {
 	rawURL, _ := config["url"].(string)
 	rawURL = strings.TrimSpace(rawURL)
@@ -277,7 +277,7 @@ func (h *NotificationChannelHandler) checkNotificationChannelCreateLimit(w http.
 
 // checkNotificationChannelReenableLimit checks whether re-enabling a
 // disabled channel would push orgID over its plan's channel limit — same
-// rule as creating one (ADR-019), checked against the enabled-only count
+// rule as creating one (ADR billing), checked against the enabled-only count
 // since a disabled channel doesn't count against the limit at all.
 func (h *NotificationChannelHandler) checkNotificationChannelReenableLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
 	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
@@ -298,7 +298,7 @@ func (h *NotificationChannelHandler) checkNotificationChannelReenableLimit(w htt
 }
 
 // smsRequiresPaidPlan reports whether creating an sms channel should be
-// blocked because the plan has no monthly SMS credits (Hobby, per ADR-032)
+// blocked because the plan has no monthly SMS credits (Hobby, per ADR billing)
 // — no point saving a channel that can never send.
 func smsRequiresPaidPlan(channelType string, plan db.Plan) bool {
 	return channelType == "sms" && billing.GetLimits(plan).SMSCredits <= 0
@@ -427,7 +427,7 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 		return
 	}
 	// Re-enabling a previously-disabled channel grows the org's active
-	// channel count, same as creating one — gated the same way (ADR-019),
+	// channel count, same as creating one — gated the same way (ADR billing),
 	// checked against enabled-only count since a disabled channel doesn't
 	// count against the limit at all.
 	if channelIsBeingReenabled(enabled, existing) && !h.checkNotificationChannelReenableLimit(w, r, orgID) {
@@ -450,7 +450,7 @@ func (h *NotificationChannelHandler) UpdateNotificationChannel(w http.ResponseWr
 
 // carryForwardWebhookSecret preserves an existing webhook channel's signing
 // secret across an update — it can only change via RegenerateWebhookSecret
-// (US-1403), so a regular PATCH (editing the URL or name) always carries it
+// (PRD webhook-alerts), so a regular PATCH (editing the URL or name) always carries it
 // forward, ignoring anything the client sent for it.
 func carryForwardWebhookSecret(existing db.NotificationChannel, config map[string]any) map[string]any {
 	if config == nil {
@@ -463,7 +463,7 @@ func carryForwardWebhookSecret(existing db.NotificationChannel, config map[strin
 }
 
 // carryForwardSMSConsent preserves an existing SMS channel's consent
-// (ADR-029) across an update when the phone number is unchanged — consent is
+// (ADR alerting) across an update when the phone number is unchanged — consent is
 // tied to the number, not to the act of editing, so re-saving the same
 // number shouldn't force the user to re-check the opt-in box.
 func carryForwardSMSConsent(existing db.NotificationChannel, config map[string]any) map[string]any {
@@ -511,7 +511,7 @@ func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificati
 }
 
 // RegenerateWebhookSecret POST /api/v1/notification-channels/{id}/regenerate-secret
-// Rotates a webhook channel's HMAC signing secret in place (US-1403).
+// Rotates a webhook channel's HMAC signing secret in place (PRD webhook-alerts).
 // Existing requests already in flight keep validating against the old
 // secret until they're sent — only future sends use the new one, since
 // nothing is retroactively re-signed.
@@ -577,7 +577,7 @@ type testNotificationChannelRequest struct {
 
 // TestNotificationChannel POST /api/v1/notification-channels/test
 // Sends a test message using the given type+config without requiring it to
-// be saved first, so the UI can verify a channel before saving (US-2801).
+// be saved first, so the UI can verify a channel before saving (PRD notification-channels).
 func (h *NotificationChannelHandler) TestNotificationChannel(w http.ResponseWriter, r *http.Request) {
 	var req testNotificationChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -630,7 +630,7 @@ func (h *NotificationChannelHandler) checkSMSTestAllowed(w http.ResponseWriter, 
 // send, returning the error (if any) for sendTestNotification to report
 // against that type's error code. webhook is the only one with its own
 // pre-step (a throwaway signing secret — the real one doesn't exist until
-// the channel is saved, US-1401 — so the request shape on the wire still
+// the channel is saved, PRD webhook-alerts — so the request shape on the wire still
 // matches a real send even with nothing for the receiver to verify against).
 
 func (h *NotificationChannelHandler) sendTestTelegram(config map[string]any) error {

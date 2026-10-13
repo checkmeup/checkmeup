@@ -138,7 +138,7 @@ describe('CronMonitorDetailView', () => {
     expect(wrapper.text()).toContain('Execution log')
   })
 
-  it('shows a run duration for a completion ping with a matching start ping (US-3404)', () => {
+  it('shows a run duration for a completion ping with a matching start ping (PRD zombie-job-detection)', () => {
     const receivedAt = new Date(Date.now() - 5 * 60000).toISOString()
     const runStartedAt = new Date(Date.now() - 15 * 60000).toISOString()
     detailData.value = {

@@ -4,7 +4,7 @@ package handler
 // conventions as monitors_test.go (which these largely mirror, since SSL
 // monitors share the MonitorHandler/testMonitorHandler/createSSLMonitor
 // helpers already defined there and in maintenance_test.go): real Postgres
-// (ADR-010), package handler so unexported request/response types are
+// (ADR testing), package handler so unexported request/response types are
 // reused directly.
 
 import (

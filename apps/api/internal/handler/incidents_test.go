@@ -1,10 +1,10 @@
 package handler
 
 // Integration tests for the manual incident handlers in incidents.go
-// (EP-24). Same conventions as maintenance_test.go: real Postgres
-// (ADR-010), package handler so the unexported request/response types can
+// (PRD incidents). Same conventions as maintenance_test.go: real Postgres
+// (ADR testing), package handler so the unexported request/response types can
 // be reused directly. testIncidentHandler additionally returns the
-// maintenance handler so US-2405 (maintenance-overlap warning) can be
+// maintenance handler so PRD incidents (maintenance-overlap warning) can be
 // exercised end to end.
 
 import (
@@ -222,7 +222,7 @@ func TestCreateIncident(t *testing.T) {
 		}
 	})
 
-	t.Run("US-2405: declaring against a monitor under active maintenance warns unless confirmed", func(t *testing.T) {
+	t.Run("PRD incidents: declaring against a monitor under active maintenance warns unless confirmed", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mon := createUptimeMonitor(t, monitorH, u.access, "Under maintenance")
 		starts := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)

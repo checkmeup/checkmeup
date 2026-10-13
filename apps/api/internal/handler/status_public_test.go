@@ -1,8 +1,8 @@
 package handler
 
 // Integration tests for the public, unauthenticated /status/:slug page
-// (ADR-017: server-rendered Go html/template, no JS dependency). Same
-// conventions as the other *_test.go files: real Postgres (ADR-010),
+// (ADR status-pages: server-rendered Go html/template, no JS dependency). Same
+// conventions as the other *_test.go files: real Postgres (ADR testing),
 // package handler so unexported types/helpers are reused directly. Since
 // this handler renders HTML rather than JSON, assertions are substring
 // checks against the rendered body rather than JSON decoding.
@@ -99,7 +99,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("ADR-038: grid layout renders the sidebar/content-grid wrapper with monitors and incidents", func(t *testing.T) {
+	t.Run("ADR status-pages: grid layout renders the sidebar/content-grid wrapper with monitors and incidents", func(t *testing.T) {
 		incidentH := NewIncidentHandler(pool)
 		u := signUpTestUser(t, authH, pool)
 		mon := createUptimeMonitor(t, monitorH, u.access, "API")
@@ -139,7 +139,7 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("ADR-035: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links", func(t *testing.T) {
+	t.Run("ADR status-pages: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		mustExec(t, pool, "UPDATE orgs SET plan = 'solo' WHERE id = $1", u.resp.OrgID)
 		slug := uniqueSlug(t)
@@ -407,7 +407,7 @@ func TestBuild90DayBar(t *testing.T) {
 	})
 }
 
-// ─── badges (EP-30) ──────────────────────────────────────────────────────────
+// ─── badges (PRD status-badges) ──────────────────────────────────────────────────────────
 
 func doPageBadge(publicH *StatusPublicHandler, slug string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, "/status/"+slug+"/badge.svg", nil)
@@ -461,7 +461,7 @@ func TestStatusPublicServePageBadge(t *testing.T) {
 			t.Fatalf("want SVG content type, got %q", ct)
 		}
 		if cc := w.Header().Get("Cache-Control"); cc != "max-age=60" {
-			t.Fatalf("want short cache TTL (US-3004), got %q", cc)
+			t.Fatalf("want short cache TTL (PRD status-badges), got %q", cc)
 		}
 		body := w.Body.String()
 		if !strings.Contains(body, "operational") {

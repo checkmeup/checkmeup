@@ -185,8 +185,8 @@ func validateURL(raw string) error {
 	return nil
 }
 
-// validateKeyword allows an empty keyword (US-1105: clearing it disables the
-// check) but enforces the 1-500 char bound from US-1101 when one is set.
+// validateKeyword allows an empty keyword (PRD keyword-monitoring: clearing it disables the
+// check) but enforces the 1-500 char bound from PRD keyword-monitoring when one is set.
 func validateKeyword(raw string) error {
 	if raw == "" {
 		return nil

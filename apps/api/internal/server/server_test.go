@@ -1,7 +1,7 @@
 package server
 
 // Tests for server.go. The router-wiring tests (TestRoutes_*, TestHandle*)
-// hit a real PostgreSQL instance per ADR-010 — DATABASE_URL must point at a
+// hit a real PostgreSQL instance per ADR testing — DATABASE_URL must point at a
 // reachable Postgres with migrations applied (docker-compose db service
 // locally, the CI service container in GitHub Actions) — because New()
 // constructs every handler in the tree, several of which take a *pgxpool.Pool.

@@ -11,7 +11,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "ADR-003 has said since the very first auth commit that the httpOnly session cookie is the only auth mechanism, full stop — no Authorization header, ever. That rule exists for good reasons specific to browsers: an httpOnly cookie can't be read by injected JavaScript, and SameSite=Strict stops another site from riding a victim's ambient session. A CI job has neither a cookie jar nor a DOM for either of those threats to exploit, but the rule as originally written didn't carve out an exception — it just said no. Rather than quietly reinterpreting a hard rule because it was inconvenient, this got an actual amendment (ADR-028): the cookie-only rule is now scoped to browser session auth specifically, and a second, independent mechanism — a dedicated X-API-Key header — exists for everything else. The two are kept deliberately distinct in code, not just in intent, down to using separate request-context keys internally, so a request authenticated one way can never be mistaken for the other.",
+    text: "ADR auth has said since the very first auth commit that the httpOnly session cookie is the only auth mechanism, full stop — no Authorization header, ever. That rule exists for good reasons specific to browsers: an httpOnly cookie can't be read by injected JavaScript, and SameSite=Strict stops another site from riding a victim's ambient session. A CI job has neither a cookie jar nor a DOM for either of those threats to exploit, but the rule as originally written didn't carve out an exception — it just said no. Rather than quietly reinterpreting a hard rule because it was inconvenient, this got an actual amendment (ADR auth): the cookie-only rule is now scoped to browser session auth specifically, and a second, independent mechanism — a dedicated X-API-Key header — exists for everything else. The two are kept deliberately distinct in code, not just in intent, down to using separate request-context keys internally, so a request authenticated one way can never be mistaken for the other.",
   },
   {
     type: 'p',
@@ -47,7 +47,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "One thing this release deliberately didn't build: per-key scope (read-only vs. read-write). ADR-028 describes it, but every route under /api/v1/public is a GET today, so there was nothing to scope yet — adding a schema column with no enforcement behind it seemed worse than adding it later when a write endpoint actually exists. It's tracked in the decision backlog specifically so it isn't forgotten and quietly assumed-done by whoever builds that write endpoint.",
+    text: "One thing this release deliberately didn't build: per-key scope (read-only vs. read-write). ADR auth describes it, but every route under /api/v1/public is a GET today, so there was nothing to scope yet — adding a schema column with no enforcement behind it seemed worse than adding it later when a write endpoint actually exists. It's tracked in the decision backlog specifically so it isn't forgotten and quietly assumed-done by whoever builds that write endpoint.",
   },
   {
     type: 'h2',

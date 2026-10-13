@@ -27,7 +27,7 @@ import (
 )
 
 // planCycle is what a Paddle price ID resolves to — a plan tier and its
-// billing cycle (EP-27). "monthly" is the only cycle that existed before
+// billing cycle (PRD annual-billing). "monthly" is the only cycle that existed before
 // annual billing; it's also the zero-value/default for Hobby, which has none.
 type planCycle struct {
 	Plan  db.Plan
@@ -80,7 +80,7 @@ func NewBillingHandler(cfg *config.Config, pool *pgxpool.Pool) *BillingHandler {
 }
 
 // currentSmsCreditsUsed returns the used-this-month SMS credit count,
-// applying the lazy monthly reset (ADR-032/US-1907, see GetBillingInfo)
+// applying the lazy monthly reset (ADR billing/PRD sms-alerts, see GetBillingInfo)
 // early if the reset date has already passed.
 func currentSmsCreditsUsed(info db.GetOrgBillingInfoRow) int32 {
 	if info.SmsCreditsResetAt.Valid && !info.SmsCreditsResetAt.Time.After(time.Now()) {
@@ -130,7 +130,7 @@ func (h *BillingHandler) GetBillingInfo(w http.ResponseWriter, r *http.Request) 
 
 	limits := billing.GetLimits(info.Plan)
 
-	// The monthly reset (ADR-032/US-1907) is only physically applied lazily,
+	// The monthly reset (ADR billing/PRD sms-alerts) is only physically applied lazily,
 	// at the next SMS send (worker.go's ConsumeSMSCredit) — so a GET here
 	// right after the reset date passes, with nothing sent yet this month,
 	// would otherwise still show last month's stale used count. Mirror the
@@ -517,7 +517,7 @@ func (h *BillingHandler) applyPaddlePlanUpdate(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Auto-pause/disable resources beyond the new plan's limits (ADR-019) —
+	// Auto-pause/disable resources beyond the new plan's limits (ADR billing) —
 	// newest-created first, oldest stays active. Run unconditionally rather
 	// than only on a detected downgrade: it's a no-op when already under the
 	// limit, and this avoids needing to diff old vs. new plan here. Logged

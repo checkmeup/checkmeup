@@ -1,7 +1,7 @@
 package handler
 
 // Integration tests for the status page admin handlers. Same conventions as
-// the other *_test.go files in this package: real Postgres (ADR-010),
+// the other *_test.go files in this package: real Postgres (ADR testing),
 // package handler so unexported request/response types and the
 // MonitorHandler/createCronMonitor-style helpers (from monitors_test.go,
 // maintenance_test.go) are reused directly.
@@ -248,7 +248,7 @@ func TestCreateStatusPage(t *testing.T) {
 		}
 	})
 
-	t.Run("layout can be set to grid on create (ADR-038)", func(t *testing.T) {
+	t.Run("layout can be set to grid on create (ADR status-pages)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{
 			Slug: uniqueSlug(t), Title: "Grid Co", Layout: "grid",
@@ -439,7 +439,7 @@ func TestUpdateStatusPage(t *testing.T) {
 		}
 	})
 
-	t.Run("sets layout to grid (ADR-038)", func(t *testing.T) {
+	t.Run("sets layout to grid (ADR status-pages)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: uniqueSlug(t), Title: "x"})
 		page := decodeBody[statusPageResponse](t, createW)
@@ -469,7 +469,7 @@ func TestUpdateStatusPage(t *testing.T) {
 		}
 	})
 
-	t.Run("ADR-035: hideBranding requires a paid plan", func(t *testing.T) {
+	t.Run("ADR status-pages: hideBranding requires a paid plan", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: uniqueSlug(t), Title: "x"})
 		page := decodeBody[statusPageResponse](t, createW)

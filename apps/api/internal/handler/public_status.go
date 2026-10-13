@@ -17,8 +17,8 @@ import (
 
 // monitorStatusResponse is the public API's read-only status projection —
 // intentionally narrower than the session-authenticated detail responses in
-// monitors.go/ssl_monitors.go/etc: this is an external contract (ADR-028)
-// versioned like any other public endpoint (ADR-007), so it only carries
+// monitors.go/ssl_monitors.go/etc: this is an external contract (ADR auth)
+// versioned like any other public endpoint (ADR api), so it only carries
 // what a third-party integration (CI dashboard, status LED) actually needs.
 type monitorStatusResponse struct {
 	ID               string            `json:"id"`

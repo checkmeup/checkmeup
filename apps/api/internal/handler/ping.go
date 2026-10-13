@@ -27,7 +27,7 @@ import (
 )
 
 // Caps on ping query-string metadata (e.g. ?build=142&state=success from a
-// CI job) so a chatty caller can't bloat cron_pings storage — see ADR-015's
+// CI job) so a chatty caller can't bloat cron_pings storage — see ADR limits's
 // retention math, which assumed near-empty rows.
 const (
 	maxPingMetadataPairs    = 20
@@ -63,10 +63,10 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	sourceIP := realIP(r)
 
-	// Close a matching open run (ADR-039/US-3401) before recording the ping,
+	// Close a matching open run (ADR workers/PRD zombie-job-detection) before recording the ping,
 	// so run_started_at can be stamped on the same row. ErrNoRows just means
 	// this monitor never sent a start ping (or this completion has none to
-	// match) — accepted as-is, not an error (US-3401's opt-in requirement).
+	// match) — accepted as-is, not an error (PRD zombie-job-detection's opt-in requirement).
 	var runStartedAt pgtype.Timestamptz
 	closedRun, closeErr := h.queries.CompleteCronRun(r.Context(), monitor.ID)
 	if closeErr == nil {
@@ -102,7 +102,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		h.sendCronRecoveryAlert(r.Context(), monitor, now)
 	}
 
-	// Zombie recovery (US-3403): this completion closed a run that had
+	// Zombie recovery (PRD zombie-job-detection): this completion closed a run that had
 	// already crossed max_duration_mins and fired a stuck-run alert.
 	if closeErr == nil && closedRun.AlertedAt.Valid {
 		h.sendStuckRunRecoveryAlert(r.Context(), monitor, closedRun, "completed")
@@ -111,7 +111,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// ReceivePingStart handles GET /ping/{token}/start (ADR-039, US-3401).
+// ReceivePingStart handles GET /ping/{token}/start (ADR workers, PRD zombie-job-detection).
 // Always returns 200, same "must never fail the caller" rule as the
 // completion ping. Deliberately does not touch last_ping_at/next_ping_at/
 // status — those stay owned entirely by the completion ping, so a monitor
@@ -125,7 +125,7 @@ func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Supersede (US-3403): an already-open run means this start ping is
+	// Supersede (PRD zombie-job-detection): an already-open run means this start ping is
 	// superseding it. If that old run had already fired a stuck-run alert,
 	// resolve it now rather than waiting on a completion ping that may
 	// never arrive.
@@ -143,7 +143,7 @@ func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
 }
 
 // sendStuckRunRecoveryAlert dispatches a recovery alert for a cron run that
-// had previously crossed max_duration_mins and been flagged stuck (US-3403).
+// had previously crossed max_duration_mins and been flagged stuck (PRD zombie-job-detection).
 // reason distinguishes whether it finally completed or was superseded by a
 // new start ping — either way the stuck state is no longer current.
 func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.CronMonitor, run db.CronRun, reason string) {
@@ -176,8 +176,8 @@ func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.
 // gated by that setting (matches the uptime-monitor worker's pattern).
 // Routed through worker.DispatchAlert (not org.TelegramChatID/AlertEmail
 // directly) so cron recovery alerts respect the monitor's attached
-// notification_channels — including webhook (EP-14) — same as every other
-// alert path; this used to be a special case still wired to the pre-EP-28
+// notification_channels — including webhook (PRD webhook-alerts) — same as every other
+// alert path; this used to be a special case still wired to the pre-PRD notification-channels
 // org-level fields.
 func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.CronMonitor, now time.Time) {
 	inc, err := h.queries.ResolveLatestCronIncident(ctx, monitor.ID)

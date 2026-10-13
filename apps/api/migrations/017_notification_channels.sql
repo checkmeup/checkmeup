@@ -2,7 +2,7 @@
 
 -- Only the two types with working delivery today get an enum value now —
 -- webhook/Slack/Teams/etc. each add their own value via their own migration
--- when that epic actually ships (EP-28, ADR-023), not reserved upfront.
+-- when that epic actually ships (PRD notification-channels, ADR alerting), not reserved upfront.
 CREATE TYPE notification_channel_type AS ENUM ('telegram', 'email');
 
 CREATE TABLE notification_channels (
@@ -30,7 +30,7 @@ CREATE TABLE monitor_notification_channels (
 CREATE INDEX idx_notification_channels_org      ON notification_channels(org_id);
 CREATE INDEX idx_monitor_notification_channels  ON monitor_notification_channels(monitor_type, monitor_id);
 
--- ─── Backfill (US-2804) ────────────────────────────────────────────────────
+-- ─── Backfill (PRD notification-channels) ────────────────────────────────────────────────────
 -- Migrate existing org-level telegram_chat_id / alert_email into real
 -- channel rows, then attach those channels to every monitor that currently
 -- has alerts_enabled = true, so dispatch behavior is unchanged at cutover.
@@ -65,7 +65,7 @@ WHERE sm.alerts_enabled;
 
 -- Note: orgs.telegram_chat_id / alert_email / email_alerts_enabled are
 -- intentionally NOT dropped here — kept until the channel-based dispatch
--- path (worker.go) has run in production, per ADR-023's migration path.
+-- path (worker.go) has run in production, per ADR alerting's migration path.
 
 -- +goose Down
 

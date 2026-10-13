@@ -65,7 +65,7 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--text` | `#F2F5F3` | Body text |
 | `--text-strong` | `#F2F5F3` | Headings, emphasis — same value as `--text` in this palette |
 
-**Neutrals — light** (`:root[data-theme='light']` override, see [EP-10](../stories/ep-10-theme.md))
+**Neutrals — light** (`:root[data-theme='light']` override, see [PRD theme](../../.about/prd/theme.md))
 
 | Token | Value | Use |
 |---|---|---|
@@ -106,7 +106,7 @@ accent** below is the one exception: it resolves to a different green step per t
 |---|---|---|---|
 | `--nav-bg` | `rgba(10,15,13,0.88)` | `rgba(251,253,252,0.88)` | Sticky nav background under `backdrop-filter: blur(...)` |
 
-**CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." box; see [EP-10](../stories/ep-10-theme.md))
+**CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." box; see [PRD theme](../../.about/prd/theme.md))
 
 A flat `--accent-wash-dim` fill with a `--cta-border` outline, same both themes — no
 separate CTA-only text tokens needed, since heading/body just use the normal
@@ -117,7 +117,7 @@ separate CTA-only text tokens needed, since heading/body just use the normal
 | `--cta-border` | `rgba(29,158,117,0.25)` | Box border |
 
 This replaces the earlier dark-gradient-in-dark-mode / light-mint-in-light-mode treatment
-(see `../reports/2026-06.md`, EP-10 entry, for why a flat `--bg`/`--surface` fill didn't work
+(see `../reports/2026-06.md`, PRD theme entry, for why a flat `--bg`/`--surface` fill didn't work
 there) — the flat wash reads fine in both themes without a per-theme gradient swap.
 
 ## Typography
@@ -128,4 +128,4 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   `style.css` — every `font-mono` utility class (timestamps, ping URLs, uptime stats)
   picks it up automatically. Falls back to `ui-monospace`/`SFMono-Regular`.
 
-Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates and is out of scope for EP-10's theme toggle. See EP-10's epic note for why.
+Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates and is out of scope for PRD theme's theme toggle. See PRD theme's epic note for why.

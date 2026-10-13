@@ -24,7 +24,7 @@ RETURNING *;
 DELETE FROM notification_channels WHERE id = $1 AND org_id = $2;
 
 -- name: UpdateNotificationChannelDelivery :exec
--- Records the outcome of the most recent send attempt (US-1404). No org_id
+-- Records the outcome of the most recent send attempt (PRD webhook-alerts). No org_id
 -- filter — only called from the worker, which already scoped the channel via
 -- ListMonitorNotificationChannels, not from a user-facing handler.
 UPDATE notification_channels
@@ -33,7 +33,7 @@ WHERE id = $1;
 
 -- name: UpdateNotificationChannelConfig :one
 -- Used for regenerating a webhook's signing secret in place, without
--- touching name/enabled (US-1403) — UpdateNotificationChannel always
+-- touching name/enabled (PRD webhook-alerts) — UpdateNotificationChannel always
 -- requires both, which would force the regenerate endpoint to re-send them.
 UPDATE notification_channels
 SET config = $3, updated_at = NOW()
@@ -57,7 +57,7 @@ DELETE FROM monitor_notification_channels WHERE monitor_type = $1 AND monitor_id
 INSERT INTO monitor_notification_channels (channel_id, monitor_type, monitor_id)
 VALUES ($1, $2, $3);
 
--- ─── fallback (ADR-023) ───────────────────────────────────────────────────────
+-- ─── fallback (ADR alerting) ───────────────────────────────────────────────────────
 
 -- name: ListOrgUserEmails :many
 SELECT email FROM users WHERE org_id = $1;

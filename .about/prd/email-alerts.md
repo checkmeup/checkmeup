@@ -29,13 +29,13 @@ An email alert arrives within one check cycle with the monitor name and "DOWN" i
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creates an email channel"
 - "Send test email" sends a test alert; without a Resend key in development it succeeds without sending.
   → test: apps/api/internal/email/email_test.go "TestSendTestAlertEmail"
-  → test: apps/api/internal/handler/notification_channels_test.go "TestTestNotificationChannel/email with no Resend API key configured no-ops successfully (ADR-012 dev behavior)"
+  → test: apps/api/internal/handler/notification_channels_test.go "TestTestNotificationChannel/email with no Resend API key configured no-ops successfully (ADR alerting dev behavior)"
 - A down email names the monitor, its type, the reason and the time, with the monitor name and "DOWN" in the subject; a recovery email names the monitor and the downtime.
   → test: apps/api/internal/email/email_test.go "TestSendAlertEmail"
 - An email channel still delivers when another channel on the same monitor fails.
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/email channel succeeds (no-op-safe in dev) even when a telegram channel on the same monitor fails"
 - A monitor with no channel, or whose channels all failed, emails every user in the org.
-  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/no channel attached falls back to emailing every org user (ADR-023)"
-  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/every attached channel failing falls back to org user email (generalized ADR-032 fallback)"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/no channel attached falls back to emailing every org user (ADR alerting)"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/every attached channel failing falls back to org user email (generalized ADR billing fallback)"
 - Text from a monitored service (a DNS answer, say) is escaped in emails, not injected as HTML.
   → test: apps/api/internal/worker/worker_dns_test.go "TestBuildDNSDownAlert/HTML in a DNS response is escaped in Telegram/email, not injected raw"

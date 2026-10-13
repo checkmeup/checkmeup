@@ -55,17 +55,17 @@ def check_no_authorization_header(src_dir: str, exclude_dir: str):
 
 def run_checks():
     findings = {}
-    findings["ADR-001 (no broker/queue)"] = check_go_mod_deps(
+    findings["ADR workers (no broker/queue)"] = check_go_mod_deps(
         "apps/api/go.mod", BROKER_PATTERN, "go.mod dependency"
     )
-    findings["ADR-004 (no ORM)"] = check_go_mod_deps("apps/api/go.mod", ORM_PATTERN, "go.mod dependency")
-    findings["ADR-026 (Paddle only, no Stripe/LemonSqueezy)"] = check_go_mod_deps(
+    findings["ADR database (no ORM)"] = check_go_mod_deps("apps/api/go.mod", ORM_PATTERN, "go.mod dependency")
+    findings["ADR billing (Paddle only, no Stripe/LemonSqueezy)"] = check_go_mod_deps(
         "apps/api/go.mod", PAYMENT_PROVIDER_PATTERN, "go.mod dependency"
     ) + check_package_json_deps("apps/web/package.json", PAYMENT_PROVIDER_PATTERN, "package.json dependency")
     findings["auth.init() must use plain fetch, not api.* (401-interceptor Don't rule)"] = (
         check_auth_init_uses_fetch("apps/web/src/stores/auth.ts")
     )
-    findings["ADR-003 (no Authorization header for browser session auth)"] = check_no_authorization_header(
+    findings["ADR auth (no Authorization header for browser session auth)"] = check_no_authorization_header(
         "apps/web/src", "blog"
     )
     return findings

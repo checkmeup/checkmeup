@@ -31,8 +31,8 @@ make build  # production build
 | ------------------------------------------------------------------ | ----------------------------------------------------- |
 | [docs/INDEX.md](docs/INDEX.md)                                     | Docs navigation cache — folder roles, load order      |
 | [docs/roadmap.md](docs/roadmap.md)                                 | Current priorities — Now / Next / Later               |
-| [docs/stories/backlog.md](docs/stories/backlog.md)                 | Epics and user stories                                |
-| [docs/decisions/](docs/decisions/)                                 | Architecture decision records (ADRs)                  |
+| [.about/prd/](.about/prd/)                                         | Feature requirements (PRDs)                           |
+| [.about/adr/](.about/adr/)                                         | Decisions (ADRs), one file per subject                |
 | [docs/reference/design.md](docs/reference/design.md)               | Design tokens — colors, logo usage                    |
 | [docs/reference/deploy.md](docs/reference/deploy.md)               | Deployment guide                                      |
 | [docs/reference/billing-setup.md](docs/reference/billing-setup.md) | Paddle activation checklist                           |

@@ -10,7 +10,7 @@ import (
 
 // SettingsHandler is now just the Telegram bot's incoming webhook (used for
 // the /start chat-ID discovery flow). Saving/testing alert channels moved to
-// NotificationChannelHandler — see EP-28 / ADR-023.
+// NotificationChannelHandler — see PRD notification-channels / ADR alerting.
 type SettingsHandler struct {
 	cfg *config.Config
 	tg  *telegram.Client

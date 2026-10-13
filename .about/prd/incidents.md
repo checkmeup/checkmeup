@@ -33,7 +33,7 @@ A user declares an incident and posts updates, and visitors see each update on t
 - Another org's monitor can't be attached.
   → test: apps/api/internal/handler/incidents_test.go "TestCreateIncident/a monitor belonging to another org is rejected (tenant isolation)"
 - Declaring on a monitor under active maintenance warns first and goes ahead only when confirmed.
-  → test: apps/api/internal/handler/incidents_test.go "TestCreateIncident/US-2405: declaring against a monitor under active maintenance warns unless confirmed"
+  → test: apps/api/internal/handler/incidents_test.go "TestCreateIncident/PRD incidents: declaring against a monitor under active maintenance warns unless confirmed"
   → test: apps/web/src/views/IncidentCreateView.test.ts "shows a maintenance-overlap warning and declares anyway on confirm"
 - Each update appends a message and moves the status on, through to resolved; the form offers the next status by default and disappears once resolved.
   → test: apps/api/internal/handler/incidents_test.go "TestPostIncidentUpdate/success appends an update and advances status through to resolved"

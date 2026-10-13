@@ -7,7 +7,7 @@ export interface NotificationChannel {
   type: NotificationChannelType
   name: string
   // sms config: { phone_number: '+972...', consent_at: '2026-...' } —
-  // consent_at is set server-side once, never re-sent by the client (ADR-029)
+  // consent_at is set server-side once, never re-sent by the client (ADR alerting)
   config: Record<string, string>
   enabled: boolean
   createdAt: string

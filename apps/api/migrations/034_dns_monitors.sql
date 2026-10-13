@@ -1,11 +1,11 @@
 -- +goose Up
 
--- EP-39: DNS record monitoring. expected_value is either user-pinned at
+-- PRD dns-monitoring: DNS record monitoring. expected_value is either user-pinned at
 -- creation or left NULL and auto-captured from the first successful lookup
 -- (baseline mode) — both modes then compare identically on every later
 -- check. dns_checks.failure_reason is set only for a lookup error
 -- (NXDOMAIN/SERVFAIL/timeout); it stays NULL for a value mismatch, so the
--- two failure kinds stay distinguishable (US-3902).
+-- two failure kinds stay distinguishable (PRD dns-monitoring).
 CREATE TYPE dns_record_type AS ENUM ('A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS');
 
 CREATE TABLE dns_monitors (

@@ -2,13 +2,13 @@ package billing
 
 // Unit tests for plans.go. No DB, no network — every function here is a
 // pure function of (plan, current) over the package-level planLimits map,
-// so these are plain table-driven tests, no ADR-010 integration setup
+// so these are plain table-driven tests, no ADR testing integration setup
 // needed.
 //
 // package billing (not billing_test): the "-1 = unlimited" sentinel
 // documented on Limits.MonitorTotal/StatusPages isn't wired to any real
 // plan today (Hobby/Solo/Startup/Enterprise all have finite limits per
-// ADR-019's pricing table), so there's no db.Plan value that exercises it.
+// ADR billing's pricing table), so there's no db.Plan value that exercises it.
 // Being in-package lets the unlimited-sentinel tests temporarily add a
 // synthetic plan to planLimits (restored via t.Cleanup) to verify that
 // branch actually works, rather than leaving it permanently untested until

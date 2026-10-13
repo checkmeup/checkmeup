@@ -128,7 +128,7 @@ func validatePort(port int32) error {
 
 // parseExpectedState defaults to "open" for empty/invalid input — a port
 // monitor is a normal uptime-style check unless the user opts into watching
-// for unexpected exposure (US-3301).
+// for unexpected exposure (PRD port-monitoring).
 func parseExpectedState(raw string) db.PortExpectedState {
 	if raw == string(db.PortExpectedStateClosed) {
 		return db.PortExpectedStateClosed
@@ -222,7 +222,7 @@ func (h *MonitorHandler) respondPortMonitorWriteError(w http.ResponseWriter, err
 
 // attachPortMonitorChannels attaches the requested channels to a newly
 // created monitor, or falls back to every enabled org channel when none
-// were explicitly selected (US-2802).
+// were explicitly selected (PRD notification-channels).
 func (h *MonitorHandler) attachPortMonitorChannels(r *http.Request, orgID, monitorID uuid.UUID, channelIDs []string) error {
 	if len(channelIDs) > 0 {
 		return h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, channelIDs)

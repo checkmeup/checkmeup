@@ -371,7 +371,7 @@ func TestUpdateDNSMonitor(t *testing.T) {
 			t.Fatalf("want updated expected value, got %v", resp.ExpectedValue)
 		}
 		if resp.BaselineCaptured {
-			t.Fatal("want baselineCaptured false after an explicit edit (US-3905)")
+			t.Fatal("want baselineCaptured false after an explicit edit (PRD dns-monitoring)")
 		}
 		if resp.AlertsEnabled {
 			t.Fatal("want alertsEnabled false")

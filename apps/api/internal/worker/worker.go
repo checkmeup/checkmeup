@@ -60,7 +60,7 @@ type Notifiers struct {
 
 // Run starts the background worker loops. Returns when ctx is cancelled.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
-//   - Every 24 h: ping/check/incident retention cleanup (ADR-015)
+//   - Every 24 h: ping/check/incident retention cleanup (ADR limits)
 func Run(ctx context.Context, n Notifiers) {
 	ticker := time.NewTicker(30 * time.Second)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
@@ -102,14 +102,14 @@ type AlertMessage struct {
 	Slack *slack.Message
 	// SMS is "" for call sites that haven't been updated — sendSMSAlert skips
 	// the sms channel type in that case rather than sending an empty text.
-	// Always pre-truncated to one SMS segment via TruncateSMS (US-1902/1903).
+	// Always pre-truncated to one SMS segment via TruncateSMS (PRD sms-alerts/1903).
 	SMS string
 }
 
 // MonitorRef identifies the monitor an alert is for. Bundled into one value
 // (rather than two separate params) to keep DispatchAlert's parameter count
 // down — every call site already has type+ID as a pair, matching the
-// polymorphic monitor_type/monitor_id pattern used at the DB layer (ADR-023).
+// polymorphic monitor_type/monitor_id pattern used at the DB layer (ADR alerting).
 type MonitorRef struct {
 	Type string
 	ID   uuid.UUID
@@ -118,10 +118,10 @@ type MonitorRef struct {
 // DispatchAlert sends msg to every channel attached to the monitor, logging
 // per-channel failures without aborting the others. If the monitor has no
 // attached, enabled channels — or every attached channel failed to deliver
-// (wrong number, exhausted SMS credit once ADR-032 ships, provider outage,
+// (wrong number, exhausted SMS credit once ADR billing ships, provider outage,
 // etc.) — it falls back to emailing every user in the org instead of staying
-// silent (ADR-023) — a monitor always has somewhere to send an alert.
-// Reports whether the alert was delivered at all — per ADR-016 / US-2805,
+// silent (ADR alerting) — a monitor always has somewhere to send an alert.
+// Reports whether the alert was delivered at all — per ADR alerting / PRD notification-channels,
 // the per-incident alert cap counts one notification event regardless of how
 // many channels (or the fallback) it went out on.
 func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon MonitorRef, msg AlertMessage) bool {
@@ -180,7 +180,7 @@ func sendToChannel(ctx context.Context, n Notifiers, c db.NotificationChannel, m
 }
 
 // sendWebhookAlert POSTs msg.Webhook to the channel's configured URL and
-// records the delivery outcome on the channel row (US-1404) regardless of
+// records the delivery outcome on the channel row (PRD webhook-alerts) regardless of
 // success — "Last delivery: failed, 500, 2 min ago" needs a result even
 // when nothing else attached to the monitor succeeded either.
 func sendWebhookAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
@@ -218,7 +218,7 @@ func sendWebhookAlert(ctx context.Context, n Notifiers, c db.NotificationChannel
 }
 
 // sendSlackAlert POSTs msg.Slack to the channel's configured Incoming Webhook
-// URL and records the delivery outcome on the channel row (US-1704), mirroring
+// URL and records the delivery outcome on the channel row (PRD slack-alerts), mirroring
 // sendWebhookAlert's fire-and-forget, no-retry pattern.
 func sendSlackAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
 	if msg.Slack == nil {
@@ -253,7 +253,7 @@ func sendSlackAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, 
 	return true
 }
 
-// consumeSMSCredit enforces the org's monthly SMS credit quota (ADR-032)
+// consumeSMSCredit enforces the org's monthly SMS credit quota (ADR billing)
 // before a send is attempted — 1 credit per send in this simplified,
 // unweighted pass (no per-destination cost band yet). Returns false and
 // records a delivery failure if the org has no credit left this month,
@@ -269,7 +269,7 @@ func consumeSMSCredit(ctx context.Context, n Notifiers, c db.NotificationChannel
 	limit := billing.GetLimits(plan).SMSCredits
 
 	// CreditCost is hardcoded to 1 in this pass (no per-destination cost
-	// band yet — ADR-032's "Implementation note"); a future weighted-cost
+	// band yet — ADR billing's "Implementation note"); a future weighted-cost
 	// lookup would compute this from the phone number's E.164 calling code
 	// instead.
 	_, err = n.Queries.ConsumeSMSCredit(ctx, db.ConsumeSMSCreditParams{ID: c.OrgID, CreditCost: 1, CreditLimit: int32(limit)})
@@ -292,10 +292,10 @@ func consumeSMSCredit(ctx context.Context, n Notifiers, c db.NotificationChannel
 }
 
 // sendSMSAlert texts msg.SMS to the channel's configured phone number via
-// Twilio and records the delivery outcome on the channel row (US-1904),
+// Twilio and records the delivery outcome on the channel row (PRD sms-alerts),
 // mirroring sendWebhookAlert/sendSlackAlert's fire-and-forget, no-retry
 // pattern. Opt-out compliance is handled entirely by the in-app channel
-// toggle, not by anything here (ADR-029) — a bounce from a number that
+// toggle, not by anything here (ADR alerting) — a bounce from a number that
 // opted out via STOP on a two-way sender just comes back as an ordinary
 // delivery failure below, same as a carrier rejection or invalid number.
 func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
@@ -336,7 +336,7 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 }
 
 // dispatchFallbackEmail emails every user in the org when a monitor has no
-// attached channels. Every org has exactly one user today (EP-12 team
+// attached channels. Every org has exactly one user today (PRD team-management team
 // invites aren't built), but this is written against org_id rather than a
 // single user so it doesn't need touching when that ships.
 func dispatchFallbackEmail(ctx context.Context, n Notifiers, orgID uuid.UUID, msg AlertMessage, monitorID uuid.UUID) bool {
@@ -425,7 +425,7 @@ func FormatDuration(d time.Duration) string {
 }
 
 // smsSegmentLimit is the length of a single GSM-7 SMS segment. Messages
-// longer than this are truncated (US-1902/US-1903) rather than silently
+// longer than this are truncated (PRD sms-alerts) rather than silently
 // split across extra segments, which would multiply per-message cost.
 const smsSegmentLimit = 160
 

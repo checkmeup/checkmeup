@@ -74,7 +74,7 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	}
 }
 
-// checkStuckCronRuns implements EP-34 US-3403 — detecting a cron run that
+// checkStuckCronRuns implements PRD zombie-job-detection — detecting a cron run that
 // started but has exceeded its monitor's max_duration_mins without a
 // completion ping ("zombie job"). Distinct from checkOverdue: this fires on
 // an in-progress run exceeding a duration budget, not a missed ping.
@@ -101,7 +101,7 @@ func checkStuckCronRuns(ctx context.Context, n Notifiers) {
 }
 
 // processStuckCronRun marks the run alerted (so the next tick doesn't
-// re-fire — "once per run" per US-3403) before dispatching, mirroring
+// re-fire — "once per run" per PRD zombie-job-detection) before dispatching, mirroring
 // processOverdueMonitor's mark-then-alert order.
 func processStuckCronRun(ctx context.Context, n Notifiers, run db.ListStuckCronRunsRow) {
 	if _, err := n.Queries.MarkCronRunAlerted(ctx, run.ID); err != nil {

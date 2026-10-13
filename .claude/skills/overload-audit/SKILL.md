@@ -86,7 +86,7 @@ signal are left to a human/LLM read rather than a fragile regex:
   OFFSET $3` pattern exists but isn't distinctive enough to assert
   absence-means-regression without false positives on unrelated queries.
 - "All queries use sqlc parameterized statements (no SQL injection)" —
-  a structural guarantee from [ADR-004](../../../docs/decisions/004-sqlc-over-orm.md)
+  a structural guarantee from [ADR database](../../../.about/adr/database.md)
   (sqlc-generated, no ORM/raw string concatenation), not something a
   per-commit grep meaningfully re-verifies.
 - Auth/ping endpoint rate limiting generally — already covered by the

@@ -1,7 +1,7 @@
 package handler
 
 // Integration tests for the maintenance-window handlers. Same conventions as
-// auth_test.go/billing_test.go: real Postgres (ADR-010), package handler so
+// auth_test.go/billing_test.go: real Postgres (ADR testing), package handler so
 // the unexported request/response types (maintenanceWindowRequest,
 // maintenanceWindowResponse, ...) can be reused directly instead of
 // duplicating their JSON shape. These handlers read the "id" URL param via

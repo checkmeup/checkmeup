@@ -7,7 +7,7 @@ description: Create a new goose migration, write the SQL, regenerate sqlc code, 
 
 Schema changes go through goose migrations by hand; sqlc then generates
 the Go query layer from `apps/api/queries/*.sql` against that schema
-(ADR-004 — no ORM). The two must be kept in sync manually.
+(ADR database — no ORM). The two must be kept in sync manually.
 
 ## Steps
 
@@ -64,7 +64,7 @@ handler:
   cross-tenant data leaks are the failure mode if this is skipped.
 - If the new table/column feeds into an existing plan-limit check (monitor
   count, channel count, etc. — see `docs/reference/limits.md` and
-  ADR-019), confirm whether the limit logic needs updating too.
+  ADR billing), confirm whether the limit logic needs updating too.
 
 **6. Verify.**
 
