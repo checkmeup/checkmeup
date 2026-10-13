@@ -127,7 +127,6 @@ See [incidents/README.md](incidents/README.md) for the template. One file per in
 | Doc | Hook |
 | --- | --- |
 | [roadmap.md](roadmap.md) | Now / Next / Later product work |
-| [reports/hours/](reports/hours/README.md) | Raw daily work-hours log, one file per month |
 
 ## Conventions
 
