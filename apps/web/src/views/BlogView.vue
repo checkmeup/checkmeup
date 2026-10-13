@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
-import { postsMeta } from '@/blog/posts'
+import { articlesMeta } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'Blog — Checkmeup',
-  description: 'Building notes, release changelogs, and the occasional opinion from Checkmeup.',
+  description: 'Monitoring guides, building notes, and the occasional opinion from Checkmeup.',
   path: '/blog',
 })
 
-const sortedPosts = [...postsMeta].reverse()
+// Release notes are listed on /changelog instead (see BlogPostMeta.kind).
+const sortedPosts = [...articlesMeta].reverse()
 </script>
 
 <template>
@@ -18,7 +19,7 @@ const sortedPosts = [...postsMeta].reverse()
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-3" style="color: var(--text-strong)">Blog</h1>
-      <p class="text-lg" style="color: var(--text-dim)">Building notes, release changelogs, and the occasional opinion.</p>
+      <p class="text-lg" style="color: var(--text-dim)">Monitoring guides, building notes, and the occasional opinion. Release notes are in the <RouterLink to="/changelog" class="underline hover:no-underline" style="color: var(--color-green-500)">changelog</RouterLink>.</p>
     </section>
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pb-24">

@@ -21,6 +21,13 @@ export interface BlogPostMeta {
   // release-notes skill, which already documented this budget for its own
   // output but nothing enforced it here.
   title: string
+  // 'release' = a vX.Y release-notes post: stays reachable for readers (via
+  // /changelog and its own URL) but is kept out of search — robots
+  // noindex in its prerendered HTML, left out of sitemap.xml, and not listed
+  // on /blog. Dozens of thin per-version pages were dragging down how search
+  // engines rate the whole site; only 'article' posts (guides, essays) are
+  // pages people actually search for.
+  kind: 'article' | 'release'
   date: string
   readTime: string
   excerpt: string

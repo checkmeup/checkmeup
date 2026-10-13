@@ -27,7 +27,11 @@ const template = readFileSync(join(distDir, 'index.html'), 'utf-8')
 // derives the same list independently (by filesystem-scanning src/blog/posts
 // rather than importing the typed module) for the unrelated job of writing
 // sitemap.xml; both lists should keep matching the indexable routes below.
-const staticPaths = ['/', '/pricing', '/docs', '/faq', '/about', '/blog', '/terms', '/privacy', '/refund']
+const staticPaths = ['/', '/pricing', '/docs', '/faq', '/about', '/blog', '/changelog', '/terms', '/privacy', '/refund']
+// Every post, release notes included: a release post is noindex but still
+// prerendered, since the robots tag has to be in the HTML the server sends —
+// a noindex added only by client JS after load can be missed by crawlers.
+// (Its absence from sitemap.xml is the one place the two lists differ.)
 const blogPostPaths = postsMeta.map((meta) => `/blog/${meta.slug}`)
 const targetPaths = [...staticPaths, ...blogPostPaths]
 

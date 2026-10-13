@@ -17,6 +17,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-42-to-v1-45-monitor-forms',
     slug: 'v1-42-to-v1-45-monitor-forms',
+    kind: 'release',
     title: 'v1.42–v1.45: One Form Instead of Fourteen',
     date: 'September 10, 2026',
     readTime: '4 min read',
@@ -26,6 +27,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'dns-record-monitoring-guide',
     slug: 'dns-record-monitoring-guide',
+    kind: 'article',
     title: 'DNS Record Monitoring: Beyond the Uptime Check',
     date: 'August 25, 2026',
     readTime: '5 min read',
@@ -35,6 +37,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'why-monitoring-matters',
     slug: 'why-monitoring-matters',
+    kind: 'article',
     title: 'Why Monitoring Matters: Finding Out Before Users Do',
     date: 'August 3, 2026',
     readTime: '5 min read',
@@ -44,6 +47,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-41-zombie-job-detection',
     slug: 'v1-41-zombie-job-detection',
+    kind: 'release',
     title: 'v1.41: Zombie (Stuck) Job Detection',
     date: 'July 30, 2026',
     readTime: '3 min read',
@@ -53,6 +57,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-40-status-page-grid-layout',
     slug: 'v1-40-status-page-grid-layout',
+    kind: 'release',
     title: 'v1.40: A Second Status Page Layout',
     date: 'July 29, 2026',
     readTime: '3 min read',
@@ -62,6 +67,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-37-to-v1-39-dns-monitoring',
     slug: 'v1-37-to-v1-39-dns-monitoring',
+    kind: 'release',
     title: 'v1.37–v1.39: DNS Record Monitoring',
     date: 'July 29, 2026',
     readTime: '3 min read',
@@ -71,6 +77,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-33-to-v1-36-uptime-form-restyle',
     slug: 'v1-33-to-v1-36-uptime-form-restyle',
+    kind: 'release',
     title: 'v1.33–v1.36: The Design Reaches the Uptime Form',
     date: 'July 27, 2026',
     readTime: '3 min read',
@@ -80,6 +87,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'port-tcp-monitoring-guide',
     slug: 'port-tcp-monitoring-guide',
+    kind: 'article',
     title: 'Port (TCP) Monitoring: Beyond HTTP Checks',
     date: 'July 27, 2026',
     readTime: '5 min read',
@@ -89,6 +97,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'ssl-certificate-expired-story',
     slug: 'ssl-certificate-expired-story',
+    kind: 'article',
     title: 'The 3 AM SSL Cert That Cost Us a Client',
     date: 'July 24, 2026',
     readTime: '5 min read',
@@ -98,6 +107,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-13-release-notes',
     slug: 'v1-13-release-notes',
+    kind: 'release',
     title: 'v1.13: New Homepage, New License',
     date: 'July 1, 2026',
     readTime: '3 min read',
@@ -107,6 +117,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-18-release-notes',
     slug: 'v1-18-release-notes',
+    kind: 'release',
     title: "v1.18: A Public API, So Status Isn't Dashboard-Only",
     date: 'July 3, 2026',
     readTime: '4 min read',
@@ -116,6 +127,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-26-release-notes',
     slug: 'v1-26-release-notes',
+    kind: 'release',
     title: 'v1.26: A Real 404 Page, and a Name Fixed',
     date: 'July 10, 2026',
     readTime: '4 min read',
@@ -125,6 +137,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-7-release-notes',
     slug: 'v1-7-release-notes',
+    kind: 'release',
     title: 'v1.7: Webhook Alerts',
     date: 'June 22, 2026',
     readTime: '3 min read',
@@ -134,6 +147,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-3-release-notes',
     slug: 'v1-3-release-notes',
+    kind: 'release',
     title: 'v1.3: Email Alerts and Keyword Monitoring',
     date: 'June 19, 2026',
     readTime: '2 min read',
@@ -143,6 +157,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-8-release-notes',
     slug: 'v1-8-release-notes',
+    kind: 'release',
     title: 'v1.8: Domain Expiry Monitoring',
     date: 'June 23, 2026',
     readTime: '3 min read',
@@ -152,6 +167,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'pomodoro-and-checkmeup',
     slug: 'pomodoro-and-checkmeup',
+    kind: 'article',
     title: 'The Cube on My Desk: Pomodoro and Building Checkmeup',
     date: 'June 18, 2026',
     readTime: '3 min read',
@@ -161,6 +177,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-29-release-notes',
     slug: 'v1-29-release-notes',
+    kind: 'release',
     title: 'v1.29: Incidents Get Limits, Finally',
     date: 'July 12, 2026',
     readTime: '4 min read',
@@ -170,6 +187,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-17-release-notes',
     slug: 'v1-17-release-notes',
+    kind: 'release',
     title: 'v1.17: Analytics, With a Consent Banner That Counts',
     date: 'July 3, 2026',
     readTime: '3 min read',
@@ -179,6 +197,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-12-release-notes',
     slug: 'v1-12-release-notes',
+    kind: 'release',
     title: 'v1.12: Port (TCP) Monitoring',
     date: 'July 1, 2026',
     readTime: '3 min read',
@@ -188,6 +207,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-6-release-notes',
     slug: 'v1-6-release-notes',
+    kind: 'release',
     title: 'v1.6: Multi-Channel Notifications',
     date: 'June 21, 2026',
     readTime: '3 min read',
@@ -197,6 +217,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-20-to-v1-22-redesign',
     slug: 'v1-20-to-v1-22-redesign',
+    kind: 'release',
     title: 'v1.20–v1.22: The Redesign Reaches Everything Else',
     date: 'July 6, 2026',
     readTime: '6 min read',
@@ -206,6 +227,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-19-release-notes',
     slug: 'v1-19-release-notes',
+    kind: 'release',
     title: 'v1.19: SMS Alerts, and a Real Downgrade',
     date: 'July 4, 2026',
     readTime: '5 min read',
@@ -215,6 +237,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-27-release-notes',
     slug: 'v1-27-release-notes',
+    kind: 'release',
     title: 'v1.27: Checks That Reuse Connections',
     date: 'July 10, 2026',
     readTime: '3 min read',
@@ -224,6 +247,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-23-release-notes',
     slug: 'v1-23-release-notes',
+    kind: 'release',
     title: "v1.23: Turning the Audit on Checkmeup's Own Codebase",
     date: 'July 9, 2026',
     readTime: '4 min read',
@@ -233,6 +257,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-2-release-notes',
     slug: 'v1-2-release-notes',
+    kind: 'release',
     title: 'v1.2: Annual Billing and Real Upgrade Buttons',
     date: 'June 18, 2026',
     readTime: '2 min read',
@@ -242,6 +267,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'three-days-to-mvp',
     slug: 'three-days-to-mvp',
+    kind: 'article',
     title: 'Three Days to MVP: How We Built Checkmeup',
     date: 'June 16, 2026',
     readTime: '3 min read',
@@ -251,6 +277,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-28-release-notes',
     slug: 'v1-28-release-notes',
+    kind: 'release',
     title: 'v1.28: Manual Incidents Arrive, Plus a Real Toggle',
     date: 'July 12, 2026',
     readTime: '4 min read',
@@ -260,6 +287,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-16-release-notes',
     slug: 'v1-16-release-notes',
+    kind: 'release',
     title: 'v1.16: Change Plan Without Leaving the Page',
     date: 'July 2, 2026',
     readTime: '3 min read',
@@ -269,6 +297,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-9-release-notes',
     slug: 'v1-9-release-notes',
+    kind: 'release',
     title: 'v1.9: Status Badges and Assertion Checks',
     date: 'June 23, 2026',
     readTime: '4 min read',
@@ -278,6 +307,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-5-release-notes',
     slug: 'v1-5-release-notes',
+    kind: 'release',
     title: 'v1.5: Cleanup, a Plan-Limit Bug, and More Tests',
     date: 'June 20, 2026',
     readTime: '2 min read',
@@ -287,6 +317,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'domain-expiry-monitoring',
     slug: 'domain-expiry-monitoring',
+    kind: 'article',
     title: 'Why Domains Expire Silently, Not From Negligence',
     date: 'July 16, 2026',
     readTime: '5 min read',
@@ -296,6 +327,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'checkmeup-vs-competitors',
     slug: 'checkmeup-vs-healthchecks-uptimerobot-cronitor',
+    kind: 'article',
     title: 'Checkmeup vs. Healthchecks, UptimeRobot, Cronitor',
     date: 'July 4, 2026',
     readTime: '6 min read',
@@ -305,6 +337,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-30-release-notes',
     slug: 'v1-30-release-notes',
+    kind: 'release',
     title: 'v1.30: Teaching Bing That Checkmeup Has Content',
     date: 'July 14, 2026',
     readTime: '4 min read',
@@ -314,6 +347,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-11-release-notes',
     slug: 'v1-11-release-notes',
+    kind: 'release',
     title: 'v1.11: Alert Noise Reduction',
     date: 'June 25, 2026',
     readTime: '3 min read',
@@ -323,6 +357,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-24-to-v1-25-seo-foundations',
     slug: 'v1-24-to-v1-25-seo-foundations',
+    kind: 'release',
     title: 'v1.24–v1.25: Teaching Search Engines Checkmeup',
     date: 'July 10, 2026',
     readTime: '5 min read',
@@ -332,6 +367,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-15-release-notes',
     slug: 'v1-15-release-notes',
+    kind: 'release',
     title: 'v1.15: Billing Moved to Paddle',
     date: 'July 2, 2026',
     readTime: '3 min read',
@@ -341,6 +377,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-1-release-notes',
     slug: 'v1-1-release-notes',
+    kind: 'release',
     title: 'v1.1: Themes, Legal Pages, FAQ, and Feedback',
     date: 'June 18, 2026',
     readTime: '2 min read',
@@ -350,6 +387,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-4-release-notes',
     slug: 'v1-4-release-notes',
+    kind: 'release',
     title: 'v1.4: A Testing Pass (and the Bugs It Found)',
     date: 'June 19, 2026',
     readTime: '2 min read',
@@ -359,6 +397,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-10-release-notes',
     slug: 'v1-10-release-notes',
+    kind: 'release',
     title: 'v1.10: Slack Alerts',
     date: 'June 24, 2026',
     readTime: '3 min read',
@@ -368,6 +407,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-31-release-notes',
     slug: 'v1-31-release-notes',
+    kind: 'release',
     title: 'v1.31: The Sitemap Was Lying, Plus Structured Data',
     date: 'July 15, 2026',
     readTime: '4 min read',
@@ -377,6 +417,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-14-release-notes',
     slug: 'v1-14-release-notes',
+    kind: 'release',
     title: 'v1.14: Legal Housekeeping',
     date: 'July 2, 2026',
     readTime: '3 min read',
@@ -386,6 +427,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-0-release-notes',
     slug: 'v1-0-release-notes',
+    kind: 'release',
     title: "v1.0 — First Release: What Shipped and What's Next",
     date: 'June 16, 2026',
     readTime: '2 min read',
@@ -395,6 +437,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'cron-job-monitoring-guide',
     slug: 'cron-job-monitoring-guide',
+    kind: 'article',
     title: 'Cron Job Monitoring: Catch Silent Failures',
     date: 'July 17, 2026',
     readTime: '6 min read',
@@ -404,6 +447,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'uptime-monitoring-guide',
     slug: 'uptime-monitoring-guide',
+    kind: 'article',
     title: 'Uptime Monitoring: Beyond the Status Code',
     date: 'July 18, 2026',
     readTime: '6 min read',
@@ -413,6 +457,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
   {
     file: 'v1-32-release-notes',
     slug: 'v1-32-release-notes',
+    kind: 'release',
     title: 'v1.32: Configurable Uptime Checks',
     date: 'July 18, 2026',
     readTime: '3 min read',

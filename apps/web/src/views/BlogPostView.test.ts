@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import BlogPostView from './BlogPostView.vue'
-import { postsMeta, getPost } from '@/blog/posts'
+import { postsMeta, articlesMeta, releasesMeta, getPost } from '@/blog/posts'
 
 const flushHead = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -123,6 +123,48 @@ describe('BlogPostView', () => {
       name: 'Andrew Molyuk',
       url: 'https://checkmeup.net/about',
     })
+  })
+
+  const robotsContent = () =>
+    document.head.querySelector('meta[name="robots"]')?.getAttribute('content')
+
+  it('marks an article indexable', async () => {
+    await mountLoaded(articlesMeta[0].slug)
+    await flushHead()
+
+    expect(robotsContent()).toBe('index, follow')
+  })
+
+  it('marks a release-notes post noindex but still followed', async () => {
+    await mountLoaded(releasesMeta[0].slug)
+    await flushHead()
+
+    expect(robotsContent()).toBe('noindex, follow')
+  })
+
+  it('marks an unknown slug noindex', async () => {
+    await mountLoaded('this-slug-does-not-exist')
+    await flushHead()
+
+    expect(robotsContent()).toBe('noindex')
+  })
+
+  it('links an article back to the blog list', async () => {
+    const wrapper = await mountLoaded(articlesMeta[0].slug)
+
+    const targets = wrapper.findAllComponents({ name: 'RouterLink' }).map((l) => l.props('to'))
+    expect(targets).toContain('/blog')
+    expect(targets).not.toContain('/changelog')
+    expect(wrapper.text()).toContain('All posts')
+  })
+
+  it('links a release-notes post back to the changelog', async () => {
+    const wrapper = await mountLoaded(releasesMeta[0].slug)
+
+    const targets = wrapper.findAllComponents({ name: 'RouterLink' }).map((l) => l.props('to'))
+    expect(targets).toContain('/changelog')
+    expect(targets).not.toContain('/blog')
+    expect(wrapper.text()).toContain('All releases')
   })
 
   it('emits no JSON-LD script for an unknown slug', async () => {

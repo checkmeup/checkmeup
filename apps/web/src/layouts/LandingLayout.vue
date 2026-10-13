@@ -139,6 +139,7 @@ const mobileMenuOpen = ref(false)
               <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors">FAQ</RouterLink>
               <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors">Pricing</RouterLink>
               <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors">Blog</RouterLink>
+              <RouterLink to="/changelog" class="hover:text-[var(--text-strong)] transition-colors">Changelog</RouterLink>
             </nav>
             <nav class="flex flex-col gap-2.5 text-xs" style="color: var(--text-muted)">
               <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors">About</RouterLink>

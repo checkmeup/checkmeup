@@ -61,6 +61,7 @@ sorts by `date` — so add it anywhere, e.g. next to the most recent entry):
 {
   file: 'v1-XX-release-notes',
   slug: 'v1-XX-release-notes',
+  kind: 'release',
   title: 'vX.Y: <short thing that shipped>',
   date: 'Month D, YYYY',
   readTime: '<N> min read',
@@ -71,6 +72,13 @@ sorts by `date` — so add it anywhere, e.g. next to the most recent entry):
 `file` must match the content file's basename under `posts/` exactly —
 it's how `posts.ts`'s loader map finds it at read time; a typo here fails
 silently as a missing post rather than a type error.
+
+`kind: 'release'` is what keeps the post out of search: it gets
+`noindex, follow` in its prerendered HTML, is left out of `sitemap.xml`,
+and is listed on `/changelog` instead of `/blog` (see `BlogPostMeta.kind` in
+`types.ts`). The post is still readable at `/blog/<slug>`. Keep `kind`
+between `slug` and `date` — `scripts/generate-sitemap.mjs` parses entries in
+that order and fails the build otherwise.
 
 Keep `title` at **52 characters or fewer**. `BlogPostView.vue` renders the
 `<title>` tag as `` `${title} — Checkmeup blog` `` (18 more characters), and
@@ -94,7 +102,7 @@ already exceed this and are on the list to shorten.
 **5. Verify.**
 
 ```bash
-cd apps/web && bun run test -- BlogView BlogPostView
+cd apps/web && bun run test -- BlogView BlogPostView ChangelogView
 ```
 
 Then start the dev server and visually check the new post renders — see

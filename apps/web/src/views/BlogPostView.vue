@@ -39,11 +39,30 @@ useSeo({
   path: () => route.fullPath,
 })
 
+const isRelease = computed(() => post.value?.kind === 'release')
+
 // This route always serves HTTP 200 (client-rendered SPA), so an unknown
-// slug would otherwise let a thin "not found" page get indexed.
+// slug would otherwise let a thin "not found" page get indexed. Release
+// notes are noindex too, but keep `follow` so their links still pass weight
+// to the guides and product pages (see BlogPostMeta.kind). The tag has to be
+// in the prerendered HTML, not just added by JS after load — it is, because
+// onServerPrefetch resolves the post before scripts/prerender.mts
+// serializes <head>.
 useHead({
-  meta: [{ name: 'robots', content: () => (post.value ? 'index, follow' : 'noindex') }],
+  meta: [
+    {
+      name: 'robots',
+      content: () => {
+        if (!post.value) return 'noindex'
+        return isRelease.value ? 'noindex, follow' : 'index, follow'
+      },
+    },
+  ],
 })
+
+const backLink = computed(() =>
+  isRelease.value ? { to: '/changelog', label: 'All releases' } : { to: '/blog', label: 'All posts' },
+)
 
 // Makes matched posts eligible for richer search listings (author, publish
 // date). No entry at all for an unknown slug — same reasoning as the
@@ -98,7 +117,7 @@ useHead({
       <!-- Header -->
       <header class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
         <RouterLink
-          to="/blog"
+          :to="backLink.to"
           class="inline-flex items-center gap-1.5 text-sm mb-8 transition-colors"
           style="color: var(--text-muted)"
         >
@@ -112,7 +131,7 @@ useHead({
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          All posts
+          {{ backLink.label }}
         </RouterLink>
 
         <div class="flex items-center gap-3 mb-4 text-xs" style="color: var(--text-muted)">
@@ -299,7 +318,7 @@ useHead({
       >
         <div class="flex items-center justify-between">
           <RouterLink
-            to="/blog"
+            :to="backLink.to"
             class="inline-flex items-center gap-1.5 text-sm transition-colors"
             style="color: var(--text-muted)"
           >
@@ -313,7 +332,7 @@ useHead({
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            All posts
+            {{ backLink.label }}
           </RouterLink>
           <RouterLink
             to="/sign-up"

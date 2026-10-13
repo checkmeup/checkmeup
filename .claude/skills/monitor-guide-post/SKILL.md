@@ -76,6 +76,7 @@ export const content: ContentBlock[] = [
 {
   file: '<type>-monitoring-guide',
   slug: '<type>-monitoring-guide',
+  kind: 'article',   // indexable, listed on /blog and in sitemap.xml
   title: '<Type> Monitoring: <short angle>',   // 52 chars or fewer, see below
   date: 'Month D, YYYY',
   readTime: '5 min read',

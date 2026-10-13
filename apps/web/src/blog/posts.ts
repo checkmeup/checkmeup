@@ -10,6 +10,11 @@ export const postsMeta = [...unsortedPostsMeta].sort(
   (a, b) => Date.parse(a.date) - Date.parse(b.date),
 )
 
+// /blog lists only articles; release notes live on /changelog instead (see
+// BlogPostMeta.kind for why they're split).
+export const articlesMeta = postsMeta.filter((m) => m.kind === 'article')
+export const releasesMeta = postsMeta.filter((m) => m.kind === 'release')
+
 // Nothing eagerly imports from posts/*.ts (see postsMeta.ts's comment for
 // why that matters) — each post's full content is a genuine, separate,
 // lazily-loaded chunk, only fetched when a reader actually opens that post.

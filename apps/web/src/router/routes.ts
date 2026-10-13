@@ -60,6 +60,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/BlogView.vue'),
   },
   {
+    path: '/changelog',
+    name: 'changelog',
+    component: () => import('@/views/ChangelogView.vue'),
+  },
+  {
     path: '/blog/:slug',
     name: 'blog-post',
     component: () => import('@/views/BlogPostView.vue'),
