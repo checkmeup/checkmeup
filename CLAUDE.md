@@ -64,15 +64,15 @@ make migrate-create name=foo  # create a new goose migration file
 
 Full rationale in [`docs/decisions/`](docs/decisions/). Open questions in [`docs/decisions/backlog.md`](docs/decisions/backlog.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), stories in [`docs/stories/`](docs/stories/), monthly snapshots in [`docs/reports/`](docs/reports/), and self-incidents in [`docs/incidents/`](docs/incidents/) ([ADR-022](docs/decisions/022-post-mvp-docs-organization.md)). Docs navigation: [`docs/INDEX.md`](docs/INDEX.md) — living how-to in [`docs/reference/`](docs/reference/), architectural snapshots in [`docs/knowledge/`](docs/knowledge/), feature gap analysis in [`docs/proposals/`](docs/proposals/), technical investigations in [`docs/investigations/`](docs/investigations/).
 
-Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, mutation testing, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code, and a `secrets-scan` gate before every `git push` — wired up in [`.claude/settings.json`](.claude/settings.json).
+Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, mutation testing, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code — wired up in [`.claude/settings.json`](.claude/settings.json). Commit-time checks (conventional commits, no secrets, no AI co-author, no merge commits on push) are the baloo plugin's Git hooks, configured in [`.claude/baloo.yml`](.claude/baloo.yml).
 
 ---
 
 ## Conventions
 
-- **Commits:** conventional commits enforced by commitlint — `feat:`, `fix:`, `chore:`, etc.
+- **Commits:** conventional commits (`feat:`, `fix:`, `chore:`, etc., max line 140), enforced by the baloo plugin's `commit-msg` hook — Git hooks are baloo's, configured in [`.claude/baloo.yml`](.claude/baloo.yml); there is no husky/commitlint
 - **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line. Merge with plain git (`git merge --ff-only` after rebasing on `main`, then `git push origin main`), not `gh pr merge` — the GitHub PAT in use here lacks merge permissions on the repo
-- **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged)
+- **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged, from baloo's `pre-commit` hook)
 - **Go lint:** golangci-lint
 - **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
 - **Colors/logo:** never hardcode hex values — use tokens from [`docs/reference/design.md`](docs/reference/design.md)

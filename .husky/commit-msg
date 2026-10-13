@@ -1,6 +1,0 @@
-bunx --no -- commitlint --edit "$1"
-
-if grep -qiE 'Co-Authored-By:.*Claude|Co-Authored-By:.*Copilot' "$1"; then
-  echo "commit-msg: AI attribution is not allowed in commit messages" >&2
-  exit 1
-fi

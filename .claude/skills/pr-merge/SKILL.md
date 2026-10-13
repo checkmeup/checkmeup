@@ -17,8 +17,8 @@ pushed — always end by pushing the fast-forwarded `main` to `origin`.
 Three `PreToolUse` hooks now enforce parts of this deterministically:
 `block_main_commit.py` blocks any `git commit` while on local `main`,
 and `pre_push_guard.py` blocks a bare `--force` (use `--force-with-lease`,
-per step 3 below) and any force-push targeting `main`, and runs
-`secrets-scan` before every push. None of that changes this skill's
+per step 3 below) and any force-push targeting `main`; baloo's Git hooks
+check every commit for secrets. None of that changes this skill's
 steps — they already follow those rules — but a push failing here with a
 hook error rather than a git error is expected, not a sign something else
 broke.

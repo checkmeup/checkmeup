@@ -51,8 +51,6 @@ __pycache__/
 # Claude Code local machine settings (skills/commands ARE committed)
 .claude/settings.local.json
 
-# session_summary.py's SessionEnd log + per-session marker files
-.claude/logs/
 
 # Stryker mutation testing: sandbox copies of the whole app (Vitest will scan
 # them as real tests if left behind) and generated reports
