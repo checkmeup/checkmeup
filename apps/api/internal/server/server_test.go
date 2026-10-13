@@ -300,6 +300,9 @@ func TestHandleSPA(t *testing.T) {
 			// A leading "//" must not survive into Location, where it would be
 			// a protocol-relative URL to another host (open redirect).
 			"//evil.example/": "/evil.example",
+			// Browsers treat "/\\" like "//", so a leading backslash must not
+			// survive either.
+			"/\\evil.example/": "/evil.example",
 		}
 		for reqPath, want := range cases {
 			req := httptest.NewRequest(http.MethodGet, reqPath, http.NoBody)

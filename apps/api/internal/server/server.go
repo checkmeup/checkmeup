@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -370,15 +369,16 @@ func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 	// One URL form per page: /blog/x/ 301s to /blog/x (query kept) — the
 	// form the sitemap, prerendered files, and every canonical tag use.
 	// Serving both with 200 made each trailing-slash variant a duplicate page
-	// in search indexes. path.Clean (rather than just trimming the slash)
-	// also collapses a leading "//", so "//evil.example/" can't turn into a
-	// protocol-relative open redirect.
+	// in search indexes. The target is "/" plus the path with every leading
+	// and trailing "/" or "\" trimmed, so it is always a path on this host:
+	// "//evil.example/" and "/\evil.example/" (browsers read "/\" as "//")
+	// can't become a protocol-relative redirect to another site.
 	if p := r.URL.Path; len(p) > 1 && strings.HasSuffix(p, "/") {
-		target := path.Clean(p)
+		target := "/" + strings.Trim(p, "/\\")
 		if r.URL.RawQuery != "" {
 			target += "?" + r.URL.RawQuery
 		}
-		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		http.Redirect(w, r, target, http.StatusMovedPermanently) // nosemgrep: go.lang.security.injection.open-redirect.open-redirect -- same-host path only, see above
 		return
 	}
 
