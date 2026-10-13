@@ -30,4 +30,4 @@ Clear answer to the question posed above.
 
 ## Follow-ups
 
-- Links to decisions/ or proposals/ if this investigation led to a decision
+- Links to `.about/adr/` or `proposals/` if this investigation led to a decision

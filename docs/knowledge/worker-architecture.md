@@ -40,5 +40,5 @@ One goroutine (`worker.Run`, started from `cmd/api/main.go`) drives everything. 
 
 ## Follow-ups
 
-- `docs/reference/tech-debts.md` already tracks the ADR workers/code mismatch and the "no shared HTTP client across checks" debt (partially superseded now that uptime/port/SSL checks share the `httpsafe.Dialer` construction pattern, though each check still builds its own client/dialer rather than reusing one across calls).
-- ADR workers itself hasn't been corrected — see the update note added there 2026-07-10 pointing back to this doc, rather than rewriting the original decision text (decisions/ is append-only).
+- `docs/reference/tech-debts.md` tracks the "no shared HTTP client across checks" debt (partially superseded now that uptime/port/SSL checks share the `httpsafe.Dialer` construction pattern, though each check still builds its own client/dialer rather than reusing one across calls).
+- ADR workers now describes this as-built model; it was rewritten when the ADRs moved to `.about/` (2026-10-13).
