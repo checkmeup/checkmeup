@@ -413,12 +413,14 @@ const statusPageHTML = `<!DOCTYPE html>
 <style>
 /* Mirrors the tokens in apps/web/src/style.css — keep both in sync if the token set changes. */
 :root{
+  color-scheme:dark;
   --bg:#0e1211;--surface:#131816;--surface-raised:#1a201e;--border:#232a27;--border-strong:#323b37;
   --text-muted:#7a847f;--text-dim:#9aa39e;--text:#ecf0ee;--text-strong:#ecf0ee;
   --status-up:#3fbf8f;--status-degraded:#ebae4a;--status-down:#f0605a;--status-paused:#7a847f;
   --tick-up:#2f6e58;--tick-empty:#1c2220;--accent:#4dc9a0;--on-accent:#06201a;--accent-wash:rgb(77 201 160 / 12%);--nav-bg:rgb(14 18 17 / 85%);
 }
 :root[data-theme='light']{
+  color-scheme:light;
   --bg:#fff;--surface:#f7f9f7;--surface-raised:#f1f4f1;--border:#e4e8e4;--border-strong:#d6dcd7;
   --text-muted:#6f7873;--text-dim:#59625d;--text:#111714;--text-strong:#111714;
   --status-up:#12805f;--status-degraded:#a86200;--status-down:#c93a2e;--status-paused:#6f7873;

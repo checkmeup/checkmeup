@@ -334,7 +334,9 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
                     class="w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold"
                     :style="{
                       backgroundColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'transparent',
-                      borderColor: selectedKeys.has(m.key) ? 'var(--accent)' : 'var(--border)',
+                      borderColor: selectedKeys.has(m.key)
+                        ? 'var(--accent)'
+                        : 'var(--border-strong)',
                       color: 'var(--on-accent)',
                     }"
                   >

@@ -48,7 +48,7 @@ describe('HomeView', () => {
     expect(signIn!.props('to')).toBe('/sign-in')
   })
 
-  it('renders all six monitor feature cards plus the status pages card', () => {
+  it('renders all six monitor feature cards', () => {
     const wrapper = mountHome()
 
     expect(wrapper.text()).toContain('Cron job monitoring')
@@ -57,7 +57,6 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('Domain expiry monitoring')
     expect(wrapper.text()).toContain('Port (TCP) monitoring')
     expect(wrapper.text()).toContain('DNS record monitoring')
-    expect(wrapper.text()).toContain('Public status pages')
   })
 
   it('renders the status pages highlight section', () => {

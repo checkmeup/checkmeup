@@ -13,7 +13,13 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
   <div class="space-y-5">
     <div>
       <Label for="title">Title</Label>
-      <Input id="title" v-model="form.title" placeholder="Database migration" class="mt-1" required />
+      <Input
+        id="title"
+        v-model="form.title"
+        placeholder="Database migration"
+        class="mt-1"
+        required
+      />
     </div>
 
     <div>
@@ -35,7 +41,7 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
           id="startsAt"
           v-model="form.startsAt"
           type="datetime-local"
-          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-[var(--surface)] border-[var(--border)] text-[var(--text)]"
+          class="mt-1 flex h-10 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
           required
         />
       </div>
@@ -46,7 +52,7 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
           v-model="form.endsAt"
           type="datetime-local"
           :disabled="form.noEnd"
-          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:opacity-50 bg-[var(--surface)] border-[var(--border)] text-[var(--text)]"
+          class="mt-1 flex h-10 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50"
         />
         <label class="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)]">
           <input v-model="form.noEnd" type="checkbox" />

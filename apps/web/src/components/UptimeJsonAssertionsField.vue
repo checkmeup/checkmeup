@@ -21,7 +21,7 @@ function removeAssertion(i: number) {
       <Label>JSON assertions (optional)</Label>
       <button
         type="button"
-        class="text-xs px-2 py-1 rounded text-[var(--text-dim)] bg-[var(--surface-raised)]"
+        class="rounded-lg border border-[var(--border-strong)] px-2.5 py-1 text-xs font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-raised)]"
         @click="addAssertion"
       >
         + Add
@@ -32,10 +32,7 @@ function removeAssertion(i: number) {
     </div>
     <div v-for="(a, i) in assertions" :key="i" class="flex items-center gap-2 mt-2">
       <Input v-model="a.path" placeholder="$.status" class="flex-1 min-w-0" />
-      <select
-        v-model="a.comparator"
-        class="rounded-lg border pl-2 py-2 text-sm"
-      >
+      <select v-model="a.comparator" class="rounded-lg border pl-2 py-2 text-sm">
         <option v-for="opt in comparatorOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
         </option>

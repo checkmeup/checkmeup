@@ -119,7 +119,11 @@ useHead({
         <FeatureCard
           title="Cron job monitoring"
           description="Ping a URL after each run. Miss a ping and we alert you immediately — before your backups rot or invoices stop sending."
-          :bullets="['Custom grace periods', 'Execution history & logs', 'Telegram, Slack, email & SMS alerts']"
+          :bullets="[
+            'Custom grace periods',
+            'Execution history & logs',
+            'Telegram, Slack, email & SMS alerts',
+          ]"
         >
           <template #icon>
             <svg
@@ -222,7 +226,11 @@ useHead({
         <FeatureCard
           title="DNS record monitoring"
           description="Watch a hostname's A, AAAA, CNAME, MX, TXT, or NS record and get alerted the moment it changes or stops resolving — a hijack or a migration gone sideways doesn't fail the way a downed server does."
-          :bullets="['Pin a value or auto-capture a baseline', 'Old value → new value in every alert', 'Lookup errors read differently than a change']"
+          :bullets="[
+            'Pin a value or auto-capture a baseline',
+            'Old value → new value in every alert',
+            'Lookup errors read differently than a change',
+          ]"
         >
           <template #icon>
             <svg
@@ -235,27 +243,6 @@ useHead({
             >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="Public status pages"
-          description="A branded status page for every client site — your logo, uptime, incidents, and maintenance windows, no login required to view."
-          :bullets="['Your logo, your branding', 'No DNS setup required', 'Embeddable status badges']"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <rect x="3" y="4" width="18" height="14" rx="2" />
-              <line x1="3" y1="8" x2="21" y2="8" />
-              <circle cx="17" cy="15" r="2" />
             </svg>
           </template>
         </FeatureCard>
@@ -371,22 +358,46 @@ useHead({
               >
             </div>
             <p class="mb-5 text-[13px] text-[var(--text-dim)]">{{ plan.description }}</p>
-            <div class="mb-6 text-[32px] font-semibold tracking-[-0.035em] text-[var(--text-strong)]">
+            <div
+              class="mb-6 text-[32px] font-semibold tracking-[-0.035em] text-[var(--text-strong)]"
+            >
               {{ plan.price === 0 ? 'Free' : `$${plan.price}` }}
-              <span v-if="plan.price > 0" class="text-sm font-normal tracking-normal text-[var(--text-dim)]"
+              <span
+                v-if="plan.price > 0"
+                class="text-sm font-normal tracking-normal text-[var(--text-dim)]"
                 >/mo</span
               >
             </div>
 
             <ul class="mb-6 flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
               <li v-for="st in plan.stats" :key="st.label" class="flex items-center gap-2">
-                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3">
+                <svg
+                  aria-hidden="true"
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--accent)"
+                  stroke-width="3"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span><strong class="font-semibold text-[var(--text-strong)]">{{ st.value }}</strong> {{ st.label }}</span>
+                <span
+                  ><strong class="font-semibold text-[var(--text-strong)]">{{ st.value }}</strong>
+                  {{ st.label }}</span
+                >
               </li>
               <li v-for="e in plan.extras" :key="e" class="flex items-start gap-2 leading-relaxed">
-                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" class="mt-[3px] flex-shrink-0">
+                <svg
+                  aria-hidden="true"
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--accent)"
+                  stroke-width="3"
+                  class="mt-[3px] flex-shrink-0"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {{ e }}
@@ -433,7 +444,11 @@ useHead({
               “{{ t.quote }}”
             </blockquote>
             <figcaption class="mt-auto flex items-center gap-3">
-              <img :src="t.avatar" :alt="t.name" class="h-9 w-9 flex-shrink-0 rounded-full object-cover" />
+              <img
+                :src="t.avatar"
+                :alt="t.name"
+                class="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+              />
               <span class="flex flex-col">
                 <span class="text-sm font-semibold text-[var(--text-strong)]">{{ t.name }}</span>
                 <span class="text-[13px] text-[var(--text-dim)]">{{ t.role }}</span>

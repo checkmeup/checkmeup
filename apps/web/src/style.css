@@ -16,6 +16,8 @@
 }
 
 :root {
+  /* Native controls (checkboxes, date pickers, scrollbars) follow the theme. */
+  color-scheme: dark;
   --bg: #0e1211;
   --surface: #131816;
   --surface-raised: #1a201e;
@@ -82,6 +84,7 @@
    the raw --color-green-* scale stays fixed. Applied via data-theme set on
    <html> (see lib/theme.ts). */
 :root[data-theme='light'] {
+  color-scheme: light;
   --bg: #fff;
   --surface: #f7f9f7;
   --surface-raised: #f1f4f1;

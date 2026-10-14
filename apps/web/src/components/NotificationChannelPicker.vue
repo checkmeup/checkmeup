@@ -22,7 +22,10 @@ const hasEnabledSelection = computed(() =>
 
 function toggle(id: string) {
   if (selected.value.has(id)) {
-    emit('update:modelValue', props.modelValue.filter((v) => v !== id))
+    emit(
+      'update:modelValue',
+      props.modelValue.filter((v) => v !== id),
+    )
   } else {
     emit('update:modelValue', [...props.modelValue, id])
   }
@@ -30,9 +33,9 @@ function toggle(id: string) {
 </script>
 
 <template>
-  <div class="rounded-[14px] border border-[var(--border)]">
+  <div class="overflow-hidden rounded-[14px] border border-[var(--border)]">
     <div
-      class="px-4 py-3 border-b text-sm font-medium border-[var(--border)] text-[var(--text-strong)]"
+      class="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--text-dim)]"
     >
       Notification channels ({{ modelValue.length }} selected)
     </div>
@@ -53,14 +56,16 @@ function toggle(id: string) {
           class="w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold"
           :style="{
             backgroundColor: selected.has(c.id) ? 'var(--accent)' : 'transparent',
-            borderColor: selected.has(c.id) ? 'var(--accent)' : 'var(--border)',
+            borderColor: selected.has(c.id) ? 'var(--accent)' : 'var(--border-strong)',
             color: 'var(--on-accent)',
           }"
         >
           {{ selected.has(c.id) ? '✓' : '' }}
         </div>
         <span class="text-sm flex-1 truncate text-[var(--text)]">{{ c.name }}</span>
-        <span v-if="!c.enabled" class="text-xs flex-shrink-0 text-[var(--status-down)]">disabled</span>
+        <span v-if="!c.enabled" class="text-xs flex-shrink-0 text-[var(--status-down)]"
+          >disabled</span
+        >
         <span class="text-xs flex-shrink-0 text-[var(--text-muted)]">{{ typeLabel[c.type] }}</span>
       </li>
     </ul>
@@ -68,11 +73,7 @@ function toggle(id: string) {
       v-if="channels.length > 0 && !hasEnabledSelection"
       class="px-4 py-2 text-xs border-t border-[var(--border)] text-[var(--text-muted)]"
     >
-      {{
-        modelValue.length === 0
-          ? 'No channels selected'
-          : 'All selected channels are disabled'
-      }}
+      {{ modelValue.length === 0 ? 'No channels selected' : 'All selected channels are disabled' }}
       — alerts will fall back to your account email.
     </p>
   </div>
