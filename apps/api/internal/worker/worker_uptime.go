@@ -16,8 +16,6 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
-	"github.com/checkmeup/checkmeup/internal/slack"
-	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 // ─── uptime monitor checks ───────────────────────────────────────────────────
@@ -101,20 +99,7 @@ func handleUptimeUp(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevSt
 }
 
 func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage {
-	return AlertMessage{
-		Telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nURL: <code>%s</code>", m.Name, m.Url),
-		EmailSubject: fmt.Sprintf("%s recovered", m.Name),
-		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>URL: <code>%s</code></p>", m.Name, m.Url),
-		Webhook: &webhook.Event{
-			EventType:        "recovery",
-			MonitorName:      m.Name,
-			MonitorType:      "uptime",
-			DowntimeDuration: downtime,
-			Timestamp:        time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.RecoveryMessage(m.Name, "uptime", downtime)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s downtime", m.Name, downtime)),
-	}
+	return backUpAlert("uptime", m.Name, downtime, codeLine("URL", m.Url))
 }
 
 func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevStatus db.MonitorStatus, failureReason string) {
@@ -156,22 +141,14 @@ func alertUptimeIncident(ctx context.Context, n Notifiers, m db.UptimeMonitor, i
 }
 
 func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage {
-	return AlertMessage{
-		Telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nURL: <code>%s</code>\nReason: %s",
-			m.Name, m.Url, failureReason),
-		EmailSubject: fmt.Sprintf("DOWN: %s", m.Name),
-		EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>URL: <code>%s</code><br>Reason: %s</p>",
-			m.Name, m.Url, failureReason),
-		Webhook: &webhook.Event{
-			EventType:   "down",
-			MonitorName: m.Name,
-			MonitorType: "uptime",
-			Reason:      failureReason,
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.DownMessage(m.Name, "uptime", failureReason)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
-	}
+	return buildAlert(alertText{
+		Event: "down", MonitorType: "uptime", Name: m.Name,
+		Icon: "🔴", Headline: " is down",
+		Details: []string{codeLine("URL", m.Url), "Reason: " + failureReason},
+		Subject: "DOWN: " + m.Name,
+		Reason:  failureReason,
+		SMS:     fmt.Sprintf("%s is DOWN (%s)", m.Name, failureReason),
+	})
 }
 
 // maxKeywordCheckBytes caps how much of the response body is read for a

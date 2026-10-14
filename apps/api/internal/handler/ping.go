@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -151,23 +150,8 @@ func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.
 		return
 	}
 	ranFor := worker.FormatDuration(time.Since(run.StartedAt.Time))
-	slackRecovery := slack.RecoveryMessage(monitor.Name, "cron", fmt.Sprintf("%s (ran for %s)", reason, ranFor))
-	msg := worker.AlertMessage{
-		Telegram:     fmt.Sprintf("✅ <b>%s</b> stuck run recovered — %s\n\nRan for: %s", monitor.Name, reason, ranFor),
-		EmailSubject: fmt.Sprintf("%s stuck run recovered", monitor.Name),
-		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> stuck run recovered — %s</p><p>Ran for: %s</p>", monitor.Name, reason, ranFor),
-		Webhook: &webhook.Event{
-			EventType:        "recovery",
-			MonitorName:      monitor.Name,
-			MonitorType:      "cron",
-			DowntimeDuration: ranFor,
-			Timestamp:        time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: &slackRecovery,
-		SMS:   worker.TruncateSMS(fmt.Sprintf("Checkmeup: %s stuck run recovered (%s)", monitor.Name, reason)),
-	}
 	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
-	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)
+	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.StuckRunRecoveryAlert(monitor.Name, reason, ranFor))
 }
 
 // sendCronRecoveryAlert dispatches a recovery alert now that a
@@ -185,23 +169,8 @@ func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.Cron
 		return
 	}
 	downtime := worker.FormatDuration(now.Sub(inc.StartedAt.Time))
-	slackRecovery := slack.RecoveryMessage(monitor.Name, "cron", downtime)
-	msg := worker.AlertMessage{
-		Telegram:     fmt.Sprintf("✅ <b>%s</b> recovered\n\nDown for: %s", monitor.Name, downtime),
-		EmailSubject: fmt.Sprintf("%s recovered", monitor.Name),
-		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> recovered</p><p>Down for: %s</p>", monitor.Name, downtime),
-		Webhook: &webhook.Event{
-			EventType:        "recovery",
-			MonitorName:      monitor.Name,
-			MonitorType:      "cron",
-			DowntimeDuration: downtime,
-			Timestamp:        now.UTC().Format(time.RFC3339),
-		},
-		Slack: &slackRecovery,
-		SMS:   worker.TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s", monitor.Name, downtime)),
-	}
 	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
-	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, msg)
+	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.CronRecoveryAlert(monitor.Name, downtime))
 }
 
 // computeNextPing returns when the next ping is expected, after which the grace

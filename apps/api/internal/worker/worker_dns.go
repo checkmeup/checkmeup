@@ -15,8 +15,6 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/deliver"
-	"github.com/checkmeup/checkmeup/internal/slack"
-	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 // ─── dns monitor checks ──────────────────────────────────────────────────────
@@ -114,24 +112,17 @@ func handleDNSUp(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus d
 }
 
 func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) AlertMessage {
-	hostRecord := fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType)
-	safeValue := html.EscapeString(resolvedValue)
-	return AlertMessage{
-		Telegram: fmt.Sprintf("✅ <b>%s</b> DNS record is back to normal\n\nHostname: <code>%s</code>\nValue: <code>%s</code>",
-			m.Name, hostRecord, safeValue),
-		EmailSubject: fmt.Sprintf("%s recovered", m.Name),
-		EmailHTML: fmt.Sprintf("<p>✅ <b>%s</b> DNS record is back to normal</p><p>Hostname: <code>%s</code><br>Value: <code>%s</code></p>",
-			m.Name, hostRecord, safeValue),
-		Webhook: &webhook.Event{
-			EventType:        "recovery",
-			MonitorName:      m.Name,
-			MonitorType:      "dns",
-			DowntimeDuration: downtime,
-			Timestamp:        time.Now().UTC().Format(time.RFC3339),
+	return buildAlert(alertText{
+		Event: "recovery", MonitorType: "dns", Name: m.Name,
+		Icon: "✅", Headline: " DNS record is back to normal",
+		Details: []string{
+			codeLine("Hostname", fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType)),
+			codeLine("Value", html.EscapeString(resolvedValue)),
 		},
-		Slack: slackMsg(slack.RecoveryMessage(m.Name, "dns", downtime)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s downtime", m.Name, downtime)),
-	}
+		Subject:  m.Name + " recovered",
+		Downtime: downtime,
+		SMS:      fmt.Sprintf("%s recovered after %s downtime", m.Name, downtime),
+	})
 }
 
 func handleDNSDown(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus db.MonitorStatus, resolvedValue, failureReason string) {
@@ -197,51 +188,30 @@ func alertDNSIncident(ctx context.Context, n Notifiers, m db.DnsMonitor, inc db.
 // use the raw values — Webhook is JSON (safe by construction), Slack/SMS
 // aren't HTML, and escaping them would just show literal "&amp;" etc.
 func buildDNSDownAlert(m db.DnsMonitor, resolvedValue, failureReason string) AlertMessage {
-	hostRecord := fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType)
+	hostLine := codeLine("Hostname", fmt.Sprintf("%s (%s)", m.Hostname, m.RecordType))
 	if failureReason != "" {
-		subject := fmt.Sprintf("%s: DNS lookup failed", m.Name)
-		safeReason := html.EscapeString(failureReason)
-		return AlertMessage{
-			Telegram: fmt.Sprintf("🔴 <b>%s</b>: DNS lookup failed\n\nHostname: <code>%s</code>\nReason: %s",
-				m.Name, hostRecord, safeReason),
-			EmailSubject: subject,
-			EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b>: DNS lookup failed</p><p>Hostname: <code>%s</code><br>Reason: %s</p>",
-				m.Name, hostRecord, safeReason),
-			Webhook: &webhook.Event{
-				EventType:   "down",
-				MonitorName: m.Name,
-				MonitorType: "dns",
-				Reason:      failureReason,
-				Timestamp:   time.Now().UTC().Format(time.RFC3339),
-			},
-			Slack: slackMsg(slack.DownMessage(m.Name, "dns", failureReason)),
-			SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s DNS lookup failed (%s)", m.Name, failureReason)),
-		}
+		return buildAlert(alertText{
+			Event: "down", MonitorType: "dns", Name: m.Name,
+			Icon: "🔴", Headline: ": DNS lookup failed",
+			Details: []string{hostLine, "Reason: " + html.EscapeString(failureReason)},
+			Subject: m.Name + ": DNS lookup failed",
+			Reason:  failureReason,
+			SMS:     fmt.Sprintf("%s DNS lookup failed (%s)", m.Name, failureReason),
+		})
 	}
 
 	oldValue := "(unknown)"
 	if m.ExpectedValue.Valid {
 		oldValue = m.ExpectedValue.String
 	}
-	changeDesc := fmt.Sprintf("%s → %s", oldValue, resolvedValue)
-	safeChangeDesc := fmt.Sprintf("%s → %s", html.EscapeString(oldValue), html.EscapeString(resolvedValue))
-	subject := fmt.Sprintf("%s: DNS record changed", m.Name)
-	return AlertMessage{
-		Telegram: fmt.Sprintf("⚠️ <b>%s</b>: DNS record changed\n\nHostname: <code>%s</code>\n%s",
-			m.Name, hostRecord, safeChangeDesc),
-		EmailSubject: subject,
-		EmailHTML: fmt.Sprintf("<p>⚠️ <b>%s</b>: DNS record changed</p><p>Hostname: <code>%s</code><br>%s</p>",
-			m.Name, hostRecord, safeChangeDesc),
-		Webhook: &webhook.Event{
-			EventType:   "down",
-			MonitorName: m.Name,
-			MonitorType: "dns",
-			Reason:      changeDesc,
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.DownMessage(m.Name, "dns", changeDesc)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s DNS record changed to %s", m.Name, resolvedValue)),
-	}
+	return buildAlert(alertText{
+		Event: "down", MonitorType: "dns", Name: m.Name,
+		Icon: "⚠️", Headline: ": DNS record changed",
+		Details: []string{hostLine, fmt.Sprintf("%s → %s", html.EscapeString(oldValue), html.EscapeString(resolvedValue))},
+		Subject: m.Name + ": DNS record changed",
+		Reason:  fmt.Sprintf("%s → %s", oldValue, resolvedValue),
+		SMS:     fmt.Sprintf("%s DNS record changed to %s", m.Name, resolvedValue),
+	})
 }
 
 // performDNSLookup resolves m's hostname per its record type, sorting and

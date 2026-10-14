@@ -392,6 +392,65 @@ func expiringSoonMessages(s expiryAlertSubject, daysLeft int, expiresStr string)
 	return
 }
 
+// alertText is what one down or recovery alert says; buildAlert renders it
+// into every channel's format, so a monitor type only supplies its wording.
+type alertText struct {
+	Event       string // "down" / "recovery"
+	MonitorType string
+	Name        string // monitor name
+	Icon        string
+	// Headline follows the bold monitor name, with its own separator:
+	// " is down", ": port unexpectedly open".
+	Headline string
+	// Details are HTML-safe "Label: value" lines under the headline, joined
+	// by a newline for Telegram and <br> for email.
+	Details []string
+	Subject string
+	Reason  string // down: the webhook and Slack reason
+	// Downtime is the recovery's webhook and Slack downtime.
+	Downtime string
+	SMS      string // without the "Checkmeup: " prefix
+}
+
+func buildAlert(a alertText) AlertMessage {
+	slackMessage := slack.DownMessage(a.Name, a.MonitorType, a.Reason)
+	if a.Event == "recovery" {
+		slackMessage = slack.RecoveryMessage(a.Name, a.MonitorType, a.Downtime)
+	}
+	return AlertMessage{
+		Telegram:     fmt.Sprintf("%s <b>%s</b>%s\n\n%s", a.Icon, a.Name, a.Headline, strings.Join(a.Details, "\n")),
+		EmailSubject: a.Subject,
+		EmailHTML:    fmt.Sprintf("<p>%s <b>%s</b>%s</p><p>%s</p>", a.Icon, a.Name, a.Headline, strings.Join(a.Details, "<br>")),
+		Webhook: &webhook.Event{
+			EventType:        a.Event,
+			MonitorName:      a.Name,
+			MonitorType:      a.MonitorType,
+			Reason:           a.Reason,
+			DowntimeDuration: a.Downtime,
+			Timestamp:        time.Now().UTC().Format(time.RFC3339),
+		},
+		Slack: &slackMessage,
+		SMS:   TruncateSMS("Checkmeup: " + a.SMS),
+	}
+}
+
+// backUpAlert is the recovery alert of the monitor types whose recovery
+// reads "is back up" (uptime, port, DNS).
+func backUpAlert(monitorType, name, downtime string, details ...string) AlertMessage {
+	return buildAlert(alertText{
+		Event: "recovery", MonitorType: monitorType, Name: name,
+		Icon: "✅", Headline: " is back up", Details: details,
+		Subject:  name + " recovered",
+		Downtime: downtime,
+		SMS:      fmt.Sprintf("%s recovered after %s downtime", name, downtime),
+	})
+}
+
+// codeLine is a details line whose value shows as code.
+func codeLine(label, value string) string {
+	return fmt.Sprintf("%s: <code>%s</code>", label, value)
+}
+
 // slackMsg returns a pointer to msg so it can be stored in AlertMessage.Slack
 // without requiring the caller to take the address of a slack.Message literal.
 func slackMsg(msg slack.Message) *slack.Message { return &msg }

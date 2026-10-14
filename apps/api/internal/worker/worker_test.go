@@ -1117,6 +1117,40 @@ func TestConsumeSMSCredit(t *testing.T) {
 	})
 }
 
+func TestBuildAlert_RendersOneTextIntoEveryChannel(t *testing.T) {
+	msg := buildAlert(alertText{
+		Event: "down", MonitorType: "uptime", Name: "Site",
+		Icon: "🔴", Headline: " is down",
+		Details: []string{codeLine("URL", "https://ex.com"), "Reason: HTTP 500"},
+		Subject: "DOWN: Site",
+		Reason:  "HTTP 500",
+		SMS:     "Site is DOWN (HTTP 500)",
+	})
+	if want := "🔴 <b>Site</b> is down\n\nURL: <code>https://ex.com</code>\nReason: HTTP 500"; msg.Telegram != want {
+		t.Errorf("Telegram = %q, want %q", msg.Telegram, want)
+	}
+	if want := "<p>🔴 <b>Site</b> is down</p><p>URL: <code>https://ex.com</code><br>Reason: HTTP 500</p>"; msg.EmailHTML != want {
+		t.Errorf("EmailHTML = %q, want %q", msg.EmailHTML, want)
+	}
+	if msg.EmailSubject != "DOWN: Site" {
+		t.Errorf("EmailSubject = %q, want %q", msg.EmailSubject, "DOWN: Site")
+	}
+	if msg.Webhook.EventType != "down" || msg.Webhook.Reason != "HTTP 500" || msg.Webhook.MonitorType != "uptime" {
+		t.Errorf("Webhook = %+v, want a down uptime event with reason HTTP 500", msg.Webhook)
+	}
+	if msg.SMS != "Checkmeup: Site is DOWN (HTTP 500)" {
+		t.Errorf("SMS = %q, want %q", msg.SMS, "Checkmeup: Site is DOWN (HTTP 500)")
+	}
+
+	recovery := backUpAlert("port", "DB", "1h 2m", codeLine("Host", "db:5432"))
+	if recovery.Webhook.EventType != "recovery" || recovery.Webhook.DowntimeDuration != "1h 2m" {
+		t.Errorf("recovery Webhook = %+v, want a recovery event with downtime 1h 2m", recovery.Webhook)
+	}
+	if recovery.EmailSubject != "DB recovered" {
+		t.Errorf("recovery EmailSubject = %q, want %q", recovery.EmailSubject, "DB recovered")
+	}
+}
+
 func TestFormatDuration(t *testing.T) {
 	cases := []struct {
 		in   time.Duration

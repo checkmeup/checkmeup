@@ -36,12 +36,6 @@ Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-ro
 
 `orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Since 2026-10-14 no code reads or writes them: `CreateOrg` lists its columns instead of `RETURNING *`, and the unused `UpdateOrg*` queries are gone. Settled by the migration that drops them, shipped in a release after that one is deployed, since migrations run at container start while the previous container still serves (`cmd/api/main.go`).
 
-## Hand-built alert messages per monitor type
-
-2026-10-14 · tech-debts.md
-
-`checkOverdue`, `buildUptimeDownAlert` and `buildPortDownAlert` each build their own `AlertMessage` (Telegram, email subject and HTML, webhook, Slack, SMS: one `fmt.Sprintf` per field), unlike SSL and domain, which share `expiredMessages`/`expiringSoonMessages`. Their reason text really differs per type, so one shared template would lose the phrasing or take as many parameters as it saves. Left as is; settled by extracting a shared builder when a fourth near-identical case shows up, or by deciding never to. As of 2026-10-14 that has happened: DNS (`buildDNSDownAlert`, `buildDNSRecoveryAlert`), cron's `buildStuckRunAlert` and the uptime and port recovery builders all hand-build theirs too.
-
 ## SMS delivery failures after Twilio accepts a send
 
 2026-10-14 · twilio-setup.md

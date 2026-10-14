@@ -13,8 +13,6 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
-	"github.com/checkmeup/checkmeup/internal/slack"
-	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 // ─── port monitor checks ─────────────────────────────────────────────────────
@@ -93,21 +91,7 @@ func handlePortUp(ctx context.Context, n Notifiers, m db.PortMonitor, prevStatus
 }
 
 func buildPortRecoveryAlert(m db.PortMonitor, downtime string) AlertMessage {
-	hostPort := fmt.Sprintf("%s:%d", m.Host, m.Port)
-	return AlertMessage{
-		Telegram:     fmt.Sprintf("✅ <b>%s</b> is back up\n\nHost: <code>%s</code>", m.Name, hostPort),
-		EmailSubject: fmt.Sprintf("%s recovered", m.Name),
-		EmailHTML:    fmt.Sprintf("<p>✅ <b>%s</b> is back up</p><p>Host: <code>%s</code></p>", m.Name, hostPort),
-		Webhook: &webhook.Event{
-			EventType:        "recovery",
-			MonitorName:      m.Name,
-			MonitorType:      "port",
-			DowntimeDuration: downtime,
-			Timestamp:        time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.RecoveryMessage(m.Name, "port", downtime)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s recovered after %s downtime", m.Name, downtime)),
-	}
+	return backUpAlert("port", m.Name, downtime, codeLine("Host", fmt.Sprintf("%s:%d", m.Host, m.Port)))
 }
 
 func handlePortDown(ctx context.Context, n Notifiers, m db.PortMonitor, prevStatus db.MonitorStatus, failureReason string) {
@@ -153,42 +137,21 @@ func alertPortIncident(ctx context.Context, n Notifiers, m db.PortMonitor, inc d
 // reachable, which reads very differently from an open-state monitor's
 // service outage.
 func buildPortDownAlert(m db.PortMonitor, failureReason string) AlertMessage {
-	hostPort := fmt.Sprintf("%s:%d", m.Host, m.Port)
+	hostLine := codeLine("Host", fmt.Sprintf("%s:%d", m.Host, m.Port))
+	a := alertText{
+		Event: "down", MonitorType: "port", Name: m.Name,
+		Icon: "🔴", Headline: " is down",
+		Details: []string{hostLine, "Reason: " + failureReason},
+		Subject: "DOWN: " + m.Name,
+		Reason:  failureReason,
+		SMS:     fmt.Sprintf("%s is DOWN (%s)", m.Name, failureReason),
+	}
 	if m.ExpectedState == db.PortExpectedStateClosed {
-		subject := fmt.Sprintf("%s: port unexpectedly open", m.Name)
-		return AlertMessage{
-			Telegram: fmt.Sprintf("⚠️ <b>%s</b>: port unexpectedly open\n\nHost: <code>%s</code>",
-				m.Name, hostPort),
-			EmailSubject: subject,
-			EmailHTML: fmt.Sprintf("<p>⚠️ <b>%s</b>: port unexpectedly open</p><p>Host: <code>%s</code></p>",
-				m.Name, hostPort),
-			Webhook: &webhook.Event{
-				EventType:   "down",
-				MonitorName: m.Name,
-				MonitorType: "port",
-				Reason:      failureReason,
-				Timestamp:   time.Now().UTC().Format(time.RFC3339),
-			},
-			Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
-			SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s", subject)),
-		}
+		a.Icon, a.Headline, a.Details = "⚠️", ": port unexpectedly open", []string{hostLine}
+		a.Subject = m.Name + ": port unexpectedly open"
+		a.SMS = a.Subject
 	}
-	return AlertMessage{
-		Telegram: fmt.Sprintf("🔴 <b>%s</b> is down\n\nHost: <code>%s</code>\nReason: %s",
-			m.Name, hostPort, failureReason),
-		EmailSubject: fmt.Sprintf("DOWN: %s", m.Name),
-		EmailHTML: fmt.Sprintf("<p>🔴 <b>%s</b> is down</p><p>Host: <code>%s</code><br>Reason: %s</p>",
-			m.Name, hostPort, failureReason),
-		Webhook: &webhook.Event{
-			EventType:   "down",
-			MonitorName: m.Name,
-			MonitorType: "port",
-			Reason:      failureReason,
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.DownMessage(m.Name, "port", failureReason)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, failureReason)),
-	}
+	return buildAlert(a)
 }
 
 // sharedPortDialer is the *net.Dialer used for every real (non-test) port

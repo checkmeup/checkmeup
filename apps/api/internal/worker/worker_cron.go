@@ -8,7 +8,6 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/slack"
-	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
 // ─── cron monitor checks ─────────────────────────────────────────────────────
@@ -116,54 +115,59 @@ func processStuckCronRun(ctx context.Context, n Notifiers, run db.ListStuckCronR
 }
 
 func buildStuckRunAlert(run db.ListStuckCronRunsRow) AlertMessage {
-	startedAt := run.StartedAt.Time
-	runningFor := FormatDuration(time.Since(startedAt))
+	startedAt := run.StartedAt.Time.Format("15:04:05 MST")
+	runningFor := FormatDuration(time.Since(run.StartedAt.Time))
 	maxDuration := FormatDuration(time.Duration(run.MonitorMaxDurationMins.Int32) * time.Minute)
-	reason := fmt.Sprintf("stuck run — started at %s, running for %s (max %s)", startedAt.Format("15:04:05 MST"), runningFor, maxDuration)
-	return AlertMessage{
-		Telegram: fmt.Sprintf(
-			"🐛 <b>%s</b> has a stuck run\n\nStarted at: %s\nRunning for: %s\nMax expected: %s",
-			run.MonitorName, startedAt.Format("15:04:05 MST"), runningFor, maxDuration,
-		),
-		EmailSubject: fmt.Sprintf("STUCK: %s run exceeded max duration", run.MonitorName),
-		EmailHTML: fmt.Sprintf(
-			"<p>🐛 <b>%s</b> has a stuck run</p><p>Started at: %s<br>Running for: %s<br>Max expected: %s</p>",
-			run.MonitorName, startedAt.Format("15:04:05 MST"), runningFor, maxDuration,
-		),
-		Webhook: &webhook.Event{
-			EventType:   "down",
-			MonitorName: run.MonitorName,
-			MonitorType: "cron",
-			Reason:      reason,
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.DownMessage(run.MonitorName, "cron", reason)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s stuck run (%s)", run.MonitorName, runningFor)),
-	}
+	return buildAlert(alertText{
+		Event: "down", MonitorType: "cron", Name: run.MonitorName,
+		Icon: "🐛", Headline: " has a stuck run",
+		Details: []string{"Started at: " + startedAt, "Running for: " + runningFor, "Max expected: " + maxDuration},
+		Subject: fmt.Sprintf("STUCK: %s run exceeded max duration", run.MonitorName),
+		Reason:  fmt.Sprintf("stuck run — started at %s, running for %s (max %s)", startedAt, runningFor, maxDuration),
+		SMS:     fmt.Sprintf("%s stuck run (%s)", run.MonitorName, runningFor),
+	})
 }
 
 func buildOverdueAlert(m db.CronMonitor) AlertMessage {
 	missedBy := time.Since(m.NextPingAt.Time).Round(time.Second)
 	expectedAt := m.NextPingAt.Time.Format("15:04:05 MST")
 	reason := fmt.Sprintf("missed its ping — expected at %s, missed by %s", expectedAt, missedBy)
-	return AlertMessage{
-		Telegram: fmt.Sprintf(
-			"🔴 <b>%s</b> missed its ping\n\nSchedule: <code>%s</code>\nExpected at: %s\nMissed by: %s",
-			m.Name, m.Schedule, expectedAt, missedBy,
-		),
-		EmailSubject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
-		EmailHTML: fmt.Sprintf(
-			"<p>🔴 <b>%s</b> missed its ping</p><p>Schedule: <code>%s</code><br>Expected at: %s<br>Missed by: %s</p>",
-			m.Name, m.Schedule, expectedAt, missedBy,
-		),
-		Webhook: &webhook.Event{
-			EventType:   "down",
-			MonitorName: m.Name,
-			MonitorType: "cron",
-			Reason:      reason,
-			Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		},
-		Slack: slackMsg(slack.DownMessage(m.Name, "cron", reason)),
-		SMS:   TruncateSMS(fmt.Sprintf("Checkmeup: %s is DOWN (%s)", m.Name, reason)),
-	}
+	return buildAlert(alertText{
+		Event: "down", MonitorType: "cron", Name: m.Name,
+		Icon: "🔴", Headline: " missed its ping",
+		Details: []string{codeLine("Schedule", m.Schedule), "Expected at: " + expectedAt, fmt.Sprintf("Missed by: %s", missedBy)},
+		Subject: fmt.Sprintf("DOWN: %s missed its ping", m.Name),
+		Reason:  reason,
+		SMS:     fmt.Sprintf("%s is DOWN (%s)", m.Name, reason),
+	})
+}
+
+// CronRecoveryAlert is the alert for a down cron monitor pinging again —
+// sent from the ping handler, which is where a cron monitor recovers.
+func CronRecoveryAlert(name, downtime string) AlertMessage {
+	return buildAlert(alertText{
+		Event: "recovery", MonitorType: "cron", Name: name,
+		Icon: "✅", Headline: " recovered",
+		Details:  []string{"Down for: " + downtime},
+		Subject:  name + " recovered",
+		Downtime: downtime,
+		SMS:      fmt.Sprintf("%s recovered after %s", name, downtime),
+	})
+}
+
+// StuckRunRecoveryAlert is the alert for a stuck run that finished or was
+// superseded by a new start ping; reason says which.
+func StuckRunRecoveryAlert(name, reason, ranFor string) AlertMessage {
+	msg := buildAlert(alertText{
+		Event: "recovery", MonitorType: "cron", Name: name,
+		Icon: "✅", Headline: " stuck run recovered — " + reason,
+		Details:  []string{"Ran for: " + ranFor},
+		Subject:  name + " stuck run recovered",
+		Downtime: ranFor,
+		SMS:      fmt.Sprintf("%s stuck run recovered (%s)", name, reason),
+	})
+	// Slack says why the run stopped being stuck along with how long it ran.
+	slackMessage := slack.RecoveryMessage(name, "cron", fmt.Sprintf("%s (ran for %s)", reason, ranFor))
+	msg.Slack = &slackMessage
+	return msg
 }
