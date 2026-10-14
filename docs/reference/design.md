@@ -28,8 +28,9 @@ The icon is a stylized `C`/bracket that morphs into a checkmark. Two greens in t
 
 ## Color palette
 
-Redesigned July 2026 ("Redesign v2") to a lower-contrast, near-black/near-white neutral
-scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-style palette.
+Redesigned October 2026 ("Redesign v3", the hybrid direction: a calm, light-first
+interface with dense data tables). Opaque neutrals replace v2's translucent ones, and
+the status colors now switch per theme like the neutrals.
 
 **Brand greens** (Tailwind theme colors in `style.css`'s `@theme`; fixed hex, both themes)
 
@@ -41,70 +42,54 @@ scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-styl
 | `--color-green-700` | `#0F6E56` |
 | `--color-green-900` | `#08392E` |
 
-**Status colors** (semantic — never rebrand these)
+**Status colors** (semantic — never rebrand these). Each resolves per theme so it also
+reads as text on `--bg` (WCAG AA, 4.5:1), not just as a dot or fill.
 
-| Token | Hex | Meaning |
-|---|---|---|
-| `--status-up` | `#1D9E75` | Up / healthy |
-| `--status-degraded` | `#F59E0B` | Degraded / slow |
-| `--status-down` | `#EF4444` | Down / error |
-| `--status-down-wash` | `rgba(239,68,68,0.10)` | Down/error tinted background (e.g. a destructive button) |
-| `--status-paused` | `#94A3B8` | Paused / maintenance |
+| Token | Dark | Light | Meaning |
+|---|---|---|---|
+| `--status-up` | `#3FBF8F` | `#12805F` | Up / healthy |
+| `--status-degraded` | `#EBAE4A` | `#A86200` | Degraded / slow / expiring |
+| `--status-down` | `#F0605A` | `#C93A2E` | Down / error |
+| `--status-down-wash` | `#3A1A18` | `#FBE6E4` | Down/error tinted background |
+| `--status-paused` | `#7A847F` | `#6F7873` | Paused / maintenance |
+| `--on-status-down` | `#1A0807` | `#FFFFFF` | Text/icon on a `--status-down` fill (destructive button) |
 
-**Neutrals — dark** (default; bare `:root` in `style.css`)
+**Neutrals** (dark is the bare `:root` in `style.css`; light is the
+`:root[data-theme='light']` override, see [PRD theme](../../.about/prd/theme.md))
 
-| Token | Value | Use |
-|---|---|---|
-| `--bg` | `#0A0F0D` | Page background |
-| `--surface` | `#101512` | Nav-adjacent chrome, the hero product-screenshot mockup |
-| `--surface-raised` | `#1A221D` | Further-elevated chrome (mockup's internal header bar), hover backgrounds |
-| `--card` | `rgba(255,255,255,0.035)` | Feature/testimonial/pricing card fill — translucent, sits directly on `--bg` |
-| `--border` | `rgba(255,255,255,0.08)` | Dividers, input borders |
-| `--text-muted` | `rgba(242,245,243,0.28)` | Placeholders, captions |
-| `--text-dim` | `rgba(242,245,243,0.55)` | Secondary text |
-| `--text` | `#F2F5F3` | Body text |
-| `--text-strong` | `#F2F5F3` | Headings, emphasis — same value as `--text` in this palette |
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `--bg` | `#0E1211` | `#FFFFFF` | Page background |
+| `--surface` | `#131816` | `#F7F9F7` | Table headers, nav-adjacent chrome, the hero mockup |
+| `--surface-raised` | `#1A201E` | `#F1F4F1` | Active nav item, hover backgrounds |
+| `--card` | `rgb(236 240 238 / 3%)` | `rgb(17 23 20 / 3%)` | Feature/testimonial/pricing card fill |
+| `--border` | `#232A27` | `#E4E8E4` | Dividers, table rules |
+| `--border-strong` | `#323B37` | `#D6DCD7` | Input and secondary-button outlines |
+| `--text-muted` | `#7A847F` | `#6F7873` | Placeholders, captions |
+| `--text-dim` | `#9AA39E` | `#59625D` | Secondary text |
+| `--text` | `#ECF0EE` | `#111714` | Body text |
+| `--text-strong` | `#ECF0EE` | `#111714` | Headings, emphasis — same value as `--text` |
 
-**Neutrals — light** (`:root[data-theme='light']` override, see [PRD theme](../../.about/prd/theme.md))
-
-| Token | Value | Use |
-|---|---|---|
-| `--bg` | `#FBFDFC` | Page background |
-| `--surface` | `#F2F6F4` | Nav-adjacent chrome, the hero product-screenshot mockup |
-| `--surface-raised` | `#E7EDE9` | Further-elevated chrome, hover backgrounds |
-| `--card` | `rgba(0,0,0,0.03)` | Feature/testimonial/pricing card fill |
-| `--border` | `rgba(0,0,0,0.08)` | Dividers, input borders |
-| `--text-muted` | `rgba(11,15,12,0.45)` | Placeholders, captions |
-| `--text-dim` | `rgba(11,15,12,0.70)` | Secondary text |
-| `--text` | `#0D1512` | Body text |
-| `--text-strong` | `#0D1512` | Headings, emphasis |
-
-**Note:** `--text-muted`/`--text-dim`'s light-mode alpha is *not* the same percentage as
-dark mode's (dark: 28%/55%; light: 45%/70%) — a straight port of the dark-mode alpha onto a
-light background under-shoots contrast badly (measured: `--text-dim` fell from a 7.24:1
-ratio in the pre-redesign solid-color palette to 4.08:1, below WCAG AA's 4.5:1 for normal
-text; `--text-muted` fell from 2.45:1 to 1.88:1). Dark-on-light and light-on-dark alpha
-blending aren't symmetric in sRGB — don't "fix" these back to match dark mode's percentage.
-
-The brand-green scale and status colors above are fixed hex in both themes. The **semantic
-accent** below is the one exception: it resolves to a different green step per theme.
+Every text token meets WCAG AA (4.5:1) on `--bg` in its theme — `--text-muted` included,
+unlike v2, where captions fell to 1.9–2.5:1.
 
 **Accent**
 
 | Token | Dark | Light | Use |
 |---|---|---|---|
-| `--accent` | `--color-green-500` | `--color-green-700` | Buttons, links, selected/active state (checkboxes, progress bars) — darker in light mode for contrast against a near-white background |
-| `--accent-emphasis` | `#6EE7B7` | `--color-green-700` (= `--accent`) | Extra-bright headline-highlight text — dark mode only; a bright mint has no contrast on white, so light mode falls back to `--accent` |
+| `--accent` | `--color-green-300` | `--color-green-700` | Buttons, links, selected/active state — the light mint reads on dark, the deep green on white |
+| `--accent-hover` | `#6EE7B7` | `#0C5E49` | Hover fill of an `--accent` button |
+| `--on-accent` | `#06201A` | `#FFFFFF` | Text/icon on an `--accent` fill — dark ink on dark mode's mint, white on light mode's green |
+| `--accent-emphasis` | `#6EE7B7` | `--color-green-700` | Extra-bright headline-highlight text — dark mode only |
 | `--accent-deep` | `--color-green-700` | `--color-green-700` | Alias, same both themes |
-| `--accent-wash` | `rgba(29,158,117,0.13)` | `rgba(15,110,86,0.10)` | Icon badges, pills, progress-track background |
-| `--accent-wash-dim` | `rgba(29,158,117,0.065)` | `rgba(15,110,86,0.05)` | Larger-area tint — CTA banner, status-operational banner, highlighted pricing card |
-| `--on-accent` | `#FFFFFF` | `#FFFFFF` | Text/icon color on top of `--accent` — no override needed, white reads on every accent step used |
+| `--accent-wash` | `rgb(77 201 160 / 12%)` | `rgb(15 110 86 / 10%)` | Icon badges, pills, progress-track background |
+| `--accent-wash-dim` | `rgb(77 201 160 / 6%)` | `rgb(15 110 86 / 5%)` | Larger-area tint — CTA banner, highlighted pricing card |
 
 **Nav**
 
 | Token | Dark | Light | Use |
 |---|---|---|---|
-| `--nav-bg` | `rgba(10,15,13,0.88)` | `rgba(251,253,252,0.88)` | Sticky nav background under `backdrop-filter: blur(...)` |
+| `--nav-bg` | `rgb(14 18 17 / 88%)` | `rgb(255 255 255 / 88%)` | Sticky nav background under `backdrop-filter: blur(...)` |
 
 **CTA banner** (`HomeView`, `PricingView`, `AboutView` — the "Start monitoring..." box; see [PRD theme](../../.about/prd/theme.md))
 
@@ -122,9 +107,11 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
 
 ## Typography
 
-- **Sans:** `Inter` (400/500/600/700/800), loaded via Google Fonts `<link>` tags in
-  `apps/web/index.html`. Falls back to the system UI stack.
-- **Mono:** `IBM Plex Mono` (400/500), wired as Tailwind's `--font-mono` theme token in
+- **Sans:** `Geist` (400/500/600/700/800) for body and headings alike — headings are
+  set apart by weight (600) and tight tracking, not by a second typeface. Wired as
+  Tailwind's `--font-sans` theme token in `style.css`, loaded via Google Fonts `<link>`
+  tags in `apps/web/index.html`. Falls back to the system UI stack.
+- **Mono:** `Geist Mono` (400/500), wired as Tailwind's `--font-mono` theme token in
   `style.css` — every `font-mono` utility class (timestamps, ping URLs, uptime stats)
   picks it up automatically. Falls back to `ui-monospace`/`SFMono-Regular`.
 
