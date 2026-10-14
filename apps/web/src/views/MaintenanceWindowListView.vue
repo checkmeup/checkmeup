@@ -65,14 +65,14 @@ async function endNow(w: MaintenanceWindow) {
 
       <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
-      <div v-else-if="error" class="rounded-[14px] border border-[var(--border)] p-6 text-center">
+      <div v-else-if="error" class="border-y border-[var(--border)] py-12 text-center">
         <p class="text-sm mb-4 text-[var(--status-down)]">{{ error }}</p>
         <Button variant="secondary" size="sm" @click="load">Try again</Button>
       </div>
 
       <div
         v-else-if="windows.length === 0"
-        class="rounded-[14px] border border-[var(--border)] p-12 text-center"
+        class="border-y border-[var(--border)] py-16 text-center"
       >
         <p class="text-sm mb-4 text-[var(--text-muted)]">
           No maintenance windows yet. Schedule one to suppress alerts during planned downtime.
@@ -82,20 +82,20 @@ async function endNow(w: MaintenanceWindow) {
 
       <template v-else>
         <!-- Mobile cards -->
-        <div class="md:hidden space-y-2">
+        <div class="md:hidden divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
           <div
             v-for="w in windows"
             :key="w.id"
-            class="rounded-[14px] border border-[var(--border)] p-4 cursor-pointer"
+            class="cursor-pointer p-4 transition-colors hover:bg-[var(--surface)]"
             @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
           >
             <div class="flex items-center justify-between mb-2">
               <span class="font-medium text-sm text-[var(--text-strong)]">{{ w.title }}</span>
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-medium"
+                class="inline-flex items-center gap-2 text-[13px] font-medium"
                 :style="{ color: statusColors[w.status] }"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusColors[w.status] }"></span>
+                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: statusColors[w.status] }"></span>
                 {{ statusLabels[w.status] }}
               </span>
             </div>
@@ -117,7 +117,7 @@ async function endNow(w: MaintenanceWindow) {
         </div>
 
         <!-- Desktop table -->
-        <div class="hidden md:block rounded-xl border overflow-hidden border-[var(--border)]">
+        <div class="hidden overflow-hidden rounded-[14px] border border-[var(--border)] md:block">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-[var(--surface)]">
@@ -139,10 +139,10 @@ async function endNow(w: MaintenanceWindow) {
                 <td class="px-4 py-3 font-medium text-[var(--text-strong)]">{{ w.title }}</td>
                 <td class="px-4 py-3">
                   <span
-                    class="inline-flex items-center gap-1.5 text-xs font-medium"
+                    class="inline-flex items-center gap-2 text-[13px] font-medium"
                     :style="{ color: statusColors[w.status] }"
                   >
-                    <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusColors[w.status] }"></span>
+                    <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: statusColors[w.status] }"></span>
                     {{ statusLabels[w.status] }}
                   </span>
                 </td>

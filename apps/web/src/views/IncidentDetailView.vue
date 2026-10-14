@@ -159,11 +159,11 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
       <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
       <template v-else-if="incident">
-        <div class="rounded-[14px] border border-[var(--border)] p-6 mb-4">
+        <div class="mb-10">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div v-if="!editingTitle" class="flex items-center gap-2 flex-1">
               <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">{{ incident.title }}</h1>
-              <button class="text-xs text-[var(--text-muted)]" @click="startEditTitle">Edit</button>
+              <button type="button" class="text-sm text-[var(--text-dim)] hover:text-[var(--text)]" @click="startEditTitle">Edit</button>
             </div>
             <div v-else class="flex items-center gap-2 flex-1">
               <Input v-model="titleDraft" class="flex-1" />
@@ -173,8 +173,8 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
           </div>
 
           <div class="flex items-center gap-4 text-sm">
-            <span class="inline-flex items-center gap-1.5" :style="{ color: severityColors[incident.severity] }">
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: severityColors[incident.severity] }"></span>
+            <span class="inline-flex items-center gap-2 font-medium" :style="{ color: severityColors[incident.severity] }">
+              <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: severityColors[incident.severity] }"></span>
               {{ severityLabels[incident.severity] }}
             </span>
             <span class="text-[var(--text-dim)]">{{ statusLabels[incident.status] }}</span>
@@ -195,7 +195,7 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         <!-- Post a new update -->
         <div
           v-if="!isResolved"
-          class="rounded-[14px] border border-[var(--border)] p-6 mb-4"
+          class="mb-10 rounded-[14px] bg-[var(--surface)] p-6"
         >
           <Label for="newMessage">Post an update</Label>
           <Input id="newMessage" v-model="newMessage" placeholder="What's changed?" class="mt-1" />
@@ -213,16 +213,17 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         <p v-if="error" class="text-sm mb-4 text-[var(--status-down)]">{{ error }}</p>
 
         <!-- Updates feed -->
-        <div class="space-y-3 mb-6">
+        <div class="mb-6 flex flex-col">
+          <h2 class="mb-1 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Updates</h2>
           <div
             v-for="u in incident.updates"
             :key="u.id"
-            class="rounded-[14px] border border-[var(--border)] p-4"
+            class="border-t border-[var(--border)] py-4"
           >
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-medium text-[var(--text-strong)]">{{ statusLabels[u.status] }}</span>
+              <span class="text-sm font-semibold text-[var(--text-strong)]">{{ statusLabels[u.status] }}</span>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-[var(--text-muted)]">{{ formatDate(u.createdAt) }}</span>
+                <span class="font-mono text-xs text-[var(--text-dim)]">{{ formatDate(u.createdAt) }}</span>
                 <button
                   v-if="editingUpdateId !== u.id"
                   class="text-xs text-[var(--text-muted)]"
@@ -232,7 +233,7 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
                 </button>
               </div>
             </div>
-            <p v-if="editingUpdateId !== u.id" class="text-sm text-[var(--text-dim)]">{{ u.message }}</p>
+            <p v-if="editingUpdateId !== u.id" class="text-[15px] text-[var(--text)]">{{ u.message }}</p>
             <div v-else class="flex items-center gap-2 mt-1">
               <Input v-model="editDraft" class="flex-1" />
               <Button size="sm" :disabled="savingUpdate" @click="saveUpdateMessage(u.id)">Save</Button>

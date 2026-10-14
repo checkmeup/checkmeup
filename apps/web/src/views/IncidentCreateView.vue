@@ -81,7 +81,7 @@ async function submit(confirmOverlap = false) {
       </div>
 
       <form
-        class="rounded-[14px] border border-[var(--border)] p-6 space-y-5"
+        class="flex flex-col gap-6"
         @submit.prevent="submit(false)"
       >
         <div>
