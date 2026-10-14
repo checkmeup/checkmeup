@@ -216,7 +216,7 @@ func toPublicIncidentRow(r db.ListActiveStatusPageIncidentsForPageRow, incidentU
 		SeverityColor: incidentSeverityColor(r.Severity),
 		StatusLabel:   incidentStatusLabel(r.Status),
 		Affected:      string(r.Affected),
-		CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
+		CreatedAt:     r.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"),
 	}
 	row.Updates = make([]publicIncidentUpdateRow, len(incidentUpdates))
 	for i, u := range incidentUpdates {
@@ -229,7 +229,7 @@ func toPublicIncidentRow(r db.ListActiveStatusPageIncidentsForPageRow, incidentU
 	}
 	if len(incidentUpdates) > 0 {
 		row.LatestUpdateMessage = incidentUpdates[0].Message
-		row.LatestUpdateAt = incidentUpdates[0].CreatedAt.Time.Format("2006-01-02 15:04 UTC")
+		row.LatestUpdateAt = incidentUpdates[0].CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC")
 	}
 	return row
 }
@@ -285,8 +285,8 @@ func (h *StatusPublicHandler) loadResolvedIncidents(ctx context.Context, page db
 			Severity:      incidentSeverityLabel(r.Severity),
 			SeverityColor: incidentSeverityColor(r.Severity),
 			StatusLabel:   incidentStatusLabel(r.Status),
-			CreatedAt:     r.CreatedAt.Time.Format("2006-01-02 15:04 UTC"),
-			ResolvedAt:    r.ResolvedAt.Time.Format("2006-01-02 15:04 UTC"),
+			CreatedAt:     r.CreatedAt.Time.UTC().Format("2006-01-02 15:04 UTC"),
+			ResolvedAt:    r.ResolvedAt.Time.UTC().Format("2006-01-02 15:04 UTC"),
 			Duration:      formatDuration(r.ResolvedAt.Time.Sub(r.CreatedAt.Time)),
 		}
 		if latest, err := h.queries.GetLatestStatusPageIncidentUpdate(ctx, r.ID); err == nil {
@@ -493,14 +493,16 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .footer a:hover{color:var(--text);text-decoration:underline}
 .footer-links{display:flex;gap:14px;flex-wrap:wrap}
 .content-grid{display:flex;gap:48px;align-items:flex-start}
-.content-grid .monitors{flex:1.6;display:grid;grid-template-columns:1fr 1fr;column-gap:32px;min-width:0}
+.monitors-col{flex:1.6;min-width:0}
+.content-grid .monitors{display:grid;grid-template-columns:1fr 1fr;column-gap:32px;min-width:0}
 .content-grid .bar{height:20px}
 .content-grid .bar-labels{display:none}
 .sidebar{flex:1;min-width:280px;display:flex;flex-direction:column;gap:28px}
 .sidebar .incidents-history{margin-top:0}
 @media (max-width:860px){
   .content-grid{flex-direction:column;gap:32px}
-  .content-grid .monitors{grid-template-columns:1fr;width:100%}
+  .content-grid .monitors{grid-template-columns:1fr}
+  .monitors-col{width:100%}
   .sidebar{min-width:0;width:100%}
   .overall h1{font-size:34px}
 }
@@ -541,12 +543,15 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 
   {{if eq .Layout "grid"}}
   <div class="content-grid">
+    <section class="monitors-col">
+    <h2 class="section-title">Monitors</h2>
     <div class="monitors">
       {{range .Monitors}}{{template "monitorCard" .}}{{end}}
       {{if not .Monitors}}
       <p class="empty">No monitors on this page yet.</p>
       {{end}}
     </div>
+    </section>
     <div class="sidebar">
       {{if .ActiveIncidents}}
       <section>
