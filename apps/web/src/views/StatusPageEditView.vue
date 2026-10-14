@@ -70,24 +70,21 @@ async function submit() {
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button
-          class="text-sm"
-          style="color: var(--text-muted)"
+    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+      <div class="mb-8 flex flex-col items-start gap-4">
+        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
           @click="router.push({ name: 'status-page-detail', params: { id } })"
         >
           ← Back
         </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">Edit status page</h1>
+        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Edit status page</h1>
       </div>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
       <form
         v-else
-        class="rounded-xl border p-6 space-y-5"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-6 space-y-5"
         @submit.prevent="submit"
       >
         <div>

@@ -88,10 +88,9 @@ async function revoke(id: string) {
 
 <template>
   <div
-    class="rounded-xl border p-6"
-    style="background-color: var(--surface); border-color: var(--border)"
+    class="rounded-[14px] border border-[var(--border)] p-6"
   >
-    <h2 class="font-medium mb-1" style="color: var(--text-strong)">API keys</h2>
+    <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">API keys</h2>
     <p class="text-sm mb-5" style="color: var(--text-muted)">
       Generate a key to read monitor status from scripts, CI pipelines, or third-party integrations
       via

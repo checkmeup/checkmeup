@@ -149,9 +149,9 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-2xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button class="text-sm" style="color: var(--text-muted)" @click="router.push({ name: 'incidents' })">
+    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+      <div class="mb-8 flex flex-col items-start gap-4">
+        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]" @click="router.push({ name: 'incidents' })">
           ← Back
         </button>
       </div>
@@ -159,10 +159,10 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
       <template v-else-if="incident">
-        <div class="rounded-xl border p-6 mb-4" style="background-color: var(--surface); border-color: var(--border)">
+        <div class="rounded-[14px] border border-[var(--border)] p-6 mb-4">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div v-if="!editingTitle" class="flex items-center gap-2 flex-1">
-              <h1 class="text-xl font-semibold" style="color: var(--text-strong)">{{ incident.title }}</h1>
+              <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">{{ incident.title }}</h1>
               <button class="text-xs" style="color: var(--text-muted)" @click="startEditTitle">Edit</button>
             </div>
             <div v-else class="flex items-center gap-2 flex-1">
@@ -196,16 +196,14 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         <!-- Post a new update -->
         <div
           v-if="!isResolved"
-          class="rounded-xl border p-6 mb-4"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] p-6 mb-4"
         >
           <Label for="newMessage">Post an update</Label>
           <Input id="newMessage" v-model="newMessage" placeholder="What's changed?" class="mt-1" />
           <div class="flex items-center gap-3 mt-3">
             <select
               v-model="newStatus"
-              class="rounded-md border px-3 py-2 text-sm"
-              style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+              class="rounded-lg border px-3 py-2 text-sm"
             >
               <option v-for="s in statusOrder" :key="s" :value="s">{{ statusLabels[s] }}</option>
             </select>
@@ -220,8 +218,7 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
           <div
             v-for="u in incident.updates"
             :key="u.id"
-            class="rounded-xl border p-4"
-            style="background-color: var(--surface); border-color: var(--border)"
+            class="rounded-[14px] border border-[var(--border)] p-4"
           >
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs font-medium" style="color: var(--text-strong)">{{ statusLabels[u.status] }}</span>

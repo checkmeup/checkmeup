@@ -40,28 +40,33 @@ function goBack() {
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button class="text-sm transition-colors" style="color: var(--text-muted)" @click="goBack">
+    <div class="mx-auto flex max-w-[720px] flex-col gap-8 px-4 pt-8 pb-20 md:px-6">
+      <div class="flex flex-col gap-4">
+        <button
+          type="button"
+          class="self-start py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+          @click="goBack"
+        >
           ← Back
         </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">{{ title }}</h1>
+        <h1
+          class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]"
+        >
+          {{ title }}
+        </h1>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+      <p v-if="loading" class="text-sm text-[var(--text-dim)]">Loading…</p>
 
-      <form
-        v-else
-        class="rounded-xl border p-6 space-y-5"
-        style="background-color: var(--surface); border-color: var(--border)"
-        @submit.prevent="emit('submit')"
-      >
+      <form v-else class="flex flex-col gap-6" @submit.prevent="emit('submit')">
         <slot />
 
         <UpgradePrompt v-if="limitReached" :message="error" />
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
-        <div class="flex items-center justify-between pt-1">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-6"
+        >
           <div class="flex gap-3">
             <Button type="submit" :disabled="submitting">
               {{ submitting ? submittingLabel : submitLabel }}
@@ -69,9 +74,7 @@ function goBack() {
             <Button variant="secondary" type="button" @click="goBack">Cancel</Button>
           </div>
           <!-- Destructive or screen-specific actions (e.g. the maintenance
-               window's delete-with-confirm) sit opposite save/cancel. With no
-               actions slot filled, justify-between leaves the single child
-               left-aligned, matching the original single-row layout. -->
+               window's delete-with-confirm) sit opposite save/cancel. -->
           <slot name="actions" />
         </div>
       </form>

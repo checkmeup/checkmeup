@@ -55,8 +55,7 @@ defineSlots<{
       <select
         id="grace"
         v-model="form.gracePeriodMins"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in graceOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -77,8 +76,7 @@ defineSlots<{
       <select
         id="alertLimit"
         v-model="form.maxAlertsPerIncident"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -94,8 +92,7 @@ defineSlots<{
       <select
         id="alertFilter"
         v-model="form.alertAfterNFailures"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -111,8 +108,7 @@ defineSlots<{
       <select
         id="maxDuration"
         v-model="form.maxDurationMins"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in maxDurationOptions" :key="opt.label" :value="opt.value">
           {{ opt.label }}

@@ -213,16 +213,14 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-3xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <button
-          class="text-sm"
-          style="color: var(--text-muted)"
+    <div class="mx-auto max-w-[960px] px-4 pt-8 pb-20 md:px-6">
+      <div class="mb-8 flex flex-col items-start gap-4">
+        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
           @click="router.push({ name: 'status-pages' })"
         >
           ← Back
         </button>
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">
+        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">
           {{ detail?.title ?? 'Status page' }}
         </h1>
       </div>
@@ -233,8 +231,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
       <template v-else-if="detail">
         <!-- Page info card -->
         <div
-          class="rounded-xl border p-5 mb-6"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] p-5 mb-6"
         >
           <div class="flex items-start justify-between gap-4 mb-4">
             <div>
@@ -285,8 +282,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Available monitors -->
           <div
-            class="rounded-xl border"
-            style="background-color: var(--surface); border-color: var(--border)"
+            class="rounded-[14px] border border-[var(--border)]"
           >
             <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
               Available monitors
@@ -323,8 +319,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
 
           <!-- Selected monitors + order -->
           <div
-            class="rounded-xl border"
-            style="background-color: var(--surface); border-color: var(--border)"
+            class="rounded-[14px] border border-[var(--border)]"
           >
             <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
               On this page ({{ monitorEntries.length }})
@@ -379,8 +374,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
 
         <!-- Badges (PRD status-badges) -->
         <div
-          class="rounded-xl border mt-6"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] mt-6"
         >
           <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
             Badges

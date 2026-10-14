@@ -123,4 +123,24 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Native form controls share the Input component's look, so a bare
+     <select> or <textarea> needs no inline colors. */
+  select,
+  textarea {
+    background-color: var(--bg);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--accent);
+  }
 }

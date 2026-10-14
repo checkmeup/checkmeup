@@ -30,7 +30,7 @@ function toggle(id: string) {
 </script>
 
 <template>
-  <div class="rounded-xl border" style="background-color: var(--surface); border-color: var(--border)">
+  <div class="rounded-[14px] border border-[var(--border)]">
     <div
       class="px-4 py-3 border-b text-sm font-medium"
       style="border-color: var(--border); color: var(--text-strong)"

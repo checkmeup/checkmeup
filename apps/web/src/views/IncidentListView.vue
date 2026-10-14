@@ -41,23 +41,22 @@ function formatDate(iso: string) {
 
 <template>
   <AppLayout>
-    <div class="p-4 md:p-8 max-w-4xl mx-auto">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">Incidents</h1>
+        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Incidents</h1>
         <Button @click="router.push({ name: 'incidents-create' })">Declare incident</Button>
       </div>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
-      <div v-else-if="error" class="rounded-xl border p-6 text-center" style="background-color: var(--surface); border-color: var(--border)">
+      <div v-else-if="error" class="rounded-[14px] border border-[var(--border)] p-6 text-center">
         <p class="text-sm mb-4" style="color: var(--status-down)">{{ error }}</p>
         <Button variant="secondary" size="sm" @click="load">Try again</Button>
       </div>
 
       <div
         v-else-if="incidents.length === 0"
-        class="rounded-xl border p-12 text-center"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-12 text-center"
       >
         <p class="text-sm mb-4" style="color: var(--text-muted)">
           No incidents yet. Declare one when something's affecting your service that isn't a plain monitor-down.
@@ -71,8 +70,7 @@ function formatDate(iso: string) {
           <div
             v-for="inc in incidents"
             :key="inc.id"
-            class="rounded-xl border p-4 cursor-pointer"
-            style="background-color: var(--surface); border-color: var(--border)"
+            class="rounded-[14px] border border-[var(--border)] p-4 cursor-pointer"
             @click="router.push({ name: 'incident-detail', params: { id: inc.id } })"
           >
             <div class="flex items-center justify-between mb-2">
@@ -97,20 +95,19 @@ function formatDate(iso: string) {
         <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Title</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Severity</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Status</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Monitors</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Created</th>
+              <tr class="bg-[var(--surface)]">
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Title</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Severity</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Status</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Monitors</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Created</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="inc in incidents"
                 :key="inc.id"
-                class="cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
-                style="background-color: var(--surface); border-bottom: 1px solid var(--border)"
+                class="cursor-pointer border-t border-[var(--border)] transition-colors hover:bg-[var(--surface)]"
                 @click="router.push({ name: 'incident-detail', params: { id: inc.id } })"
               >
                 <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ inc.title }}</td>

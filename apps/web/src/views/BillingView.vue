@@ -229,8 +229,8 @@ function limitLabel(used: number, limit: number) {
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-2xl mx-auto">
-      <h1 class="text-2xl font-semibold mb-6" style="color: var(--text-strong)">Billing</h1>
+    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+      <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Billing</h1>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
       <div v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</div>
@@ -238,12 +238,11 @@ function limitLabel(used: number, limit: number) {
       <template v-else-if="info">
         <!-- Current plan -->
         <div
-          class="rounded-xl border p-6 mb-6"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] p-6 mb-6"
         >
           <div class="flex items-center justify-between mb-4">
             <div>
-              <p class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--text-muted)">Current plan</p>
+              <p class="mb-1 text-[13px] font-medium text-[var(--text-dim)]">Current plan</p>
               <p class="text-2xl font-bold" style="color: var(--text-strong)">
                 {{ planLabel[info.plan] }}
                 <span class="text-base font-normal ml-1" style="color: var(--text-muted)">
@@ -384,8 +383,7 @@ function limitLabel(used: number, limit: number) {
         <!-- Upgrade -->
         <div
           v-if="upgradeOptions.length > 0"
-          class="rounded-xl border p-6"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] p-6"
         >
           <p class="font-medium mb-5" style="color: var(--text-strong)">Upgrade</p>
 
@@ -418,8 +416,7 @@ function limitLabel(used: number, limit: number) {
         <!-- Downgrade -->
         <div
           v-if="downgradeOptions.length > 0"
-          class="rounded-xl border p-6 mt-6"
-          style="background-color: var(--surface); border-color: var(--border)"
+          class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
         >
           <p class="font-medium mb-5" style="color: var(--text-strong)">Downgrade</p>
 
@@ -458,7 +455,7 @@ function limitLabel(used: number, limit: number) {
           style="background-color: rgba(0,0,0,0.6)"
           @click.self="downgradeTarget = null"
         >
-          <div class="rounded-xl border p-6 max-w-sm w-full mx-4" style="background-color: var(--surface); border-color: var(--border)">
+          <div class="rounded-[14px] border border-[var(--border)] bg-[var(--bg)] p-6 max-w-sm w-full mx-4">
             <h3 class="font-medium mb-2" style="color: var(--text-strong)">
               {{ downgradeTarget === 'hobby' ? 'Cancel subscription?' : `Downgrade to ${downgradeTargetLabel}?` }}
             </h3>

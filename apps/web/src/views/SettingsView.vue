@@ -43,15 +43,14 @@ function formatDate(iso: string | null): string {
 
 <template>
   <AppLayout>
-    <div class="p-8 max-w-2xl mx-auto">
-      <h1 class="text-2xl font-semibold mb-6" style="color: var(--text-strong)">Settings</h1>
+    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+      <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Settings</h1>
 
       <!-- Appearance -->
       <div
-        class="rounded-xl border p-6 mb-6"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-6 mb-6"
       >
-        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Appearance</h2>
+        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Appearance</h2>
         <p class="text-sm mb-5" style="color: var(--text-muted)">
           Choose how Checkmeup looks on this device.
         </p>
@@ -92,10 +91,9 @@ function formatDate(iso: string | null): string {
 
       <!-- Legal -->
       <div
-        class="rounded-xl border p-6 mt-6"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
       >
-        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Terms and Privacy</h2>
+        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Terms and Privacy</h2>
         <p v-if="auth.user?.termsAcceptedAt" class="text-sm" style="color: var(--text-muted)">
           You accepted the
           <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)"
@@ -111,10 +109,9 @@ function formatDate(iso: string | null): string {
 
       <!-- Suggest a feature -->
       <div
-        class="rounded-xl border p-6 mt-6"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
       >
-        <h2 class="font-medium mb-1" style="color: var(--text-strong)">Suggest a feature</h2>
+        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Suggest a feature</h2>
         <p class="text-sm mb-5" style="color: var(--text-muted)">
           There's no support ticket queue — this goes straight to the founder.
         </p>
@@ -127,7 +124,7 @@ function formatDate(iso: string | null): string {
               v-model="suggestionText"
               rows="4"
               placeholder="What should Checkmeup do better?"
-              class="mt-1 flex w-full rounded-md border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+              class="mt-1 flex w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
               style="
                 border-color: var(--border);
                 background-color: var(--surface);

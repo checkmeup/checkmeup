@@ -57,23 +57,22 @@ async function endNow(w: MaintenanceWindow) {
 
 <template>
   <AppLayout>
-    <div class="p-4 md:p-8 max-w-4xl mx-auto">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold" style="color: var(--text-strong)">Maintenance windows</h1>
+        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Maintenance windows</h1>
         <Button @click="router.push({ name: 'maintenance-create' })">Schedule maintenance</Button>
       </div>
 
       <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
-      <div v-else-if="error" class="rounded-xl border p-6 text-center" style="background-color: var(--surface); border-color: var(--border)">
+      <div v-else-if="error" class="rounded-[14px] border border-[var(--border)] p-6 text-center">
         <p class="text-sm mb-4" style="color: var(--status-down)">{{ error }}</p>
         <Button variant="secondary" size="sm" @click="load">Try again</Button>
       </div>
 
       <div
         v-else-if="windows.length === 0"
-        class="rounded-xl border p-12 text-center"
-        style="background-color: var(--surface); border-color: var(--border)"
+        class="rounded-[14px] border border-[var(--border)] p-12 text-center"
       >
         <p class="text-sm mb-4" style="color: var(--text-muted)">
           No maintenance windows yet. Schedule one to suppress alerts during planned downtime.
@@ -87,8 +86,7 @@ async function endNow(w: MaintenanceWindow) {
           <div
             v-for="w in windows"
             :key="w.id"
-            class="rounded-xl border p-4 cursor-pointer"
-            style="background-color: var(--surface); border-color: var(--border)"
+            class="rounded-[14px] border border-[var(--border)] p-4 cursor-pointer"
             @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
           >
             <div class="flex items-center justify-between mb-2">
@@ -122,12 +120,12 @@ async function endNow(w: MaintenanceWindow) {
         <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
           <table class="w-full text-sm">
             <thead>
-              <tr style="background-color: var(--surface-raised); border-bottom: 1px solid var(--border)">
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Title</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Status</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Starts</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Ends</th>
-                <th class="text-left px-4 py-3 font-semibold text-[10.5px] uppercase tracking-wide" style="color: var(--text-muted)">Monitors</th>
+              <tr class="bg-[var(--surface)]">
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Title</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Status</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Starts</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Ends</th>
+                <th class="text-left px-4 py-2.5 font-medium text-[12.5px] text-[var(--text-dim)]">Monitors</th>
                 <th class="px-4 py-3"></th>
               </tr>
             </thead>
@@ -135,8 +133,7 @@ async function endNow(w: MaintenanceWindow) {
               <tr
                 v-for="w in windows"
                 :key="w.id"
-                class="cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
-                style="background-color: var(--surface); border-bottom: 1px solid var(--border)"
+                class="cursor-pointer border-t border-[var(--border)] transition-colors hover:bg-[var(--surface)]"
                 @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
               >
                 <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ w.title }}</td>

@@ -70,8 +70,7 @@ const portInput = computed({
       <select
         id="expectedState"
         v-model="form.expectedState"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in expectedStateOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -87,8 +86,7 @@ const portInput = computed({
       <select
         id="interval"
         v-model="form.intervalMins"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in intervalOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -101,8 +99,7 @@ const portInput = computed({
       <select
         id="alertLimit"
         v-model="form.maxAlertsPerIncident"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -118,8 +115,7 @@ const portInput = computed({
       <select
         id="alertFilter"
         v-model="form.alertAfterNFailures"
-        class="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        style="background-color: var(--surface-raised); border-color: var(--border); color: var(--text)"
+        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       >
         <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}

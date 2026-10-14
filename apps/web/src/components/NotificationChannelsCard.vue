@@ -77,10 +77,9 @@ async function toggleEnabled(c: NotificationChannel) {
 
 <template>
   <div
-    class="rounded-xl border p-6"
-    style="background-color: var(--surface); border-color: var(--border)"
+    class="rounded-[14px] border border-[var(--border)] p-6"
   >
-    <h2 class="font-medium mb-1" style="color: var(--text-strong)">Notification channels</h2>
+    <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Notification channels</h2>
     <p class="text-sm mb-5" style="color: var(--text-muted)">
       Connect Telegram, email, Slack, SMS, and webhook destinations, then choose which channels
       each monitor alerts on. A monitor with no channels attached falls back to your account email.
