@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// One group of settings: its name and a line of explanation on the left, the
-// controls on the right; groups are divided by hairlines, not boxes. Stacks
+// One labeled group: its name (and an optional line of explanation) on the
+// left, the content on the right; groups are divided by hairlines, not boxes.
+// Settings, billing, About and the legal pages are all built from it. Stacks
 // into one column on phones.
 defineProps<{
   title: string

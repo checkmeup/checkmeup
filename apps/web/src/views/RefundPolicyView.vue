@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import LabeledSection from '@/components/LabeledSection.vue'
+import PageHero from '@/components/PageHero.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
@@ -13,52 +15,54 @@ const effectiveDate = '2026-07-01'
 
 <template>
   <LandingLayout>
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-24 sm:pt-24">
-      <h1 class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] mb-2 text-[var(--text-strong)]">
-        Refund Policy
-      </h1>
-      <p class="text-sm mb-12 text-[var(--text-muted)]">Effective {{ effectiveDate }}</p>
+    <PageHero title="Refund Policy">Effective {{ effectiveDate }}</PageHero>
 
-      <div class="space-y-10 text-sm leading-relaxed text-[var(--text-dim)]">
-        <section>
-          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">1. Scope</h2>
+    <div
+      class="mx-auto max-w-[1200px] px-4 pb-24 text-[15px] leading-relaxed text-[var(--text-dim)] sm:px-6"
+    >
+      <LabeledSection title="1. Scope">
+        <div class="max-w-[680px] space-y-3">
           <p>
-            This policy covers charges for Checkmeup's paid plans (Solo, Startup, Enterprise), billed and
-            processed by Paddle, our merchant of record. The Hobby plan is free and has no charges to
-            refund.
+            This policy covers charges for Checkmeup's paid plans (Solo, Startup, Enterprise),
+            billed and processed by Paddle, our merchant of record. The Hobby plan is free and has
+            no charges to refund.
           </p>
-        </section>
+        </div>
+      </LabeledSection>
 
-        <section>
-          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">2. The policy</h2>
+      <LabeledSection title="2. The policy">
+        <div class="max-w-[680px] space-y-3">
           <p>
-            Refund requests made within 30 days of any charge — your first subscription payment, a renewal,
-            or an upgrade — are honored in full, no questions asked. This applies to both monthly and annual
-            billing.
+            Refund requests made within 30 days of any charge — your first subscription payment, a
+            renewal, or an upgrade — are honored in full, no questions asked. This applies to both
+            monthly and annual billing.
           </p>
-        </section>
+        </div>
+      </LabeledSection>
 
-        <section>
-          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">3. How to request one</h2>
+      <LabeledSection title="3. How to request one">
+        <div class="max-w-[680px] space-y-3">
           <p>
             Email
             <a href="mailto:andrew@checkmeup.net" class="underline text-[var(--accent)]"
               >andrew@checkmeup.net</a
             >
-            with the email address on your account. Refunds are issued back to your original payment method
-            via Paddle, typically within a few business days.
+            with the email address on your account. Refunds are issued back to your original payment
+            method via Paddle, typically within a few business days.
           </p>
-        </section>
+        </div>
+      </LabeledSection>
 
-        <section>
-          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">4. Related terms</h2>
+      <LabeledSection title="4. Related terms">
+        <div class="max-w-[680px] space-y-3">
           <p>
             This policy is part of, and should be read alongside, our
-            <RouterLink to="/terms" class="underline text-[var(--accent)]">Terms of Service</RouterLink>,
-            which covers plan changes, cancellations, and billing more broadly.
+            <RouterLink to="/terms" class="underline text-[var(--accent)]"
+              >Terms of Service</RouterLink
+            >, which covers plan changes, cancellations, and billing more broadly.
           </p>
-        </section>
-      </div>
-    </section>
+        </div>
+      </LabeledSection>
+    </div>
   </LandingLayout>
 </template>

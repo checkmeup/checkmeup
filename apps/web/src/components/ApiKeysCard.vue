@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
-import SettingsSection from '@/components/SettingsSection.vue'
+import LabeledSection from '@/components/LabeledSection.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { apiKeysApi, type CreatedApiKey } from '@/api/apiKeys'
@@ -88,7 +88,7 @@ async function revoke(id: string) {
 </script>
 
 <template>
-  <SettingsSection title="API keys">
+  <LabeledSection title="API keys">
     <template #description>
       Generate a key to read monitor status from scripts, CI pipelines, or third-party integrations
       via
@@ -160,5 +160,5 @@ async function revoke(id: string) {
 
       <p v-if="formError" class="text-sm text-[var(--status-down)]">{{ formError }}</p>
     </div>
-  </SettingsSection>
+  </LabeledSection>
 </template>

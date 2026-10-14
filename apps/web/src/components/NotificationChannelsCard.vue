@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
-import SettingsSection from '@/components/SettingsSection.vue'
+import LabeledSection from '@/components/LabeledSection.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelForm from '@/components/NotificationChannelForm.vue'
 import { ApiError } from '@/api/client'
@@ -77,7 +77,7 @@ async function toggleEnabled(c: NotificationChannel) {
 </script>
 
 <template>
-  <SettingsSection title="Notification channels">
+  <LabeledSection title="Notification channels">
     <template #description>
       Connect Telegram, email, Slack, SMS, and webhook destinations, then choose which channels
       each monitor alerts on. A monitor with no channels attached falls back to your account email.
@@ -135,5 +135,5 @@ async function toggleEnabled(c: NotificationChannel) {
     <Button v-if="!form.showForm" variant="secondary" @click="form.startAdd">+ Add channel</Button>
 
     <NotificationChannelForm v-else :form="form" />
-  </SettingsSection>
+  </LabeledSection>
 </template>

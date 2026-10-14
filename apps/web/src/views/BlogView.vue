@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import PageHero from '@/components/PageHero.vue'
 import { articlesMeta } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
@@ -16,38 +17,32 @@ const sortedPosts = [...articlesMeta].reverse()
 
 <template>
   <LandingLayout>
+    <PageHero title="Blog">
+      Monitoring guides, building notes, and the occasional opinion. Release notes are in the
+      <RouterLink to="/changelog" class="text-[var(--accent)] underline hover:no-underline"
+        >changelog</RouterLink
+      >.
+    </PageHero>
 
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <h1 class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[60px] mb-3 text-[var(--text-strong)]">Blog</h1>
-      <p class="text-lg text-[var(--text-dim)]">Monitoring guides, building notes, and the occasional opinion. Release notes are in the <RouterLink to="/changelog" class="underline hover:no-underline text-[var(--accent)]">changelog</RouterLink>.</p>
-    </section>
-
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 pb-24">
-      <div class="space-y-0 divide-y border-[var(--border)]">
-        <RouterLink
-          v-for="post in sortedPosts"
-          :key="post.slug"
-          :to="`/blog/${post.slug}`"
-          class="block py-8 group border-[var(--border)]"
-        >
-          <div class="flex items-center gap-3 mb-3 text-xs text-[var(--text-muted)]">
-            <span>{{ post.date }}</span>
-            <span>·</span>
-            <span>{{ post.readTime }}</span>
-          </div>
+    <section class="mx-auto max-w-[1200px] px-4 pb-24 sm:px-6">
+      <RouterLink
+        v-for="post in sortedPosts"
+        :key="post.slug"
+        :to="`/blog/${post.slug}`"
+        class="group grid gap-x-12 gap-y-2 border-t border-[var(--border)] py-8 md:grid-cols-[260px_minmax(0,1fr)]"
+      >
+        <div class="text-[13px] text-[var(--text-muted)]">
+          {{ post.date }} · {{ post.readTime }}
+        </div>
+        <div class="max-w-[680px]">
           <h2
-            class="text-xl font-semibold mb-2 transition-colors group-hover:underline"
-            style="color: var(--text-strong); text-decoration-color: var(--color-green-500)"
+            class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)] decoration-[var(--accent)] underline-offset-4 group-hover:underline"
           >
             {{ post.title }}
           </h2>
-          <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">{{ post.excerpt }}</p>
-          <span class="text-sm font-medium transition-colors text-[var(--accent)]">
-            Read post →
-          </span>
-        </RouterLink>
-      </div>
+          <p class="text-[15px] leading-relaxed text-[var(--text-dim)]">{{ post.excerpt }}</p>
+        </div>
+      </RouterLink>
     </section>
-
   </LandingLayout>
 </template>

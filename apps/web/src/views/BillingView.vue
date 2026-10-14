@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { initializePaddle, type Paddle } from '@paddle/paddle-js'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
-import SettingsSection from '@/components/SettingsSection.vue'
+import LabeledSection from '@/components/LabeledSection.vue'
 import { billingApi, type BillingCycle } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import { useBilling } from '@/composables/useBilling'
@@ -237,7 +237,7 @@ function limitLabel(used: number, limit: number) {
       <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
       <template v-else-if="info">
-        <SettingsSection title="Current plan">
+        <LabeledSection title="Current plan">
           <template #description>
             <template v-if="cancelScheduled">
               Cancellation scheduled — you'll keep {{ planLabel[info.plan] }} access until
@@ -268,9 +268,9 @@ function limitLabel(used: number, limit: number) {
               Manage subscription →
             </a>
           </div>
-        </SettingsSection>
+        </LabeledSection>
 
-        <SettingsSection title="Usage">
+        <LabeledSection title="Usage">
           <template #description>What your plan allows, and how much of it is in use.</template>
           <div class="flex flex-col gap-5">
             <div>
@@ -338,9 +338,9 @@ function limitLabel(used: number, limit: number) {
               Min uptime check interval: {{ info.minIntervalMins }} min
             </p>
           </div>
-        </SettingsSection>
+        </LabeledSection>
 
-        <SettingsSection v-if="upgradeOptions.length > 0 || downgradeOptions.length > 0" title="Change plan">
+        <LabeledSection v-if="upgradeOptions.length > 0 || downgradeOptions.length > 0" title="Change plan">
           <template #description>Switch plans any time; moving to a cheaper plan is prorated.</template>
           <div class="flex flex-col gap-6">
             <!-- Cycle toggle (shared by Upgrade and paid-tier Downgrade lists) -->
@@ -417,7 +417,7 @@ function limitLabel(used: number, limit: number) {
               <p v-if="changePlanError" class="mt-3 text-sm text-[var(--status-down)]">{{ changePlanError }}</p>
             </div>
           </div>
-        </SettingsSection>
+        </LabeledSection>
 
         <!-- Downgrade confirm dialog -->
         <div

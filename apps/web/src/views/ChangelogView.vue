@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import PageHero from '@/components/PageHero.vue'
 import { releasesMeta } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
@@ -19,32 +20,36 @@ const sortedReleases = [...releasesMeta].reverse()
 
 <template>
   <LandingLayout>
+    <PageHero title="Changelog">
+      Every release, newest first. Guides and essays live on the
+      <RouterLink to="/blog" class="text-[var(--accent)] underline hover:no-underline"
+        >blog</RouterLink
+      >.
+    </PageHero>
 
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <h1 class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[60px] mb-3 text-[var(--text-strong)]">Changelog</h1>
-      <p class="text-lg text-[var(--text-dim)]">Every release, newest first. Guides and essays live on the <RouterLink to="/blog" class="underline hover:no-underline text-[var(--accent)]">blog</RouterLink>.</p>
-    </section>
-
-    <section class="max-w-3xl mx-auto px-4 sm:px-6 pb-24">
-      <div class="space-y-0 divide-y border-[var(--border)]">
-        <article
-          v-for="release in sortedReleases"
-          :id="release.slug"
-          :key="release.slug"
-          class="py-8 scroll-mt-20 border-[var(--border)]"
-        >
-          <div class="mb-3 text-xs text-[var(--text-muted)]">{{ release.date }}</div>
-          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">{{ release.title }}</h2>
-          <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">{{ release.excerpt }}</p>
+    <section class="mx-auto max-w-[1200px] px-4 pb-24 sm:px-6">
+      <article
+        v-for="release in sortedReleases"
+        :id="release.slug"
+        :key="release.slug"
+        class="grid scroll-mt-20 gap-x-12 gap-y-2 border-t border-[var(--border)] py-8 md:grid-cols-[260px_minmax(0,1fr)]"
+      >
+        <div class="text-[13px] text-[var(--text-muted)]">{{ release.date }}</div>
+        <div class="max-w-[680px]">
+          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">
+            {{ release.title }}
+          </h2>
+          <p class="mb-4 text-[15px] leading-relaxed text-[var(--text-dim)]">
+            {{ release.excerpt }}
+          </p>
           <RouterLink
             :to="`/blog/${release.slug}`"
-            class="text-sm font-medium hover:underline text-[var(--accent)]"
+            class="text-sm font-medium text-[var(--accent)] hover:underline"
           >
             Read the full release notes →
           </RouterLink>
-        </article>
-      </div>
+        </div>
+      </article>
     </section>
-
   </LandingLayout>
 </template>

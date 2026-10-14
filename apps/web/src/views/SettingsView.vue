@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelsCard from '@/components/NotificationChannelsCard.vue'
 import ApiKeysCard from '@/components/ApiKeysCard.vue'
-import SettingsSection from '@/components/SettingsSection.vue'
+import LabeledSection from '@/components/LabeledSection.vue'
 import { suggestionsApi } from '@/api/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/lib/theme'
@@ -48,7 +48,7 @@ function formatDate(iso: string | null): string {
       <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Settings</h1>
 
       <!-- Appearance -->
-      <SettingsSection title="Appearance">
+      <LabeledSection title="Appearance">
         <template #description>Choose how Checkmeup looks on this device.</template>
 
         <div class="inline-flex gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
@@ -77,7 +77,7 @@ function formatDate(iso: string | null): string {
             Light
           </button>
         </div>
-      </SettingsSection>
+      </LabeledSection>
 
       <!-- Notification channels -->
       <NotificationChannelsCard />
@@ -86,7 +86,7 @@ function formatDate(iso: string | null): string {
       <ApiKeysCard />
 
       <!-- Legal -->
-      <SettingsSection title="Terms and Privacy">
+      <LabeledSection title="Terms and Privacy">
         <p v-if="auth.user?.termsAcceptedAt" class="text-sm text-[var(--text-dim)]">
           You accepted the
           <RouterLink to="/terms" class="text-[var(--accent)] underline"
@@ -98,10 +98,10 @@ function formatDate(iso: string | null): string {
           >
           (version {{ auth.user?.termsVersion }}) on {{ formatDate(auth.user.termsAcceptedAt) }}.
         </p>
-      </SettingsSection>
+      </LabeledSection>
 
       <!-- Suggest a feature -->
-      <SettingsSection title="Suggest a feature">
+      <LabeledSection title="Suggest a feature">
         <template #description>
           There's no support ticket queue — this goes straight to the founder.
         </template>
@@ -135,7 +135,7 @@ function formatDate(iso: string | null): string {
             {{ suggestionError }}
           </p>
         </div>
-      </SettingsSection>
+      </LabeledSection>
     </div>
   </AppLayout>
 </template>

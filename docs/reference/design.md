@@ -124,6 +124,10 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   show no strip.
 - **Headings** are Geist 600 with tight negative tracking (about −0.035em on page titles,
   −0.02em on section titles); statuses are a colored dot plus a label (`StatusLabel.vue`).
+- **Content pages** (About, Blog, Changelog, blog posts, Terms, Privacy, Refund) share the
+  1200px page grid with the landing page: a left-aligned `PageHero`, then rows with a 260px
+  label column and a text column capped at 680px (`LabeledSection.vue`, the same component
+  Settings and Billing use). Docs and FAQ keep their sticky section nav in that left column.
 
 ## Typography
 
