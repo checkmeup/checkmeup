@@ -62,6 +62,14 @@ async function renderRoute(path: string): Promise<string> {
   return transformHtmlTemplate(head, withBody)
 }
 
+// The routes the Go server answers with the app and a 200; any other path
+// gets 404.html with a 404, not the app shell with a 200 (ADR seo). The
+// catch-all is left out, and so is /blog/:slug: every real post has its own
+// prerendered file, so a slug without one doesn't exist.
+const spaRoutePaths = routes
+  .map((route) => route.path)
+  .filter((path) => path !== '/:pathMatch(.*)*' && path !== '/blog/:slug')
+
 async function main() {
   for (const path of targetPaths) {
     const html = await renderRoute(path)
@@ -69,7 +77,10 @@ async function main() {
     mkdirSync(dirname(outPath), { recursive: true })
     writeFileSync(outPath, html)
   }
-  console.log(`Prerendered ${targetPaths.length} routes`)
+  // Any path no route matches renders the catch-all's NotFoundView.
+  writeFileSync(join(distDir, '404.html'), await renderRoute('/404'))
+  writeFileSync(join(distDir, 'spa-routes.json'), JSON.stringify(spaRoutePaths))
+  console.log(`Prerendered ${targetPaths.length} routes and 404.html`)
 }
 
 await main()

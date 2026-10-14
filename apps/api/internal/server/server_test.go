@@ -550,3 +550,37 @@ func TestNew_RouterIsUsable(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 }
+
+func TestHandleSPA_UnknownPathIsA404WhenTheRoutesAreKnown(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"index.html":      "<html>app</html>",
+		"404.html":        "<html>not-found</html>",
+		"spa-routes.json": `["/","/dashboard","/monitors/uptime/:id","/monitors/uptime/:id/edit"]`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	srv := &Server{cfg: &config.Config{StaticDir: dir}}
+
+	for path, want := range map[string]struct {
+		code int
+		body string
+	}{
+		"/dashboard":                {http.StatusOK, "<html>app</html>"},
+		"/monitors/uptime/abc":      {http.StatusOK, "<html>app</html>"},
+		"/monitors/uptime/abc/edit": {http.StatusOK, "<html>app</html>"},
+		"/nope-404":                 {http.StatusNotFound, "<html>not-found</html>"},
+		"/monitors/uptime/abc/x":    {http.StatusNotFound, "<html>not-found</html>"},
+		"/blog/no-such-post":        {http.StatusNotFound, "<html>not-found</html>"},
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, http.NoBody)
+		w := httptest.NewRecorder()
+		srv.handleSPA(w, req)
+
+		if w.Code != want.code || w.Body.String() != want.body {
+			t.Errorf("%s: got %d %q, want %d %q", path, w.Code, w.Body.String(), want.code, want.body)
+		}
+	}
+}

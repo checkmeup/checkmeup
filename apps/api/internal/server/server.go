@@ -36,6 +36,7 @@ type Server struct {
 	db      *pgxpool.Pool
 	router  *chi.Mux
 	version string
+	spa     spaRoutes
 }
 
 func New(cfg *config.Config, logger *slog.Logger, db *pgxpool.Pool, version string) *Server {
@@ -392,6 +393,12 @@ func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
 		// index.html is unhashed and must be revalidated every time, or
 		// deploys wouldn't reach clients holding a cached copy.
 		w.Header().Set("Cache-Control", "no-cache")
+		if page := s.spa.notFoundPage(s.cfg.StaticDir, r.URL.Path); page != nil {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write(page)
+			return
+		}
 		http.ServeFile(w, r, filepath.Join(s.cfg.StaticDir, "index.html"))
 		return
 	}

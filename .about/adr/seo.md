@@ -8,6 +8,8 @@ Every public URL has one form, without a trailing slash (except `/`). The server
 
 Public routes (`/`, `/pricing`, `/docs`, `/faq`, `/about`, `/terms`, `/privacy`, `/refund`, `/blog`, `/changelog` and every post) are prerendered to static HTML at build time, so crawlers that don't run JavaScript (Bingbot among them) see the content and the head tags. `apps/web/scripts/prerender.mts` renders the real components with `vue/server-renderer` under `vite-node` and writes `dist/<route>/index.html`, which the Go server serves as is. The browser then renders the app fresh over it rather than hydrating. Signed-in app routes stay client-rendered.
 
+A path no route of the web app matches gets a 404 with a prerendered `404.html` (`noindex`), not the app shell with a 200: a soft 404 gets crawled as a duplicate page, and an uptime monitor on a missing page reads it as up. The prerender step writes the app's route patterns to `dist/spa-routes.json` from the same `routes.ts` the router uses, so the server never keeps its own copy; `/blog/:slug` is left out because every real post has its own prerendered file.
+
 ## Considered options
 
 - A 301 from each release note to its `/changelog` anchor: offered as the alternative to `noindex`. With `noindex`, the full notes stay readable at their old URLs.
