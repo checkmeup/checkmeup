@@ -1,10 +1,12 @@
 # How monitors are checked: the worker, check mechanics, maintenance and cron runs
 
-Date: 2026-10-13
+Date: 2026-10-14
 
 The worker runs inside the API process with no Redis, job queue or external broker: one shared 30-second tick queries each monitor type for what is due and fans the checks out over a bounded semaphore of goroutines per type (`checkConcurrency = 50`). Under load this delays checks rather than piling up goroutines, and all state stays in PostgreSQL.
 
 An uptime check is one `GET` with the redirects followed; by default it is up only on a final `200` within 10 seconds. Method, timeout and accepted status codes are per-monitor settings (PRD configurable-uptime-checks); these are the defaults, kept strict because most health endpoints answer `200` and anything else is worth an alert. `GET` rather than `HEAD`, because many servers answer `HEAD` differently or not at all.
+
+Every address a user supplies is dialed through `internal/httpsafe`, which refuses loopback, private, link-local (the cloud metadata address included), unspecified and multicast targets on the resolved address, so DNS rebinding doesn't get past it: uptime URLs, port hosts and SSL hostnames here, webhook and Slack URLs in alerting, which also refuse redirects. DNS checks only resolve and never connect, so they need no guard.
 
 A maintenance window hides its monitors from the due/overdue queries, the same way `paused` does, so no check runs, no incident opens, no alert is sent and uptime stats stay clean without a separate exclusion step. Windows are one-off (`starts_at`, optional `ends_at` ended by hand) and cover monitors of any type through a polymorphic join table.
 

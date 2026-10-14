@@ -36,7 +36,6 @@ make build  # production build
 | [docs/reference/design.md](docs/reference/design.md)               | Design tokens — colors, logo usage                    |
 | [docs/reference/deploy.md](docs/reference/deploy.md)               | Deployment guide                                      |
 | [docs/reference/billing-setup.md](docs/reference/billing-setup.md) | Paddle activation checklist                           |
-| [docs/reports/](docs/reports/)                                     | Monthly snapshots — what shipped, ADRs added          |
 | [docs/incidents/](docs/incidents/)                                 | Production incident write-ups (one file per incident) |
 | [docs/knowledge/mvp-history.md](docs/knowledge/mvp-history.md)     | How the MVP was built (archived, frozen record)       |
 | [CLAUDE.md](CLAUDE.md)                                             | Conventions and guardrails for contributors           |

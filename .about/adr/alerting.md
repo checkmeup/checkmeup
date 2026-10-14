@@ -1,10 +1,12 @@
 # Alerting: notification channels, delivery providers and alert limits
 
-Date: 2026-10-13
+Date: 2026-10-14
 
 A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side; whether bearer-like secrets such as a Slack webhook URL should be masked is open (see the Inbox).
 
 A monitor always has somewhere to alert: when it has no enabled channel attached, or nothing it tried was delivered, the alert goes to the email of every user in the org. This applied to existing orgs too, on purpose: a monitor going down with nobody told is worse than an unasked-for email.
+
+Each channel gets one delivery attempt per alert, never a retry: retrying against a receiver that is already failing adds load when it hurts most, and the fallback email covers a failed send. Webhook, Slack and SMS record the outcome on the channel, so Settings shows the last delivery.
 
 Each monitor's `max_alerts_per_incident` caps alerts per incident (default 3; 0 means every failed check alerts); the count lives on the incident and starts at zero with the next one. A recovery alert is always sent. The cap is per monitor because urgency differs per monitor.
 

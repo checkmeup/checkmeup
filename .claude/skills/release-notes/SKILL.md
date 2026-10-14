@@ -20,10 +20,9 @@ the eager bundle instead. Don't add an `import` of a post file into
 
 ## Steps
 
-**1. Figure out what shipped.** Use recent commits and the current month's
-`docs/reports/YYYY-MM.md` "Shipped" section — that section is written in the
-same explanatory voice this post needs, so it's the fastest source of truth
-for *what* changed and *why*.
+**1. Figure out what shipped.** Use the commits since the last release and
+the descriptions of their PRs (`gh pr list --state merged`) — the PR bodies
+say *why* a change was made, not just *what* changed.
 
 ```bash
 git log --oneline <since-last-release-tag-or-commit>..HEAD

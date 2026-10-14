@@ -16,5 +16,3 @@ Template:
 
 ## Follow-up
 ```
-
-Link the file from that month's [report](../reports/).

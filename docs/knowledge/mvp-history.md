@@ -9,7 +9,7 @@ scope: full project
 
 # MVP history
 
-Frozen record of how the MVP was actually built. See [roadmap.md](../roadmap.md) for current Now / Next / Later work, and [reports/](../reports/) for what's shipped since.
+Frozen record of how the MVP was actually built. See [roadmap.md](../roadmap.md) for current Now / Next / Later work, and the [changelog](https://checkmeup.net/changelog) for what's shipped since.
 
 **Work schedule (Israel)** — the basis for the phase hour budgets below (~28–30 h/week):
 
@@ -219,7 +219,7 @@ LemonSqueezy (MoR) handles payments and all global tax. Keep the second week for
 
 ## Hours: estimated vs. logged
 
-The phase/estimate practice ended with the MVP — post-MVP work has no hour budgets (see [ADR docs](../../.about/adr/docs.md)). Phase 7 (maintenance windows, the first post-MVP feature, see [reports/2026-06.md](../reports/2026-06.md)) is included here since it was the last phase planned this way.
+The phase/estimate practice ended with the MVP — post-MVP work has no hour budgets (see [ADR docs](../../.about/adr/docs.md)). Phase 7 (maintenance windows, the first post-MVP feature) is included here since it was the last phase planned this way.
 
 | Phase                        | Estimated | Logged   | Delta      |
 | ----------------------------- | --------- | -------- | ---------- |

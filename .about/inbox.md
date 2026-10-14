@@ -63,3 +63,9 @@ Rewriting the epics as PRDs found three places where the code had moved away fro
 - SSL and domain monitors: the epics said the hostname can't be edited (delete and recreate); the API allows editing it (PRD ssl-monitoring, PRD domain-expiry-monitoring).
 - Telegram webhook with a wrong secret: the epic said `401`; the handler answers `200` and ignores the update, so scanners and Telegram never retry (PRD telegram-alerts, PRD security-hardening).
 - Uptime intervals: the epic's 10/30-minute MVP minimum was replaced by the plans' 5/1-minute minimums (PRD uptime-monitoring, ADR billing).
+
+## Hand-built alert messages per monitor type
+
+2026-10-14 · tech-debts.md
+
+`checkOverdue`, `buildUptimeDownAlert` and `buildPortDownAlert` each build their own `AlertMessage` (Telegram, email subject and HTML, webhook, Slack, SMS: one `fmt.Sprintf` per field), unlike SSL and domain, which share `expiredMessages`/`expiringSoonMessages`. Their reason text really differs per type, so one shared template would lose the phrasing or take as many parameters as it saves. Left as is; settled by extracting a shared builder when a fourth near-identical case shows up, or by deciding never to.

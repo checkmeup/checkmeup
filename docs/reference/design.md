@@ -117,7 +117,7 @@ separate CTA-only text tokens needed, since heading/body just use the normal
 | `--cta-border` | `rgba(29,158,117,0.25)` | Box border |
 
 This replaces the earlier dark-gradient-in-dark-mode / light-mint-in-light-mode treatment
-(see `../reports/2026-06.md`, PRD theme entry, for why a flat `--bg`/`--surface` fill didn't work
+(a flat `--bg`/`--surface` fill didn't work
 there) — the flat wash reads fine in both themes without a per-theme gradient swap.
 
 ## Typography

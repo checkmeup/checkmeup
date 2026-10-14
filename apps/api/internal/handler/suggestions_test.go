@@ -5,7 +5,7 @@ package handler
 //
 // SubmitSuggestion checks auth via apimiddleware.ClaimsFrom directly (like
 // Me/AcceptTerms in auth.go), not via the orgIDFrom helper most other
-// handlers use — see the orgIDFrom-ownership note in docs/tech-debts.md.
+// handlers use.
 // The per-IP/per-org rate limiting (PRD feedback-form: 5/hour per IP, 20/hour per org)
 // is wired as chi/httprate middleware in server.go, not in this handler, so
 // it's out of scope here — same boundary as the other handler test files.
