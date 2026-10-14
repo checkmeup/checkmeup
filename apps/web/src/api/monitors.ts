@@ -365,7 +365,20 @@ export interface UpdateDNSMonitorInput {
   channelIds: string[]
 }
 
+// One tick per hour over the last `hours`, oldest first: 'up' when every
+// check passed, 'down' when any failed, null when none ran. SSL and domain
+// monitors keep no check history and never appear.
+export interface CheckHistory {
+  hours: number
+  monitors: {
+    type: 'cron' | 'uptime' | 'port' | 'dns'
+    id: string
+    ticks: ('up' | 'down' | null)[]
+  }[]
+}
+
 export const monitorsApi = {
+  checkHistory: () => api.get<CheckHistory>('/api/v1/monitors/check-history'),
   listCron: () => api.get<CronMonitor[]>('/api/v1/monitors/cron/'),
   getCron: (id: string) => api.get<CronMonitorDetail>(`/api/v1/monitors/cron/${id}/`),
   createCron: (input: CreateCronMonitorInput) =>

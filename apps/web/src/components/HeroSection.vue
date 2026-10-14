@@ -126,7 +126,7 @@ const previewRows: {
               <span class="font-medium text-[var(--text-strong)]">{{ row.name }}</span>
               <span class="text-[var(--text-dim)]"> · {{ row.type }}</span>
             </span>
-            <CheckStrip size="sm" :checks="ticks(row.pattern)" class="hidden sm:flex" />
+            <div class="hidden sm:block"><CheckStrip size="sm" :checks="ticks(row.pattern)" /></div>
             <span class="text-right font-mono text-[13px] text-[var(--text)]">{{ row.metric }}</span>
           </li>
         </ul>

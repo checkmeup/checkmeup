@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import StatusLabel from '@/components/StatusLabel.vue'
+import CheckStrip from '@/components/CheckStrip.vue'
 import {
   type MonitorRow,
   type MonitorType,
@@ -110,18 +111,20 @@ function open(row: MonitorRow) {
             <span class="truncate font-mono text-[var(--text-dim)]">{{ m.target }}</span>
             <span class="flex-shrink-0 font-mono text-[var(--text)]">{{ m.metric }}</span>
           </div>
+          <CheckStrip v-if="m.history" size="sm" :checks="m.history" class="mt-2" />
         </RouterLink>
       </li>
     </ul>
 
     <!-- Desktop table -->
     <div class="hidden overflow-x-auto rounded-[14px] border border-[var(--border)] md:block">
-      <table class="w-full min-w-[760px] border-collapse text-sm">
+      <table class="w-full min-w-[960px] border-collapse text-sm">
         <thead>
           <tr class="bg-[var(--surface)] text-left text-[12.5px] text-[var(--text-dim)]">
             <th class="w-[130px] px-4 py-2.5 font-medium">Status</th>
             <th class="px-3 py-2.5 font-medium">Monitor</th>
             <th class="w-[90px] px-3 py-2.5 font-medium">Type</th>
+            <th class="w-[220px] px-3 py-2.5 font-medium">Last 48 hours</th>
             <th class="w-[200px] px-3 py-2.5 font-medium">Now</th>
             <th class="w-[100px] px-4 py-2.5 text-right font-medium">Checked</th>
           </tr>
@@ -150,6 +153,10 @@ function open(row: MonitorRow) {
               </div>
             </td>
             <td class="px-3 py-2.5 text-[13px] text-[var(--text-dim)]">{{ typeLabel[m.type] }}</td>
+            <td class="px-3 py-2.5">
+              <CheckStrip v-if="m.history" size="sm" :checks="m.history" />
+              <span v-else class="text-xs text-[var(--text-muted)]">—</span>
+            </td>
             <td class="px-3 py-2.5">
               <div
                 class="font-mono text-[13.5px]"

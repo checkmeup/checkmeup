@@ -48,6 +48,10 @@ const otherData = await vi.hoisted(async () => (await import('vue')).ref<unknown
 const empty = vi.hoisted(() => () => ({ data: otherData }))
 vi.mock('@/composables/useDomainMonitors', () => ({ useDomainMonitors: empty }))
 vi.mock('@/composables/usePortMonitors', () => ({ usePortMonitors: empty }))
+const historyData = ref<unknown>(null)
+vi.mock('@/composables/useCheckHistory', () => ({
+  useCheckHistory: () => ({ data: historyData }),
+}))
 vi.mock('@/composables/useDNSMonitors', () => ({ useDNSMonitors: empty }))
 
 const cron = {
@@ -89,6 +93,7 @@ function mountView() {
 }
 
 beforeEach(() => {
+  historyData.value = null
   cronData.value = []
   uptimeData.value = []
   sslData.value = []

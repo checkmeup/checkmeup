@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CheckStrip from '@/components/CheckStrip.vue'
 import {
   type MonitorRow,
   attentionSentence,
@@ -43,6 +44,10 @@ function actionLabel(row: MonitorRow) {
           {{ attentionSentence(row) }}
         </span>
       </span>
+      <!-- Wrapped so "hidden" doesn't fight CheckStrip's own display:flex. -->
+      <div v-if="row.history" class="hidden min-w-[180px] flex-[0_1_280px] md:block">
+        <CheckStrip size="sm" :checks="row.history" />
+      </div>
       <span class="min-w-[80px] text-right text-sm font-semibold text-[var(--accent)]">
         {{ actionLabel(row) }} →
       </span>

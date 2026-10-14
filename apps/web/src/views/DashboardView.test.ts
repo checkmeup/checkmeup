@@ -35,6 +35,10 @@ vi.mock('@/composables/useDomainMonitors', () => ({
 vi.mock('@/composables/usePortMonitors', () => ({
   usePortMonitors: () => ({ data: portData }),
 }))
+const historyData = ref<unknown>(null)
+vi.mock('@/composables/useCheckHistory', () => ({
+  useCheckHistory: () => ({ data: historyData }),
+}))
 vi.mock('@/composables/useDNSMonitors', () => ({
   useDNSMonitors: () => ({ data: dnsData }),
 }))
@@ -120,6 +124,7 @@ function dnsMonitor(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  historyData.value = null
   cronData.value = null
   uptimeData.value = null
   sslData.value = null
@@ -309,5 +314,21 @@ describe('DashboardView', () => {
 
     const panelText = wrapper.find('section[aria-labelledby="expirations-heading"]').text()
     expect(panelText.indexOf('soon')).toBeLessThan(panelText.indexOf('far-out'))
+  })
+
+  it('draws the last 48 hours as a check strip for monitors with history', () => {
+    uptimeData.value = [uptimeMonitor({ id: 'u1', name: 'with-history' })]
+    sslData.value = [sslMonitor({ name: 'no-history' })]
+    historyData.value = {
+      hours: 3,
+      monitors: [{ type: 'uptime', id: 'u1', ticks: ['up', null, 'down'] }],
+    }
+    const wrapper = mountView()
+
+    const rows = wrapper.findAll('tbody tr')
+    const withHistory = rows.find((r) => r.text().includes('with-history'))!
+    expect(withHistory.find('[aria-label="1 of the last 2 checks failed"]').exists()).toBe(true)
+    const withoutHistory = rows.find((r) => r.text().includes('no-history'))!
+    expect(withoutHistory.find('[role="img"]').exists()).toBe(false)
   })
 })

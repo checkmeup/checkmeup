@@ -35,6 +35,9 @@ export interface MonitorRow {
   daysUntilExpiry: number | null
   // Uptime over the last 24h for monitors that track it (uptime, port, DNS).
   uptime24h: number | null
+  // Hourly check results for the check strip, oldest first; absent for
+  // monitors that keep no check history (SSL, domain) or have none yet.
+  history?: { ok: boolean | null }[]
 }
 
 export const typeLabel: Record<MonitorType, string> = {

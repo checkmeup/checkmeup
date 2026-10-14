@@ -175,6 +175,10 @@ func (s *Server) buildRouter() *chi.Mux {
 				})
 			})
 
+			// Hourly check results for every monitor, feeding the check strips
+			// on the dashboard and the /monitors list.
+			r.Get("/monitors/check-history", monitors.ListCheckHistory)
+
 			r.Route("/monitors/cron", func(r chi.Router) {
 				r.Get("/", monitors.ListCronMonitors)
 				r.Post("/", monitors.CreateCronMonitor)

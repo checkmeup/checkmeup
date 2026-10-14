@@ -117,6 +117,11 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   (`sortRows` in `lib/monitorRows.ts`), so the rows that need action are always on top.
 - **No cards for content**: sections are separated by whitespace and hairline `--border`
   rules; tables sit in one bordered box with a `--surface` header row.
+- **Check strips** (`CheckStrip.vue`): a row of ticks, oldest on the left — soft green
+  (`--tick-up`) for a passing check or hour, `--status-down` for a failure, `--tick-empty`
+  for none. Monitor tables show the last 48 hours from `GET /api/v1/monitors/check-history`;
+  monitor pages show their recent checks. SSL and domain monitors keep no check history and
+  show no strip.
 - **Headings** are Geist 600 with tight negative tracking (about −0.035em on page titles,
   −0.02em on section titles); statuses are a colored dot plus a label (`StatusLabel.vue`).
 

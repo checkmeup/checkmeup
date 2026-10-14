@@ -5,6 +5,7 @@ import { useSSLMonitors } from '@/composables/useSSLMonitors'
 import { useDomainMonitors } from '@/composables/useDomainMonitors'
 import { usePortMonitors } from '@/composables/usePortMonitors'
 import { useDNSMonitors } from '@/composables/useDNSMonitors'
+import { useCheckHistory } from '@/composables/useCheckHistory'
 import {
   type MonitorRow,
   cronRow,
@@ -26,10 +27,23 @@ export function useMonitorRows() {
   const port = usePortMonitors()
   const dns = useDNSMonitors()
   const queries = [cron, uptime, ssl, domain, port, dns]
+  const history = useCheckHistory()
+
+  // type:id → that monitor's hourly ticks, in the shape CheckStrip takes.
+  const historyByKey = computed(() => {
+    const map = new Map<string, { ok: boolean | null }[]>()
+    for (const m of history.data.value?.monitors ?? []) {
+      map.set(
+        `${m.type}:${m.id}`,
+        m.ticks.map((t) => ({ ok: t === null ? null : t === 'up' })),
+      )
+    }
+    return map
+  })
 
   const rows = computed<MonitorRow[]>(() => {
     const now = Date.now()
-    return sortRows([
+    const sorted = sortRows([
       ...(cron.data.value ?? []).map((m) => cronRow(m, now)),
       ...(uptime.data.value ?? []).map((m) => uptimeRow(m, now)),
       ...(ssl.data.value ?? []).map((m) => sslRow(m, now)),
@@ -37,6 +51,10 @@ export function useMonitorRows() {
       ...(port.data.value ?? []).map((m) => portRow(m, now)),
       ...(dns.data.value ?? []).map((m) => dnsRow(m, now)),
     ])
+    return sorted.map((r) => {
+      const ticks = historyByKey.value.get(r.key)
+      return ticks ? { ...r, history: ticks } : r
+    })
   })
 
   // Still loading only while no type has answered yet — once any list is in,
