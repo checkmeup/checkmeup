@@ -19,9 +19,8 @@ const form = reactive(useNotificationChannelForm({ billingInfo, refetch }))
 
 const deletingId = ref('')
 
-// relativeTime mirrors the small per-view helper used elsewhere (e.g.
-// CronMonitorListView.vue) rather than a new shared util, matching this
-// codebase's existing pattern for this exact bit of formatting.
+// relativeTime mirrors the small per-view helpers used elsewhere (e.g.
+// relativeTime in lib/monitorRows.ts) rather than a new shared util.
 function relativeTime(iso: string | undefined) {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()

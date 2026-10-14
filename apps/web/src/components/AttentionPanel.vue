@@ -1,70 +1,51 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-
-interface AttentionItem {
-  key: string
-  title: string
-  detail: string
-  actionLabel: string
-  severity: 0 | 1
-  color: string
-  wash: string
-  routeName: string
-  id: string
-}
+import {
+  type MonitorRow,
+  attentionSentence,
+  detailRouteName,
+  toneColor,
+} from '@/lib/monitorRows'
 
 defineProps<{
-  items: AttentionItem[]
+  rows: MonitorRow[]
 }>()
 
-const router = useRouter()
+function actionLabel(row: MonitorRow) {
+  return row.status === 'expired' || row.status === 'expiring_soon' ? 'Renew' : 'Open'
+}
 </script>
 
 <template>
-  <div v-if="items.length > 0" class="mb-7">
-    <div
-      class="text-[13px] font-semibold mb-3 flex items-center gap-2"
-      style="color: var(--text-strong)"
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--status-degraded)"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path
-          d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-        />
-        <line x1="12" y1="9" x2="12" y2="13" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
+  <section v-if="rows.length > 0" aria-labelledby="attention-heading" class="flex flex-col">
+    <h2 id="attention-heading" class="mb-3 text-[13px] font-semibold text-[var(--text-dim)]">
       Needs attention
-    </div>
-    <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
-      <div
-        v-for="item in items"
-        :key="item.key"
-        class="rounded-xl border p-4 flex flex-col gap-2 cursor-pointer"
+    </h2>
+    <RouterLink
+      v-for="row in rows"
+      :key="row.key"
+      :to="{ name: detailRouteName[row.type], params: { id: row.id } }"
+      class="group flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[var(--border)] py-5 focus-visible:outline-none"
+    >
+      <span
+        class="h-3 w-3 flex-shrink-0 rounded-full"
         :style="{
-          borderColor: `color-mix(in srgb, ${item.color} 30%, transparent)`,
-          backgroundColor: item.wash,
+          backgroundColor: toneColor[row.tone],
+          boxShadow: `0 0 0 5px color-mix(in srgb, ${toneColor[row.tone]} 16%, transparent)`,
         }"
-        @click="router.push({ name: item.routeName, params: { id: item.id } })"
-      >
-        <div class="text-[13.5px] font-semibold" style="color: var(--text-strong)">
-          {{ item.title }}
-        </div>
-        <div class="text-xs leading-relaxed font-mono" style="color: var(--text-dim)">
-          {{ item.detail }}
-        </div>
-        <span class="text-xs font-semibold mt-0.5" :style="{ color: item.color }"
-          >{{ item.actionLabel }} →</span
+      ></span>
+      <span class="flex min-w-0 flex-[1_1_280px] flex-col gap-0.5">
+        <span
+          class="text-[19px] font-semibold tracking-[-0.015em] text-[var(--text-strong)] group-hover:underline group-focus-visible:underline"
         >
-      </div>
-    </div>
-  </div>
+          {{ row.name }}
+        </span>
+        <span class="text-[14.5px]" :style="{ color: toneColor[row.tone] }">
+          {{ attentionSentence(row) }}
+        </span>
+      </span>
+      <span class="min-w-[80px] text-right text-sm font-semibold text-[var(--accent)]">
+        {{ actionLabel(row) }} →
+      </span>
+    </RouterLink>
+  </section>
 </template>

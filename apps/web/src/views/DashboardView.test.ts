@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
 import DashboardView from './DashboardView.vue'
 
 const pushMock = vi.fn()
@@ -11,14 +11,6 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
-}))
-
-const authStoreMock = reactive({
-  user: null as { email: string } | null,
-})
-
-vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => authStoreMock,
 }))
 
 const cronData = ref<unknown[] | null>(null)
@@ -128,7 +120,6 @@ function dnsMonitor(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  authStoreMock.user = null
   cronData.value = null
   uptimeData.value = null
   sslData.value = null
@@ -142,119 +133,144 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+// RouterLink renders as a plain anchor — the router itself is mocked out.
+function mountView() {
+  return mount(DashboardView, {
+    global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+  })
+}
+
 describe('DashboardView', () => {
-  it('greets the user with their email when available', () => {
-    authStoreMock.user = { email: 'andrew@checkmeup.net' }
-    const wrapper = mount(DashboardView)
-
-    expect(wrapper.text()).toContain('Welcome back, andrew@checkmeup.net.')
-  })
-
-  it('greets without an email when the user is not loaded', () => {
-    authStoreMock.user = null
-    const wrapper = mount(DashboardView)
-
-    expect(wrapper.text()).toContain('Welcome back.')
-  })
-
   it('shows the empty state when there are no monitors of any type', () => {
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
     expect(wrapper.text()).toContain('No monitors yet')
-    expect(wrapper.text()).toContain('0/ 0')
+    expect(wrapper.find('table').exists()).toBe(false)
   })
 
-  it('computes the healthy/total hero stat across monitor types', () => {
+  it('says every monitor is fine when none needs attention', () => {
+    uptimeData.value = [uptimeMonitor({ status: 'up' }), uptimeMonitor({ id: 'u2' })]
+    const wrapper = mountView()
+
+    expect(wrapper.find('h1').text()).toBe('All 2 monitors are fine.')
+    expect(wrapper.text()).not.toContain('Needs attention')
+  })
+
+  it('counts the monitors that need attention in the headline', () => {
     uptimeData.value = [
       uptimeMonitor({ status: 'up' }),
       uptimeMonitor({ id: 'u2', status: 'down' }),
     ]
+    sslData.value = [sslMonitor({ status: 'expiring_soon', daysUntilExpiry: 6 })]
     cronData.value = [cronMonitor({ status: 'up' })]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('2/ 3')
-    expect(wrapper.text()).toContain('66.7% healthy')
+    expect(wrapper.find('h1').text()).toContain('2 monitors need you.')
+    expect(wrapper.find('h1').text()).toContain('The other 2 are fine.')
+  })
+
+  it('summarizes average uptime and up count under the headline', () => {
+    uptimeData.value = [
+      uptimeMonitor({ uptime24h: 99 }),
+      uptimeMonitor({ id: 'u2', status: 'down', uptime24h: 97 }),
+    ]
+    cronData.value = [cronMonitor({ status: 'up' })]
+    const wrapper = mountView()
+
+    expect(wrapper.text()).toContain('98.00% average uptime today')
+    expect(wrapper.text()).toContain('2 of 3 up')
   })
 
   it('shows SMS credits used/limit when the plan has a limit', () => {
+    uptimeData.value = [uptimeMonitor()]
     billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('3')
-    expect(wrapper.text()).toContain('/ 10')
+    expect(wrapper.text()).toContain('3 of 10 SMS credits used')
   })
 
-  it('shows "Not available on your plan" for SMS credits on a 0-limit plan (Hobby)', () => {
+  it('leaves SMS credits out on a 0-limit plan (Hobby)', () => {
+    uptimeData.value = [uptimeMonitor()]
     billingData.value = { smsCreditsUsed: 10, smsCreditsLimit: 0 }
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('Not available on your plan')
-    expect(wrapper.text()).not.toContain('10 / 0')
+    expect(wrapper.text()).not.toContain('SMS credits')
   })
 
-  it('surfaces a down monitor in the needs-attention banner', () => {
+  it('surfaces a down monitor under needs attention', () => {
     uptimeData.value = [uptimeMonitor({ status: 'down', name: 'api.acmecorp.com' })]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('Needs attention')
-    expect(wrapper.text()).toContain('api.acmecorp.com is down')
+    const panel = wrapper.find('section[aria-labelledby="attention-heading"]')
+    expect(panel.text()).toContain('api.acmecorp.com')
+    expect(panel.text()).toContain('Down — the last check of https://checkmeup.net failed.')
   })
 
-  it('surfaces an expiring-soon SSL monitor in the needs-attention banner', () => {
+  it('surfaces an expiring-soon SSL monitor with a renew action', () => {
     sslData.value = [
       sslMonitor({ status: 'expiring_soon', daysUntilExpiry: 6, name: 'client-shop.com' }),
     ]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('client-shop.com')
-    expect(wrapper.text()).toContain('Renew')
+    const panel = wrapper.find('section[aria-labelledby="attention-heading"]')
+    expect(panel.text()).toContain('client-shop.com')
+    expect(panel.text()).toContain('Certificate expires in 6 days.')
+    expect(panel.text()).toContain('Renew')
   })
 
-  it('shows no attention banner when every monitor is healthy', () => {
-    uptimeData.value = [uptimeMonitor({ status: 'up' })]
-    const wrapper = mount(DashboardView)
-
-    // "Needs attention" also labels the always-present hero stat card, so
-    // absence of the banner is asserted via its distinguishing content
-    // (an item's action link) rather than that shared heading text.
-    expect(wrapper.text()).not.toContain('Investigate →')
-    expect(wrapper.text()).toContain('All clear')
-  })
-
-  it('renders a row per monitor across all types with its type badge', () => {
+  it('renders a row per monitor across all types with its type', () => {
     uptimeData.value = [uptimeMonitor()]
     cronData.value = [cronMonitor()]
     sslData.value = [sslMonitor()]
     domainData.value = [domainMonitor()]
     portData.value = [portMonitor()]
     dnsData.value = [dnsMonitor()]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('checkmeup.net')
-    expect(wrapper.text()).toContain('Nightly Backup')
-    expect(wrapper.text()).toContain('db-primary')
-    expect(wrapper.text()).toContain('Apex A record')
-    expect(wrapper.findAll('tbody tr').length).toBe(6)
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows.length).toBe(6)
+    expect(wrapper.find('tbody').text()).toContain('Nightly Backup')
+    expect(wrapper.find('tbody').text()).toContain('db-primary')
+    expect(wrapper.find('tbody').text()).toContain('Apex A record')
+    expect(wrapper.find('tbody').text()).toContain('DNS')
   })
 
-  it('filters the monitors table when a type chip is clicked', async () => {
+  it('lists problems first in the monitors table', () => {
+    uptimeData.value = [uptimeMonitor({ name: 'a-healthy' })]
+    portData.value = [portMonitor({ name: 'z-broken', status: 'down' })]
+    const wrapper = mountView()
+
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows[0]!.text()).toContain('z-broken')
+    expect(rows[1]!.text()).toContain('a-healthy')
+  })
+
+  it('filters the monitors table when a type tab is clicked', async () => {
     uptimeData.value = [uptimeMonitor({ name: 'uptime-one' })]
     cronData.value = [cronMonitor({ name: 'cron-one' })]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain('uptime-one')
-    expect(wrapper.text()).toContain('cron-one')
+    const tab = wrapper.findAll('[role="tab"]').find((b) => b.text().startsWith('Cron'))
+    await tab!.trigger('click')
 
-    const chips = wrapper.findAll('button').filter((b) => b.text().startsWith('Cron'))
-    await chips[0]!.trigger('click')
+    expect(wrapper.find('tbody').text()).toContain('cron-one')
+    expect(wrapper.find('tbody').text()).not.toContain('uptime-one')
+  })
 
-    expect(wrapper.text()).toContain('cron-one')
-    expect(wrapper.text()).not.toContain('uptime-one')
+  it('narrows the monitors table by search text', async () => {
+    uptimeData.value = [uptimeMonitor({ name: 'shop', url: 'https://shop.example.com' })]
+    cronData.value = [cronMonitor({ name: 'backup' })]
+    const wrapper = mountView()
+
+    await wrapper.find('input[type="search"]').setValue('shop')
+
+    expect(wrapper.findAll('tbody tr').length).toBe(1)
+    expect(wrapper.find('tbody').text()).toContain('shop')
   })
 
   it('navigates to a monitor detail route when its table row is clicked', async () => {
     uptimeData.value = [uptimeMonitor({ id: 'u42', name: 'Primary Website Uptime' })]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
     const row = wrapper.findAll('tbody tr').find((r) => r.text().includes('Primary Website Uptime'))
     await row!.trigger('click')
@@ -265,20 +281,23 @@ describe('DashboardView', () => {
     })
   })
 
-  it('opens the add-monitor menu and navigates to the chosen monitor type', async () => {
-    const wrapper = mount(DashboardView)
+  it('opens the new-monitor menu and navigates to the chosen monitor type', async () => {
+    const wrapper = mountView()
 
-    const addButton = wrapper.findAll('button').find((b) => b.text().includes('Add monitor'))
+    const addButton = wrapper.findAll('button').find((b) => b.text() === 'New monitor')
     await addButton!.trigger('click')
 
-    const option = wrapper.findAll('div').find((d) => d.text().trim() === 'Uptime monitor')
+    const option = wrapper
+      .findAll('[role="menuitem"]')
+      .find((d) => d.text().startsWith('Uptime monitor'))
     await option!.trigger('click')
 
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'uptime-monitor-create' })
   })
 
   it('prompts to add an SSL/domain monitor when neither type exists yet', () => {
-    const wrapper = mount(DashboardView)
+    uptimeData.value = [uptimeMonitor()]
+    const wrapper = mountView()
 
     expect(wrapper.text()).toContain('Add an SSL or domain monitor')
   })
@@ -286,11 +305,9 @@ describe('DashboardView', () => {
   it('lists upcoming expirations sorted soonest-first', () => {
     sslData.value = [sslMonitor({ name: 'far-out', daysUntilExpiry: 300 })]
     domainData.value = [domainMonitor({ name: 'soon', daysUntilExpiry: 5 })]
-    const wrapper = mount(DashboardView)
+    const wrapper = mountView()
 
-    // Both names also appear in the (unsorted) monitors table above the
-    // panel, so scope the ordering check to the panel's own text.
-    const panelText = wrapper.text().split('Upcoming expirations')[1]!
+    const panelText = wrapper.find('section[aria-labelledby="expirations-heading"]').text()
     expect(panelText.indexOf('soon')).toBeLessThan(panelText.indexOf('far-out'))
   })
 })

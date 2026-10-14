@@ -40,8 +40,8 @@ An outage is reported within two check intervals, and a single transient error d
   → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/escalates to down after two consecutive failures, then recovers"
   → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/delivers a recovery webhook event with a non-zero downtime duration"
 - The list shows each monitor's status and uptime, and an empty state with a create button.
-  → test: apps/web/src/views/UptimeMonitorListView.test.ts "renders monitor rows with status, uptime, and keyword label"
-  → test: apps/web/src/views/UptimeMonitorListView.test.ts "shows an empty state when there are no monitors"
+  → test: apps/web/src/views/MonitorListView.test.ts "renders an uptime row with status, uptime, and keyword rule"
+  → test: apps/web/src/views/MonitorListView.test.ts "shows an empty state with a call to action when there are no monitors"
 - The detail page shows a 24-hour response-time chart, uptime % for 24 hours, 7 and 30 days, incidents with duration, and a paginated check log newest first.
   → test: apps/web/src/views/UptimeMonitorDetailView.test.ts "renders the response time chart when there are at least two chart points"
   → test: apps/web/src/views/UptimeMonitorDetailView.test.ts "renders uptime stats, formatting a missing 30d value as a dash"

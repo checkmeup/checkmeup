@@ -53,8 +53,8 @@ A missed run is reported within the job's grace period, without the user writing
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/recovery resolves the open incident when alerts are enabled"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/recovery delivers a webhook event via the monitor's attached channel"
 - The list shows each monitor's name, status and schedule, and an empty state with a create button when there are none.
-  → test: apps/web/src/views/CronMonitorListView.test.ts "renders a row per monitor with name, status, and schedule"
-  → test: apps/web/src/views/CronMonitorListView.test.ts "shows an empty state with a call to action when there are no monitors"
+  → test: apps/web/src/views/MonitorListView.test.ts "renders a cron row with its name, status, and schedule"
+  → test: apps/web/src/views/MonitorListView.test.ts "shows an empty state with a call to action when there are no monitors"
 - The detail page shows the configuration, a paginated ping log newest first, and incidents with their duration.
   → test: apps/api/internal/handler/monitors_test.go "TestGetCronMonitor/success returns pings and incidents newest first"
   → test: apps/api/internal/handler/monitors_test.go "TestGetCronPings/pagination"

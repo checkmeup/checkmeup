@@ -105,6 +105,21 @@ This replaces the earlier dark-gradient-in-dark-mode / light-mint-in-light-mode 
 (a flat `--bg`/`--surface` fill didn't work
 there) — the flat wash reads fine in both themes without a per-theme gradient swap.
 
+## App layout
+
+- **Top navigation**, not a sidebar (`AppLayout.vue`): Overview, Monitors, Status pages,
+  Incidents, Maintenance; Settings, Billing and sign-out sit in the account menu. On phones
+  the same links open from a menu button.
+- **One monitor list** at `/monitors` for every type, filtered by `?type=`. The old per-type
+  list URLs (`/monitors/cron`, …) redirect there with their type preselected, and keep their
+  route names so `router.push({ name: 'cron-monitors' })` still works.
+- **Problems first**: every monitor table sorts down, then warnings, then the rest by name
+  (`sortRows` in `lib/monitorRows.ts`), so the rows that need action are always on top.
+- **No cards for content**: sections are separated by whitespace and hairline `--border`
+  rules; tables sit in one bordered box with a `--surface` header row.
+- **Headings** are Geist 600 with tight negative tracking (about −0.035em on page titles,
+  −0.02em on section titles); statuses are a colored dot plus a label (`StatusLabel.vue`).
+
 ## Typography
 
 - **Sans:** `Geist` (400/500/600/700/800) for body and headings alike — headings are

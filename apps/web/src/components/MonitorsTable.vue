@@ -1,186 +1,184 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Button from '@/components/ui/Button.vue'
+import StatusLabel from '@/components/StatusLabel.vue'
 import {
+  type MonitorRow,
   type MonitorType,
-  type Row,
-  typeLabel,
   detailRouteName,
-  statusColors,
-  statusLabels,
-} from '@/views/dashboardHelpers'
+  matchesSearch,
+  monitorTypes,
+  typeLabel,
+} from '@/lib/monitorRows'
 
-defineProps<{
-  chips: { id: string; label: string; count: number }[]
-  filter: 'all' | MonitorType
-  hasAnyMonitors: boolean
-  filteredRows: Row[]
+export type MonitorFilter = 'all' | 'problems' | MonitorType
+
+const props = defineProps<{
+  rows: MonitorRow[]
 }>()
 
-const emit = defineEmits<{
-  'update:filter': [value: 'all' | MonitorType]
-}>()
-
+const filter = defineModel<MonitorFilter>('filter', { default: 'all' })
+const search = ref('')
 const router = useRouter()
+
+const isProblem = (r: MonitorRow) => r.tone === 'down' || r.tone === 'warn'
+
+// "All" and "Problems" always show; a type tab only once it has a monitor.
+const tabs = computed(() => [
+  { id: 'all' as const, label: 'All', count: props.rows.length },
+  { id: 'problems' as const, label: 'Problems', count: props.rows.filter(isProblem).length },
+  ...monitorTypes
+    .map((t) => ({ id: t, label: typeLabel[t], count: props.rows.filter((r) => r.type === t).length }))
+    .filter((t) => t.count > 0 || filter.value === t.id),
+])
+
+const visibleRows = computed(() =>
+  props.rows
+    .filter((r) =>
+      filter.value === 'all' ? true : filter.value === 'problems' ? isProblem(r) : r.type === filter.value,
+    )
+    .filter((r) => matchesSearch(r, search.value)),
+)
+
+function open(row: MonitorRow) {
+  router.push({ name: detailRouteName[row.type], params: { id: row.id } })
+}
 </script>
 
 <template>
-  <div
-    class="flex-1 min-w-0 rounded-2xl border overflow-hidden"
-    style="background-color: var(--surface); border-color: var(--border); flex-basis: 560px"
-  >
-    <div
-      class="flex items-center justify-between gap-3 px-5 py-4 border-b flex-wrap"
-      style="border-color: var(--border)"
-    >
-      <span class="text-sm font-semibold" style="color: var(--text-strong)">Monitors</span>
-      <div class="flex gap-1.5 flex-wrap">
+  <div class="flex flex-col gap-3.5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div
+        role="tablist"
+        aria-label="Filter monitors"
+        class="flex flex-wrap gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]"
+      >
         <button
-          v-for="chip in chips"
-          :key="chip.id"
-          class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-          :style="{
-            borderColor: filter === chip.id ? 'var(--accent)' : 'var(--border)',
-            backgroundColor: filter === chip.id ? 'var(--accent-wash)' : 'transparent',
-            color: filter === chip.id ? 'var(--accent)' : 'var(--text-dim)',
-          }"
-          @click="emit('update:filter', chip.id as 'all' | MonitorType)"
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="filter === tab.id"
+          class="min-h-[34px] rounded-lg px-3 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+          :class="
+            filter === tab.id
+              ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]'
+              : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+          "
+          @click="filter = tab.id"
         >
-          {{ chip.label }} <span class="opacity-60">{{ chip.count }}</span>
+          {{ tab.label }} <span class="text-[var(--text-muted)]">{{ tab.count }}</span>
         </button>
       </div>
-    </div>
-
-    <div v-if="!hasAnyMonitors" class="p-10 text-center">
-      <p class="text-sm mb-4" style="color: var(--text-muted)">
-        No monitors yet. Add a cron, uptime, SSL, domain, port, or DNS monitor to get started.
-      </p>
-      <Button @click="router.push({ name: 'uptime-monitor-create' })"
-        >Add your first monitor</Button
+      <label
+        class="flex min-h-10 items-center gap-2 rounded-[10px] border border-[var(--border-strong)] px-3 text-[var(--text-muted)] focus-within:ring-2 focus-within:ring-[var(--accent)]"
       >
+        <svg
+          aria-hidden="true"
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <line x1="20" y1="20" x2="16" y2="16" />
+        </svg>
+        <span class="sr-only">Search monitors</span>
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Search"
+          class="w-40 bg-transparent text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+        />
+      </label>
     </div>
 
-    <template v-else>
-      <!-- Mobile cards -->
-      <div class="md:hidden">
-        <div
-          v-for="m in filteredRows"
-          :key="m.key"
-          class="p-4 border-b cursor-pointer transition-colors hover:bg-[var(--surface-raised)]"
-          style="border-color: var(--border)"
-          @click="router.push({ name: detailRouteName[m.type], params: { id: m.id } })"
+    <!-- Phones: one stacked row per monitor -->
+    <ul class="divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)] md:hidden">
+      <li v-for="m in visibleRows" :key="m.key">
+        <RouterLink
+          :to="{ name: detailRouteName[m.type], params: { id: m.id } }"
+          class="block px-4 py-3 transition-colors hover:bg-[var(--surface)]"
         >
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="font-medium text-sm truncate" style="color: var(--text-strong)">{{
-              m.name
-            }}</span>
-            <span
-              class="inline-flex items-center gap-1.5 text-xs font-medium flex-shrink-0"
-              :style="{ color: statusColors[m.status] }"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :style="{ backgroundColor: statusColors[m.status] }"
-              ></span>
-              {{ statusLabels[m.status] ?? m.status }}
-            </span>
+          <div class="flex items-center justify-between gap-3">
+            <span class="truncate font-medium text-[var(--text-strong)]">{{ m.name }}</span>
+            <StatusLabel :tone="m.tone" :label="m.statusLabel" />
           </div>
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-mono truncate" style="color: var(--text-muted)">{{
-              m.target
-            }}</span>
-            <span class="font-mono flex-shrink-0" style="color: var(--text-dim)">{{
-              m.metricValue
-            }}</span>
+          <div class="mt-1 flex items-center justify-between gap-3 text-xs">
+            <span class="truncate font-mono text-[var(--text-dim)]">{{ m.target }}</span>
+            <span class="flex-shrink-0 font-mono text-[var(--text)]">{{ m.metric }}</span>
           </div>
-        </div>
-      </div>
+        </RouterLink>
+      </li>
+    </ul>
 
-      <!-- Desktop table -->
-      <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-sm" style="min-width: 640px">
-          <thead>
-            <tr style="background-color: var(--surface-raised)">
-              <th class="w-6"></th>
-              <th
-                class="text-left px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                style="color: var(--text-muted)"
+    <!-- Desktop table -->
+    <div class="hidden overflow-x-auto rounded-[14px] border border-[var(--border)] md:block">
+      <table class="w-full min-w-[760px] border-collapse text-sm">
+        <thead>
+          <tr class="bg-[var(--surface)] text-left text-[12.5px] text-[var(--text-dim)]">
+            <th class="w-[130px] px-4 py-2.5 font-medium">Status</th>
+            <th class="px-3 py-2.5 font-medium">Monitor</th>
+            <th class="w-[90px] px-3 py-2.5 font-medium">Type</th>
+            <th class="w-[200px] px-3 py-2.5 font-medium">Now</th>
+            <th class="w-[100px] px-4 py-2.5 text-right font-medium">Checked</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="m in visibleRows"
+            :key="m.key"
+            class="cursor-pointer border-t border-[var(--border)] transition-colors hover:bg-[var(--surface)]"
+            @click="open(m)"
+          >
+            <td class="px-4 py-2.5">
+              <StatusLabel :tone="m.tone" :label="m.statusLabel" />
+            </td>
+            <td class="max-w-0 px-3 py-2.5">
+              <RouterLink
+                :to="{ name: detailRouteName[m.type], params: { id: m.id } }"
+                class="block truncate font-medium text-[var(--text-strong)] focus-visible:underline focus-visible:outline-none"
+                @click.stop
               >
-                Monitor
-              </th>
-              <th
-                class="text-left px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                style="color: var(--text-muted)"
+                {{ m.name }}
+              </RouterLink>
+              <div class="truncate font-mono text-xs text-[var(--text-dim)]">{{ m.target }}</div>
+              <div v-if="m.note" class="truncate text-xs text-[var(--text-muted)]">
+                {{ m.note }}
+              </div>
+            </td>
+            <td class="px-3 py-2.5 text-[13px] text-[var(--text-dim)]">{{ typeLabel[m.type] }}</td>
+            <td class="px-3 py-2.5">
+              <div
+                class="font-mono text-[13.5px]"
+                :class="m.tone === 'down' || m.tone === 'warn' ? 'font-medium' : ''"
+                :style="{
+                  color:
+                    m.tone === 'down'
+                      ? 'var(--status-down)'
+                      : m.tone === 'warn'
+                        ? 'var(--status-degraded)'
+                        : 'var(--text)',
+                }"
               >
-                Metric
-              </th>
-              <th
-                class="text-right px-5 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider"
-                style="color: var(--text-muted)"
-              >
-                Last checked
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="m in filteredRows"
-              :key="m.key"
-              class="cursor-pointer transition-colors border-b hover:bg-[var(--surface-raised)]"
-              style="border-color: var(--border)"
-              @click="router.push({ name: detailRouteName[m.type], params: { id: m.id } })"
-            >
-              <td class="pl-5">
-                <span
-                  class="inline-block w-[9px] h-[9px] rounded-full"
-                  :style="{ backgroundColor: statusColors[m.status] }"
-                ></span>
-              </td>
-              <td class="px-3 py-3 min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <span class="font-semibold truncate" style="color: var(--text-strong)">{{
-                    m.name
-                  }}</span>
-                  <span
-                    class="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-                    style="background-color: var(--surface-raised); color: var(--text-dim)"
-                  >
-                    {{ typeLabel[m.type] }}
-                  </span>
-                </div>
-                <div class="font-mono text-[11.5px] truncate mt-0.5" style="color: var(--text-muted)">
-                  {{ m.target }}
-                </div>
-              </td>
-              <td class="px-3 py-3">
-                <div class="text-[11.5px] mb-0.5" style="color: var(--text-muted)">
-                  {{ m.metricLabel }}
-                </div>
-                <div
-                  class="font-mono text-[13.5px] font-semibold"
-                  :style="{
-                    color: ['down', 'error', 'expired', 'expiring_soon'].includes(m.status)
-                      ? statusColors[m.status]
-                      : 'var(--text-strong)',
-                  }"
-                >
-                  {{ m.metricValue }}
-                </div>
-              </td>
-              <td class="px-5 py-3 font-mono text-[11.5px] text-right" style="color: var(--text-muted)">
-                {{ m.lastChecked }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div
-          v-if="filteredRows.length === 0"
-          class="p-8 text-center text-sm"
-          style="color: var(--text-muted)"
-        >
-          No monitors match this filter.
-        </div>
-      </div>
-    </template>
+                {{ m.metric }}
+              </div>
+              <div v-if="m.metricSub" class="truncate text-xs text-[var(--text-dim)]">
+                {{ m.metricSub }}
+              </div>
+            </td>
+            <td class="px-4 py-2.5 text-right font-mono text-xs text-[var(--text-dim)]">
+              {{ m.lastChecked }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p v-if="visibleRows.length === 0" class="py-6 text-center text-sm text-[var(--text-dim)]">
+      No monitors match this filter.
+    </p>
   </div>
 </template>

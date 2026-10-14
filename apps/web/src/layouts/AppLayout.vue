@@ -14,14 +14,33 @@ const route = useRoute()
 const auth = useAuthStore()
 const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
-const sidebarOpen = ref(false)
+
+const menuOpen = ref(false)
+const accountOpen = ref(false)
 
 watch(
   () => route.path,
   () => {
-    sidebarOpen.value = false
+    menuOpen.value = false
+    accountOpen.value = false
   },
 )
+
+// A section stays highlighted on its detail, create and edit pages too —
+// e.g. "Monitors" on /monitors/uptime/42.
+const sections = [
+  { label: 'Overview', to: '/dashboard', prefix: '/dashboard' },
+  { label: 'Monitors', to: '/monitors', prefix: '/monitors' },
+  { label: 'Status pages', to: '/status-pages', prefix: '/status-pages' },
+  { label: 'Incidents', to: '/incidents', prefix: '/incidents' },
+  { label: 'Maintenance', to: '/maintenance', prefix: '/maintenance' },
+]
+
+function isActive(prefix: string) {
+  return route.path === prefix || route.path.startsWith(prefix + '/')
+}
+
+const initials = computed(() => (auth.user?.email ?? '?').slice(0, 2).toUpperCase())
 
 async function signOut() {
   try {
@@ -34,350 +53,154 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="flex h-screen" style="background-color: var(--bg)">
-    <!-- Mobile backdrop -->
-    <div
-      v-if="sidebarOpen"
-      class="fixed inset-0 z-20 bg-black/50 md:hidden"
-      @click="sidebarOpen = false"
-    />
-
-    <!-- Sidebar — fixed overlay on mobile, static column on desktop -->
-    <aside
-      class="fixed inset-y-0 left-0 z-30 w-56 flex-shrink-0 flex flex-col border-r transition-transform duration-200 md:static md:translate-x-0"
-      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
-      style="background-color: var(--surface); border-color: var(--border)"
+  <div class="min-h-screen bg-[var(--bg)]">
+    <header
+      class="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--nav-bg)] backdrop-blur-md"
     >
-      <!-- Logo -->
-      <div class="flex items-center gap-2 px-4 py-5 border-b" style="border-color: var(--border)">
-        <img :src="logo" alt="" class="h-6" />
-        <div class="text-xs mt-1" style="color: var(--text-muted)">
-          {{ appVersion }}
-        </div>
-      </div>
-
-      <!-- Nav -->
-      <nav class="flex-1 px-2 py-4 space-y-1">
-        <RouterLink
-          to="/dashboard"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-          </svg>
-          Dashboard
-        </RouterLink>
-
-        <div
-          class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider"
-          style="color: var(--text-muted)"
-        >
-          Monitors
+      <div class="mx-auto flex min-h-16 max-w-[1200px] items-center justify-between gap-4 px-4 md:px-6">
+        <div class="flex items-center gap-8">
+          <RouterLink to="/dashboard" class="flex-shrink-0" aria-label="Checkmeup — overview">
+            <img :src="logo" alt="" class="block h-6 w-auto" />
+          </RouterLink>
+          <nav aria-label="Main" class="hidden gap-1 md:flex">
+            <RouterLink
+              v-for="s in sections"
+              :key="s.to"
+              :to="s.to"
+              class="rounded-lg px-3 py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+              :class="
+                isActive(s.prefix)
+                  ? 'bg-[var(--surface-raised)] font-semibold text-[var(--text-strong)]'
+                  : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+              "
+              :aria-current="isActive(s.prefix) ? 'page' : undefined"
+            >
+              {{ s.label }}
+            </RouterLink>
+          </nav>
         </div>
 
-        <RouterLink
-          to="/monitors/cron"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          Cron
-        </RouterLink>
+        <div class="flex items-center gap-2">
+          <ThemeToggle />
 
-        <RouterLink
-          to="/monitors/uptime"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-          Uptime
-        </RouterLink>
-
-        <RouterLink
-          to="/monitors/ssl"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          SSL
-        </RouterLink>
-
-        <RouterLink
-          to="/monitors/domain"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg>
-          Domain
-        </RouterLink>
-
-        <RouterLink
-          to="/monitors/port"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="2" y="9" width="6" height="6" rx="1" />
-            <rect x="16" y="9" width="6" height="6" rx="1" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
-          Port
-        </RouterLink>
-
-        <RouterLink
-          to="/monitors/dns"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          DNS
-        </RouterLink>
-
-        <div
-          class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider"
-          style="color: var(--text-muted)"
-        >
-          Public
-        </div>
-
-        <RouterLink
-          to="/status-pages"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path
-              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-            />
-          </svg>
-          Status pages
-        </RouterLink>
-
-        <RouterLink
-          to="/maintenance"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
-          </svg>
-          Maintenance
-        </RouterLink>
-
-        <RouterLink
-          to="/incidents"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          Incidents
-        </RouterLink>
-
-        <div
-          class="pt-2 pb-1 px-3 text-xs font-medium uppercase tracking-wider"
-          style="color: var(--text-muted)"
-        >
-          Account
-        </div>
-
-        <RouterLink
-          to="/billing"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-            <line x1="1" y1="10" x2="23" y2="10" />
-          </svg>
-          Billing
-        </RouterLink>
-
-        <RouterLink
-          to="/settings"
-          class="nav-link flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-            />
-          </svg>
-          Settings
-        </RouterLink>
-      </nav>
-
-      <!-- User -->
-      <div class="px-4 py-3 border-t flex items-center justify-between gap-2" style="border-color: var(--border)">
-        <div class="min-w-0">
-          <div class="text-xs truncate mb-2" style="color: var(--text-muted)">
-            {{ auth.user?.email }}
+          <!-- Account menu (desktop) -->
+          <div class="relative hidden md:block">
+            <button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-wash)] text-[13px] font-semibold text-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
+              :aria-expanded="accountOpen"
+              aria-haspopup="menu"
+              aria-label="Account menu"
+              @click="accountOpen = !accountOpen"
+            >
+              {{ initials }}
+            </button>
+            <template v-if="accountOpen">
+              <div class="fixed inset-0 z-40" @click="accountOpen = false"></div>
+              <div
+                role="menu"
+                class="absolute top-[calc(100%+8px)] right-0 z-50 w-60 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg)] py-1.5 shadow-[0_16px_40px_rgb(0_0_0/18%)]"
+              >
+                <div class="border-b border-[var(--border)] px-4 pt-1.5 pb-3">
+                  <div class="truncate text-sm text-[var(--text-strong)]">{{ auth.user?.email }}</div>
+                  <div class="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{{ appVersion }}</div>
+                </div>
+                <RouterLink
+                  to="/settings"
+                  role="menuitem"
+                  class="block px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  >Settings</RouterLink
+                >
+                <RouterLink
+                  to="/billing"
+                  role="menuitem"
+                  class="block px-4 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  >Billing</RouterLink
+                >
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="block w-full px-4 py-2.5 text-left text-sm text-[var(--text)] hover:bg-[var(--surface-raised)]"
+                  @click="signOut"
+                >
+                  Sign out
+                </button>
+              </div>
+            </template>
           </div>
+
+          <!-- Menu button (phones) -->
           <button
-            class="text-xs text-left transition-colors hover:cursor-pointer"
-            style="color: var(--text-muted)"
-            @click="signOut"
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-dim)] md:hidden"
+            :aria-expanded="menuOpen"
+            :aria-label="menuOpen ? 'Close menu' : 'Open menu'"
+            @click="menuOpen = !menuOpen"
           >
-            Sign out
+            <svg
+              aria-hidden="true"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <template v-if="menuOpen">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </template>
+              <template v-else>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </template>
+            </svg>
           </button>
         </div>
-        <ThemeToggle />
       </div>
-    </aside>
 
-
-    <!-- Main column -->
-    <div class="flex flex-col flex-1 min-w-0">
-      <!-- Mobile header (hidden on desktop) -->
-      <header
-        class="flex md:hidden items-center gap-3 px-4 h-14 border-b flex-shrink-0"
-        style="background-color: var(--surface); border-color: var(--border)"
+      <!-- Phone menu panel -->
+      <nav
+        v-if="menuOpen"
+        aria-label="Main"
+        class="flex flex-col border-t border-[var(--border)] px-4 py-3 md:hidden"
       >
-        <button
-          class="p-1 -ml-1 rounded"
-          style="color: var(--text-muted)"
-          aria-label="Open menu"
-          @click="sidebarOpen = true"
+        <RouterLink
+          v-for="s in sections"
+          :key="s.to"
+          :to="s.to"
+          class="rounded-lg px-3 py-3 text-[15px]"
+          :class="
+            isActive(s.prefix)
+              ? 'bg-[var(--surface-raised)] font-semibold text-[var(--text-strong)]'
+              : 'text-[var(--text-dim)]'
+          "
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          {{ s.label }}
+        </RouterLink>
+        <div class="my-2 h-px bg-[var(--border)]"></div>
+        <RouterLink to="/settings" class="rounded-lg px-3 py-3 text-[15px] text-[var(--text-dim)]"
+          >Settings</RouterLink
+        >
+        <RouterLink to="/billing" class="rounded-lg px-3 py-3 text-[15px] text-[var(--text-dim)]"
+          >Billing</RouterLink
+        >
+        <button
+          type="button"
+          class="rounded-lg px-3 py-3 text-left text-[15px] text-[var(--text-dim)]"
+          @click="signOut"
+        >
+          Sign out
         </button>
-        <img :src="logo" alt="" class="h-5" />
-        <div class="text-xs mt-1" style="color: var(--text-muted)">
-          {{ appVersion }}
+        <div class="px-3 pt-2 text-xs text-[var(--text-muted)]">
+          {{ auth.user?.email }} · <span class="font-mono">{{ appVersion }}</span>
         </div>
-      </header>
+      </nav>
+    </header>
 
-      <!-- Page content -->
-      <main class="flex-1 overflow-y-auto">
-        <slot />
-      </main>
-    </div>
+    <main>
+      <slot />
+    </main>
   </div>
 </template>
-
-<style scoped>
-.nav-link {
-  color: var(--text-dim);
-}
-
-.nav-link:hover {
-  background-color: var(--surface-raised);
-  color: var(--text);
-}
-
-.nav-link.router-link-active {
-  background-color: var(--surface-raised);
-  color: var(--text-strong);
-  font-weight: 500;
-  box-shadow: inset 2px 0 0 var(--color-green-500);
-}
-</style>

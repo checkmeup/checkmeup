@@ -43,6 +43,6 @@ A page that answers `200` but lost its expected content is reported as down.
 - Keywords work on the Hobby plan.
   → test: apps/api/internal/handler/uptime_monitors_test.go "TestCreateUptimeMonitor/keyword monitoring works on the Hobby (free) plan"
 - The list and detail page show the keyword and its mode when one is set.
-  → test: apps/web/src/views/UptimeMonitorListView.test.ts "renders monitor rows with status, uptime, and keyword label"
+  → test: apps/web/src/views/MonitorListView.test.ts "renders an uptime row with status, uptime, and keyword rule"
   → test: apps/web/src/views/UptimeMonitorDetailView.test.ts "renders the keyword line only when a keyword is configured"
 - Only the first 512 KB of the body is searched, whatever its `Content-Length`.

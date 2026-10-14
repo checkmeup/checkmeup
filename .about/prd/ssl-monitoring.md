@@ -42,8 +42,8 @@ Every certificate is renewed before it expires, with three warnings in hand: 30,
   → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/expired sets status expired"
   → test: apps/api/internal/worker/worker_test.go "TestSslThresholdAlert/builds an expired-phrased alert for negative days left"
 - The list shows status, expiry date, days left and issuer; a negative day count shows "Expired".
-  → test: apps/web/src/views/SSLMonitorListView.test.ts "renders monitor rows with status, expiry, and issuer"
-  → test: apps/web/src/views/SSLMonitorListView.test.ts "shows \"Expired\" for a negative days-until-expiry even with an expiry date"
+  → test: apps/web/src/views/MonitorListView.test.ts "renders an SSL row with status, expiry, and issuer"
+  → test: apps/web/src/views/MonitorListView.test.ts "shows \"Expired\" for a negative days-until-expiry even with an expiry date"
 - Editing changes the name and hostname.
   → test: apps/api/internal/handler/ssl_monitors_test.go "TestUpdateSSLMonitor/success applies changes and normalises the hostname"
 - Pausing stops alerts; resuming restores them.

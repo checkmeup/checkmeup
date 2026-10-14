@@ -100,10 +100,17 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    // Every monitor type in one list; the old per-type list URLs below
+    // redirect here with their type preselected as a filter.
+    path: '/monitors',
+    name: 'monitors',
+    component: () => import('@/views/MonitorListView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/monitors/cron',
     name: 'cron-monitors',
-    component: () => import('@/views/CronMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'cron' } },
   },
   {
     path: '/monitors/cron/new',
@@ -126,8 +133,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/monitors/uptime',
     name: 'uptime-monitors',
-    component: () => import('@/views/UptimeMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'uptime' } },
   },
   {
     path: '/monitors/uptime/new',
@@ -150,8 +156,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/monitors/ssl',
     name: 'ssl-monitors',
-    component: () => import('@/views/SSLMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'ssl' } },
   },
   {
     path: '/monitors/ssl/new',
@@ -174,8 +179,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/monitors/domain',
     name: 'domain-monitors',
-    component: () => import('@/views/DomainMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'domain' } },
   },
   {
     path: '/monitors/domain/new',
@@ -198,8 +202,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/monitors/port',
     name: 'port-monitors',
-    component: () => import('@/views/PortMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'port' } },
   },
   {
     path: '/monitors/port/new',
@@ -222,8 +225,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/monitors/dns',
     name: 'dns-monitors',
-    component: () => import('@/views/DNSMonitorListView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'monitors', query: { type: 'dns' } },
   },
   {
     path: '/monitors/dns/new',
