@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -495,5 +496,17 @@ func TestParseExpectedState(t *testing.T) {
 		if got := parseExpectedState(in); got != db.PortExpectedStateOpen {
 			t.Fatalf("parseExpectedState(%q) = %q, want open (default)", in, got)
 		}
+	}
+}
+
+// A timestamp read in a non-UTC zone must still serialize as UTC: the "Z"
+// suffix promises UTC, so writing local wall-clock time before it shifts every
+// time in the UI by the zone's offset.
+func TestPortCheckToResponse_WritesCheckedAtInUTC(t *testing.T) {
+	zone := time.FixedZone("EEST", 3*60*60)
+	at := time.Date(2026, 10, 15, 1, 14, 55, 0, zone)
+	r := portCheckToResponse(db.PortCheck{CheckedAt: pgtype.Timestamptz{Time: at, Valid: true}})
+	if r.CheckedAt != "2026-10-14T22:14:55Z" {
+		t.Fatalf("CheckedAt = %q, want 2026-10-14T22:14:55Z", r.CheckedAt)
 	}
 }

@@ -85,7 +85,7 @@ func toMaintenanceWindowResponse(win db.MaintenanceWindow, monitors []resolvedMo
 		StartsAt:     win.StartsAt.Time.Format(time.RFC3339),
 		Status:       windowStatus(win.StartsAt.Time, win.EndsAt),
 		MonitorCount: len(monitors),
-		CreatedAt:    win.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    win.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if win.EndsAt.Valid {
 		t := win.EndsAt.Time.Format(time.RFC3339)
@@ -253,7 +253,7 @@ func (h *MaintenanceHandler) ListMaintenanceWindows(w http.ResponseWriter, r *ht
 			StartsAt:     row.StartsAt.Time.Format(time.RFC3339),
 			Status:       windowStatus(row.StartsAt.Time, row.EndsAt),
 			MonitorCount: int(row.MonitorCount),
-			CreatedAt:    row.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+			CreatedAt:    row.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		}
 		if row.EndsAt.Valid {
 			t := row.EndsAt.Time.Format(time.RFC3339)

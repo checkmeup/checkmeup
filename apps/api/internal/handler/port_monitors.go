@@ -70,10 +70,10 @@ func (h *MonitorHandler) portMonitorToResponse(m db.PortMonitor) portMonitorResp
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
-		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if m.LastCheckedAt.Valid {
-		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastCheckedAt = &t
 	}
 	return r
@@ -82,7 +82,7 @@ func (h *MonitorHandler) portMonitorToResponse(m db.PortMonitor) portMonitorResp
 func portCheckToResponse(c db.PortCheck) portCheckResponse {
 	r := portCheckResponse{
 		ID:             c.ID.String(),
-		CheckedAt:      c.CheckedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CheckedAt:      c.CheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		ResponseTimeMs: c.ResponseTimeMs,
 		IsUp:           c.IsUp,
 	}
@@ -95,10 +95,10 @@ func portCheckToResponse(c db.PortCheck) portCheckResponse {
 func portIncidentToResponse(i db.PortIncident) portIncidentResponse {
 	r := portIncidentResponse{
 		ID:        i.ID.String(),
-		StartedAt: i.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+		StartedAt: i.StartedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if i.ResolvedAt.Valid {
-		t := i.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := i.ResolvedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.ResolvedAt = &t
 	}
 	return r

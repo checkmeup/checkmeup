@@ -74,7 +74,7 @@ func (h *MonitorHandler) dnsMonitorToResponse(m db.DnsMonitor) dnsMonitorRespons
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
-		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if m.ExpectedValue.Valid {
 		r.ExpectedValue = &m.ExpectedValue.String
@@ -83,7 +83,7 @@ func (h *MonitorHandler) dnsMonitorToResponse(m db.DnsMonitor) dnsMonitorRespons
 		r.LastResolvedValue = &m.LastResolvedValue.String
 	}
 	if m.LastCheckedAt.Valid {
-		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastCheckedAt = &t
 	}
 	return r
@@ -92,7 +92,7 @@ func (h *MonitorHandler) dnsMonitorToResponse(m db.DnsMonitor) dnsMonitorRespons
 func dnsCheckToResponse(c db.DnsCheck) dnsCheckResponse {
 	r := dnsCheckResponse{
 		ID:             c.ID.String(),
-		CheckedAt:      c.CheckedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CheckedAt:      c.CheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		ResponseTimeMs: c.ResponseTimeMs,
 		IsUp:           c.IsUp,
 	}
@@ -108,10 +108,10 @@ func dnsCheckToResponse(c db.DnsCheck) dnsCheckResponse {
 func dnsIncidentToResponse(i db.DnsIncident) dnsIncidentResponse {
 	r := dnsIncidentResponse{
 		ID:        i.ID.String(),
-		StartedAt: i.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+		StartedAt: i.StartedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if i.ResolvedAt.Valid {
-		t := i.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := i.ResolvedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.ResolvedAt = &t
 	}
 	return r

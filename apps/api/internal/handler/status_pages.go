@@ -68,7 +68,7 @@ func toStatusPageResponse(p db.StatusPage, baseURL string) statusPageResponse {
 		HideBranding: p.HideBranding,
 		Layout:       p.Layout,
 		PublicURL:    baseURL + "/status/" + p.Slug,
-		CreatedAt:    p.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    p.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

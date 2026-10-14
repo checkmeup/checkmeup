@@ -64,7 +64,7 @@ type cronPingResponse struct {
 func cronPingToResponse(p db.CronPing) cronPingResponse {
 	r := cronPingResponse{
 		ID:         p.ID.String(),
-		ReceivedAt: p.ReceivedAt.Time.Format("2006-01-02T15:04:05Z"),
+		ReceivedAt: p.ReceivedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		SourceIP:   p.SourceIp,
 	}
 	if len(p.Metadata) > 0 {
@@ -74,7 +74,7 @@ func cronPingToResponse(p db.CronPing) cronPingResponse {
 		}
 	}
 	if p.RunStartedAt.Valid {
-		t := p.RunStartedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := p.RunStartedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.RunStartedAt = &t
 	}
 	return r
@@ -98,18 +98,18 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
-		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if m.MaxDurationMins.Valid {
 		v := m.MaxDurationMins.Int32
 		r.MaxDurationMins = &v
 	}
 	if m.LastPingAt.Valid {
-		t := m.LastPingAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.LastPingAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastPingAt = &t
 	}
 	if m.NextPingAt.Valid {
-		t := m.NextPingAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.NextPingAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.NextPingAt = &t
 	}
 	return r
@@ -375,10 +375,10 @@ func (h *MonitorHandler) GetCronMonitor(w http.ResponseWriter, r *http.Request) 
 	for i, inc := range incidents {
 		ir := cronIncidentResponse{
 			ID:        inc.ID.String(),
-			StartedAt: inc.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+			StartedAt: inc.StartedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		}
 		if inc.ResolvedAt.Valid {
-			t := inc.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+			t := inc.ResolvedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 			ir.ResolvedAt = &t
 		}
 		incidentResp[i] = ir

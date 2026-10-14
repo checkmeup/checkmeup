@@ -41,10 +41,10 @@ func apiKeyToResponse(k db.ApiKey) apiKeyResponse {
 		ID:        k.ID.String(),
 		Label:     k.Label,
 		KeyPrefix: k.KeyPrefix,
-		CreatedAt: k.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt: k.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if k.LastUsedAt.Valid {
-		t := k.LastUsedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := k.LastUsedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastUsedAt = &t
 	}
 	return r

@@ -98,7 +98,7 @@ func toNotificationChannelResponse(c db.NotificationChannel) notificationChannel
 		Name:               c.Name,
 		Config:             cfg,
 		Enabled:            c.Enabled,
-		CreatedAt:          c.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:          c.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		LastDeliveryStatus: c.LastDeliveryStatus.String,
 		LastDeliveryDetail: c.LastDeliveryDetail.String,
 		LastDeliveryAt:     formatDeliveryAt(c.LastDeliveryAt),
@@ -128,7 +128,7 @@ func formatDeliveryAt(t pgtype.Timestamptz) string {
 	if !t.Valid {
 		return ""
 	}
-	return t.Time.Format("2006-01-02T15:04:05Z")
+	return t.Time.UTC().Format("2006-01-02T15:04:05Z")
 }
 
 // validateChannelConfig checks config has the field(s) required for type.

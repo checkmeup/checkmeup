@@ -65,7 +65,7 @@ func (h *MonitorHandler) GetCronStatus(w http.ResponseWriter, r *http.Request) {
 		Status: string(monitor.Status),
 	}
 	if monitor.LastPingAt.Valid {
-		t := monitor.LastPingAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastPingAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 
@@ -103,7 +103,7 @@ func (h *MonitorHandler) GetUptimeStatus(w http.ResponseWriter, r *http.Request)
 		Status: string(monitor.Status),
 	}
 	if monitor.LastCheckedAt.Valid {
-		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 	respond.JSON(w, http.StatusOK, resp)
@@ -133,7 +133,7 @@ func (h *MonitorHandler) GetPortStatus(w http.ResponseWriter, r *http.Request) {
 		Status: string(monitor.Status),
 	}
 	if monitor.LastCheckedAt.Valid {
-		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 	respond.JSON(w, http.StatusOK, resp)
@@ -163,7 +163,7 @@ func (h *MonitorHandler) GetDNSStatus(w http.ResponseWriter, r *http.Request) {
 		Status: string(monitor.Status),
 	}
 	if monitor.LastCheckedAt.Valid {
-		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 	respond.JSON(w, http.StatusOK, resp)
@@ -193,11 +193,11 @@ func (h *MonitorHandler) GetSSLStatus(w http.ResponseWriter, r *http.Request) {
 		Status: string(monitor.Status),
 	}
 	if monitor.LastCheckedAt.Valid {
-		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 	if monitor.ExpiresAt.Valid {
-		t := monitor.ExpiresAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.ExpiresAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.ExpiresAt = &t
 		days := int(time.Until(monitor.ExpiresAt.Time).Hours() / 24)
 		resp.DaysUntilExpiry = &days
@@ -229,11 +229,11 @@ func (h *MonitorHandler) GetDomainStatus(w http.ResponseWriter, r *http.Request)
 		Status: string(monitor.Status),
 	}
 	if monitor.LastCheckedAt.Valid {
-		t := monitor.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.LastCheckedAt = &t
 	}
 	if monitor.ExpiresAt.Valid {
-		t := monitor.ExpiresAt.Time.Format("2006-01-02T15:04:05Z")
+		t := monitor.ExpiresAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		resp.ExpiresAt = &t
 		days := int(time.Until(monitor.ExpiresAt.Time).Hours() / 24)
 		resp.DaysUntilExpiry = &days

@@ -47,10 +47,10 @@ func domainMonitorToResponse(m db.DomainMonitor) domainMonitorResponse {
 		AlertsEnabled:        m.AlertsEnabled,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
-		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if m.ExpiresAt.Valid {
-		t := m.ExpiresAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.ExpiresAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.ExpiresAt = &t
 		days := int(time.Until(m.ExpiresAt.Time).Hours() / 24)
 		r.DaysUntilExpiry = &days
@@ -62,7 +62,7 @@ func domainMonitorToResponse(m db.DomainMonitor) domainMonitorResponse {
 		r.ErrorMsg = &m.ErrorMsg.String
 	}
 	if m.LastCheckedAt.Valid {
-		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastCheckedAt = &t
 	}
 	return r

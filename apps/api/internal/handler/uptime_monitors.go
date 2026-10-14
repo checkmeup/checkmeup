@@ -110,13 +110,13 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 		AlertsEnabled:        m.AlertsEnabled,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
-		CreatedAt:            m.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		KeywordMode:          string(m.KeywordMode),
 		KeywordCaseSensitive: m.KeywordCaseSensitive,
 		JsonAssertions:       []JsonAssertion{},
 	}
 	if m.LastCheckedAt.Valid {
-		t := m.LastCheckedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := m.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.LastCheckedAt = &t
 	}
 	if m.Keyword.Valid {
@@ -134,7 +134,7 @@ func (h *MonitorHandler) uptimeMonitorToResponse(m db.UptimeMonitor) uptimeMonit
 func uptimeCheckToResponse(c db.UptimeCheck) uptimeCheckResponse {
 	r := uptimeCheckResponse{
 		ID:             c.ID.String(),
-		CheckedAt:      c.CheckedAt.Time.Format("2006-01-02T15:04:05Z"),
+		CheckedAt:      c.CheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 		ResponseTimeMs: c.ResponseTimeMs,
 		IsUp:           c.IsUp,
 	}
@@ -150,10 +150,10 @@ func uptimeCheckToResponse(c db.UptimeCheck) uptimeCheckResponse {
 func uptimeIncidentToResponse(i db.UptimeIncident) uptimeIncidentResponse {
 	r := uptimeIncidentResponse{
 		ID:        i.ID.String(),
-		StartedAt: i.StartedAt.Time.Format("2006-01-02T15:04:05Z"),
+		StartedAt: i.StartedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if i.ResolvedAt.Valid {
-		t := i.ResolvedAt.Time.Format("2006-01-02T15:04:05Z")
+		t := i.ResolvedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
 		r.ResolvedAt = &t
 	}
 	return r
