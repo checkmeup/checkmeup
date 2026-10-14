@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import CheckStrip from '@/components/CheckStrip.vue'
+import StatusLabel from '@/components/StatusLabel.vue'
+
+// One tick per night for the example job; the red one is the night in the
+// alert above.
+const missedNight = 61
+const quarter = Array.from({ length: 90 }, (_, i) => ({ ok: i !== missedNight }))
 </script>
 
 <template>
@@ -93,6 +100,22 @@ import { RouterLink } from 'vue-router'
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- The same job over a quarter: one missed night among ninety. -->
+    <div class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span>
+          <span class="font-semibold text-[var(--text-strong)]">nightly-backup</span>
+          <span class="text-[var(--text-dim)]"> · Cron · example, last 90 days</span>
+        </span>
+        <StatusLabel tone="up" label="Up" />
+      </div>
+      <CheckStrip :checks="quarter" />
+      <div class="flex justify-between text-xs text-[var(--text-muted)]">
+        <span>90 days ago</span>
+        <span>Today</span>
       </div>
     </div>
   </section>
