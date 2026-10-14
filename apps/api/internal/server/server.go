@@ -113,6 +113,10 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}/badge.svg", statusPublic.ServePageBadge)
 	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}/badge/{monitor_id}.svg", statusPublic.ServeMonitorBadge)
 
+	// A page's overall status and combined 90-day strip as JSON, for embedding
+	// a live strip elsewhere (the landing page shows checkmeup.net's own).
+	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}/summary.json", statusPublic.ServeSummary)
+
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
 	}

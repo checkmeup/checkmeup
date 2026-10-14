@@ -130,7 +130,10 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   Settings and Billing use). Docs and FAQ keep their sticky section nav in that left column.
 - **Landing hero** (`HeroSection.vue`) shows the product's one moment of value instead of a
   dashboard mockup: a crontab line ending in the ping `curl`, in a terminal panel
-  (`--terminal-*` tokens: dark in both themes), and the missed-ping alert it produces. The
+  (`--terminal-*` tokens: dark in both themes), and the missed-ping alert it produces. Under it,
+  a live 90-day strip of checkmeup.net's own status page (`GET /status/checkmeup-net/summary.json`,
+  slug in `content/home.ts`), which falls back to the example job's strip when that page doesn't
+  answer, as in local dev. The
   monitor types below it are a spec table (`monitorTypes` in `content/home.ts`), not icon cards.
 
 ## Typography

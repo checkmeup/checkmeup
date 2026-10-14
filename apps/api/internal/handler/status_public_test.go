@@ -636,3 +636,83 @@ func TestStatusTone_MapsEachStatusColorToItsTone(t *testing.T) {
 		}
 	}
 }
+
+func TestSummarizeDays_TakesEachDaysWorstTone(t *testing.T) {
+	bar := func(colors ...string) []publicBar {
+		b := make([]publicBar, 90)
+		for i := range b {
+			b[i] = publicBar{Color: statusColorGreen, Label: "day"}
+		}
+		for i, c := range colors {
+			b[i] = publicBar{Color: c, Label: "day"}
+		}
+		return b
+	}
+	rows := []publicMonitorRow{
+		{Bar: bar(statusColorRed, statusColorGreen, statusColorLight)},
+		{Bar: bar(statusColorGreen, statusColorAmber, statusColorLight)},
+	}
+
+	days := summarizeDays(rows)
+	if len(days) != 90 {
+		t.Fatalf("want 90 days, got %d", len(days))
+	}
+	for i, want := range []string{"down", "warn", "none", "up"} {
+		if days[i].Tone != want {
+			t.Fatalf("day %d: tone = %q, want %q", i, days[i].Tone, want)
+		}
+	}
+	if days[0].Date != "day" {
+		t.Fatalf("want the bar's date label, got %q", days[0].Date)
+	}
+	if got := summarizeDays(nil); len(got) != 90 || got[0].Tone != "none" {
+		t.Fatalf("a page with no monitors: want 90 empty days, got %+v", got[:1])
+	}
+}
+
+func TestStatusPublicServeSummary(t *testing.T) {
+	authH, monitorH, statusH, _, publicH, pool := testStatusPublicHandler(t)
+	doSummary := func(slug string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/status/"+slug+"/summary.json", nil)
+		req = withURLParam(req, "slug", slug)
+		w := httptest.NewRecorder()
+		publicH.ServeSummary(w, req)
+		return w
+	}
+
+	t.Run("unknown slug returns 404", func(t *testing.T) {
+		if w := doSummary("no-such-slug-" + uuid.NewString()); w.Code != http.StatusNotFound {
+			t.Fatalf("want 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("returns the overall status and a 90-day strip", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		cron := createCronMonitor(t, monitorH, u.access, "Cron job")
+		mustExec(t, pool, "UPDATE cron_monitors SET status = 'up' WHERE id = $1", cron.ID)
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Summary Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "cron", MonitorID: cron.ID, DisplayName: "Backups", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		w := doSummary(slug)
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		if cc := w.Header().Get("Cache-Control"); cc != "max-age=60" {
+			t.Fatalf("want a short cache TTL, got %q", cc)
+		}
+		got := decodeBody[statusSummary](t, w)
+		if got.Title != "Summary Co" || got.Overall != "All systems operational" || got.Tone != "up" {
+			t.Fatalf("unexpected headline: %+v", got)
+		}
+		if got.Monitors != 1 || len(got.Days) != 90 {
+			t.Fatalf("want 1 monitor and 90 days, got %d and %d", got.Monitors, len(got.Days))
+		}
+	})
+}

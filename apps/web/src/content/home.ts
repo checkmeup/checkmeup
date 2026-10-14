@@ -155,3 +155,7 @@ export const testimonials = [
       "Woke up to a Slack alert that my SSL cert was expiring in 7 days. I'd completely forgotten about it. Renewed it in 10 minutes. Crisis averted.",
   },
 ]
+
+// The production status page of checkmeup.net itself; the landing hero shows
+// its live 90-day strip.
+export const ownStatusSlug = 'checkmeup-net'

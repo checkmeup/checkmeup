@@ -1,12 +1,28 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import CheckStrip from '@/components/CheckStrip.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
+import { ownStatusSlug } from '@/content/home'
+import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
 
-// One tick per night for the example job; the red one is the night in the
-// alert above.
+// Until checkmeup.net's own status page answers (and wherever it can't, like
+// a local dev database without that page), the strip shows the example job
+// from the alert above: ninety nights, one missed.
 const missedNight = 61
-const quarter = Array.from({ length: 90 }, (_, i) => ({ ok: i !== missedNight }))
+const example = Array.from({ length: 90 }, (_, i) => ({ ok: i !== missedNight }))
+
+const summary = ref<StatusSummary | null>(null)
+const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`/status/${ownStatusSlug}/summary.json`)
+    if (res.ok) summary.value = (await res.json()) as StatusSummary
+  } catch {
+    // Network error: keep the example.
+  }
+})
 </script>
 
 <template>
@@ -103,16 +119,25 @@ const quarter = Array.from({ length: 90 }, (_, i) => ({ ok: i !== missedNight })
       </div>
     </div>
 
-    <!-- The same job over a quarter: one missed night among ninety. -->
+    <!-- checkmeup.net's own status, live; the example job until it loads. -->
     <div class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6">
       <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span>
+        <span v-if="live && summary">
+          <a
+            :href="`/status/${ownStatusSlug}`"
+            class="font-semibold text-[var(--text-strong)] hover:underline"
+            >{{ summary.title }}</a
+          >
+          <span class="text-[var(--text-dim)]"> · monitored by Checkmeup · live, last 90 days</span>
+        </span>
+        <span v-else>
           <span class="font-semibold text-[var(--text-strong)]">nightly-backup</span>
           <span class="text-[var(--text-dim)]"> · Cron · example, last 90 days</span>
         </span>
-        <StatusLabel tone="up" label="Up" />
+        <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
+        <StatusLabel v-else tone="up" label="Up" />
       </div>
-      <CheckStrip :checks="quarter" />
+      <CheckStrip :checks="live ? live.checks : example" />
       <div class="flex justify-between text-xs text-[var(--text-muted)]">
         <span>90 days ago</span>
         <span>Today</span>
