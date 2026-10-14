@@ -38,31 +38,42 @@ func (q *Queries) AcceptUserTerms(ctx context.Context, arg AcceptUserTermsParams
 }
 
 const createOrg = `-- name: CreateOrg :one
-INSERT INTO orgs (name, alert_email)
-VALUES ($1, $2)
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
+INSERT INTO orgs (name)
+VALUES ($1)
+RETURNING id, name, plan, created_at, updated_at, subscription_status, plan_renews_at, billing_cycle,
+  paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
 `
 
-type CreateOrgParams struct {
-	Name       string      `json:"name"`
-	AlertEmail pgtype.Text `json:"alert_email"`
+type CreateOrgRow struct {
+	ID                      uuid.UUID          `json:"id"`
+	Name                    string             `json:"name"`
+	Plan                    Plan               `json:"plan"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	SubscriptionStatus      string             `json:"subscription_status"`
+	PlanRenewsAt            pgtype.Timestamptz `json:"plan_renews_at"`
+	BillingCycle            string             `json:"billing_cycle"`
+	PaddleCustomerID        pgtype.Text        `json:"paddle_customer_id"`
+	PaddleSubscriptionID    pgtype.Text        `json:"paddle_subscription_id"`
+	SmsCreditsUsedThisMonth int32              `json:"sms_credits_used_this_month"`
+	SmsCreditsResetAt       pgtype.Date        `json:"sms_credits_reset_at"`
 }
 
-func (q *Queries) CreateOrg(ctx context.Context, arg CreateOrgParams) (Org, error) {
-	row := q.db.QueryRow(ctx, createOrg, arg.Name, arg.AlertEmail)
-	var i Org
+// Columns listed rather than RETURNING *: orgs still has the legacy
+// telegram_chat_id / alert_email / email_alerts_enabled columns, dropped in a
+// later release once no running code reads them.
+func (q *Queries) CreateOrg(ctx context.Context, name string) (CreateOrgRow, error) {
+	row := q.db.QueryRow(ctx, createOrg, name)
+	var i CreateOrgRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TelegramChatID,
 		&i.SubscriptionStatus,
 		&i.PlanRenewsAt,
 		&i.BillingCycle,
-		&i.AlertEmail,
-		&i.EmailAlertsEnabled,
 		&i.PaddleCustomerID,
 		&i.PaddleSubscriptionID,
 		&i.SmsCreditsUsedThisMonth,

@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getOrgByID = `-- name: GetOrgByID :one
@@ -18,111 +17,6 @@ SELECT id, name, plan, created_at, updated_at, telegram_chat_id, subscription_st
 
 func (q *Queries) GetOrgByID(ctx context.Context, id uuid.UUID) (Org, error) {
 	row := q.db.QueryRow(ctx, getOrgByID, id)
-	var i Org
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.TelegramChatID,
-		&i.SubscriptionStatus,
-		&i.PlanRenewsAt,
-		&i.BillingCycle,
-		&i.AlertEmail,
-		&i.EmailAlertsEnabled,
-		&i.PaddleCustomerID,
-		&i.PaddleSubscriptionID,
-		&i.SmsCreditsUsedThisMonth,
-		&i.SmsCreditsResetAt,
-	)
-	return i, err
-}
-
-const updateOrgAlertEmail = `-- name: UpdateOrgAlertEmail :one
-UPDATE orgs
-SET alert_email = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
-`
-
-type UpdateOrgAlertEmailParams struct {
-	ID         uuid.UUID   `json:"id"`
-	AlertEmail pgtype.Text `json:"alert_email"`
-}
-
-func (q *Queries) UpdateOrgAlertEmail(ctx context.Context, arg UpdateOrgAlertEmailParams) (Org, error) {
-	row := q.db.QueryRow(ctx, updateOrgAlertEmail, arg.ID, arg.AlertEmail)
-	var i Org
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.TelegramChatID,
-		&i.SubscriptionStatus,
-		&i.PlanRenewsAt,
-		&i.BillingCycle,
-		&i.AlertEmail,
-		&i.EmailAlertsEnabled,
-		&i.PaddleCustomerID,
-		&i.PaddleSubscriptionID,
-		&i.SmsCreditsUsedThisMonth,
-		&i.SmsCreditsResetAt,
-	)
-	return i, err
-}
-
-const updateOrgEmailAlertsEnabled = `-- name: UpdateOrgEmailAlertsEnabled :one
-UPDATE orgs
-SET email_alerts_enabled = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
-`
-
-type UpdateOrgEmailAlertsEnabledParams struct {
-	ID                 uuid.UUID `json:"id"`
-	EmailAlertsEnabled bool      `json:"email_alerts_enabled"`
-}
-
-func (q *Queries) UpdateOrgEmailAlertsEnabled(ctx context.Context, arg UpdateOrgEmailAlertsEnabledParams) (Org, error) {
-	row := q.db.QueryRow(ctx, updateOrgEmailAlertsEnabled, arg.ID, arg.EmailAlertsEnabled)
-	var i Org
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.TelegramChatID,
-		&i.SubscriptionStatus,
-		&i.PlanRenewsAt,
-		&i.BillingCycle,
-		&i.AlertEmail,
-		&i.EmailAlertsEnabled,
-		&i.PaddleCustomerID,
-		&i.PaddleSubscriptionID,
-		&i.SmsCreditsUsedThisMonth,
-		&i.SmsCreditsResetAt,
-	)
-	return i, err
-}
-
-const updateOrgTelegramChatID = `-- name: UpdateOrgTelegramChatID :one
-UPDATE orgs
-SET telegram_chat_id = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at
-`
-
-type UpdateOrgTelegramChatIDParams struct {
-	ID             uuid.UUID   `json:"id"`
-	TelegramChatID pgtype.Text `json:"telegram_chat_id"`
-}
-
-func (q *Queries) UpdateOrgTelegramChatID(ctx context.Context, arg UpdateOrgTelegramChatIDParams) (Org, error) {
-	row := q.db.QueryRow(ctx, updateOrgTelegramChatID, arg.ID, arg.TelegramChatID)
 	var i Org
 	err := row.Scan(
 		&i.ID,

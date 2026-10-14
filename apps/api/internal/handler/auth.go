@@ -179,10 +179,7 @@ var errEmailTaken = errors.New("email already taken")
 // leaving it as a permanent orphan row.
 func createOrgAndUser(ctx context.Context, qtx *db.Queries, email string, hash []byte) (db.User, error) {
 	orgName := strings.SplitN(email, "@", 2)[0]
-	org, err := qtx.CreateOrg(ctx, db.CreateOrgParams{
-		Name:       orgName,
-		AlertEmail: pgtype.Text{String: email, Valid: true},
-	})
+	org, err := qtx.CreateOrg(ctx, orgName)
 	if err != nil {
 		return db.User{}, err
 	}

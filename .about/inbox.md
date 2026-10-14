@@ -34,7 +34,7 @@ Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-ro
 
 2026-10-13 · notification channels epic
 
-`orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Settled by a migration that drops them, or by deciding to keep them.
+`orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Since 2026-10-14 no code reads or writes them: `CreateOrg` lists its columns instead of `RETURNING *`, and the unused `UpdateOrg*` queries are gone. Settled by the migration that drops them, shipped in a release after that one is deployed, since migrations run at container start while the previous container still serves (`cmd/api/main.go`).
 
 ## Hand-built alert messages per monitor type
 
