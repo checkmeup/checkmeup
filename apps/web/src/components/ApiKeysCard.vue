@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
+import SettingsSection from '@/components/SettingsSection.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { apiKeysApi, type CreatedApiKey } from '@/api/apiKeys'
@@ -87,22 +88,19 @@ async function revoke(id: string) {
 </script>
 
 <template>
-  <div
-    class="rounded-[14px] border border-[var(--border)] p-6"
-  >
-    <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">API keys</h2>
-    <p class="text-sm mb-5" style="color: var(--text-muted)">
+  <SettingsSection title="API keys">
+    <template #description>
       Generate a key to read monitor status from scripts, CI pipelines, or third-party integrations
       via
       <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
         >X-API-Key</code
       >. Keys are read-only for now.
-    </p>
+    </template>
+
 
     <div
       v-if="createdKey"
-      class="rounded-lg border p-4 space-y-3 mb-5"
-      style="border-color: var(--status-up); background-color: var(--surface-raised)"
+      class="mb-5 space-y-3 rounded-[14px] bg-[var(--accent-wash)] p-5"
     >
       <p class="text-sm font-medium" style="color: var(--text-strong)">
         Copy this key now — you won't be able to see it again.
@@ -123,12 +121,11 @@ async function revoke(id: string) {
 
     <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
-    <ul v-else-if="keys.length > 0" class="space-y-2 mb-5">
+    <ul v-else-if="keys.length > 0" class="mb-5 divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
       <li
         v-for="k in keys"
         :key="k.id"
-        class="flex items-center gap-3 rounded-lg border px-4 py-3"
-        style="border-color: var(--border)"
+        class="flex items-center gap-3 px-4 py-3"
       >
         <div class="flex-1 min-w-0">
           <p class="text-sm truncate" style="color: var(--text)">{{ k.label || '(no label)' }}</p>
@@ -148,8 +145,7 @@ async function revoke(id: string) {
 
     <div
       v-else
-      class="rounded-lg border p-4 space-y-4"
-      style="border-color: var(--border); background-color: var(--surface-raised)"
+      class="space-y-4 rounded-[14px] bg-[var(--surface)] p-5"
     >
       <div>
         <Label for="key-label">Label (optional)</Label>
@@ -165,5 +161,5 @@ async function revoke(id: string) {
 
       <p v-if="formError" class="text-sm" style="color: var(--status-down)">{{ formError }}</p>
     </div>
-  </div>
+  </SettingsSection>
 </template>

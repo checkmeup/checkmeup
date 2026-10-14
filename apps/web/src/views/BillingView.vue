@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { initializePaddle, type Paddle } from '@paddle/paddle-js'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
+import SettingsSection from '@/components/SettingsSection.vue'
 import { billingApi, type BillingCycle } from '@/api/billing'
 import { ApiError } from '@/api/client'
 import { useBilling } from '@/composables/useBilling'
@@ -229,58 +230,55 @@ function limitLabel(used: number, limit: number) {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1000px] px-4 pt-8 pb-20 md:px-6">
       <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Billing</h1>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
-      <div v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</div>
+      <p v-if="loading" class="text-sm text-[var(--text-dim)]">Loading…</p>
+      <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
       <template v-else-if="info">
-        <!-- Current plan -->
-        <div
-          class="rounded-[14px] border border-[var(--border)] p-6 mb-6"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <p class="mb-1 text-[13px] font-medium text-[var(--text-dim)]">Current plan</p>
-              <p class="text-2xl font-bold" style="color: var(--text-strong)">
-                {{ planLabel[info.plan] }}
-                <span class="text-base font-normal ml-1" style="color: var(--text-muted)">
-                  {{ planPrice }}
-                </span>
-                <span v-if="syncingPlan" class="text-xs font-normal ml-1" style="color: var(--text-muted)">
-                  updating…
-                </span>
-              </p>
-            </div>
+        <SettingsSection title="Current plan">
+          <template #description>
+            <template v-if="cancelScheduled">
+              Cancellation scheduled — you'll keep {{ planLabel[info.plan] }} access until
+              {{ info.planRenewsAt }}, then drop to Hobby.
+            </template>
+            <template v-else-if="info.planRenewsAt">
+              {{ info.subscriptionStatus === 'canceled' ? 'Access until' : 'Renews' }}
+              {{ info.planRenewsAt }}
+            </template>
+          </template>
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <p class="text-[30px] font-semibold tracking-[-0.035em] text-[var(--text-strong)]">
+              {{ planLabel[info.plan] }}
+              <span class="ml-1 font-mono text-base font-normal tracking-normal text-[var(--text-dim)]">
+                {{ planPrice }}
+              </span>
+              <span v-if="syncingPlan" class="ml-1 text-xs font-normal tracking-normal text-[var(--text-dim)]">
+                updating…
+              </span>
+            </p>
             <a
               v-if="info.customerPortalUrl && info.plan !== 'hobby'"
               :href="info.customerPortalUrl"
               target="_blank"
               rel="noopener"
-              class="text-sm px-3 py-1.5 rounded-md border"
-              style="color: var(--text-dim); border-color: var(--border)"
+              class="rounded-[10px] border border-[var(--border-strong)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-raised)]"
             >
               Manage subscription →
             </a>
           </div>
+        </SettingsSection>
 
-          <p v-if="cancelScheduled" class="text-xs mb-4" style="color: var(--text-muted)">
-            Cancellation scheduled — you'll keep {{ planLabel[info.plan] }} access until {{ info.planRenewsAt }}, then drop to Hobby.
-          </p>
-          <p v-else-if="info.planRenewsAt" class="text-xs mb-4" style="color: var(--text-muted)">
-            {{ info.subscriptionStatus === 'canceled' ? 'Access until' : 'Renews' }}
-            {{ info.planRenewsAt }}
-          </p>
-
-          <!-- Usage bars -->
-          <div class="space-y-4">
+        <SettingsSection title="Usage">
+          <template #description>What your plan allows, and how much of it is in use.</template>
+          <div class="flex flex-col gap-5">
             <div>
-              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
-                <span>Monitors</span>
-                <span>{{ limitLabel(info.monitorCount, info.monitorLimit) }}</span>
+              <div class="mb-1.5 flex justify-between text-sm">
+                <span class="text-[var(--text)]">Monitors</span>
+                <span class="font-mono text-[13px] text-[var(--text-dim)]">{{ limitLabel(info.monitorCount, info.monitorLimit) }}</span>
               </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--surface-raised)">
+              <div class="h-1.5 overflow-hidden rounded-full bg-[var(--surface-raised)]">
                 <div
                   class="h-full rounded-full transition-all"
                   :style="{
@@ -290,13 +288,12 @@ function limitLabel(used: number, limit: number) {
                 />
               </div>
             </div>
-
             <div>
-              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
-                <span>Status pages</span>
-                <span>{{ limitLabel(info.statusPageCount, info.statusPageLimit) }}</span>
+              <div class="mb-1.5 flex justify-between text-sm">
+                <span class="text-[var(--text)]">Status pages</span>
+                <span class="font-mono text-[13px] text-[var(--text-dim)]">{{ limitLabel(info.statusPageCount, info.statusPageLimit) }}</span>
               </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--surface-raised)">
+              <div class="h-1.5 overflow-hidden rounded-full bg-[var(--surface-raised)]">
                 <div
                   class="h-full rounded-full transition-all"
                   :style="{
@@ -306,13 +303,12 @@ function limitLabel(used: number, limit: number) {
                 />
               </div>
             </div>
-
             <div>
-              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
-                <span>Notification channels</span>
-                <span>{{ limitLabel(info.notificationChannelCount, info.notificationChannelLimit) }}</span>
+              <div class="mb-1.5 flex justify-between text-sm">
+                <span class="text-[var(--text)]">Notification channels</span>
+                <span class="font-mono text-[13px] text-[var(--text-dim)]">{{ limitLabel(info.notificationChannelCount, info.notificationChannelLimit) }}</span>
               </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--surface-raised)">
+              <div class="h-1.5 overflow-hidden rounded-full bg-[var(--surface-raised)]">
                 <div
                   class="h-full rounded-full transition-all"
                   :style="{
@@ -322,18 +318,13 @@ function limitLabel(used: number, limit: number) {
                 />
               </div>
             </div>
-
             <div>
-              <div class="flex justify-between text-xs mb-1" style="color: var(--text-dim)">
-                <span>SMS credits (this month)</span>
-                <span v-if="info.smsCreditsLimit <= 0">Not available on your plan</span>
-                <span v-else>{{ limitLabel(info.smsCreditsUsed, info.smsCreditsLimit) }}</span>
+              <div class="mb-1.5 flex justify-between text-sm">
+                <span class="text-[var(--text)]">SMS credits (this month)</span>
+                <span v-if="info.smsCreditsLimit <= 0" class="text-[13px] text-[var(--text-dim)]">Not available on your plan</span>
+                <span v-else class="font-mono text-[13px] text-[var(--text-dim)]">{{ limitLabel(info.smsCreditsUsed, info.smsCreditsLimit) }}</span>
               </div>
-              <div
-                v-if="info.smsCreditsLimit > 0"
-                class="h-1.5 rounded-full overflow-hidden"
-                style="background-color: var(--surface-raised)"
-              >
+              <div v-if="info.smsCreditsLimit > 0" class="h-1.5 overflow-hidden rounded-full bg-[var(--surface-raised)]">
                 <div
                   class="h-full rounded-full transition-all"
                   :style="{
@@ -343,123 +334,103 @@ function limitLabel(used: number, limit: number) {
                 />
               </div>
             </div>
-
-            <p class="text-xs" style="color: var(--text-muted)">
+            <p class="text-[13px] text-[var(--text-dim)]">
               Min uptime check interval: {{ info.minIntervalMins }} min
             </p>
           </div>
-        </div>
+        </SettingsSection>
 
-        <!-- Cycle toggle (shared by Upgrade and paid-tier Downgrade sections) -->
-        <div v-if="showCycleToggle" class="flex items-center justify-end mb-4">
-          <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
-            <button
-              type="button"
-              class="px-3 py-1 rounded text-xs transition-colors hover:cursor-pointer"
-              :style="
-                cycle === 'monthly'
-                  ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-                  : 'color: var(--text-muted)'
-              "
-              @click="cycle = 'monthly'"
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              class="px-3 py-1 rounded text-xs transition-colors hover:cursor-pointer"
-              :style="
-                cycle === 'annual'
-                  ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-                  : 'color: var(--text-muted)'
-              "
-              @click="cycle = 'annual'"
-            >
-              Annual <span style="color: var(--color-green-500)">— 2 months free</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Upgrade -->
-        <div
-          v-if="upgradeOptions.length > 0"
-          class="rounded-[14px] border border-[var(--border)] p-6"
-        >
-          <p class="font-medium mb-5" style="color: var(--text-strong)">Upgrade</p>
-
-          <div class="space-y-3">
-            <div
-              v-for="plan in upgradeOptions"
-              :key="plan"
-              class="flex items-center justify-between p-3 rounded-lg"
-              style="background-color: var(--surface-raised)"
-            >
-              <div>
-                <p class="text-sm font-medium" style="color: var(--text-strong)">{{ planLabel[plan] }}</p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  {{
-                    cycle === 'annual'
-                      ? `$${annualPrice[plan]}/yr ($${effectiveMonthly(plan)}/mo)`
-                      : `$${monthlyPrice[plan]}/mo`
-                  }}
-                </p>
-              </div>
-              <Button size="sm" :disabled="checkingOut === plan" @click="upgrade(plan)">
-                {{ checkingOut === plan ? 'Opening checkout…' : `Upgrade to ${planLabel[plan]}` }}
-              </Button>
+        <SettingsSection v-if="upgradeOptions.length > 0 || downgradeOptions.length > 0" title="Change plan">
+          <template #description>Switch plans any time; moving to a cheaper plan is prorated.</template>
+          <div class="flex flex-col gap-6">
+            <!-- Cycle toggle (shared by Upgrade and paid-tier Downgrade lists) -->
+            <div v-if="showCycleToggle" class="inline-flex self-start gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
+              <button
+                type="button"
+                class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+                :class="cycle === 'monthly' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
+                @click="cycle = 'monthly'"
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+                :class="cycle === 'annual' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
+                @click="cycle = 'annual'"
+              >
+                Annual <span class="text-[var(--accent)]">— 2 months free</span>
+              </button>
             </div>
-          </div>
 
-          <p v-if="checkoutError" class="text-sm mt-4" style="color: var(--status-down)">{{ checkoutError }}</p>
-        </div>
-
-        <!-- Downgrade -->
-        <div
-          v-if="downgradeOptions.length > 0"
-          class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
-        >
-          <p class="font-medium mb-5" style="color: var(--text-strong)">Downgrade</p>
-
-          <div class="space-y-3">
-            <div
-              v-for="plan in downgradeOptions"
-              :key="plan"
-              class="flex items-center justify-between p-3 rounded-lg"
-              style="background-color: var(--surface-raised)"
-            >
-              <div>
-                <p class="text-sm font-medium" style="color: var(--text-strong)">{{ planLabel[plan] }}</p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  {{
-                    plan === 'hobby'
-                      ? 'Free'
-                      : cycle === 'annual'
+            <div v-if="upgradeOptions.length > 0">
+              <p class="mb-2 text-[13px] font-semibold text-[var(--text-dim)]">Upgrade</p>
+              <ul class="divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
+              <li
+                v-for="plan in upgradeOptions"
+                :key="plan"
+                class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5"
+              >
+                <div>
+                  <p class="font-medium text-[var(--text-strong)]">{{ planLabel[plan] }}</p>
+                  <p class="font-mono text-[13px] text-[var(--text-dim)]">
+                    {{
+                      cycle === 'annual'
                         ? `$${annualPrice[plan]}/yr ($${effectiveMonthly(plan)}/mo)`
                         : `$${monthlyPrice[plan]}/mo`
-                  }}
-                </p>
-              </div>
-              <Button size="sm" variant="secondary" @click="downgradeTarget = plan">
-                {{ plan === 'hobby' ? 'Cancel subscription' : `Downgrade to ${planLabel[plan]}` }}
-              </Button>
+                    }}
+                  </p>
+                </div>
+                <Button size="sm" :disabled="checkingOut === plan" @click="upgrade(plan)">
+                  {{ checkingOut === plan ? 'Opening checkout…' : `Upgrade to ${planLabel[plan]}` }}
+                </Button>
+              </li>
+              </ul>
+              <p v-if="checkoutError" class="mt-3 text-sm text-[var(--status-down)]">{{ checkoutError }}</p>
+            </div>
+
+            <div v-if="downgradeOptions.length > 0">
+              <p class="mb-2 text-[13px] font-semibold text-[var(--text-dim)]">Downgrade</p>
+              <ul class="divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
+              <li
+                v-for="plan in downgradeOptions"
+                :key="plan"
+                class="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5"
+              >
+                <div>
+                  <p class="font-medium text-[var(--text-strong)]">{{ planLabel[plan] }}</p>
+                  <p class="font-mono text-[13px] text-[var(--text-dim)]">
+                    {{
+                      plan === 'hobby'
+                        ? 'Free'
+                        : cycle === 'annual'
+                          ? `$${annualPrice[plan]}/yr ($${effectiveMonthly(plan)}/mo)`
+                          : `$${monthlyPrice[plan]}/mo`
+                    }}
+                  </p>
+                </div>
+                <Button size="sm" variant="secondary" @click="downgradeTarget = plan">
+                  {{ plan === 'hobby' ? 'Cancel subscription' : `Downgrade to ${planLabel[plan]}` }}
+                </Button>
+              </li>
+              </ul>
+              <p v-if="changePlanError" class="mt-3 text-sm text-[var(--status-down)]">{{ changePlanError }}</p>
             </div>
           </div>
-
-          <p v-if="changePlanError" class="text-sm mt-4" style="color: var(--status-down)">{{ changePlanError }}</p>
-        </div>
+        </SettingsSection>
 
         <!-- Downgrade confirm dialog -->
         <div
           v-if="downgradeTarget"
           class="fixed inset-0 flex items-center justify-center z-50"
-          style="background-color: rgba(0,0,0,0.6)"
+          style="background-color: rgb(0 0 0 / 50%)"
           @click.self="downgradeTarget = null"
         >
-          <div class="rounded-[14px] border border-[var(--border)] bg-[var(--bg)] p-6 max-w-sm w-full mx-4">
-            <h3 class="font-medium mb-2" style="color: var(--text-strong)">
+          <div class="mx-4 w-full max-w-sm rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[0_24px_60px_rgb(0_0_0/18%)]">
+            <h3 class="mb-2 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">
               {{ downgradeTarget === 'hobby' ? 'Cancel subscription?' : `Downgrade to ${downgradeTargetLabel}?` }}
             </h3>
-            <p class="text-sm mb-5" style="color: var(--text-muted)">
+            <p class="mb-5 text-sm text-[var(--text-dim)]">
               <template v-if="downgradeTarget === 'hobby'">
                 You'll keep access to your current plan until the end of the billing period, then drop to Hobby.
               </template>

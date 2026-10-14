@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelsCard from '@/components/NotificationChannelsCard.vue'
 import ApiKeysCard from '@/components/ApiKeysCard.vue'
+import SettingsSection from '@/components/SettingsSection.vue'
 import { suggestionsApi } from '@/api/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/lib/theme'
@@ -43,26 +44,21 @@ function formatDate(iso: string | null): string {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1000px] px-4 pt-8 pb-20 md:px-6">
       <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Settings</h1>
 
       <!-- Appearance -->
-      <div
-        class="rounded-[14px] border border-[var(--border)] p-6 mb-6"
-      >
-        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Appearance</h2>
-        <p class="text-sm mb-5" style="color: var(--text-muted)">
-          Choose how Checkmeup looks on this device.
-        </p>
+      <SettingsSection title="Appearance">
+        <template #description>Choose how Checkmeup looks on this device.</template>
 
-        <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
+        <div class="inline-flex gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
           <button
             type="button"
-            class="px-3 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
-            :style="
+            class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+            :class="
               theme === 'dark'
-                ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-                : 'color: var(--text-muted)'
+                ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]'
+                : 'text-[var(--text-dim)] hover:text-[var(--text)]'
             "
             @click="setTheme('dark')"
           >
@@ -70,51 +66,45 @@ function formatDate(iso: string | null): string {
           </button>
           <button
             type="button"
-            class="px-3 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
-            :style="
+            class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+            :class="
               theme === 'light'
-                ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-                : 'color: var(--text-muted)'
+                ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]'
+                : 'text-[var(--text-dim)] hover:text-[var(--text)]'
             "
             @click="setTheme('light')"
           >
             Light
           </button>
         </div>
-      </div>
+      </SettingsSection>
 
       <!-- Notification channels -->
-      <NotificationChannelsCard class="mt-6" />
+      <NotificationChannelsCard />
 
       <!-- API keys -->
-      <ApiKeysCard class="mt-6" />
+      <ApiKeysCard />
 
       <!-- Legal -->
-      <div
-        class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
-      >
-        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Terms and Privacy</h2>
-        <p v-if="auth.user?.termsAcceptedAt" class="text-sm" style="color: var(--text-muted)">
+      <SettingsSection title="Terms and Privacy">
+        <p v-if="auth.user?.termsAcceptedAt" class="text-sm text-[var(--text-dim)]">
           You accepted the
-          <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)"
+          <RouterLink to="/terms" class="text-[var(--accent)] underline"
             >Terms of Service</RouterLink
           >
           and
-          <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)"
+          <RouterLink to="/privacy" class="text-[var(--accent)] underline"
             >Privacy Policy</RouterLink
           >
           (version {{ auth.user?.termsVersion }}) on {{ formatDate(auth.user.termsAcceptedAt) }}.
         </p>
-      </div>
+      </SettingsSection>
 
       <!-- Suggest a feature -->
-      <div
-        class="rounded-[14px] border border-[var(--border)] p-6 mt-6"
-      >
-        <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Suggest a feature</h2>
-        <p class="text-sm mb-5" style="color: var(--text-muted)">
+      <SettingsSection title="Suggest a feature">
+        <template #description>
           There's no support ticket queue — this goes straight to the founder.
-        </p>
+        </template>
 
         <div class="space-y-4">
           <div>
@@ -124,12 +114,7 @@ function formatDate(iso: string | null): string {
               v-model="suggestionText"
               rows="4"
               placeholder="What should Checkmeup do better?"
-              class="mt-1 flex w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-              style="
-                border-color: var(--border);
-                background-color: var(--surface);
-                color: var(--text);
-              "
+              class="mt-1 flex w-full rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             ></textarea>
           </div>
 
@@ -150,7 +135,7 @@ function formatDate(iso: string | null): string {
             {{ suggestionError }}
           </p>
         </div>
-      </div>
+      </SettingsSection>
     </div>
   </AppLayout>
 </template>

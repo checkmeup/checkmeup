@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
+import SettingsSection from '@/components/SettingsSection.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import NotificationChannelForm from '@/components/NotificationChannelForm.vue'
 import { ApiError } from '@/api/client'
@@ -76,23 +77,20 @@ async function toggleEnabled(c: NotificationChannel) {
 </script>
 
 <template>
-  <div
-    class="rounded-[14px] border border-[var(--border)] p-6"
-  >
-    <h2 class="mb-1 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">Notification channels</h2>
-    <p class="text-sm mb-5" style="color: var(--text-muted)">
+  <SettingsSection title="Notification channels">
+    <template #description>
       Connect Telegram, email, Slack, SMS, and webhook destinations, then choose which channels
       each monitor alerts on. A monitor with no channels attached falls back to your account email.
-    </p>
+    </template>
+
 
     <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
 
-    <ul v-else-if="channels.length > 0" class="space-y-2 mb-5">
+    <ul v-else-if="channels.length > 0" class="mb-5 divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
       <li
         v-for="c in channels"
         :key="c.id"
-        class="flex items-center gap-3 rounded-lg border px-4 py-3"
-        style="border-color: var(--border)"
+        class="flex items-center gap-3 px-4 py-3"
       >
         <input
           type="checkbox"
@@ -138,5 +136,5 @@ async function toggleEnabled(c: NotificationChannel) {
     <Button v-if="!form.showForm" variant="secondary" @click="form.startAdd">+ Add channel</Button>
 
     <NotificationChannelForm v-else :form="form" />
-  </div>
+  </SettingsSection>
 </template>
