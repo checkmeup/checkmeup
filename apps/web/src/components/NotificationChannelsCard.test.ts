@@ -58,7 +58,8 @@ const webhookChannel: NotificationChannel = {
   id: 'ch2',
   type: 'webhook',
   name: 'Ops webhook',
-  config: { url: 'https://example.com/hooks/checkmeup', secret: 'shh-secret' },
+  // The API returns a webhook URL masked (ADR alerting).
+  config: { url: 'https://example.com/…ckup', secret: 'shh-secret' },
   enabled: true,
   createdAt: '2026-01-01T00:00:00Z',
   lastDeliveryStatus: 'success',
@@ -129,6 +130,7 @@ describe('NotificationChannelsCard', () => {
     expect(wrapper.text()).toContain('Ops Telegram')
     expect(wrapper.text()).toContain('Telegram · -1001234567890')
     expect(wrapper.text()).toContain('Ops webhook')
+    expect(wrapper.text()).toContain('Webhook · https://example.com/…ckup')
     expect(wrapper.text()).toContain('Last delivery: success, 200 OK, just now')
   })
 
@@ -186,10 +188,28 @@ describe('NotificationChannelsCard', () => {
 
     expect(selectedChannelType(wrapper)).toBe('Webhook')
     expect((wrapper.find('#channel-name').element as HTMLInputElement).value).toBe('Ops webhook')
-    expect((wrapper.find('#channel-value').element as HTMLInputElement).value).toBe(
-      'https://example.com/hooks/checkmeup',
-    )
+    const urlInput = wrapper.find('#channel-value').element as HTMLInputElement
+    expect(urlInput.value).toBe('')
+    expect(urlInput.placeholder).toBe('https://example.com/…ckup')
     expect((wrapper.find('#channel-secret').element as HTMLInputElement).value).toBe('shh-secret')
+  })
+
+  it('saves an edited webhook with an empty URL so the stored one is kept', async () => {
+    channelsData.value = [webhookChannel]
+    updateMock.mockResolvedValueOnce({ ...webhookChannel, name: 'Renamed' })
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, 'Edit')?.trigger('click')
+    await wrapper.find('#channel-name').setValue('Renamed')
+
+    await findButtonByText(wrapper, 'Save changes')?.trigger('click')
+    await flushPromises()
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith('ch2', {
+      type: 'webhook',
+      name: 'Renamed',
+      config: { url: '' },
+      enabled: true,
+    })
   })
 
   it('shows a validation error when the name is empty', async () => {

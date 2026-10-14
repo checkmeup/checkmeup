@@ -10,6 +10,13 @@ describe('validateChannelSaveInput', () => {
     expect(validateChannelSaveInput('telegram', 'Ops', '', false)).toBe('Chat ID is required')
   })
 
+  it('allows an empty URL when the channel already has a stored one', () => {
+    expect(validateChannelSaveInput('slack', 'Ops', '', false, true)).toBe('')
+    expect(validateChannelSaveInput('slack', 'Ops', '', false)).toBe(
+      'Incoming Webhook URL is required',
+    )
+  })
+
   it('requires webhook URLs to start with https://', () => {
     expect(validateChannelSaveInput('webhook', 'Ops', 'http://example.com', false)).toBe(
       'Webhook URL must start with https://',

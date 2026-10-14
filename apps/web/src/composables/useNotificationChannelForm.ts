@@ -36,6 +36,10 @@ export function useNotificationChannelForm(opts: {
   // Only populated when editing an existing webhook channel — the secret
   // doesn't exist until the channel is first saved (PRD webhook-alerts).
   const secret = ref('')
+  // A webhook or Slack channel's URL as the API returns it, masked (ADR
+  // alerting) — shown as the placeholder while editing; the value field
+  // starts empty, and saving it empty keeps the stored URL.
+  const maskedValue = ref('')
   // TCPA-style opt-in checkbox (PRD sms-alerts, ADR alerting) — required before any sms
   // channel can be saved or tested. Pre-checked when editing an existing
   // channel that already has consent on file (consentAt below).
@@ -92,6 +96,7 @@ export function useNotificationChannelForm(opts: {
     name.value = ''
     value.value = ''
     secret.value = ''
+    maskedValue.value = ''
     smsConsent.value = false
     consentAt.value = ''
     consentedPhone.value = ''
@@ -115,7 +120,8 @@ export function useNotificationChannelForm(opts: {
     consentAt.value = c.type === 'sms' ? (c.config.consent_at ?? '') : ''
     consentedPhone.value = c.type === 'sms' ? (c.config.phone_number ?? '') : ''
     smsConsent.value = !!consentAt.value
-    value.value = c.config[configKey[c.type]] ?? ''
+    maskedValue.value = c.type === 'webhook' || c.type === 'slack' ? (c.config.url ?? '') : ''
+    value.value = maskedValue.value ? '' : (c.config[configKey[c.type]] ?? '')
     enabled.value = c.enabled
     formError.value = ''
     testSuccess.value = false
@@ -189,6 +195,7 @@ export function useNotificationChannelForm(opts: {
       name.value,
       value.value,
       smsConsent.value,
+      !!editingId.value && !!maskedValue.value,
     )
     if (validationError) {
       formError.value = validationError
@@ -224,6 +231,7 @@ export function useNotificationChannelForm(opts: {
     value,
     enabled,
     secret,
+    maskedValue,
     smsConsent,
     consentAt,
     smsConsentOnFile,

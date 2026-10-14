@@ -54,6 +54,29 @@ func doChannelRequest(t *testing.T, method string, handler http.HandlerFunc, acc
 	return doMaintenanceRequest(t, method, handler, access, id, body)
 }
 
+// storedChannelURL reads a channel's url straight from the database — the
+// API only ever returns it masked.
+func storedChannelURL(t *testing.T, pool *pgxpool.Pool, id string) string {
+	t.Helper()
+	var u string
+	if err := pool.QueryRow(context.Background(), "SELECT config->>'url' FROM notification_channels WHERE id = $1", id).Scan(&u); err != nil {
+		t.Fatalf("read stored url: %v", err)
+	}
+	return u
+}
+
+func TestMaskChannelURL(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{"https://hooks.slack.com/services/T0/B0/abcd1234", "https://hooks.slack.com/…1234"},
+		{"https://example.com/hook?token=s3cr3t", "https://example.com/…cr3t"},
+		{"abc", "…abc"},
+	} {
+		if got := maskChannelURL(tc.raw); got != tc.want {
+			t.Errorf("maskChannelURL(%q) = %q, want %q", tc.raw, got, tc.want)
+		}
+	}
+}
+
 func TestListNotificationChannels(t *testing.T) {
 	authH, channelsH, pool := testNotificationChannelHandler(t)
 
@@ -210,8 +233,11 @@ func TestCreateNotificationChannel(t *testing.T) {
 	t.Run("creates a webhook channel with a server-generated signing secret", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "Ops Webhook")
-		if c.Type != "webhook" || c.Config["url"] != "https://example.com/hook" {
+		if c.Type != "webhook" || c.Config["url"] != "https://example.com/…hook" {
 			t.Fatalf("unexpected channel: %+v", c)
+		}
+		if got := storedChannelURL(t, pool, c.ID); got != "https://example.com/hook" {
+			t.Fatalf("stored url = %q, want the unmasked one", got)
 		}
 		secret, _ := c.Config["secret"].(string)
 		if secret == "" {
@@ -358,20 +384,46 @@ func TestUpdateNotificationChannel(t *testing.T) {
 		}
 	})
 
+	t.Run("an empty or masked URL keeps the stored one (ADR alerting)", func(t *testing.T) {
+		for _, tc := range []struct {
+			name, channelType, stored, sent string
+		}{
+			{"empty webhook url", "webhook", "https://example.com/hook", ""},
+			{"masked webhook url", "webhook", "https://example.com/hook", "https://example.com/…hook"},
+			{"empty slack url", "slack", "https://hooks.slack.com/services/T0/B0/abcd1234", ""},
+			{"masked slack url", "slack", "https://hooks.slack.com/services/T0/B0/abcd1234", "https://hooks.slack.com/…1234"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				u := signUpTestUser(t, authH, pool)
+				c := createChannel(t, channelsH, u.access, tc.channelType, map[string]any{"url": tc.stored}, "X")
+
+				w := doChannelRequest(t, http.MethodPatch, channelsH.UpdateNotificationChannel, u.access, c.ID, notificationChannelRequest{
+					Name: "Renamed", Config: map[string]any{"url": tc.sent},
+				})
+				if w.Code != http.StatusOK {
+					t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+				}
+				if got := storedChannelURL(t, pool, c.ID); got != tc.stored {
+					t.Fatalf("stored url = %q, want %q", got, tc.stored)
+				}
+			})
+		}
+	})
+
 	t.Run("updating a webhook's URL keeps the original signing secret, ignoring any client-supplied value", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		c := createChannel(t, channelsH, u.access, "webhook", map[string]any{"url": "https://example.com/hook"}, "Hook")
 		originalSecret := c.Config["secret"]
 
 		w := doChannelRequest(t, http.MethodPatch, channelsH.UpdateNotificationChannel, u.access, c.ID, notificationChannelRequest{
-			Name: "Hook", Config: map[string]any{"url": "https://example.com/new-hook", "secret": "attacker-supplied"},
+			Name: "Hook", Config: map[string]any{"url": "https://example.com/new-path", "secret": "attacker-supplied"},
 		})
 		if w.Code != http.StatusOK {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 		}
 		updated := decodeBody[notificationChannelResponse](t, w)
-		if updated.Config["url"] != "https://example.com/new-hook" {
-			t.Fatalf("want the URL updated, got %v", updated.Config["url"])
+		if got := storedChannelURL(t, pool, c.ID); got != "https://example.com/new-path" {
+			t.Fatalf("stored url = %q, want the URL updated", got)
 		}
 		if updated.Config["secret"] != originalSecret {
 			t.Fatalf("want the secret preserved (%v), got %v", originalSecret, updated.Config["secret"])
@@ -543,8 +595,8 @@ func TestRegenerateWebhookSecret(t *testing.T) {
 			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 		}
 		updated := decodeBody[notificationChannelResponse](t, w)
-		if updated.Config["url"] != "https://example.com/hook" {
-			t.Fatalf("want the URL unchanged, got %v", updated.Config["url"])
+		if got := storedChannelURL(t, pool, c.ID); got != "https://example.com/hook" {
+			t.Fatalf("stored url = %q, want it unchanged", got)
 		}
 		if updated.Config["secret"] == originalSecret {
 			t.Fatal("want a new secret after regenerating")

@@ -27,6 +27,10 @@ A user pastes an Incoming Webhook URL and the next alert appears in the channel 
 - Only a `hooks.slack.com` Incoming Webhook URL is accepted.
   → test: apps/web/src/lib/notificationChannelTypes.test.ts "requires slack URLs to point at hooks.slack.com"
   → test: apps/web/src/components/NotificationChannelsCard.test.ts "rejects a Slack URL that is not an Incoming Webhook URL"
+- After creation the API returns the URL masked (scheme, host and its last 4 characters); saving an edit with the URL left empty keeps the stored one (ADR alerting).
+  → test: apps/api/internal/handler/notification_channels_test.go "TestMaskChannelURL"
+  → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/an empty or masked URL keeps the stored one (ADR alerting)"
+  → test: apps/web/src/lib/notificationChannelTypes.test.ts "allows an empty URL when the channel already has a stored one"
 - A down message shows the monitor's name, type, reason and time; a recovery message shows the downtime.
   → test: apps/api/internal/slack/slack_test.go "TestDownMessage_ContainsMonitorDetails"
   → test: apps/api/internal/slack/slack_test.go "TestRecoveryMessage_ContainsDowntime"

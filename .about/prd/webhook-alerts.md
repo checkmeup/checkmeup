@@ -29,6 +29,10 @@ A user receives signed JSON events on their endpoint and can verify each one is 
 - A webhook URL must start with `https://`.
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/webhook url must be https"
   → test: apps/web/src/lib/notificationChannelTypes.test.ts "requires webhook URLs to start with https://"
+- After creation the API returns the URL masked (scheme, host and its last 4 characters); saving an edit with the URL left empty keeps the stored one (ADR alerting).
+  → test: apps/api/internal/handler/notification_channels_test.go "TestMaskChannelURL"
+  → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/an empty or masked URL keeps the stored one (ADR alerting)"
+  → test: apps/web/src/components/NotificationChannelsCard.test.ts "saves an edited webhook with an empty URL so the stored one is kept"
 - Creating a webhook channel generates its signing secret on the server; a client-sent secret is ignored, also on update.
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creates a webhook channel with a server-generated signing secret"
   → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/updating a webhook's URL keeps the original signing secret, ignoring any client-supplied value"

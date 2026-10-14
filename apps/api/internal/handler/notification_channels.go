@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -78,16 +79,19 @@ type notificationChannelResponse struct {
 	LastDeliveryAt     string         `json:"lastDeliveryAt,omitempty"`
 }
 
-// toNotificationChannelResponse round-trips config verbatim, including a
-// webhook channel's signing secret. ADR alerting flags secrets in config JSONB
-// as something that "should never round-trip unmasked" in general (Slack
-// webhook URLs, future OAuth tokens) — but a checkmeup-issued HMAC signing
-// secret is different from a bearer credential: PRD webhook-alerts requires it stay
-// "viewable... in Settings" so the user can configure their endpoint to
-// verify X-Checkmeup-Signature. Masking it would break that requirement.
+// toNotificationChannelResponse masks a webhook or Slack channel's URL — it's
+// bearer-like, whoever holds it can post to it (ADR alerting) — and returns
+// the rest of config as stored, including a webhook channel's signing
+// secret: a checkmeup-issued HMAC secret isn't a bearer credential, and PRD
+// webhook-alerts requires it stay viewable in Settings so the user can
+// verify X-Checkmeup-Signature.
 func toNotificationChannelResponse(c db.NotificationChannel) notificationChannelResponse {
 	var cfg map[string]any
 	_ = json.Unmarshal(c.Config, &cfg)
+	if hasMaskedURL(c.Type) {
+		stored, _ := cfg["url"].(string)
+		cfg["url"] = maskChannelURL(stored)
+	}
 	return notificationChannelResponse{
 		ID:                 c.ID.String(),
 		Type:               string(c.Type),
@@ -99,6 +103,25 @@ func toNotificationChannelResponse(c db.NotificationChannel) notificationChannel
 		LastDeliveryDetail: c.LastDeliveryDetail.String,
 		LastDeliveryAt:     formatDeliveryAt(c.LastDeliveryAt),
 	}
+}
+
+// hasMaskedURL reports whether t's config URL is returned masked.
+func hasMaskedURL(t db.NotificationChannelType) bool {
+	return t == db.NotificationChannelTypeWebhook || t == db.NotificationChannelTypeSlack
+}
+
+// maskChannelURL keeps raw's scheme and host plus its last 4 characters —
+// enough to tell two channels apart without handing out a working URL.
+func maskChannelURL(raw string) string {
+	tail := raw
+	if len(tail) > 4 {
+		tail = tail[len(tail)-4:]
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "…" + tail
+	}
+	return u.Scheme + "://" + u.Host + "/…" + tail
 }
 
 func formatDeliveryAt(t pgtype.Timestamptz) string {
@@ -462,6 +485,25 @@ func carryForwardWebhookSecret(existing db.NotificationChannel, config map[strin
 	return config
 }
 
+// carryForwardChannelURL keeps a webhook or Slack channel's stored URL when
+// the update sends it empty or as the masked value the API returned (ADR
+// alerting) — the client never sees the real URL, so it can only send a
+// new one or leave it alone.
+func carryForwardChannelURL(existing db.NotificationChannel, config map[string]any) map[string]any {
+	if config == nil {
+		config = map[string]any{}
+	}
+	var existingCfg map[string]any
+	_ = json.Unmarshal(existing.Config, &existingCfg)
+	stored, _ := existingCfg["url"].(string)
+	sent, _ := config["url"].(string)
+	sent = strings.TrimSpace(sent)
+	if sent == "" || sent == maskChannelURL(stored) {
+		config["url"] = stored
+	}
+	return config
+}
+
 // carryForwardSMSConsent preserves an existing SMS channel's consent
 // (ADR alerting) across an update when the phone number is unchanged — consent is
 // tied to the number, not to the act of editing, so re-saving the same
@@ -489,7 +531,10 @@ func resolveUpdatedChannelConfig(existing db.NotificationChannel, req notificati
 	config := req.Config
 	switch existing.Type {
 	case db.NotificationChannelTypeWebhook:
+		config = carryForwardChannelURL(existing, config)
 		config = carryForwardWebhookSecret(existing, config)
+	case db.NotificationChannelTypeSlack:
+		config = carryForwardChannelURL(existing, config)
 	case db.NotificationChannelTypeSms:
 		config = carryForwardSMSConsent(existing, config)
 	}

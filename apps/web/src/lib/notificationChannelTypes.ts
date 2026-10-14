@@ -49,14 +49,20 @@ export const valuePlaceholder: Record<NotificationChannelType, string> = {
 // Returns the first validation failure message, or '' if the form is valid
 // to submit. A pure function (no Vue reactivity) so it's testable and
 // reusable on its own, independent of the form composable's ref state.
+// hasStoredValue: editing a webhook or Slack channel, whose URL the API
+// returns masked — an empty value keeps the stored one (ADR alerting).
 export function validateChannelSaveInput(
   type: NotificationChannelType,
   name: string,
   value: string,
   smsConsent: boolean,
+  hasStoredValue = false,
 ): string {
   if (!name.trim()) {
     return 'Name is required'
+  }
+  if (!value.trim() && hasStoredValue) {
+    return ''
   }
   if (!value.trim()) {
     // t only ever ranges over the fixed NotificationChannelType keys of valueLabel,

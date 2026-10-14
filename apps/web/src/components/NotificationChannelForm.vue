@@ -115,9 +115,12 @@ defineProps<{
         id="channel-value"
         v-model="form.value"
         :type="form.type === 'email' ? 'email' : form.type === 'webhook' ? 'url' : 'text'"
-        :placeholder="valuePlaceholder[form.type]"
+        :placeholder="form.maskedValue || valuePlaceholder[form.type]"
         class="mt-1"
       />
+      <p v-if="form.maskedValue" class="mt-1 text-xs" style="color: var(--text-muted)">
+        Leave empty to keep the current URL.
+      </p>
     </div>
     <div v-if="form.type === 'sms'">
       <p v-if="form.smsConsentOnFile" class="text-xs" style="color: var(--text-muted)">
