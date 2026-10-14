@@ -123,16 +123,15 @@ const featureRows: TableRow[] = [
     <!-- Hero -->
     <section class="max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
       <h1
-        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4"
-        style="color: var(--text-strong)"
+        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]"
       >
         Simple, honest pricing
       </h1>
-      <p class="text-lg sm:text-xl max-w-xl mx-auto mb-8" style="color: var(--text-dim)">
+      <p class="text-lg sm:text-xl max-w-xl mx-auto mb-8 text-[var(--text-dim)]">
         Start free. Pay only when you grow. No per-seat fees, no hidden costs.
       </p>
 
-      <div class="inline-flex rounded-md border p-1" style="border-color: var(--border)">
+      <div class="inline-flex rounded-md border p-1 border-[var(--border)]">
         <button
           type="button"
           class="px-4 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
@@ -156,7 +155,7 @@ const featureRows: TableRow[] = [
           @click="cycle = 'annual'"
         >
           Annual
-          <span class="ml-1" style="color: var(--accent)">— 2 months free</span>
+          <span class="ml-1 text-[var(--accent)]">— 2 months free</span>
         </button>
       </div>
     </section>
@@ -176,136 +175,129 @@ const featureRows: TableRow[] = [
           <!-- Popular badge -->
           <div
             v-if="plan.highlight"
-            class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full"
-            style="background-color: var(--color-green-500); color: var(--on-accent)"
+            class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full bg-[var(--accent)] text-[var(--on-accent)]"
           >
             Most popular
           </div>
 
           <div class="mb-5">
-            <div class="text-base font-semibold mb-1" style="color: var(--text-strong)">
+            <div class="text-base font-semibold mb-1 text-[var(--text-strong)]">
               {{ plan.name }}
             </div>
-            <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
+            <p class="text-xs leading-relaxed text-[var(--text-muted)]">
               {{ plan.description }}
             </p>
           </div>
 
           <div class="mb-6">
             <template v-if="plan.price === 0">
-              <span class="text-4xl font-bold" style="color: var(--text-strong)">Free</span>
+              <span class="text-4xl font-bold text-[var(--text-strong)]">Free</span>
             </template>
             <template v-else-if="cycle === 'monthly'">
-              <span class="text-4xl font-bold" style="color: var(--text-strong)">${{ plan.price }}</span>
-              <span class="text-sm ml-1" style="color: var(--text-muted)">/month</span>
+              <span class="text-4xl font-bold text-[var(--text-strong)]">${{ plan.price }}</span>
+              <span class="text-sm ml-1 text-[var(--text-muted)]">/month</span>
             </template>
             <template v-else>
-              <span class="text-4xl font-bold" style="color: var(--text-strong)">${{ plan.annualPrice }}</span>
-              <span class="text-sm ml-1" style="color: var(--text-muted)">/year</span>
-              <p class="text-xs mt-1" style="color: var(--text-muted)">
+              <span class="text-4xl font-bold text-[var(--text-strong)]">${{ plan.annualPrice }}</span>
+              <span class="text-sm ml-1 text-[var(--text-muted)]">/year</span>
+              <p class="text-xs mt-1 text-[var(--text-muted)]">
                 (${{ effectiveMonthly(plan) }}/mo, billed annually)
               </p>
             </template>
           </div>
 
           <ul class="space-y-3 mb-8 flex-1">
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span
-                ><strong style="color: var(--text-strong)">{{ plan.monitors }}</strong>
+                ><strong class="text-[var(--text-strong)]">{{ plan.monitors }}</strong>
                 monitors</span
               >
             </li>
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span
-                ><strong style="color: var(--text-strong)">{{ plan.checkInterval }}</strong> check
+                ><strong class="text-[var(--text-strong)]">{{ plan.checkInterval }}</strong> check
                 interval</span
               >
             </li>
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span
-                ><strong style="color: var(--text-strong)">{{ plan.statusPages }}</strong> status
+                ><strong class="text-[var(--text-strong)]">{{ plan.statusPages }}</strong> status
                 {{ plan.statusPages === '1' ? 'page' : 'pages' }}</span
               >
             </li>
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span
-                ><strong style="color: var(--text-strong)">{{ plan.notificationChannels }}</strong>
+                ><strong class="text-[var(--text-strong)]">{{ plan.notificationChannels }}</strong>
                 notification channels</span
               >
             </li>
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Cron, uptime, SSL, domain, port &amp; DNS monitors
             </li>
-            <li class="flex items-start gap-2.5 text-sm" style="color: var(--text-dim)">
+            <li class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -313,23 +305,21 @@ const featureRows: TableRow[] = [
             </li>
             <li
               v-if="plan.smsCredits !== '0'"
-              class="flex items-start gap-2.5 text-sm"
-              style="color: var(--text-dim)"
+              class="flex items-start gap-2.5 text-sm text-[var(--text-dim)]"
             >
               <svg
-                class="flex-shrink-0 mt-0.5"
+                class="flex-shrink-0 mt-0.5 text-[var(--accent)]"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span
-                ><strong style="color: var(--text-strong)">{{ plan.smsCredits }}</strong> SMS
+                ><strong class="text-[var(--text-strong)]">{{ plan.smsCredits }}</strong> SMS
                 credits / month</span
               >
             </li>
@@ -349,7 +339,7 @@ const featureRows: TableRow[] = [
         </div>
       </div>
 
-      <p class="text-center text-xs mt-6" style="color: var(--text-muted)">
+      <p class="text-center text-xs mt-6 text-[var(--text-muted)]">
         All prices in USD. Billing handled by Paddle — taxes calculated at checkout based on
         your location.
       </p>
@@ -357,17 +347,16 @@ const featureRows: TableRow[] = [
 
     <!-- Feature comparison table -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-xl font-semibold mb-6 text-center" style="color: var(--text-strong)">
+      <h2 class="text-xl font-semibold mb-6 text-center text-[var(--text-strong)]">
         Full feature comparison
       </h2>
 
-      <div class="rounded-xl border overflow-hidden" style="border-color: var(--border)">
+      <div class="rounded-xl border overflow-hidden border-[var(--border)]">
         <!-- Table header -->
         <div
-          class="grid grid-cols-5 border-b"
-          style="border-color: var(--border); background-color: var(--surface)"
+          class="grid grid-cols-5 border-b border-[var(--border)] bg-[var(--surface)]"
         >
-          <div class="col-span-1 px-4 py-3 text-xs font-medium" style="color: var(--text-muted)">
+          <div class="col-span-1 px-4 py-3 text-xs font-medium text-[var(--text-muted)]">
             Feature
           </div>
           <div
@@ -390,7 +379,7 @@ const featureRows: TableRow[] = [
             backgroundColor: i % 2 === 0 ? 'var(--bg)' : 'var(--surface)',
           }"
         >
-          <div class="col-span-1 px-4 py-3 text-xs" style="color: var(--text-dim)">
+          <div class="col-span-1 px-4 py-3 text-xs text-[var(--text-dim)]">
             {{ row.label }}
           </div>
           <div
@@ -414,19 +403,19 @@ const featureRows: TableRow[] = [
 
     <!-- FAQ -->
     <section id="billing" class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-2xl font-semibold mb-10 text-center" style="color: var(--text-strong)">
+      <h2 class="text-2xl font-semibold mb-10 text-center text-[var(--text-strong)]">
         Frequently asked questions
       </h2>
 
-      <div class="space-y-0 divide-y" style="border-color: var(--border)">
-        <div v-for="faq in billingFaqs" :key="faq.q" class="py-5" style="border-color: var(--border)">
-          <h3 class="text-sm font-semibold mb-2" style="color: var(--text-strong)">{{ faq.q }}</h3>
-          <p class="text-sm leading-relaxed" style="color: var(--text-dim)">{{ faq.a }}</p>
+      <div class="space-y-0 divide-y border-[var(--border)]">
+        <div v-for="faq in billingFaqs" :key="faq.q" class="py-5 border-[var(--border)]">
+          <h3 class="text-sm font-semibold mb-2 text-[var(--text-strong)]">{{ faq.q }}</h3>
+          <p class="text-sm leading-relaxed text-[var(--text-dim)]">{{ faq.a }}</p>
         </div>
       </div>
 
       <p class="text-center mt-8">
-        <RouterLink to="/faq" class="text-sm transition-colors" style="color: var(--accent)">
+        <RouterLink to="/faq" class="text-sm transition-colors text-[var(--accent)]">
           See all FAQs →
         </RouterLink>
       </p>
@@ -435,22 +424,17 @@ const featureRows: TableRow[] = [
     <!-- CTA -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
       <div
-        class="rounded-2xl text-center px-8 py-14 border"
-        style="
-          background-color: var(--accent-wash-dim);
-          border-color: var(--cta-border);
-        "
+        class="rounded-2xl text-center px-8 py-14 border bg-[var(--accent-wash-dim)] border-[var(--cta-border)]"
       >
-        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]" style="color: var(--text-strong)">
+        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]">
           Start monitoring in 60 seconds.
         </h2>
-        <p class="mb-8 text-base" style="color: var(--text-dim)">
+        <p class="mb-8 text-base text-[var(--text-dim)]">
           Free plan included. No credit card required.
         </p>
         <RouterLink
           to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90"
-          style="background-color: var(--accent); color: var(--on-accent)"
+          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
         >
           Create free account →
         </RouterLink>

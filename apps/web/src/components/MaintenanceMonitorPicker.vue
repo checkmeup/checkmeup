@@ -68,21 +68,19 @@ function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | '
 <template>
   <div class="rounded-[14px] border border-[var(--border)]">
     <div
-      class="px-4 py-3 border-b text-sm font-medium"
-      style="border-color: var(--border); color: var(--text-strong)"
+      class="px-4 py-3 border-b text-sm font-medium border-[var(--border)] text-[var(--text-strong)]"
     >
       Monitors ({{ modelValue.length }} selected)
     </div>
-    <div v-if="loading" class="px-4 py-3 text-xs" style="color: var(--text-muted)">Loading…</div>
-    <div v-else-if="allMonitors.length === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">
+    <div v-if="loading" class="px-4 py-3 text-xs text-[var(--text-muted)]">Loading…</div>
+    <div v-else-if="allMonitors.length === 0" class="px-4 py-3 text-xs text-[var(--text-muted)]">
       No monitors yet — create a cron, uptime, SSL, domain, port, or DNS monitor first.
     </div>
     <ul v-else class="max-h-72 overflow-y-auto">
       <li
         v-for="m in allMonitors"
         :key="m.key"
-        class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b last:border-0"
-        style="border-color: var(--border)"
+        class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b last:border-0 border-[var(--border)]"
         @click="toggle(m)"
       >
         <div
@@ -95,8 +93,8 @@ function toggle(m: { key: string; type: 'cron' | 'uptime' | 'ssl' | 'domain' | '
         >
           {{ selectedKeys.has(m.key) ? '✓' : '' }}
         </div>
-        <span class="text-sm flex-1 truncate" style="color: var(--text)">{{ m.name }}</span>
-        <span class="text-xs flex-shrink-0" style="color: var(--text-muted)">{{ typeLabel[m.type] }}</span>
+        <span class="text-sm flex-1 truncate text-[var(--text)]">{{ m.name }}</span>
+        <span class="text-xs flex-shrink-0 text-[var(--text-muted)]">{{ typeLabel[m.type] }}</span>
       </li>
     </ul>
   </div>

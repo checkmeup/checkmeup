@@ -92,7 +92,7 @@ async function revoke(id: string) {
     <template #description>
       Generate a key to read monitor status from scripts, CI pipelines, or third-party integrations
       via
-      <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
         >X-API-Key</code
       >. Keys are read-only for now.
     </template>
@@ -102,13 +102,12 @@ async function revoke(id: string) {
       v-if="createdKey"
       class="mb-5 space-y-3 rounded-[14px] bg-[var(--accent-wash)] p-5"
     >
-      <p class="text-sm font-medium" style="color: var(--text-strong)">
+      <p class="text-sm font-medium text-[var(--text-strong)]">
         Copy this key now — you won't be able to see it again.
       </p>
       <div class="flex items-center gap-2">
         <code
-          class="flex-1 text-xs px-3 py-2 rounded-md truncate"
-          style="background-color: var(--surface); color: var(--text-dim)"
+          class="flex-1 text-xs px-3 py-2 rounded-md truncate bg-[var(--surface)] text-[var(--text-dim)]"
         >
           {{ createdKey.key }}
         </code>
@@ -119,7 +118,7 @@ async function revoke(id: string) {
       <Button size="sm" @click="dismissCreatedKey">Done</Button>
     </div>
 
-    <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+    <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
     <ul v-else-if="keys.length > 0" class="mb-5 divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
       <li
@@ -128,8 +127,8 @@ async function revoke(id: string) {
         class="flex items-center gap-3 px-4 py-3"
       >
         <div class="flex-1 min-w-0">
-          <p class="text-sm truncate" style="color: var(--text)">{{ k.label || '(no label)' }}</p>
-          <p class="text-xs truncate font-mono" style="color: var(--text-muted)">
+          <p class="text-sm truncate text-[var(--text)]">{{ k.label || '(no label)' }}</p>
+          <p class="text-xs truncate font-mono text-[var(--text-muted)]">
             {{ k.keyPrefix }}… · created {{ formatDate(k.createdAt) }} ·
             {{ relativeTime(k.lastUsedAt) }}
           </p>
@@ -139,7 +138,7 @@ async function revoke(id: string) {
         </Button>
       </li>
     </ul>
-    <p v-else class="text-sm mb-5" style="color: var(--text-muted)">No API keys yet.</p>
+    <p v-else class="text-sm mb-5 text-[var(--text-muted)]">No API keys yet.</p>
 
     <Button v-if="!showForm" variant="secondary" @click="startCreate">+ Generate key</Button>
 
@@ -159,7 +158,7 @@ async function revoke(id: string) {
         <Button variant="secondary" type="button" @click="cancelForm">Cancel</Button>
       </div>
 
-      <p v-if="formError" class="text-sm" style="color: var(--status-down)">{{ formError }}</p>
+      <p v-if="formError" class="text-sm text-[var(--status-down)]">{{ formError }}</p>
     </div>
   </SettingsSection>
 </template>

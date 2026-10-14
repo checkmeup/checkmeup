@@ -100,7 +100,7 @@ useHead({
   <LandingLayout>
     <!-- Loading: the requested post's content chunk hasn't resolved yet -->
     <div v-if="loading" class="max-w-3xl mx-auto px-4 sm:px-6 py-24 text-center">
-      <p class="text-sm" style="color: var(--text-muted)">Loading…</p>
+      <p class="text-sm text-[var(--text-muted)]">Loading…</p>
     </div>
 
     <!-- 404 -->
@@ -118,8 +118,7 @@ useHead({
       <header class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
         <RouterLink
           :to="backLink.to"
-          class="inline-flex items-center gap-1.5 text-sm mb-8 transition-colors"
-          style="color: var(--text-muted)"
+          class="inline-flex items-center gap-1.5 text-sm mb-8 transition-colors text-[var(--text-muted)]"
         >
           <svg
             width="14"
@@ -134,22 +133,21 @@ useHead({
           {{ backLink.label }}
         </RouterLink>
 
-        <div class="flex items-center gap-3 mb-4 text-xs" style="color: var(--text-muted)">
+        <div class="flex items-center gap-3 mb-4 text-xs text-[var(--text-muted)]">
           <span>{{ post.date }}</span>
           <span>·</span>
           <span>{{ post.readTime }}</span>
         </div>
 
         <h1
-          class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] leading-tight mb-6"
-          style="color: var(--text-strong)"
+          class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] leading-tight mb-6 text-[var(--text-strong)]"
         >
           {{ post.title }}
         </h1>
 
-        <p class="text-lg leading-relaxed" style="color: var(--text-dim)">{{ post.excerpt }}</p>
+        <p class="text-lg leading-relaxed text-[var(--text-dim)]">{{ post.excerpt }}</p>
 
-        <div class="mt-8 border-t" style="border-color: var(--border)"></div>
+        <div class="mt-8 border-t border-[var(--border)]"></div>
       </header>
 
       <!-- Content -->
@@ -157,48 +155,38 @@ useHead({
         <template v-for="(block, i) in post.content" :key="i">
           <p
             v-if="block.type === 'p'"
-            class="text-base leading-relaxed"
-            style="color: var(--text-dim)"
+            class="text-base leading-relaxed text-[var(--text-dim)]"
           >
             {{ block.text }}
           </p>
 
           <h2
             v-else-if="block.type === 'h2'"
-            class="text-xl font-semibold pt-4"
-            style="color: var(--text-strong)"
+            class="text-xl font-semibold pt-4 text-[var(--text-strong)]"
           >
             {{ block.text }}
           </h2>
 
           <h3
             v-else-if="block.type === 'h3'"
-            class="text-base font-semibold pt-2"
-            style="color: var(--text-strong)"
+            class="text-base font-semibold pt-2 text-[var(--text-strong)]"
           >
             {{ block.text }}
           </h3>
 
           <pre
             v-else-if="block.type === 'code'"
-            class="rounded-xl border p-5 text-xs overflow-x-auto font-mono leading-relaxed"
-            style="
-              background-color: var(--surface);
-              border-color: var(--border);
-              color: var(--color-green-300);
-            "
+            class="rounded-xl border p-5 text-xs overflow-x-auto font-mono leading-relaxed bg-[var(--surface)] border-[var(--border)] text-[var(--color-green-300)]"
           ><code>{{ block.text }}</code></pre>
 
           <ul v-else-if="block.type === 'ul'" class="space-y-2 pl-1">
             <li
               v-for="item in block.items"
               :key="item"
-              class="flex items-start gap-3 text-sm leading-relaxed"
-              style="color: var(--text-dim)"
+              class="flex items-start gap-3 text-sm leading-relaxed text-[var(--text-dim)]"
             >
               <span
-                class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2"
-                style="background-color: var(--accent)"
+                class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2 bg-[var(--accent)]"
               ></span>
               {{ item }}
             </li>
@@ -208,14 +196,12 @@ useHead({
             <img
               :src="block.src"
               :alt="block.alt"
-              class="rounded-xl border w-full"
-              style="border-color: var(--border)"
+              class="rounded-xl border w-full border-[var(--border)]"
               loading="lazy"
             />
             <figcaption
               v-if="block.caption"
-              class="text-xs text-center mt-2"
-              style="color: var(--text-muted)"
+              class="text-xs text-center mt-2 text-[var(--text-muted)]"
             >
               {{ block.caption }}
             </figcaption>
@@ -223,8 +209,7 @@ useHead({
 
           <div
             v-else-if="block.type === 'table'"
-            class="rounded-xl border"
-            style="border-color: var(--border)"
+            class="rounded-xl border border-[var(--border)]"
           >
             <div
               class="grid"
@@ -236,13 +221,8 @@ useHead({
                 <div
                   v-for="(h, hi) in block.headers"
                   :key="h"
-                  class="px-2 py-3 text-xs font-semibold border-b break-words"
+                  class="px-2 py-3 text-xs font-semibold border-b break-words border-[var(--border)] bg-[var(--surface)] text-[var(--text-strong)]"
                   :class="hi === 0 ? 'text-left' : 'text-center'"
-                  style="
-                    border-color: var(--border);
-                    background-color: var(--surface);
-                    color: var(--text-strong);
-                  "
                 >
                   {{ h }}
                 </div>
@@ -274,8 +254,7 @@ useHead({
 
           <blockquote
             v-else-if="block.type === 'blockquote'"
-            class="border-l-2 pl-5 py-1 text-sm leading-relaxed italic"
-            style="border-color: var(--color-green-500); color: var(--text-dim)"
+            class="border-l-2 pl-5 py-1 text-sm leading-relaxed italic border-[var(--accent)] text-[var(--text-dim)]"
           >
             {{ block.text }}
           </blockquote>
@@ -290,22 +269,20 @@ useHead({
 
           <div
             v-else-if="block.type === 'divider'"
-            class="border-t my-4"
-            style="border-color: var(--border)"
+            class="border-t my-4 border-[var(--border)]"
           ></div>
         </template>
       </article>
 
       <!-- License note -->
       <div class="max-w-3xl mx-auto px-4 sm:px-6 pb-8">
-        <p class="text-xs leading-relaxed" style="color: var(--text-muted)">
+        <p class="text-xs leading-relaxed text-[var(--text-muted)]">
           This work is licensed under a
           <a
             href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
             target="_blank"
             rel="noopener noreferrer"
-            class="underline hover:no-underline transition-colors"
-            style="color: var(--accent)"
+            class="underline hover:no-underline transition-colors text-[var(--accent)]"
             >Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a
           >.
         </p>
@@ -313,14 +290,12 @@ useHead({
 
       <!-- Footer nav -->
       <div
-        class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 border-t pt-8"
-        style="border-color: var(--border)"
+        class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 border-t pt-8 border-[var(--border)]"
       >
         <div class="flex items-center justify-between">
           <RouterLink
             :to="backLink.to"
-            class="inline-flex items-center gap-1.5 text-sm transition-colors"
-            style="color: var(--text-muted)"
+            class="inline-flex items-center gap-1.5 text-sm transition-colors text-[var(--text-muted)]"
           >
             <svg
               width="14"
@@ -336,8 +311,7 @@ useHead({
           </RouterLink>
           <RouterLink
             to="/sign-up"
-            class="text-sm font-medium px-4 py-2 rounded-[10px] transition-colors"
-            style="background-color: var(--color-green-500); color: var(--on-accent)"
+            class="text-sm font-medium px-4 py-2 rounded-[10px] transition-colors bg-[var(--accent)] text-[var(--on-accent)]"
           >
             Try Checkmeup free →
           </RouterLink>

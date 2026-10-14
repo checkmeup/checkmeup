@@ -80,7 +80,7 @@ async function submit() {
         <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Edit status page</h1>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+      <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
       <form
         v-else
@@ -89,8 +89,8 @@ async function submit() {
       >
         <div>
           <Label>Slug</Label>
-          <p class="mt-1 text-sm font-mono" style="color: var(--text-dim)">/status/{{ slug }}</p>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+          <p class="mt-1 text-sm font-mono text-[var(--text-dim)]">/status/{{ slug }}</p>
+          <p class="text-xs mt-0.5 text-[var(--text-muted)]">
             Slug cannot be changed after creation.
           </p>
         </div>
@@ -101,23 +101,23 @@ async function submit() {
         </div>
 
         <div>
-          <Label for="description">Description <span style="color: var(--text-muted)">(optional)</span></Label>
+          <Label for="description">Description <span class="text-[var(--text-muted)]">(optional)</span></Label>
           <Input id="description" v-model="description" placeholder="Live status of our services" class="mt-1" />
         </div>
 
         <div>
-          <Label for="logoUrl">Logo URL <span style="color: var(--text-muted)">(optional)</span></Label>
+          <Label for="logoUrl">Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label>
           <Input id="logoUrl" v-model="logoUrl" placeholder="https://example.com/logo.png" class="mt-1" />
         </div>
 
         <div>
           <Label>Layout</Label>
           <div class="mt-1 flex flex-col gap-2">
-            <label class="flex items-center gap-2 text-sm" style="color: var(--text)">
+            <label class="flex items-center gap-2 text-sm text-[var(--text)]">
               <input v-model="layout" type="radio" value="classic" name="layout" />
               Classic — single-column, monitors and incidents stacked
             </label>
-            <label class="flex items-center gap-2 text-sm" style="color: var(--text)">
+            <label class="flex items-center gap-2 text-sm text-[var(--text)]">
               <input v-model="layout" type="radio" value="grid" name="layout" />
               Grid — monitor cards in a wide grid with an incident sidebar
             </label>
@@ -132,15 +132,15 @@ async function submit() {
             <input v-model="hideBranding" type="checkbox" :disabled="hobbyPlanNoBrandingToggle" />
             Hide "Powered by Checkmeup" and FAQ/Terms/Privacy links on this page
           </label>
-          <p v-if="hobbyPlanNoBrandingToggle" class="mt-1 text-xs" style="color: var(--text-muted)">
+          <p v-if="hobbyPlanNoBrandingToggle" class="mt-1 text-xs text-[var(--text-muted)]">
             Hiding branding requires a paid plan —
-            <RouterLink to="/billing" class="underline" style="color: var(--color-green-500)"
+            <RouterLink to="/billing" class="underline text-[var(--accent)]"
               >view plans</RouterLink
             >.
           </p>
         </div>
 
-        <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <p v-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
         <div class="flex gap-3 pt-1">
           <Button type="submit" :disabled="submitting">

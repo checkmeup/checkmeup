@@ -4,20 +4,15 @@ import { RouterLink } from 'vue-router'
 
 <template>
   <section id="help" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Need help?</h2>
-    <p class="text-sm leading-relaxed mb-6" style="color: var(--text-dim)">
+    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Need help?</h2>
+    <p class="text-sm leading-relaxed mb-6 text-[var(--text-dim)]">
       There's no support ticket queue — questions, bug reports, and feature requests all reach
       an engineer directly.
     </p>
     <div class="flex flex-wrap gap-4">
       <RouterLink
         to="/settings"
-        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors"
-        style="
-          color: var(--text-dim);
-          border-color: var(--border);
-          background-color: var(--surface);
-        "
+        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors text-[var(--text-dim)] border-[var(--border)] bg-[var(--surface)]"
       >
         <svg
           width="14"
@@ -36,12 +31,7 @@ import { RouterLink } from 'vue-router'
       </RouterLink>
       <a
         href="mailto:andrew@checkmeup.net"
-        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors"
-        style="
-          color: var(--text-dim);
-          border-color: var(--border);
-          background-color: var(--surface);
-        "
+        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors text-[var(--text-dim)] border-[var(--border)] bg-[var(--surface)]"
       >
         <svg
           width="14"
@@ -62,12 +52,7 @@ import { RouterLink } from 'vue-router'
         href="https://github.com/checkmeup/checkmeup/issues"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors"
-        style="
-          color: var(--text-dim);
-          border-color: var(--border);
-          background-color: var(--surface);
-        "
+        class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors text-[var(--text-dim)] border-[var(--border)] bg-[var(--surface)]"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path

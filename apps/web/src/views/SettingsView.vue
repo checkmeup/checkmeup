@@ -119,7 +119,7 @@ function formatDate(iso: string | null): string {
           </div>
 
           <div class="flex items-center justify-between gap-3">
-            <p class="text-xs" style="color: var(--text-muted)">Sent as {{ auth.user?.email }}</p>
+            <p class="text-xs text-[var(--text-muted)]">Sent as {{ auth.user?.email }}</p>
             <Button
               :disabled="!suggestionText.trim() || submittingSuggestion"
               @click="submitSuggestion"
@@ -128,10 +128,10 @@ function formatDate(iso: string | null): string {
             </Button>
           </div>
 
-          <p v-if="suggestionSent" class="text-sm" style="color: var(--status-up)">
+          <p v-if="suggestionSent" class="text-sm text-[var(--status-up)]">
             Thanks — this reaches an engineer directly.
           </p>
-          <p v-if="suggestionError" class="text-sm" style="color: var(--status-down)">
+          <p v-if="suggestionError" class="text-sm text-[var(--status-down)]">
             {{ suggestionError }}
           </p>
         </div>

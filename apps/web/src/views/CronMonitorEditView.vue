@@ -74,13 +74,13 @@ async function submit() {
   >
     <CronMonitorForm v-model="form" show-alerts-toggle>
       <template #scheduleHelp>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           The ping URL never changes when you edit the schedule.
         </p>
       </template>
 
       <template #maxDurationHelp>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           Alert if a run doesn't finish within this time — only applies if your job also pings
           <code>{{ detail?.monitor.pingUrl }}/start</code> when it begins.
         </p>

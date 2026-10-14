@@ -84,7 +84,7 @@ async function toggleEnabled(c: NotificationChannel) {
     </template>
 
 
-    <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+    <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
     <ul v-else-if="channels.length > 0" class="mb-5 divide-y divide-[var(--border)] rounded-[14px] border border-[var(--border)]">
       <li
@@ -100,16 +100,15 @@ async function toggleEnabled(c: NotificationChannel) {
           @change="toggleEnabled(c)"
         />
         <div
-          class="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0"
-          style="background-color: var(--surface-raised); color: var(--text-dim)"
+          class="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface-raised)] text-[var(--text-dim)]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path :d="typeIconPath[c.type]" />
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm truncate" style="color: var(--text)">{{ c.name }}</p>
-          <p class="text-xs truncate font-mono" style="color: var(--text-muted)">
+          <p class="text-sm truncate text-[var(--text)]">{{ c.name }}</p>
+          <p class="text-xs truncate font-mono text-[var(--text-muted)]">
             {{ typeLabel[c.type] }} · {{ c.config[configKey[c.type]] }}
           </p>
           <p
@@ -128,10 +127,10 @@ async function toggleEnabled(c: NotificationChannel) {
         </Button>
       </li>
     </ul>
-    <p v-else class="text-sm mb-5" style="color: var(--text-muted)">No channels connected yet.</p>
+    <p v-else class="text-sm mb-5 text-[var(--text-muted)]">No channels connected yet.</p>
 
     <UpgradePrompt v-if="toggleLimitReached" class="mb-5" :message="toggleError" />
-    <p v-else-if="toggleError" class="text-sm mb-5" style="color: var(--status-down)">{{ toggleError }}</p>
+    <p v-else-if="toggleError" class="text-sm mb-5 text-[var(--status-down)]">{{ toggleError }}</p>
 
     <Button v-if="!form.showForm" variant="secondary" @click="form.startAdd">+ Add channel</Button>
 

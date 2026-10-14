@@ -21,14 +21,13 @@ function removeAssertion(i: number) {
       <Label>JSON assertions (optional)</Label>
       <button
         type="button"
-        class="text-xs px-2 py-1 rounded"
-        style="color: var(--text-dim); background-color: var(--surface-raised)"
+        class="text-xs px-2 py-1 rounded text-[var(--text-dim)] bg-[var(--surface-raised)]"
         @click="addAssertion"
       >
         + Add
       </button>
     </div>
-    <div v-if="assertions.length === 0" class="text-xs" style="color: var(--text-muted)">
+    <div v-if="assertions.length === 0" class="text-xs text-[var(--text-muted)]">
       Assert on JSON response fields, e.g. <code>data.status</code> equals <code>ok</code>.
     </div>
     <div v-for="(a, i) in assertions" :key="i" class="flex items-center gap-2 mt-2">
@@ -44,8 +43,7 @@ function removeAssertion(i: number) {
       <Input v-model="a.expected" placeholder="ok" class="flex-1 min-w-0" />
       <button
         type="button"
-        class="text-xs px-1.5 py-1 rounded flex-shrink-0"
-        style="color: var(--text-muted); background-color: var(--surface-raised)"
+        class="text-xs px-1.5 py-1 rounded flex-shrink-0 text-[var(--text-muted)] bg-[var(--surface-raised)]"
         @click="removeAssertion(i)"
       >
         ✕

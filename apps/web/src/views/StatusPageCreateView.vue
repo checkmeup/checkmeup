@@ -140,13 +140,13 @@ async function submit() {
           <p v-if="slugStatus !== 'idle'" class="text-xs mt-1" :style="{ color: slugColors[slugStatus] ?? 'var(--text-muted)' }">
             {{ slugStatus === 'checking' ? 'Checking…' : slugMessage }}
           </p>
-          <p v-else class="text-xs mt-1" style="color: var(--text-muted)">
+          <p v-else class="text-xs mt-1 text-[var(--text-muted)]">
             Public URL will be <span class="font-mono">/status/{{ slug || 'your-slug' }}</span>
           </p>
         </div>
 
         <div>
-          <Label for="description">Description <span style="color: var(--text-muted)">(optional)</span></Label>
+          <Label for="description">Description <span class="text-[var(--text-muted)]">(optional)</span></Label>
           <Input
             id="description"
             v-model="description"
@@ -156,7 +156,7 @@ async function submit() {
         </div>
 
         <div>
-          <Label for="logoUrl">Logo URL <span style="color: var(--text-muted)">(optional)</span></Label>
+          <Label for="logoUrl">Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label>
           <Input
             id="logoUrl"
             v-model="logoUrl"
@@ -166,7 +166,7 @@ async function submit() {
         </div>
 
         <UpgradePrompt v-if="limitReached" :message="error" />
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
         <div class="flex gap-3 pt-1">
           <Button type="submit" :disabled="submitting || slugStatus === 'taken' || slugStatus === 'invalid'">

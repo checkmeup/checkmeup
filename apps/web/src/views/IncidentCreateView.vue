@@ -117,10 +117,9 @@ async function submit(confirmOverlap = false) {
 
         <div
           v-if="overlapWarning"
-          class="rounded-lg border p-4 text-sm space-y-3"
-          style="background-color: var(--surface-raised); border-color: var(--status-degraded)"
+          class="rounded-lg border p-4 text-sm space-y-3 bg-[var(--surface-raised)] border-[var(--status-degraded)]"
         >
-          <p style="color: var(--status-degraded)">{{ overlapWarning }}</p>
+          <p class="text-[var(--status-degraded)]">{{ overlapWarning }}</p>
           <div class="flex gap-2">
             <Button type="button" :disabled="submitting" @click="submit(true)">
               {{ submitting ? 'Declaring…' : 'Declare anyway' }}
@@ -128,7 +127,7 @@ async function submit(confirmOverlap = false) {
             <Button variant="secondary" type="button" @click="overlapWarning = ''">Cancel</Button>
           </div>
         </div>
-        <p v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+        <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
         <div v-if="!overlapWarning" class="flex gap-3 pt-1">
           <Button type="submit" :disabled="submitting">

@@ -39,8 +39,7 @@ function toggleStatusCode(code: number) {
   <div>
     <button
       type="button"
-      class="flex items-center gap-1.5 text-sm font-medium"
-      style="color: var(--text-dim)"
+      class="flex items-center gap-1.5 text-sm font-medium text-[var(--text-dim)]"
       :aria-expanded="open"
       @click="open = !open"
     >
@@ -55,8 +54,7 @@ function toggleStatusCode(code: number) {
 
     <div
       v-if="open"
-      class="space-y-4 mt-2.5 p-4 rounded-[10px] border"
-      style="border-color: var(--border); background-color: var(--surface-raised)"
+      class="space-y-4 mt-2.5 p-4 rounded-[10px] border border-[var(--border)] bg-[var(--surface-raised)]"
     >
       <div>
         <Label for="httpMethod">Request method</Label>
@@ -90,7 +88,7 @@ function toggleStatusCode(code: number) {
             {{ code }}
           </button>
         </div>
-        <p class="text-xs mt-1.5" style="color: var(--text-muted)">
+        <p class="text-xs mt-1.5 text-[var(--text-muted)]">
           A response outside this set counts as down, regardless of body content.
         </p>
       </div>
@@ -107,9 +105,9 @@ function toggleStatusCode(code: number) {
             class="w-40"
             required
           />
-          <span class="text-sm" style="color: var(--text-muted)">ms</span>
+          <span class="text-sm text-[var(--text-muted)]">ms</span>
         </div>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           Abort and fail the check if no response arrives within this window.
         </p>
       </div>

@@ -68,7 +68,7 @@ async function submit() {
         />
       </div>
 
-      <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+      <p v-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
       <Button type="submit" class="w-full" :disabled="loading || !token">
         {{ loading ? 'Saving…' : 'Set new password' }}

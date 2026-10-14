@@ -108,8 +108,8 @@ async function submit() {
 
     <div>
       <Label>Domain</Label>
-      <p class="mt-1 text-sm font-mono" style="color: var(--text-dim)">{{ domain }}</p>
-      <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+      <p class="mt-1 text-sm font-mono text-[var(--text-dim)]">{{ domain }}</p>
+      <p class="text-xs mt-0.5 text-[var(--text-muted)]">
         To change the domain, delete this monitor and create a new one.
       </p>
     </div>
@@ -130,7 +130,7 @@ async function submit() {
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Stop alerting after this many notifications. Resets on renewal.
       </p>
     </div>
@@ -146,7 +146,7 @@ async function submit() {
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Suppress alerts until N consecutive check cycles detect the issue. Resets on renewal.
       </p>
     </div>

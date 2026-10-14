@@ -18,7 +18,7 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
 
     <div>
       <Label for="message">
-        Message <span style="color: var(--text-muted)">(optional, shown on status page)</span>
+        Message <span class="text-[var(--text-muted)]">(optional, shown on status page)</span>
       </Label>
       <Input
         id="message"
@@ -35,8 +35,7 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
           id="startsAt"
           v-model="form.startsAt"
           type="datetime-local"
-          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-          style="background-color: var(--surface); border-color: var(--border); color: var(--text)"
+          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-[var(--surface)] border-[var(--border)] text-[var(--text)]"
           required
         />
       </div>
@@ -47,10 +46,9 @@ const form = defineModel<MaintenanceWindowFormState>({ required: true })
           v-model="form.endsAt"
           type="datetime-local"
           :disabled="form.noEnd"
-          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:opacity-50"
-          style="background-color: var(--surface); border-color: var(--border); color: var(--text)"
+          class="mt-1 flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:opacity-50 bg-[var(--surface)] border-[var(--border)] text-[var(--text)]"
         />
-        <label class="flex items-center gap-2 mt-1.5 text-xs" style="color: var(--text-muted)">
+        <label class="flex items-center gap-2 mt-1.5 text-xs text-[var(--text-muted)]">
           <input v-model="form.noEnd" type="checkbox" />
           No end date — I'll end it manually
         </label>

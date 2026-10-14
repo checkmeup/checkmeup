@@ -86,17 +86,16 @@ async function deleteWindow() {
 
     <template #actions>
       <div class="flex gap-2">
-        <Button
+        <Button class="text-[var(--status-down)]"
           v-if="!confirmDelete"
           variant="secondary"
           type="button"
-          style="color: var(--status-down)"
           @click="confirmDelete = true"
         >
           Delete
         </Button>
         <template v-else>
-          <Button type="button" style="background-color: var(--status-down)" @click="deleteWindow">
+          <Button class="bg-[var(--status-down)]" type="button" @click="deleteWindow">
             Confirm delete
           </Button>
           <Button variant="secondary" type="button" @click="confirmDelete = false">Cancel</Button>

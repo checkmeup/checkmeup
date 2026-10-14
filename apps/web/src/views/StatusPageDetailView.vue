@@ -225,8 +225,8 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
         </h1>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
-      <div v-else-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</div>
+      <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
+      <div v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</div>
 
       <template v-else-if="detail">
         <!-- Page info card -->
@@ -235,8 +235,8 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
         >
           <div class="flex items-start justify-between gap-4 mb-4">
             <div>
-              <p class="text-sm font-mono" style="color: var(--text-dim)">/status/{{ detail.slug }}</p>
-              <p v-if="detail.description" class="text-xs mt-1" style="color: var(--text-muted)">
+              <p class="text-sm font-mono text-[var(--text-dim)]">/status/{{ detail.slug }}</p>
+              <p v-if="detail.description" class="text-xs mt-1 text-[var(--text-muted)]">
                 {{ detail.description }}
               </p>
             </div>
@@ -245,8 +245,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
                 :href="detail.publicUrl"
                 target="_blank"
                 rel="noopener"
-                class="text-xs px-3 py-1.5 rounded-md border transition-colors"
-                style="color: var(--text-dim); border-color: var(--border)"
+                class="text-xs px-3 py-1.5 rounded-md border transition-colors text-[var(--text-dim)] border-[var(--border)]"
               >
                 View public page →
               </a>
@@ -257,17 +256,16 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
               >
                 Edit
               </Button>
-              <Button
+              <Button class="text-[var(--status-down)]"
                 v-if="!confirmDelete"
                 variant="secondary"
                 size="sm"
-                style="color: var(--status-down)"
                 @click="confirmDelete = true"
               >
                 Delete
               </Button>
               <template v-else>
-                <Button size="sm" style="background-color: var(--status-down)" @click="deletePage">
+                <Button class="bg-[var(--status-down)]" size="sm" @click="deletePage">
                   Confirm delete
                 </Button>
                 <Button variant="secondary" size="sm" @click="confirmDelete = false">Cancel</Button>
@@ -276,7 +274,7 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
           </div>
         </div>
 
-        <p v-if="actionError" class="text-sm mb-4" style="color: var(--status-down)">{{ actionError }}</p>
+        <p v-if="actionError" class="text-sm mb-4 text-[var(--status-down)]">{{ actionError }}</p>
 
         <!-- Monitor management -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -284,18 +282,17 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
           <div
             class="rounded-[14px] border border-[var(--border)]"
           >
-            <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
+            <div class="px-4 py-3 border-b text-sm font-medium border-[var(--border)] text-[var(--text-strong)]">
               Available monitors
             </div>
-            <div v-if="allMonitors.length === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">
+            <div v-if="allMonitors.length === 0" class="px-4 py-3 text-xs text-[var(--text-muted)]">
               No monitors yet.
             </div>
             <ul v-else>
               <li
                 v-for="m in allMonitors"
                 :key="m.key"
-                class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b last:border-0"
-                style="border-color: var(--border)"
+                class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b last:border-0 border-[var(--border)]"
                 @click="toggleMonitor(m)"
               >
                 <div
@@ -308,10 +305,9 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
                 >
                   {{ selectedKeys.has(m.key) ? '✓' : '' }}
                 </div>
-                <span class="text-sm flex-1 truncate" style="color: var(--text)">{{ m.name }}</span>
+                <span class="text-sm flex-1 truncate text-[var(--text)]">{{ m.name }}</span>
                 <span
-                  class="text-xs flex-shrink-0"
-                  style="color: var(--text-muted)"
+                  class="text-xs flex-shrink-0 text-[var(--text-muted)]"
                 >{{ typeLabel[m.type] }}</span>
               </li>
             </ul>
@@ -321,50 +317,45 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
           <div
             class="rounded-[14px] border border-[var(--border)]"
           >
-            <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
+            <div class="px-4 py-3 border-b text-sm font-medium border-[var(--border)] text-[var(--text-strong)]">
               On this page ({{ monitorEntries.length }})
             </div>
-            <div v-if="monitorEntries.length === 0" class="px-4 py-3 text-xs" style="color: var(--text-muted)">
+            <div v-if="monitorEntries.length === 0" class="px-4 py-3 text-xs text-[var(--text-muted)]">
               Select monitors from the left.
             </div>
             <ul v-else>
               <li
                 v-for="(m, i) in monitorEntries"
                 :key="m.key"
-                class="flex items-center gap-2 px-4 py-2.5 border-b last:border-0"
-                style="border-color: var(--border)"
+                class="flex items-center gap-2 px-4 py-2.5 border-b last:border-0 border-[var(--border)]"
               >
                 <div class="flex flex-col gap-0.5">
                   <button
-                    class="text-xs leading-none px-1"
-                    style="color: var(--text-muted)"
+                    class="text-xs leading-none px-1 text-[var(--text-muted)]"
                     :disabled="i === 0"
                     @click="moveUp(i)"
                   >▲</button>
                   <button
-                    class="text-xs leading-none px-1"
-                    style="color: var(--text-muted)"
+                    class="text-xs leading-none px-1 text-[var(--text-muted)]"
                     :disabled="i === monitorEntries.length - 1"
                     @click="moveDown(i)"
                   >▼</button>
                 </div>
                 <input
                   v-model="m.displayName"
-                  class="flex-1 text-sm bg-transparent border-0 focus:outline-none min-w-0"
-                  style="color: var(--text)"
+                  class="flex-1 text-sm bg-transparent border-0 focus:outline-none min-w-0 text-[var(--text)]"
                   :placeholder="m.displayName"
                 />
-                <span class="text-xs flex-shrink-0" style="color: var(--text-muted)">
+                <span class="text-xs flex-shrink-0 text-[var(--text-muted)]">
                   {{ typeLabel[m.monitorType] }}
                 </span>
                 <button
-                  class="text-xs ml-1 flex-shrink-0"
-                  style="color: var(--text-muted)"
+                  class="text-xs ml-1 flex-shrink-0 text-[var(--text-muted)]"
                   @click="toggleMonitor({ key: m.key, type: m.monitorType, id: m.monitorId, name: m.displayName })"
                 >✕</button>
               </li>
             </ul>
-            <div class="px-4 py-3 border-t" style="border-color: var(--border)">
+            <div class="px-4 py-3 border-t border-[var(--border)]">
               <Button size="sm" :disabled="savingMonitors" @click="saveMonitors">
                 {{ savingMonitors ? 'Saving…' : 'Save changes' }}
               </Button>
@@ -376,19 +367,18 @@ function copySnippet(key: string, format: 'markdown' | 'html', snippet: string) 
         <div
           class="rounded-[14px] border border-[var(--border)] mt-6"
         >
-          <div class="px-4 py-3 border-b text-sm font-medium" style="border-color: var(--border); color: var(--text-strong)">
+          <div class="px-4 py-3 border-b text-sm font-medium border-[var(--border)] text-[var(--text-strong)]">
             Badges
           </div>
           <ul v-if="pageBadge">
             <li
               v-for="badge in [pageBadge, ...monitorBadges]"
               :key="badge.key"
-              class="px-4 py-3 border-b last:border-0"
-              style="border-color: var(--border)"
+              class="px-4 py-3 border-b last:border-0 border-[var(--border)]"
             >
               <div class="flex items-center gap-3">
                 <img :src="badge.badgeUrl" :alt="badge.label" class="flex-shrink-0" />
-                <span class="text-sm flex-1 truncate" style="color: var(--text)">
+                <span class="text-sm flex-1 truncate text-[var(--text)]">
                   {{ badge.key === 'page' ? 'Overall status' : badge.label }}
                 </span>
                 <Button variant="secondary" size="sm" @click="copySnippet(badge.key, 'markdown', badge.markdown)">

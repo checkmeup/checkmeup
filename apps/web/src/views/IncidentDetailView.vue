@@ -156,14 +156,14 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         </button>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+      <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
       <template v-else-if="incident">
         <div class="rounded-[14px] border border-[var(--border)] p-6 mb-4">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div v-if="!editingTitle" class="flex items-center gap-2 flex-1">
               <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">{{ incident.title }}</h1>
-              <button class="text-xs" style="color: var(--text-muted)" @click="startEditTitle">Edit</button>
+              <button class="text-xs text-[var(--text-muted)]" @click="startEditTitle">Edit</button>
             </div>
             <div v-else class="flex items-center gap-2 flex-1">
               <Input v-model="titleDraft" class="flex-1" />
@@ -177,16 +177,15 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
               <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: severityColors[incident.severity] }"></span>
               {{ severityLabels[incident.severity] }}
             </span>
-            <span style="color: var(--text-dim)">{{ statusLabels[incident.status] }}</span>
-            <span style="color: var(--text-muted)">{{ incident.monitorCount }} monitor{{ incident.monitorCount === 1 ? '' : 's' }}</span>
+            <span class="text-[var(--text-dim)]">{{ statusLabels[incident.status] }}</span>
+            <span class="text-[var(--text-muted)]">{{ incident.monitorCount }} monitor{{ incident.monitorCount === 1 ? '' : 's' }}</span>
           </div>
 
           <div v-if="incident.monitors?.length" class="mt-3 flex flex-wrap gap-1.5">
             <span
               v-for="m in incident.monitors"
               :key="`${m.monitorType}:${m.monitorId}`"
-              class="text-xs px-2 py-1 rounded-full"
-              style="background-color: var(--surface-raised); color: var(--text-dim)"
+              class="text-xs px-2 py-1 rounded-full bg-[var(--surface-raised)] text-[var(--text-dim)]"
             >
               {{ m.name }}
             </span>
@@ -211,7 +210,7 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
           </div>
         </div>
 
-        <p v-if="error" class="text-sm mb-4" style="color: var(--status-down)">{{ error }}</p>
+        <p v-if="error" class="text-sm mb-4 text-[var(--status-down)]">{{ error }}</p>
 
         <!-- Updates feed -->
         <div class="space-y-3 mb-6">
@@ -221,20 +220,19 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
             class="rounded-[14px] border border-[var(--border)] p-4"
           >
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-medium" style="color: var(--text-strong)">{{ statusLabels[u.status] }}</span>
+              <span class="text-xs font-medium text-[var(--text-strong)]">{{ statusLabels[u.status] }}</span>
               <div class="flex items-center gap-2">
-                <span class="text-xs" style="color: var(--text-muted)">{{ formatDate(u.createdAt) }}</span>
+                <span class="text-xs text-[var(--text-muted)]">{{ formatDate(u.createdAt) }}</span>
                 <button
                   v-if="editingUpdateId !== u.id"
-                  class="text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-xs text-[var(--text-muted)]"
                   @click="startEditUpdate(u.id, u.message)"
                 >
                   Edit
                 </button>
               </div>
             </div>
-            <p v-if="editingUpdateId !== u.id" class="text-sm" style="color: var(--text-dim)">{{ u.message }}</p>
+            <p v-if="editingUpdateId !== u.id" class="text-sm text-[var(--text-dim)]">{{ u.message }}</p>
             <div v-else class="flex items-center gap-2 mt-1">
               <Input v-model="editDraft" class="flex-1" />
               <Button size="sm" :disabled="savingUpdate" @click="saveUpdateMessage(u.id)">Save</Button>
@@ -244,16 +242,15 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         </div>
 
         <div class="flex justify-end">
-          <Button
+          <Button class="text-[var(--status-down)]"
             v-if="!confirmDelete"
             variant="secondary"
-            style="color: var(--status-down)"
             @click="confirmDelete = true"
           >
             Delete incident
           </Button>
           <div v-else class="flex gap-2">
-            <Button style="background-color: var(--status-down)" :disabled="deleting" @click="deleteIncident">
+            <Button class="bg-[var(--status-down)]" :disabled="deleting" @click="deleteIncident">
               Confirm delete
             </Button>
             <Button variant="secondary" @click="confirmDelete = false">Cancel</Button>

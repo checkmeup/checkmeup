@@ -80,7 +80,7 @@ async function submit() {
         placeholder="example.com"
         class="mt-1"
       />
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Apex domain only — no https:// or path. Registration expiry checked daily.
       </p>
     </div>

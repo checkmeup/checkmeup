@@ -9,7 +9,7 @@ const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4" style="background-color: var(--bg)">
+  <div class="min-h-screen flex items-center justify-center px-4 bg-[var(--bg)]">
     <div class="w-full max-w-[400px] space-y-8 py-12">
       <!-- Logo -->
       <div class="flex justify-center">

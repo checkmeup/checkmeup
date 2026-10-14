@@ -56,12 +56,11 @@ const sections = [
     <!-- Hero -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
       <h1
-        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4"
-        style="color: var(--text-strong)"
+        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]"
       >
         Documentation
       </h1>
-      <p class="text-lg max-w-2xl" style="color: var(--text-dim)">
+      <p class="text-lg max-w-2xl text-[var(--text-dim)]">
         Everything Checkmeup does today, in plain language — how to set up a monitor, what triggers
         an alert, and what each plan actually includes.
       </p>
@@ -77,8 +76,7 @@ const sections = [
             v-for="s in sections"
             :key="s.id"
             :href="`#${s.id}`"
-            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline"
-            style="color: var(--text-dim)"
+            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline text-[var(--text-dim)]"
           >
             {{ s.label }}
           </a>

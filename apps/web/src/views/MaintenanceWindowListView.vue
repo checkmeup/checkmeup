@@ -63,10 +63,10 @@ async function endNow(w: MaintenanceWindow) {
         <Button @click="router.push({ name: 'maintenance-create' })">Schedule maintenance</Button>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+      <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
       <div v-else-if="error" class="rounded-[14px] border border-[var(--border)] p-6 text-center">
-        <p class="text-sm mb-4" style="color: var(--status-down)">{{ error }}</p>
+        <p class="text-sm mb-4 text-[var(--status-down)]">{{ error }}</p>
         <Button variant="secondary" size="sm" @click="load">Try again</Button>
       </div>
 
@@ -74,7 +74,7 @@ async function endNow(w: MaintenanceWindow) {
         v-else-if="windows.length === 0"
         class="rounded-[14px] border border-[var(--border)] p-12 text-center"
       >
-        <p class="text-sm mb-4" style="color: var(--text-muted)">
+        <p class="text-sm mb-4 text-[var(--text-muted)]">
           No maintenance windows yet. Schedule one to suppress alerts during planned downtime.
         </p>
         <Button @click="router.push({ name: 'maintenance-create' })">Schedule your first window</Button>
@@ -90,7 +90,7 @@ async function endNow(w: MaintenanceWindow) {
             @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
           >
             <div class="flex items-center justify-between mb-2">
-              <span class="font-medium text-sm" style="color: var(--text-strong)">{{ w.title }}</span>
+              <span class="font-medium text-sm text-[var(--text-strong)]">{{ w.title }}</span>
               <span
                 class="inline-flex items-center gap-1.5 text-xs font-medium"
                 :style="{ color: statusColors[w.status] }"
@@ -99,7 +99,7 @@ async function endNow(w: MaintenanceWindow) {
                 {{ statusLabels[w.status] }}
               </span>
             </div>
-            <div class="flex items-center gap-4 text-xs" style="color: var(--text-dim)">
+            <div class="flex items-center gap-4 text-xs text-[var(--text-dim)]">
               <span>{{ formatDate(w.startsAt) }} → {{ formatDate(w.endsAt) }}</span>
               <span>{{ w.monitorCount }} monitor{{ w.monitorCount === 1 ? '' : 's' }}</span>
             </div>
@@ -117,7 +117,7 @@ async function endNow(w: MaintenanceWindow) {
         </div>
 
         <!-- Desktop table -->
-        <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
+        <div class="hidden md:block rounded-xl border overflow-hidden border-[var(--border)]">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-[var(--surface)]">
@@ -136,7 +136,7 @@ async function endNow(w: MaintenanceWindow) {
                 class="cursor-pointer border-t border-[var(--border)] transition-colors hover:bg-[var(--surface)]"
                 @click="router.push({ name: 'maintenance-edit', params: { id: w.id } })"
               >
-                <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ w.title }}</td>
+                <td class="px-4 py-3 font-medium text-[var(--text-strong)]">{{ w.title }}</td>
                 <td class="px-4 py-3">
                   <span
                     class="inline-flex items-center gap-1.5 text-xs font-medium"
@@ -146,9 +146,9 @@ async function endNow(w: MaintenanceWindow) {
                     {{ statusLabels[w.status] }}
                   </span>
                 </td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ formatDate(w.startsAt) }}</td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ formatDate(w.endsAt) }}</td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ w.monitorCount }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ formatDate(w.startsAt) }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ formatDate(w.endsAt) }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ w.monitorCount }}</td>
                 <td class="px-4 py-3 text-right">
                   <Button
                     v-if="w.status !== 'ended'"

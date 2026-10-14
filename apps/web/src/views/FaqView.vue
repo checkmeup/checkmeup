@@ -36,10 +36,10 @@ useHead({
   <LandingLayout>
     <!-- Hero -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
-      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4" style="color: var(--text-strong)">
+      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]">
         Frequently asked questions
       </h1>
-      <p class="text-lg max-w-2xl" style="color: var(--text-dim)">
+      <p class="text-lg max-w-2xl text-[var(--text-dim)]">
         Everything in one place — getting started, billing, monitors and alerts, status pages, and privacy.
       </p>
     </section>
@@ -52,8 +52,7 @@ useHead({
             v-for="c in faqCategories"
             :key="c.id"
             :href="`#${c.id}`"
-            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline"
-            style="color: var(--text-dim)"
+            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline text-[var(--text-dim)]"
           >
             {{ c.label }}
           </a>
@@ -63,11 +62,11 @@ useHead({
       <!-- Content -->
       <div class="flex-1 min-w-0 space-y-16">
         <section v-for="c in faqCategories" :key="c.id" :id="c.id" class="scroll-mt-24">
-          <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">{{ c.label }}</h2>
-          <div class="space-y-0 divide-y" style="border-color: var(--border)">
-            <div v-for="faq in c.entries" :key="faq.q" class="py-5" style="border-color: var(--border)">
-              <h3 class="text-sm font-semibold mb-2" style="color: var(--text-strong)">{{ faq.q }}</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--text-dim)">{{ faq.a }}</p>
+          <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">{{ c.label }}</h2>
+          <div class="space-y-0 divide-y border-[var(--border)]">
+            <div v-for="faq in c.entries" :key="faq.q" class="py-5 border-[var(--border)]">
+              <h3 class="text-sm font-semibold mb-2 text-[var(--text-strong)]">{{ faq.q }}</h3>
+              <p class="text-sm leading-relaxed text-[var(--text-dim)]">{{ faq.a }}</p>
             </div>
           </div>
         </section>

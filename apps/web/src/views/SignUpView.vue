@@ -81,37 +81,37 @@ async function submit() {
         />
       </div>
 
-      <label class="flex items-start gap-2 text-sm" style="color: var(--text-dim)">
+      <label class="flex items-start gap-2 text-sm text-[var(--text-dim)]">
         <input v-model="acceptedTerms" type="checkbox" class="mt-0.5" />
         <span>
           I agree to the
-          <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--accent)"
+          <RouterLink to="/terms" target="_blank" class="underline text-[var(--accent)]"
             >Terms of Service</RouterLink
           >
           and
-          <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--accent)"
+          <RouterLink to="/privacy" target="_blank" class="underline text-[var(--accent)]"
             >Privacy Policy</RouterLink
           >.
         </span>
       </label>
 
-      <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+      <p v-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
       <Button type="submit" class="w-full" :disabled="loading || !acceptedTerms">
         {{ loading ? 'Creating account…' : 'Create account' }}
       </Button>
     </form>
 
-    <p class="text-center text-sm" style="color: var(--text-muted)">
+    <p class="text-center text-sm text-[var(--text-muted)]">
       Already have an account?
-      <RouterLink to="/sign-in" class="font-medium" style="color: var(--accent)">
+      <RouterLink to="/sign-in" class="font-medium text-[var(--accent)]">
         Sign in
       </RouterLink>
     </p>
 
-    <p class="text-center text-xs" style="color: var(--text-muted)">
+    <p class="text-center text-xs text-[var(--text-muted)]">
       Questions?
-      <RouterLink to="/faq#getting-started" style="color: var(--accent)">
+      <RouterLink class="text-[var(--accent)]" to="/faq#getting-started">
         See the FAQ
       </RouterLink>
     </p>

@@ -59,20 +59,19 @@ async function submit() {
             v-for="ex in scheduleExamples"
             :key="ex.value"
             type="button"
-            class="text-xs px-2 py-1 rounded transition-colors"
-            style="background-color: var(--surface-raised); color: var(--text-dim)"
+            class="text-xs px-2 py-1 rounded transition-colors bg-[var(--surface-raised)] text-[var(--text-dim)]"
             @click="form.schedule = ex.value"
           >
             {{ ex.label }}
           </button>
         </div>
-        <p class="text-xs mt-2" style="color: var(--text-muted)">
+        <p class="text-xs mt-2 text-[var(--text-muted)]">
           Use a cron expression or <code>every Xm / every Xh / every Xd</code>.
         </p>
       </template>
 
       <template #maxDurationHelp>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           Alert if a run doesn't finish within this time — only applies if your job also pings
           this monitor's <code>/start</code> URL when it begins (shown after creating this
           monitor).

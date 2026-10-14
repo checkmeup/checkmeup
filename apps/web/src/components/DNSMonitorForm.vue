@@ -92,7 +92,7 @@ defineSlots<{ expectedValueHelp?: () => unknown }>()
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Stop alerting after this many notifications per incident.
       </p>
     </div>
@@ -108,7 +108,7 @@ defineSlots<{ expectedValueHelp?: () => unknown }>()
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Suppress alerts until N consecutive failures are detected. Resets on success.
       </p>
     </div>

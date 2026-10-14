@@ -47,10 +47,10 @@ function formatDate(iso: string) {
         <Button @click="router.push({ name: 'incidents-create' })">Declare incident</Button>
       </div>
 
-      <div v-if="loading" class="text-sm" style="color: var(--text-muted)">Loading…</div>
+      <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
       <div v-else-if="error" class="rounded-[14px] border border-[var(--border)] p-6 text-center">
-        <p class="text-sm mb-4" style="color: var(--status-down)">{{ error }}</p>
+        <p class="text-sm mb-4 text-[var(--status-down)]">{{ error }}</p>
         <Button variant="secondary" size="sm" @click="load">Try again</Button>
       </div>
 
@@ -58,7 +58,7 @@ function formatDate(iso: string) {
         v-else-if="incidents.length === 0"
         class="rounded-[14px] border border-[var(--border)] p-12 text-center"
       >
-        <p class="text-sm mb-4" style="color: var(--text-muted)">
+        <p class="text-sm mb-4 text-[var(--text-muted)]">
           No incidents yet. Declare one when something's affecting your service that isn't a plain monitor-down.
         </p>
         <Button @click="router.push({ name: 'incidents-create' })">Declare your first incident</Button>
@@ -74,7 +74,7 @@ function formatDate(iso: string) {
             @click="router.push({ name: 'incident-detail', params: { id: inc.id } })"
           >
             <div class="flex items-center justify-between mb-2">
-              <span class="font-medium text-sm" style="color: var(--text-strong)">{{ inc.title }}</span>
+              <span class="font-medium text-sm text-[var(--text-strong)]">{{ inc.title }}</span>
               <span
                 class="inline-flex items-center gap-1.5 text-xs font-medium"
                 :style="{ color: severityColors[inc.severity] }"
@@ -83,7 +83,7 @@ function formatDate(iso: string) {
                 {{ severityLabels[inc.severity] }}
               </span>
             </div>
-            <div class="flex items-center gap-4 text-xs" style="color: var(--text-dim)">
+            <div class="flex items-center gap-4 text-xs text-[var(--text-dim)]">
               <span>{{ statusLabels[inc.status] }}</span>
               <span>{{ formatDate(inc.createdAt) }}</span>
               <span>{{ inc.monitorCount }} monitor{{ inc.monitorCount === 1 ? '' : 's' }}</span>
@@ -92,7 +92,7 @@ function formatDate(iso: string) {
         </div>
 
         <!-- Desktop table -->
-        <div class="hidden md:block rounded-xl border overflow-hidden" style="border-color: var(--border)">
+        <div class="hidden md:block rounded-xl border overflow-hidden border-[var(--border)]">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-[var(--surface)]">
@@ -110,7 +110,7 @@ function formatDate(iso: string) {
                 class="cursor-pointer border-t border-[var(--border)] transition-colors hover:bg-[var(--surface)]"
                 @click="router.push({ name: 'incident-detail', params: { id: inc.id } })"
               >
-                <td class="px-4 py-3 font-medium" style="color: var(--text-strong)">{{ inc.title }}</td>
+                <td class="px-4 py-3 font-medium text-[var(--text-strong)]">{{ inc.title }}</td>
                 <td class="px-4 py-3">
                   <span
                     class="inline-flex items-center gap-1.5 text-xs font-medium"
@@ -120,9 +120,9 @@ function formatDate(iso: string) {
                     {{ severityLabels[inc.severity] }}
                   </span>
                 </td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ statusLabels[inc.status] }}</td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ inc.monitorCount }}</td>
-                <td class="px-4 py-3" style="color: var(--text-dim)">{{ formatDate(inc.createdAt) }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ statusLabels[inc.status] }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ inc.monitorCount }}</td>
+                <td class="px-4 py-3 text-[var(--text-dim)]">{{ formatDate(inc.createdAt) }}</td>
               </tr>
             </tbody>
           </table>

@@ -14,14 +14,14 @@ const effectiveDate = '2026-07-01'
 <template>
   <LandingLayout>
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-24 sm:pt-24">
-      <h1 class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] mb-2" style="color: var(--text-strong)">
+      <h1 class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] mb-2 text-[var(--text-strong)]">
         Refund Policy
       </h1>
-      <p class="text-sm mb-12" style="color: var(--text-muted)">Effective {{ effectiveDate }}</p>
+      <p class="text-sm mb-12 text-[var(--text-muted)]">Effective {{ effectiveDate }}</p>
 
-      <div class="space-y-10 text-sm leading-relaxed" style="color: var(--text-dim)">
+      <div class="space-y-10 text-sm leading-relaxed text-[var(--text-dim)]">
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">1. Scope</h2>
+          <h2 class="text-lg font-semibold mb-2 text-[var(--text-strong)]">1. Scope</h2>
           <p>
             This policy covers charges for Checkmeup's paid plans (Solo, Startup, Enterprise), billed and
             processed by Paddle, our merchant of record. The Hobby plan is free and has no charges to
@@ -30,7 +30,7 @@ const effectiveDate = '2026-07-01'
         </section>
 
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">2. The policy</h2>
+          <h2 class="text-lg font-semibold mb-2 text-[var(--text-strong)]">2. The policy</h2>
           <p>
             Refund requests made within 30 days of any charge — your first subscription payment, a renewal,
             or an upgrade — are honored in full, no questions asked. This applies to both monthly and annual
@@ -39,10 +39,10 @@ const effectiveDate = '2026-07-01'
         </section>
 
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">3. How to request one</h2>
+          <h2 class="text-lg font-semibold mb-2 text-[var(--text-strong)]">3. How to request one</h2>
           <p>
             Email
-            <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--accent)"
+            <a href="mailto:andrew@checkmeup.net" class="underline text-[var(--accent)]"
               >andrew@checkmeup.net</a
             >
             with the email address on your account. Refunds are issued back to your original payment method
@@ -51,10 +51,10 @@ const effectiveDate = '2026-07-01'
         </section>
 
         <section>
-          <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">4. Related terms</h2>
+          <h2 class="text-lg font-semibold mb-2 text-[var(--text-strong)]">4. Related terms</h2>
           <p>
             This policy is part of, and should be read alongside, our
-            <RouterLink to="/terms" class="underline" style="color: var(--accent)">Terms of Service</RouterLink>,
+            <RouterLink to="/terms" class="underline text-[var(--accent)]">Terms of Service</RouterLink>,
             which covers plan changes, cancellations, and billing more broadly.
           </p>
         </section>

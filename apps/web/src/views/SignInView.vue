@@ -64,8 +64,7 @@ async function submit() {
           <Label for="password">Password</Label>
           <RouterLink
             to="/forgot-password"
-            class="text-xs"
-            style="color: var(--text-muted)"
+            class="text-xs text-[var(--text-muted)]"
           >
             Forgot password?
           </RouterLink>
@@ -80,16 +79,16 @@ async function submit() {
         />
       </div>
 
-      <p v-if="error" class="text-sm" style="color: var(--status-down)">{{ error }}</p>
+      <p v-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
       <Button type="submit" class="w-full" :disabled="loading">
         {{ loading ? 'Signing in…' : 'Sign in' }}
       </Button>
     </form>
 
-    <p class="text-center text-sm" style="color: var(--text-muted)">
+    <p class="text-center text-sm text-[var(--text-muted)]">
       No account?
-      <RouterLink to="/sign-up" class="font-medium" style="color: var(--accent)">
+      <RouterLink to="/sign-up" class="font-medium text-[var(--accent)]">
         Sign up
       </RouterLink>
     </p>

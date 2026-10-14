@@ -1,34 +1,32 @@
 <template>
   <section id="incidents" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">
+    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">
       Incident management
     </h2>
-    <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
+    <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Declare an incident from the
-      <strong style="color: var(--text-strong)">Incidents</strong> page for anything affecting
+      <strong class="text-[var(--text-strong)]">Incidents</strong> page for anything affecting
       visitors that isn't a plain monitor-down — degraded performance, a partial outage, or
       something you want to narrate before a monitor even trips. Pick a title, an initial
       message, a severity (Minor / Major / Critical), and any combination of affected monitors.
     </p>
-    <ul class="space-y-2 text-sm" style="color: var(--text-dim)">
+    <ul class="space-y-2 text-sm text-[var(--text-dim)]">
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Progress updates</strong> — post
+          ><strong class="text-[var(--text-strong)]">Progress updates</strong> — post
           timestamped updates as you work the incident; status moves forward through
           Investigating → Identified → Monitoring → Resolved with each one.</span
         >
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Shown on the public status page</strong> —
+          ><strong class="text-[var(--text-strong)]">Shown on the public status page</strong> —
           active incidents appear above the monitor list, and a Major or Critical incident
           escalates the overall status banner. Resolved incidents move to a paginated
           history.</span
@@ -36,33 +34,30 @@
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Independent of monitor status</strong> —
+          ><strong class="text-[var(--text-strong)]">Independent of monitor status</strong> —
           declaring, updating, or resolving an incident never changes a monitor's own up/down
           state, and doesn't trigger alerts on any channel.</span
         >
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Maintenance-aware</strong> — declaring an
+          ><strong class="text-[var(--text-strong)]">Maintenance-aware</strong> — declaring an
           incident against a monitor already under an active maintenance window shows a warning
           first, so the two don't collide by accident.</span
         >
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">90-day history</strong> — resolved
+          ><strong class="text-[var(--text-strong)]">90-day history</strong> — resolved
           incidents stay in the public history for 90 days, the same window as check history,
           on every plan. A still-active incident is never removed on a timer, no matter how
           old.</span
@@ -70,11 +65,10 @@
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Up to 100 open at once</strong> — every
+          ><strong class="text-[var(--text-strong)]">Up to 100 open at once</strong> — every
           plan can have up to 100 unresolved incidents at the same time. Resolve one to free up
           room for the next; this is a safety cap on how many can pile up, not a per-plan
           allowance.</span
@@ -82,11 +76,10 @@
       </li>
       <li class="flex items-start gap-2">
         <span
-          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--accent)"
+          class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 bg-[var(--accent)]"
         ></span>
         <span
-          ><strong style="color: var(--text-strong)">Up to 100 updates per incident</strong> —
+          ><strong class="text-[var(--text-strong)]">Up to 100 updates per incident</strong> —
           same safety-cap philosophy, per incident rather than per org.</span
         >
       </li>

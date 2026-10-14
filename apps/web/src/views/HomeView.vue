@@ -64,11 +64,10 @@ useHead({
     <HeroSection />
 
     <!-- Our Customers -->
-    <section class="border-y" style="border-color: var(--border)">
+    <section class="border-y border-[var(--border)]">
       <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">
         <p
-          class="text-center text-xs mb-6"
-          style="color: var(--text-muted); font-family: var(--font-mono)"
+          class="text-center text-xs mb-6 text-[var(--text-muted)] font-mono"
         >
           Trusted by freelancers and solo devs worldwide
         </p>
@@ -89,8 +88,8 @@ useHead({
 
           <!-- Count + label -->
           <div class="text-center sm:text-left">
-            <span class="text-sm font-semibold" style="color: var(--text-strong)">200+</span>
-            <span class="text-sm ml-1" style="color: var(--text-dim)"
+            <span class="text-sm font-semibold text-[var(--text-strong)]">200+</span>
+            <span class="text-sm ml-1 text-[var(--text-dim)]"
               >freelancers monitoring client sites with Checkmeup</span
             >
           </div>
@@ -107,8 +106,7 @@ useHead({
               'SaaS startups',
             ]"
             :key="tag"
-            class="text-xs px-3 py-1 rounded-full border"
-            style="border-color: var(--border); color: var(--text-muted)"
+            class="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--text-muted)]"
           >
             {{ tag }}
           </span>
@@ -120,12 +118,11 @@ useHead({
     <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
       <div class="mb-12 max-w-[640px]">
         <h2
-          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
-          style="color: var(--text-strong)"
+          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
         >
           Everything you need to stay on top.
         </h2>
-        <p class="text-base" style="color: var(--text-dim)">
+        <p class="text-base text-[var(--text-dim)]">
           Six monitor types, one dashboard, zero blind spots.
         </p>
       </div>
@@ -280,17 +277,11 @@ useHead({
     <!-- Status pages highlight -->
     <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
       <div
-        class="rounded-[20px] border p-8 sm:p-12 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-[52px] items-center"
-        style="background-color: var(--card); border-color: var(--border)"
+        class="rounded-[20px] border p-8 sm:p-12 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-[52px] items-center bg-[var(--card)] border-[var(--border)]"
       >
         <div class="flex-1">
           <div
-            class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mb-4"
-            style="
-              border: 1px solid var(--border);
-              background-color: var(--surface);
-              color: var(--accent-emphasis);
-            "
+            class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mb-4 border border-[var(--border)] bg-[var(--surface)] text-[var(--accent-emphasis)]"
           >
             <svg
               width="10"
@@ -309,28 +300,25 @@ useHead({
             Status pages
           </div>
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-4 tracking-[-0.035em]"
-            style="color: var(--text-strong)"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-4 tracking-[-0.035em] text-[var(--text-strong)]"
           >
             Give your clients a page they can bookmark.
           </h2>
-          <p class="text-base leading-relaxed mb-6" style="color: var(--text-muted)">
+          <p class="text-base leading-relaxed mb-6 text-[var(--text-muted)]">
             Create a branded status page for every client site. They see uptime, incidents, and
             maintenance windows — you stay in control, and it looks like your work.
           </p>
           <RouterLink
             to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-[10px] transition-opacity hover:opacity-90"
-            style="background-color: var(--accent); color: var(--on-accent)"
+            class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
           >
             Create a status page →
           </RouterLink>
 
           <div
-            class="mt-6 p-4 rounded-lg border"
-            style="border-color: var(--border); background-color: var(--surface)"
+            class="mt-6 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
           >
-            <p class="text-sm mb-2.5" style="color: var(--text-muted)">
+            <p class="text-sm mb-2.5 text-[var(--text-muted)]">
               Embed a live status badge anywhere — links straight to your status page
             </p>
             <a href="https://checkmeup.net/status/checkmeup-net">
@@ -344,39 +332,34 @@ useHead({
 
         <!-- Status page mockup -->
         <div
-          class="w-full rounded-xl border overflow-hidden text-sm"
-          style="border-color: var(--border)"
+          class="w-full rounded-xl border overflow-hidden text-sm border-[var(--border)]"
         >
           <div
-            class="flex items-center px-4 py-3 border-b"
-            style="border-color: var(--border); background-color: var(--surface)"
+            class="flex items-center px-4 py-3 border-b border-[var(--border)] bg-[var(--surface)]"
           >
             <img :src="logo" alt="Checkmeup" class="h-[15px] w-auto" />
           </div>
           <div
-            class="px-4 py-2.5 border-b"
-            style="border-color: var(--border); background-color: var(--accent-wash-dim)"
+            class="px-4 py-2.5 border-b border-[var(--border)] bg-[var(--accent-wash-dim)]"
           >
-            <span class="text-xs font-semibold" style="color: var(--accent)"
+            <span class="text-xs font-semibold text-[var(--accent)]"
               >● All systems operational</span
             >
           </div>
           <div
             v-for="row in statusRows"
             :key="row.name"
-            class="px-4 py-3 border-b last:border-0"
-            style="border-color: var(--border); background-color: var(--surface)"
+            class="px-4 py-3 border-b last:border-0 border-[var(--border)] bg-[var(--surface)]"
           >
             <div class="flex items-center justify-between mb-1.5">
-              <span style="color: var(--text-dim)">{{ row.name }}</span>
+              <span class="text-[var(--text-dim)]">{{ row.name }}</span>
               <span
-                class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style="background-color: var(--accent-wash); color: var(--accent)"
+                class="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--accent-wash)] text-[var(--accent)]"
               >
                 Operational
               </span>
             </div>
-            <div class="h-1.5 rounded overflow-hidden" style="background-color: var(--accent-wash)">
+            <div class="h-1.5 rounded overflow-hidden bg-[var(--accent-wash)]">
               <div
                 class="h-full rounded"
                 :style="{ width: row.pct, backgroundColor: 'var(--accent)' }"
@@ -388,15 +371,14 @@ useHead({
     </section>
 
     <!-- Pricing teaser -->
-    <section class="border-t" style="border-color: var(--border)">
+    <section class="border-t border-[var(--border)]">
       <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
         <h2
-          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
-          style="color: var(--text-strong)"
+          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
         >
           Simple pricing.
         </h2>
-        <p class="mb-10" style="color: var(--text-dim)">Start free. Scale as you grow.</p>
+        <p class="mb-10 text-[var(--text-dim)]">Start free. Scale as you grow.</p>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div
@@ -410,34 +392,30 @@ useHead({
           >
             <div
               v-if="plan.highlight"
-              class="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
-              style="background-color: var(--accent); color: var(--on-accent)"
+              class="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full bg-[var(--accent)] text-[var(--on-accent)]"
             >
               Most popular
             </div>
-            <div class="text-sm font-semibold mb-1" style="color: var(--text-strong)">
+            <div class="text-sm font-semibold mb-1 text-[var(--text-strong)]">
               {{ plan.name }}
             </div>
-            <p class="text-xs mb-4" style="color: var(--text-muted)">{{ plan.description }}</p>
-            <div class="text-2xl font-semibold mb-5" style="color: var(--text-strong)">
+            <p class="text-xs mb-4 text-[var(--text-muted)]">{{ plan.description }}</p>
+            <div class="text-2xl font-semibold mb-5 text-[var(--text-strong)]">
               {{ plan.price === 0 ? 'Free' : `$${plan.price}` }}
               <span
                 v-if="plan.price > 0"
-                class="text-sm font-normal"
-                style="color: var(--text-muted)"
+                class="text-sm font-normal text-[var(--text-muted)]"
                 >/mo</span
               >
             </div>
 
             <div
-              class="pt-4 mb-5 border-t flex flex-col gap-2.5"
-              style="border-color: var(--border)"
+              class="pt-4 mb-5 border-t flex flex-col gap-2.5 border-[var(--border)]"
             >
               <div
                 v-for="s in plan.stats"
                 :key="s.label"
-                class="flex items-center gap-2 text-xs"
-                style="color: var(--text-dim)"
+                class="flex items-center gap-2 text-xs text-[var(--text-dim)]"
               >
                 <svg
                   width="11"
@@ -449,14 +427,13 @@ useHead({
                 >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <strong style="color: var(--text-strong)">{{ s.value }}</strong
+                <strong class="text-[var(--text-strong)]">{{ s.value }}</strong
                 >&nbsp;{{ s.label }}
               </div>
               <div
                 v-for="e in plan.extras"
                 :key="e"
-                class="flex items-start gap-2 text-xs leading-relaxed"
-                style="color: var(--text-dim)"
+                class="flex items-start gap-2 text-xs leading-relaxed text-[var(--text-dim)]"
               >
                 <svg
                   width="11"
@@ -489,8 +466,7 @@ useHead({
 
         <RouterLink
           to="/pricing"
-          class="inline-flex items-center gap-1 mt-8 text-sm transition-opacity hover:opacity-80"
-          style="color: var(--accent-emphasis)"
+          class="inline-flex items-center gap-1 mt-8 text-sm transition-opacity hover:opacity-80 text-[var(--accent-emphasis)]"
         >
           See full pricing details →
         </RouterLink>
@@ -498,16 +474,15 @@ useHead({
     </section>
 
     <!-- Testimonials -->
-    <section class="border-t" style="border-color: var(--border)">
+    <section class="border-t border-[var(--border)]">
       <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div class="text-center mb-12">
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
-            style="color: var(--text-strong)"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
           >
             Loved by freelancers and solo devs.
           </h2>
-          <p class="text-base" style="color: var(--text-dim)">
+          <p class="text-base text-[var(--text-dim)]">
             Monitoring that gets out of your way — so you can focus on client work.
           </p>
         </div>
@@ -516,8 +491,7 @@ useHead({
           <div
             v-for="t in testimonials"
             :key="t.name"
-            class="rounded-2xl border p-6 flex flex-col gap-4"
-            style="background-color: var(--card); border-color: var(--border)"
+            class="rounded-2xl border p-6 flex flex-col gap-4 bg-[var(--card)] border-[var(--border)]"
           >
             <div class="flex items-center gap-3">
               <img
@@ -526,54 +500,50 @@ useHead({
                 class="w-10 h-10 rounded-full object-cover flex-shrink-0"
               />
               <div>
-                <div class="text-sm font-semibold" style="color: var(--text-strong)">
+                <div class="text-sm font-semibold text-[var(--text-strong)]">
                   {{ t.name }}
                 </div>
-                <div class="text-xs" style="color: var(--text-muted)">{{ t.role }}</div>
+                <div class="text-xs text-[var(--text-muted)]">{{ t.role }}</div>
               </div>
             </div>
             <!-- Stars -->
             <div class="flex gap-0.5">
-              <svg
+              <svg class="text-[var(--accent)]"
                 v-for="i in 5"
                 :key="i"
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                style="color: var(--accent)"
               >
                 <polygon
                   points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
                 />
               </svg>
             </div>
-            <p class="text-sm leading-relaxed" style="color: var(--text-dim)">"{{ t.quote }}"</p>
+            <p class="text-sm leading-relaxed text-[var(--text-dim)]">"{{ t.quote }}"</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA banner -->
-    <section class="border-t" style="border-color: var(--border)">
+    <section class="border-t border-[var(--border)]">
       <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div
-          class="rounded-[20px] text-center px-10 py-[72px] border"
-          style="background-color: var(--accent-wash-dim); border-color: var(--cta-border)"
+          class="rounded-[20px] text-center px-10 py-[72px] border bg-[var(--accent-wash-dim)] border-[var(--cta-border)]"
         >
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
-            style="color: var(--text-strong)"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
           >
             Start monitoring in 60 seconds.
           </h2>
-          <p class="mb-8 text-base" style="color: var(--text-dim)">
+          <p class="mb-8 text-base text-[var(--text-dim)]">
             Free plan included. No credit card required.
           </p>
           <RouterLink
             to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90"
-            style="background-color: var(--accent); color: var(--on-accent)"
+            class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
           >
             Create free account →
           </RouterLink>

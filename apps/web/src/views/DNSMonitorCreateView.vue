@@ -70,7 +70,7 @@ async function submit() {
   >
     <DNSMonitorForm v-model="form" :min-interval-mins="minIntervalMins">
       <template #expectedValueHelp>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           Leave blank to auto-detect the current value on first check and alert on any later change. Set a value to pin it and alert on any mismatch from creation onward.
         </p>
       </template>

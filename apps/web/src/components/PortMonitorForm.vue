@@ -61,7 +61,7 @@ const portInput = computed({
         />
       </div>
     </div>
-    <p class="text-xs -mt-3" style="color: var(--text-muted)">
+    <p class="text-xs -mt-3 text-[var(--text-muted)]">
       Raw TCP connect — no data sent or received. 10-second timeout.
     </p>
 
@@ -76,7 +76,7 @@ const portInput = computed({
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         "Closed" is a security check — confirm a port that should be firewalled off stays unreachable.
       </p>
     </div>
@@ -105,7 +105,7 @@ const portInput = computed({
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Stop alerting after this many notifications per incident.
       </p>
     </div>
@@ -121,7 +121,7 @@ const portInput = computed({
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Suppress alerts until N consecutive failures are detected. Resets on success.
       </p>
     </div>

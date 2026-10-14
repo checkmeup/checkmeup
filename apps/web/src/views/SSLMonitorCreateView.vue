@@ -80,7 +80,7 @@ async function submit() {
         placeholder="example.com"
         class="mt-1"
       />
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Domain name only — no https:// or path. Checked daily on port 443.
       </p>
     </div>

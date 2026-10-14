@@ -16,70 +16,38 @@ defineProps<{
 </script>
 
 <template>
-  <!-- Design: Claude Design "CheckMeUp 404" — variant 1a (standard, on-brand),
-       shared between the site-wide 404 route and BlogPostView's unknown-slug state. -->
-  <section class="relative py-24 sm:py-32 flex items-center justify-center overflow-hidden">
-    <!-- Grid texture -->
-    <div
-      class="absolute inset-0 pointer-events-none"
-      style="
-        background-image:
-          linear-gradient(var(--border) 1px, transparent 1px),
-          linear-gradient(90deg, var(--border) 1px, transparent 1px);
-        background-size: 48px 48px;
-      "
-    ></div>
-    <!-- Accent glow, top-right -->
-    <div
-      class="absolute pointer-events-none"
-      style="
-        top: -80px;
-        right: -100px;
-        width: 600px;
-        height: 500px;
-        background: radial-gradient(ellipse at 70% 30%, var(--accent-wash) 0%, transparent 65%);
-      "
-    ></div>
-
-    <div class="relative z-10 text-center max-w-[520px] px-4 sm:px-6">
-      <div
-        class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full mb-7"
-        style="border: 1px solid var(--border); background-color: var(--card); color: var(--text-dim)"
-      >
-        <span
-          class="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse"
-          style="background-color: var(--status-down)"
-        ></span>
+  <!-- Shared between the site-wide 404 route and BlogPostView's unknown-slug state. -->
+  <section class="flex items-center justify-center py-24 sm:py-32">
+    <div class="max-w-[520px] px-4 text-center sm:px-6">
+      <p class="mb-6 inline-flex items-center gap-2 text-[13px] font-medium text-[var(--status-down)]">
+        <span class="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--status-down)]"></span>
         {{ badge }}
-      </div>
+      </p>
 
       <div
-        class="font-mono text-8xl sm:text-9xl font-semibold tracking-tight leading-none mb-2"
-        style="color: var(--text-strong)"
+        class="mb-2 font-mono text-8xl leading-none font-medium tracking-[-0.06em] text-[var(--text-strong)] sm:text-9xl"
       >
         404
       </div>
 
-      <h1 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold tracking-[-0.035em] mb-4" style="color: var(--text-strong)">
+      <h1 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]">
         {{ heading }}
       </h1>
 
-      <p class="text-[15px] leading-relaxed mb-8" style="color: var(--text-dim)">
+      <p class="text-[15px] leading-relaxed mb-8 text-[var(--text-dim)]">
         {{ description }}
       </p>
 
       <div class="flex items-center justify-center gap-2.5 flex-wrap">
         <RouterLink
           :to="primaryCta.to"
-          class="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-          style="background-color: var(--accent); color: var(--on-accent)"
+          class="inline-flex items-center rounded-[10px] bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
         >
           {{ primaryCta.label }}
         </RouterLink>
         <RouterLink
           :to="secondaryCta.to"
-          class="inline-flex items-center px-5 py-2.5 rounded-lg text-sm transition-colors"
-          style="border: 1px solid var(--border); color: var(--text-dim)"
+          class="inline-flex items-center rounded-[10px] border border-[var(--border-strong)] px-5 py-2.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-raised)]"
         >
           {{ secondaryCta.label }}
         </RouterLink>

@@ -61,7 +61,7 @@ defineSlots<{
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         How long to wait after the expected time before alerting.
       </p>
     </div>
@@ -82,7 +82,7 @@ defineSlots<{
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Stop alerting after this many notifications per incident.
       </p>
     </div>
@@ -98,7 +98,7 @@ defineSlots<{
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Suppress alerts until N consecutive failures are detected. Resets on success.
       </p>
     </div>

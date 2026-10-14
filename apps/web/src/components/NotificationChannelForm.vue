@@ -15,8 +15,7 @@ defineProps<{
 
 <template>
   <div
-    class="rounded-lg border p-4 space-y-4"
-    style="border-color: var(--border); background-color: var(--surface-raised)"
+    class="rounded-lg border p-4 space-y-4 border-[var(--border)] bg-[var(--surface-raised)]"
   >
     <div>
       <Label>Type</Label>
@@ -45,17 +44,16 @@ defineProps<{
           {{ t.label }}
         </button>
       </div>
-      <p v-if="form.hobbyPlanNoSms" class="mt-1 text-xs" style="color: var(--text-muted)">
+      <p v-if="form.hobbyPlanNoSms" class="mt-1 text-xs text-[var(--text-muted)]">
         SMS alerts require a paid plan —
-        <RouterLink to="/billing" class="underline" style="color: var(--color-green-500)"
+        <RouterLink to="/billing" class="underline text-[var(--accent)]"
           >view plans</RouterLink
         >.
       </p>
     </div>
     <ol
       v-if="form.type === 'telegram'"
-      class="text-sm space-y-2 list-decimal list-inside"
-      style="color: var(--text-dim)"
+      class="text-sm space-y-2 list-decimal list-inside text-[var(--text-dim)]"
     >
       <li>
         Open
@@ -63,31 +61,29 @@ defineProps<{
           href="https://t.me/checkmeupnet_bot"
           target="_blank"
           rel="noopener"
-          class="underline"
-          style="color: var(--color-green-500)"
+          class="underline text-[var(--accent)]"
           >@checkmeupnet_bot</a
         >
         in Telegram and send
-        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
           >/start</code
         >
         — the bot will reply with your Chat ID
       </li>
       <li>Paste the Chat ID below and click <strong>Send test message</strong> to verify</li>
     </ol>
-    <p v-else-if="form.type === 'webhook'" class="text-sm" style="color: var(--text-dim)">
+    <p v-else-if="form.type === 'webhook'" class="text-sm text-[var(--text-dim)]">
       Checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
-      <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
         >X-Checkmeup-Signature</code
       >. Must be
-      <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
         >https://</code
       >.
     </p>
     <ol
       v-else-if="form.type === 'slack'"
-      class="text-sm space-y-2 list-decimal list-inside"
-      style="color: var(--text-dim)"
+      class="text-sm space-y-2 list-decimal list-inside text-[var(--text-dim)]"
     >
       <li>
         In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create a new webhook for
@@ -95,13 +91,13 @@ defineProps<{
       </li>
       <li>
         Copy the <strong>Webhook URL</strong> (starts with
-        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
           >https://hooks.slack.com/services/</code
         >) and paste it below
       </li>
       <li>Click <strong>Send test message</strong> to verify the connection before saving</li>
     </ol>
-    <p v-else-if="form.type === 'sms'" class="text-sm" style="color: var(--text-dim)">
+    <p v-else-if="form.type === 'sms'" class="text-sm text-[var(--text-dim)]">
       Checkmeup will text down/recovery alerts to this number. Real per-message cost applies once
       Twilio account setup is complete.
     </p>
@@ -118,15 +114,15 @@ defineProps<{
         :placeholder="form.maskedValue || valuePlaceholder[form.type]"
         class="mt-1"
       />
-      <p v-if="form.maskedValue" class="mt-1 text-xs" style="color: var(--text-muted)">
+      <p v-if="form.maskedValue" class="mt-1 text-xs text-[var(--text-muted)]">
         Leave empty to keep the current URL.
       </p>
     </div>
     <div v-if="form.type === 'sms'">
-      <p v-if="form.smsConsentOnFile" class="text-xs" style="color: var(--text-muted)">
+      <p v-if="form.smsConsentOnFile" class="text-xs text-[var(--text-muted)]">
         Consent given on {{ new Date(form.consentAt).toLocaleString() }}.
       </p>
-      <label v-else class="flex items-start gap-2 text-sm" style="color: var(--text-dim)">
+      <label v-else class="flex items-start gap-2 text-sm text-[var(--text-dim)]">
         <input v-model="form.smsConsent" type="checkbox" class="mt-0.5" />
         <span>I agree to receive automated SMS alerts from Checkmeup at this number.</span>
       </label>
@@ -149,20 +145,20 @@ defineProps<{
           {{ form.regeneratingSecret ? 'Regenerating…' : 'Regenerate' }}
         </Button>
       </div>
-      <p class="text-xs" style="color: var(--text-muted)">
+      <p class="text-xs text-[var(--text-muted)]">
         Verify a request by computing HMAC-SHA256 of the raw request body using this secret as the
         key, hex-encoding it, and comparing it to the
-        <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"
+        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
           >X-Checkmeup-Signature</code
         >
         header. Regenerating invalidates the signature for future sends only — already-delivered
         requests aren't affected.
       </p>
-      <p v-if="form.regenerateError" class="text-xs" style="color: var(--status-down)">
+      <p v-if="form.regenerateError" class="text-xs text-[var(--status-down)]">
         {{ form.regenerateError }}
       </p>
     </div>
-    <p v-else-if="form.type === 'webhook'" class="text-xs" style="color: var(--text-muted)">
+    <p v-else-if="form.type === 'webhook'" class="text-xs text-[var(--text-muted)]">
       A signing secret is generated automatically once you save this channel.
     </p>
     <div class="flex items-center gap-3">
@@ -189,7 +185,7 @@ defineProps<{
       </Button>
       <Button variant="secondary" type="button" @click="form.cancelForm">Cancel</Button>
     </div>
-    <p v-if="form.testSuccess" class="text-sm" style="color: var(--status-up)">
+    <p v-if="form.testSuccess" class="text-sm text-[var(--status-up)]">
       {{
         form.type === 'webhook'
           ? 'Test webhook sent!'
@@ -199,7 +195,7 @@ defineProps<{
       }}
     </p>
     <UpgradePrompt v-if="form.limitReached" :message="form.testError || form.formError" />
-    <p v-else-if="form.testError" class="text-sm" style="color: var(--status-down)">{{ form.testError }}</p>
-    <p v-else-if="form.formError" class="text-sm" style="color: var(--status-down)">{{ form.formError }}</p>
+    <p v-else-if="form.testError" class="text-sm text-[var(--status-down)]">{{ form.testError }}</p>
+    <p v-else-if="form.formError" class="text-sm text-[var(--status-down)]">{{ form.formError }}</p>
   </div>
 </template>

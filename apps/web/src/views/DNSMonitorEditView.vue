@@ -106,7 +106,7 @@ async function submit() {
   >
     <DNSMonitorForm v-model="form" :min-interval-mins="minIntervalMins" show-alerts-toggle>
       <template #expectedValueHelp>
-        <p class="text-xs mt-1" style="color: var(--text-muted)">
+        <p class="text-xs mt-1 text-[var(--text-muted)]">
           Clear this to re-arm baseline mode — the next check re-captures whatever the record currently resolves to. Save a new value to acknowledge an intentional change.
         </p>
       </template>

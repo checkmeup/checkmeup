@@ -51,13 +51,13 @@ async function submit() {
     </template>
 
     <template v-else>
-      <p class="text-sm" style="color: var(--text-dim)">
+      <p class="text-sm text-[var(--text-dim)]">
         If an account exists for <strong>{{ email }}</strong>, you'll receive a reset link shortly.
       </p>
     </template>
 
-    <p class="text-center text-sm" style="color: var(--text-muted)">
-      <RouterLink to="/sign-in" class="font-medium" style="color: var(--accent)">
+    <p class="text-center text-sm text-[var(--text-muted)]">
+      <RouterLink to="/sign-in" class="font-medium text-[var(--accent)]">
         Back to sign in
       </RouterLink>
     </p>

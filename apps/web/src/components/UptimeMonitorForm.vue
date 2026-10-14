@@ -39,7 +39,7 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
     <div>
       <Label for="url">URL</Label>
       <Input id="url" v-model="form.url" placeholder="https://example.com/health" class="mt-1" />
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Defaults to a GET request, 10-second timeout, HTTP 200 — customize under Advanced below.
       </p>
     </div>
@@ -53,15 +53,14 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
         class="mt-1"
         maxlength="500"
       />
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Leave blank to check status code only. Searches the first 512 KB of the response body.
       </p>
     </div>
 
     <div
       v-if="form.keyword.trim()"
-      class="space-y-4 pl-4 border-l-2"
-      style="border-color: var(--border)"
+      class="space-y-4 pl-4 border-l-2 border-[var(--border)]"
     >
       <div>
         <Label for="keywordMode">Mode</Label>
@@ -119,7 +118,7 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Stop alerting after this many notifications per incident.
       </p>
     </div>
@@ -135,7 +134,7 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
           {{ opt.label }}
         </option>
       </select>
-      <p class="text-xs mt-1" style="color: var(--text-muted)">
+      <p class="text-xs mt-1 text-[var(--text-muted)]">
         Suppress alerts until N consecutive failures are detected. Resets on success.
       </p>
     </div>
