@@ -273,10 +273,10 @@ describe('CronMonitorDetailView', () => {
     const wrapper = mount(CronMonitorDetailView)
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
-    expect(wrapper.text()).toContain('Delete monitor?')
+    expect(wrapper.text()).toContain('the ping URL stops working immediately')
 
     await findButtonByText(wrapper, 'Cancel')!.trigger('click')
-    expect(wrapper.text()).not.toContain('Delete monitor?')
+    expect(wrapper.text()).not.toContain('the ping URL stops working immediately')
     expect(deleteCronMock).not.toHaveBeenCalled()
   })
 
@@ -286,34 +286,25 @@ describe('CronMonitorDetailView', () => {
     const wrapper = mount(CronMonitorDetailView)
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
-    const confirmButton = wrapper.findAll('button').filter((b) => b.text() === 'Delete')[1]
-    await confirmButton!.trigger('click')
+    await findButtonByText(wrapper, 'Confirm delete')!.trigger('click')
     await flushPromises()
 
     expect(deleteCronMock).toHaveBeenCalledExactlyOnceWith('c1')
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'cron-monitors' })
   })
 
-  it('does not navigate and resets pending state when delete fails', async () => {
-    // confirmDelete has no catch around monitorsApi.deleteCron, so the
-    // rejection is intentionally left unhandled by the component; swallow it
-    // here so the test can still assert the resulting UI state.
-    const onUnhandledRejection = () => {}
-    process.on('unhandledRejection', onUnhandledRejection)
-
+  it('shows an error and does not navigate when delete fails', async () => {
     detailData.value = { ...detail, monitor: { ...monitor } }
     deleteCronMock.mockRejectedValueOnce(new Error('Delete failed'))
     const wrapper = mount(CronMonitorDetailView)
 
     await findButtonByText(wrapper, 'Delete')!.trigger('click')
-    const confirmButton = wrapper.findAll('button').filter((b) => b.text() === 'Delete')[1]
-    await confirmButton!.trigger('click')
+    await findButtonByText(wrapper, 'Confirm delete')!.trigger('click')
     await flushPromises()
 
     expect(pushMock).not.toHaveBeenCalled()
-    expect(wrapper.text()).not.toContain('Delete monitor?')
-
-    process.off('unhandledRejection', onUnhandledRejection)
+    expect(wrapper.text()).toContain('Delete failed')
+    expect(findButtonByText(wrapper, 'Delete')).toBeTruthy()
   })
 
   it('copies the ping URL to the clipboard when Copy is clicked', async () => {

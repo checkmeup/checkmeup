@@ -266,7 +266,7 @@ describe('DNSMonitorDetailView', () => {
     expect(wrapper.text()).toContain('99.90%')
     expect(wrapper.text()).toContain('99.50%')
     expect(wrapper.text()).toContain('Uptime 30d')
-    const cells = wrapper.findAll('.grid.grid-cols-3 > div')
+    const cells = wrapper.findAll('dl > div')
     const uptime30d = cells.find((c) => c.text().includes('Uptime 30d'))
     expect(uptime30d!.text()).toContain('—')
   })
@@ -275,15 +275,16 @@ describe('DNSMonitorDetailView', () => {
     detailData.value = { ...detail }
     const wrapper = mount(DNSMonitorDetailView)
 
-    expect(wrapper.find('svg polyline').exists()).toBe(true)
-    expect(wrapper.findAll('svg circle')).toHaveLength(2)
+    const chart = wrapper.find('[aria-label^="Response time for the last 2 checks"]')
+    expect(chart.exists()).toBe(true)
+    expect(chart.findAll('span')).toHaveLength(2)
   })
 
   it('shows an empty state when there is no chart data', () => {
     detailData.value = { ...detail, chartData: [] }
     const wrapper = mount(DNSMonitorDetailView)
 
-    expect(wrapper.find('svg').exists()).toBe(false)
+    expect(wrapper.find('[aria-label^="Response time for"]').exists()).toBe(false)
     expect(wrapper.text()).toContain(
       'No checks yet — first check runs within the configured interval.',
     )
@@ -313,9 +314,9 @@ describe('DNSMonitorDetailView', () => {
     const tables = wrapper.findAll('table')
     const checkRows = tables.at(-1)!.findAll('tbody tr')
     expect(checkRows).toHaveLength(2)
-    expect(checkRows[0]!.text()).toContain('✓ Up')
+    expect(checkRows[0]!.text()).toContain('Up')
     expect(checkRows[0]!.text()).toContain('1.2.3.4')
-    expect(checkRows[1]!.text()).toContain('✗ Down')
+    expect(checkRows[1]!.text()).toContain('Down')
     expect(checkRows[1]!.text()).toContain('NXDOMAIN')
   })
 

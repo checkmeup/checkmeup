@@ -111,7 +111,7 @@ describe('SSLMonitorDetailView', () => {
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
     })
 
-    const cells = wrapper.findAll('.grid.grid-cols-2 > div')
+    const cells = wrapper.findAll('dl > div')
     const issuerCell = cells.find((c) => c.text().includes('Issuer'))
     expect(issuerCell!.text()).toContain('—')
     const daysCell = cells.find((c) => c.text().includes('Days remaining'))

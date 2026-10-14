@@ -112,15 +112,16 @@ describe('DomainMonitorDetailView', () => {
     detailData.value = { ...monitor, status: 'expired', daysUntilExpiry: -5 }
     const wrapper = mount(DomainMonitorDetailView)
 
-    expect(wrapper.text()).toContain('Expired')
-    expect(wrapper.text()).toContain('-5 days')
+    const daysCell = wrapper.findAll('dl > div').find((c) => c.text().includes('Days remaining'))
+    expect(daysCell!.text()).toContain('Expired')
+    expect(wrapper.text()).toContain('The registration expired on')
   })
 
   it('shows a dash for days remaining when daysUntilExpiry is null', () => {
     detailData.value = { ...monitor, expiresAt: null, daysUntilExpiry: null }
     const wrapper = mount(DomainMonitorDetailView)
 
-    const cells = wrapper.findAll('.grid.grid-cols-2 > div')
+    const cells = wrapper.findAll('dl > div')
     const daysCell = cells.find((c) => c.text().includes('Days remaining'))
     expect(daysCell!.text()).toContain('—')
     const expiresCell = cells.find((c) => c.text().includes('Expires'))
@@ -131,7 +132,7 @@ describe('DomainMonitorDetailView', () => {
     detailData.value = { ...monitor, registrar: null }
     const wrapper = mount(DomainMonitorDetailView)
 
-    const cells = wrapper.findAll('.grid.grid-cols-2 > div')
+    const cells = wrapper.findAll('dl > div')
     const registrarCell = cells.find((c) => c.text().includes('Registrar'))
     expect(registrarCell!.text()).toContain('—')
   })

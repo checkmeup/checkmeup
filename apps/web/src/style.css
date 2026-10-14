@@ -40,6 +40,11 @@
   /* Text/icon color on top of a --status-down fill (destructive button). */
   --on-status-down: #1a0807;
 
+  /* Check strip ticks (CheckStrip.vue): a passing check is a soft green so a
+     failure (--status-down) stands out; an empty slot is barely there. */
+  --tick-up: #2f6e58;
+  --tick-empty: #1c2220;
+
   /* Translucent card fill — feature/testimonial/pricing cards, sits directly
      on --bg rather than using the more opaque --surface (reserved for chrome:
      nav-adjacent bars, the hero product-screenshot mockup). */
@@ -92,6 +97,8 @@
   --status-down-wash: #fbe6e4;
   --status-paused: #6f7873;
   --on-status-down: #fff;
+  --tick-up: #a9dcc7;
+  --tick-empty: #ebeeeb;
   --card: rgb(17 23 20 / 3%);
   --accent: var(--color-green-700);
   --accent-hover: #0c5e49;

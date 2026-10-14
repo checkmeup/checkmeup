@@ -258,3 +258,19 @@ export function attentionSentence(row: MonitorRow): string {
       return row.statusLabel
   }
 }
+
+// How long an incident lasted, or "Ongoing" while it's open.
+export function incidentDuration(start: string, end: string | null): string {
+  if (!end) return 'Ongoing'
+  const mins = Math.floor((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ${mins % 60}m`
+  return `${Math.floor(hrs / 24)}d ${hrs % 24}h`
+}
+
+// The /monitors list with this type's tab selected — where a monitor page's
+// back link and post-delete redirect go.
+export function monitorsListRoute(type: MonitorType) {
+  return { name: 'monitors', query: { type } }
+}
