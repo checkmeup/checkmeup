@@ -202,7 +202,7 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
           <div class="flex items-center gap-3 mt-3">
             <select
               v-model="newStatus"
-              class="rounded-lg border px-3 py-2 text-sm"
+              class="h-10 rounded-lg border px-3 text-sm"
             >
               <option v-for="s in statusOrder" :key="s" :value="s">{{ statusLabels[s] }}</option>
             </select>

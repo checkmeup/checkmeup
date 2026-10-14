@@ -54,14 +54,14 @@ function toggleStatusCode(code: number) {
 
     <div
       v-if="open"
-      class="space-y-4 mt-2.5 p-4 rounded-[10px] border border-[var(--border)] bg-[var(--surface-raised)]"
+      class="mt-2.5 space-y-4 rounded-[14px] bg-[var(--surface)] p-5"
     >
       <div>
         <Label for="httpMethod">Request method</Label>
         <select
           id="httpMethod"
           v-model="httpMethod"
-          class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
         >
           <option v-for="opt in httpMethodOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}

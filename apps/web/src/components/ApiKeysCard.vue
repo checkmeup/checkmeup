@@ -92,7 +92,7 @@ async function revoke(id: string) {
     <template #description>
       Generate a key to read monitor status from scripts, CI pipelines, or third-party integrations
       via
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >X-API-Key</code
       >. Keys are read-only for now.
     </template>

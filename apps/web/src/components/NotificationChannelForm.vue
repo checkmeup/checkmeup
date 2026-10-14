@@ -15,7 +15,7 @@ defineProps<{
 
 <template>
   <div
-    class="rounded-lg border p-4 space-y-4 border-[var(--border)] bg-[var(--surface-raised)]"
+    class="space-y-4 rounded-[14px] bg-[var(--surface)] p-5"
   >
     <div>
       <Label>Type</Label>
@@ -65,7 +65,7 @@ defineProps<{
           >@checkmeupnet_bot</a
         >
         in Telegram and send
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >/start</code
         >
         — the bot will reply with your Chat ID
@@ -74,10 +74,10 @@ defineProps<{
     </ol>
     <p v-else-if="form.type === 'webhook'" class="text-sm text-[var(--text-dim)]">
       Checkmeup will POST a JSON payload to this URL on every down/recovery event, signed with
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >X-Checkmeup-Signature</code
       >. Must be
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >https://</code
       >.
     </p>
@@ -91,7 +91,7 @@ defineProps<{
       </li>
       <li>
         Copy the <strong>Webhook URL</strong> (starts with
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >https://hooks.slack.com/services/</code
         >) and paste it below
       </li>
@@ -148,7 +148,7 @@ defineProps<{
       <p class="text-xs text-[var(--text-muted)]">
         Verify a request by computing HMAC-SHA256 of the raw request body using this secret as the
         key, hex-encoding it, and comparing it to the
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >X-Checkmeup-Signature</code
         >
         header. Regenerating invalidates the signature for future sends only — already-delivered

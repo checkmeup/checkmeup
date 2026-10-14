@@ -104,7 +104,7 @@ async function submit(confirmOverlap = false) {
           <select
             id="severity"
             v-model="severity"
-            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
           >
             <option v-for="opt in severityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
