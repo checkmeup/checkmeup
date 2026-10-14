@@ -35,9 +35,3 @@ Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-ro
 2026-10-13 · notification channels epic
 
 `orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Since 2026-10-14 no code reads or writes them: `CreateOrg` lists its columns instead of `RETURNING *`, and the unused `UpdateOrg*` queries are gone. Settled by the migration that drops them, shipped in a release after that one is deployed, since migrations run at container start while the previous container still serves (`cmd/api/main.go`).
-
-## SMS delivery failures after Twilio accepts a send
-
-2026-10-14 · twilio-setup.md
-
-Checkmeup records a send as failed only when Twilio rejects the API call. A message Twilio accepts and a carrier later drops (an unreachable number, a STOP opt-out on a two-way sender) still reads as delivered, and the org's email fallback never fires. Catching it needs a status-callback endpoint (e.g. `POST /webhooks/twilio/sms-status`) verified by `X-Twilio-Signature`, set as the Messaging Service's status callback. Settled by building it or deciding the gap is acceptable.

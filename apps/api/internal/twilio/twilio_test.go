@@ -27,7 +27,7 @@ func testClient(t *testing.T, srv *httptest.Server) *Client {
 func TestSend(t *testing.T) {
 	t.Run("not configured", func(t *testing.T) {
 		c := &Client{httpClient: &http.Client{}, baseURL: "https://api.twilio.com"}
-		statusCode, err := c.Send("+15005550006", "hi")
+		_, statusCode, err := c.Send("+15005550006", "hi")
 		if err == nil {
 			t.Fatal("want an error when Twilio isn't configured")
 		}
@@ -49,7 +49,7 @@ func TestSend(t *testing.T) {
 		defer srv.Close()
 
 		c := testClient(t, srv)
-		statusCode, err := c.Send("+15005550006", "checkmeup: test")
+		_, statusCode, err := c.Send("+15005550006", "checkmeup: test")
 		if err != nil {
 			t.Fatalf("want no error, got %v", err)
 		}
@@ -70,6 +70,30 @@ func TestSend(t *testing.T) {
 		}
 	})
 
+	t.Run("returns the message SID and asks for status callbacks when configured", func(t *testing.T) {
+		var gotCallback string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = r.ParseForm()
+			gotCallback = r.Form.Get("StatusCallback")
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]string{"sid": "SM123"})
+		}))
+		defer srv.Close()
+
+		c := testClient(t, srv)
+		c.statusCallbackURL = "https://checkmeup.net/webhook/twilio/sms-status/tok"
+		sid, _, err := c.Send("+15005550006", "hi")
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+		if sid != "SM123" {
+			t.Fatalf("sid = %q, want %q", sid, "SM123")
+		}
+		if gotCallback != c.statusCallbackURL {
+			t.Fatalf("StatusCallback = %q, want %q", gotCallback, c.statusCallbackURL)
+		}
+	})
+
 	t.Run("non-2xx response surfaces Twilio's error message", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
@@ -78,7 +102,7 @@ func TestSend(t *testing.T) {
 		defer srv.Close()
 
 		c := testClient(t, srv)
-		statusCode, err := c.Send("bad-number", "hi")
+		_, statusCode, err := c.Send("bad-number", "hi")
 		if err == nil {
 			t.Fatal("want an error on a 400 response")
 		}
@@ -97,7 +121,7 @@ func TestSend(t *testing.T) {
 		defer srv.Close()
 
 		c := testClient(t, srv)
-		statusCode, err := c.Send("+15005550006", "hi")
+		_, statusCode, err := c.Send("+15005550006", "hi")
 		if err == nil {
 			t.Fatal("want an error on a 500 response")
 		}
@@ -111,7 +135,7 @@ func TestSend(t *testing.T) {
 			accountSID: "AC_test", apiKeySID: "SK_test", apiKeySecret: "secret",
 			httpClient: &http.Client{}, baseURL: "http://127.0.0.1:0",
 		}
-		statusCode, err := c.Send("+15005550006", "hi")
+		_, statusCode, err := c.Send("+15005550006", "hi")
 		if err == nil {
 			t.Fatal("want an error dialing an invalid address")
 		}
@@ -119,4 +143,23 @@ func TestSend(t *testing.T) {
 			t.Fatalf("want status 0 for a connection failure, got %d", statusCode)
 		}
 	})
+}
+
+func TestStatusCallbackToken(t *testing.T) {
+	a, b := StatusCallbackToken("key-a"), StatusCallbackToken("key-b")
+	if a == b {
+		t.Fatal("want different keys to give different tokens")
+	}
+	if a != StatusCallbackToken("key-a") {
+		t.Fatal("want the token stable for one key")
+	}
+}
+
+func TestStatusCallbackURL(t *testing.T) {
+	if got, want := StatusCallbackURL("https://checkmeup.net/", "k"), "https://checkmeup.net/webhook/twilio/sms-status/"+StatusCallbackToken("k"); got != want {
+		t.Fatalf("StatusCallbackURL = %q, want %q", got, want)
+	}
+	if got := StatusCallbackURL("http://localhost:8080", "k"); got != "" {
+		t.Fatalf("StatusCallbackURL for a non-https base = %q, want none", got)
+	}
 }

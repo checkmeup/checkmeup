@@ -86,12 +86,14 @@ func (s *Server) buildRouter() *chi.Mux {
 	mailer := email.NewSender(s.cfg.ResendAPIKey)
 	wh := webhook.NewClient()
 	sl := slack.NewClient()
-	sm := twilio.NewClient(s.cfg.TwilioAccountSID, s.cfg.TwilioAPIKeySID, s.cfg.TwilioAPIKeySecret, s.cfg.TwilioMessagingServiceSID)
+	sm := twilio.NewClient(s.cfg.TwilioAccountSID, s.cfg.TwilioAPIKeySID, s.cfg.TwilioAPIKeySecret, s.cfg.TwilioMessagingServiceSID,
+		twilio.StatusCallbackURL(s.cfg.BaseURL, s.cfg.JWTSecret))
 	auth := handler.NewAuthHandler(s.cfg, s.db)
 	monitors := handler.NewMonitorHandler(s.cfg, s.db, tg)
 	settings := handler.NewSettingsHandler(s.cfg, tg)
 	notifChannels := handler.NewNotificationChannelHandler(s.db, tg, mailer, wh, sl, sm)
 	ping := handler.NewPingHandler(s.db, tg, mailer, wh, sl, sm)
+	smsStatus := handler.NewSMSStatusHandler(s.db, mailer, twilio.StatusCallbackToken(s.cfg.JWTSecret))
 	statusPages := handler.NewStatusPageHandler(s.db)
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
@@ -119,6 +121,8 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.With(httprate.LimitBy(60, time.Minute, pingTokenKey)).Get("/ping/{token}/start", ping.ReceivePingStart)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/telegram", settings.HandleTelegramWebhook)
 	r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Post("/webhook/paddle", billing.Webhook)
+	// Twilio posts several status callbacks per SMS, all from its own IPs.
+	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Post(twilio.StatusCallbackPath+"/{token}", smsStatus.HandleStatus)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)

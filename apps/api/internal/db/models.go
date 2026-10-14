@@ -732,6 +732,15 @@ type RefreshToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type SmsMessage struct {
+	Sid             string             `json:"sid"`
+	OrgID           uuid.UUID          `json:"org_id"`
+	ChannelID       uuid.UUID          `json:"channel_id"`
+	FallbackSubject pgtype.Text        `json:"fallback_subject"`
+	FallbackHtml    pgtype.Text        `json:"fallback_html"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type SslMonitor struct {
 	ID                   uuid.UUID          `json:"id"`
 	OrgID                uuid.UUID          `json:"org_id"`

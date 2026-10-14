@@ -45,7 +45,7 @@ func testNotificationChannelHandler(t *testing.T) (*AuthHandler, *NotificationCh
 		AppURL:        "http://localhost:5173",
 	}
 	authH := NewAuthHandler(cfg, pool)
-	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(), slack.NewClient(), twilio.NewClient("", "", "", ""))
+	channelsH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(), slack.NewClient(), twilio.NewClient("", "", "", "", ""))
 	return authH, channelsH, pool
 }
 
@@ -707,7 +707,7 @@ func TestTestNotificationChannel(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		tlsTrustingH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClientWithHTTPClient(srv.Client()), slack.NewClient(), twilio.NewClient("", "", "", ""))
+		tlsTrustingH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClientWithHTTPClient(srv.Client()), slack.NewClient(), twilio.NewClient("", "", "", "", ""))
 		w := doJSON(t, tlsTrustingH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
 			Type: "webhook", Config: map[string]any{"url": srv.URL},
 		})

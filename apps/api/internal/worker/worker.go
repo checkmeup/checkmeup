@@ -133,9 +133,17 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 		return false
 	}
 
+	// SMS goes last: an SMS Twilio accepts can still fail at the carrier, so
+	// whether it was the alert's only delivery has to be known when it's
+	// sent, for the status callback to send the fallback email then.
 	sent := false
 	for _, c := range channels {
-		if sendToChannel(ctx, n, c, msg, mon.ID) {
+		if c.Type != db.NotificationChannelTypeSms && sendToChannel(ctx, n, c, msg, mon.ID) {
+			sent = true
+		}
+	}
+	for _, c := range channels {
+		if c.Type == db.NotificationChannelTypeSms && sendSMSAlert(ctx, n, c, msg, mon.ID, !sent) {
 			sent = true
 		}
 	}
@@ -173,8 +181,6 @@ func sendToChannel(ctx context.Context, n Notifiers, c db.NotificationChannel, m
 		return sendWebhookAlert(ctx, n, c, msg, monitorID)
 	case db.NotificationChannelTypeSlack:
 		return sendSlackAlert(ctx, n, c, msg, monitorID)
-	case db.NotificationChannelTypeSms:
-		return sendSMSAlert(ctx, n, c, msg, monitorID)
 	}
 	return false
 }
@@ -298,7 +304,11 @@ func consumeSMSCredit(ctx context.Context, n Notifiers, c db.NotificationChannel
 // toggle, not by anything here (ADR alerting) — a bounce from a number that
 // opted out via STOP on a two-way sender just comes back as an ordinary
 // delivery failure below, same as a carrier rejection or invalid number.
-func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID) bool {
+//
+// An accepted SMS is kept by its SID until Twilio's status callback reports
+// how it ended (HandleSMSStatus). onlyDelivery — nothing else delivered the
+// alert — stores the fallback email with it, sent if the SMS fails after all.
+func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID, onlyDelivery bool) bool {
 	if msg.SMS == "" {
 		return false
 	}
@@ -311,7 +321,7 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 		return false
 	}
 
-	statusCode, sendErr := n.SMS.Send(phone, msg.SMS)
+	sid, statusCode, sendErr := n.SMS.Send(phone, msg.SMS)
 
 	status, detail := "success", fmt.Sprintf("%d", statusCode)
 	if sendErr != nil {
@@ -331,6 +341,16 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 	if sendErr != nil {
 		n.Logger.Error("worker: send sms alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
 		return false
+	}
+	if sid != "" {
+		params := db.InsertSMSMessageParams{Sid: sid, OrgID: c.OrgID, ChannelID: c.ID}
+		if onlyDelivery {
+			params.FallbackSubject = pgtype.Text{String: msg.EmailSubject, Valid: true}
+			params.FallbackHtml = pgtype.Text{String: msg.EmailHTML, Valid: true}
+		}
+		if err := n.Queries.InsertSMSMessage(ctx, params); err != nil {
+			n.Logger.Error("worker: record sms message", "channel_id", c.ID, "sid", sid, "err", err)
+		}
 	}
 	return true
 }
@@ -501,6 +521,45 @@ func TruncateSMS(s string) string {
 	return string(runes[:smsSegmentLimit-1]) + "…"
 }
 
+// HandleSMSStatus acts on a status callback Twilio sent for an alert SMS
+// (ADR alerting). Only a final status acts, and only once per message:
+// delivered records success on the channel; failed or undelivered records
+// the failure and, when the SMS was the alert's only delivery, emails every
+// user in the org instead. Reports whether that fallback email went out.
+func HandleSMSStatus(ctx context.Context, n Notifiers, sid, status, errorCode string) bool {
+	if status != "delivered" && status != "failed" && status != "undelivered" {
+		return false
+	}
+	m, err := n.Queries.TakeSMSMessage(ctx, sid)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("worker: take sms message", "sid", sid, "err", err)
+		}
+		return false
+	}
+
+	deliveryStatus, detail := "success", status
+	if status != "delivered" {
+		deliveryStatus = "failed"
+		if errorCode != "" {
+			detail = fmt.Sprintf("%s (error %s)", status, errorCode)
+		}
+	}
+	if err := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{
+		ID:                 m.ChannelID,
+		LastDeliveryStatus: pgtype.Text{String: deliveryStatus, Valid: true},
+		LastDeliveryDetail: pgtype.Text{String: detail, Valid: true},
+	}); err != nil {
+		n.Logger.Error("worker: record sms delivery status", "channel_id", m.ChannelID, "err", err)
+	}
+
+	if deliveryStatus == "success" || !m.FallbackSubject.Valid {
+		return false
+	}
+	n.Logger.Warn("worker: sms alert failed after send, emailing the org", "channel_id", m.ChannelID, "sid", sid, "status", detail)
+	return dispatchFallbackEmail(ctx, n, m.OrgID, AlertMessage{EmailSubject: m.FallbackSubject.String, EmailHTML: m.FallbackHtml.String}, uuid.Nil)
+}
+
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
 	if err := queries.DeleteOldCronPings(ctx); err != nil {
 		logger.Error("worker: prune old pings", "err", err)
@@ -516,6 +575,11 @@ func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger
 		logger.Error("worker: prune old uptime checks", "err", err)
 	} else {
 		logger.Info("worker: pruned uptime_checks older than 90 days")
+	}
+	if err := queries.DeleteOldSMSMessages(ctx); err != nil {
+		logger.Error("worker: prune old sms messages", "err", err)
+	} else {
+		logger.Info("worker: pruned sms_messages older than 7 days")
 	}
 	if err := queries.DeleteOldPortChecks(ctx); err != nil {
 		logger.Error("worker: prune old port checks", "err", err)

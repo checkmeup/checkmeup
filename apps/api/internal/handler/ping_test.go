@@ -48,7 +48,7 @@ func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler,
 	// httptest server, which webhook.NewClient's SSRF protections (loopback
 	// blocked) would refuse to dial — not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
-	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), wh, slack.NewClient(), twilio.NewClient("", "", "", ""))
+	pingH := NewPingHandler(pool, telegram.NewClient(""), email.NewSender(""), wh, slack.NewClient(), twilio.NewClient("", "", "", "", ""))
 	return authH, monitorH, pingH, pool
 }
 

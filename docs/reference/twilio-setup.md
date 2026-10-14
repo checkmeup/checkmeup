@@ -17,7 +17,9 @@ SMS alerts ([PRD sms-alerts](../../.about/prd/sms-alerts.md), [ADR alerting](../
 3. **Create a Messaging Service** (Messaging > Services) — do not send from a bare phone number directly. The Messaging Service is what enables:
    - A single stable `TWILIO_MESSAGING_SERVICE_SID` to send from, regardless of how many underlying senders are attached later.
 
-   Note: opt-out compliance does **not** depend on this — checkmeup relies on its own in-app notification-channel toggle for that (see ADR alerting), since alphanumeric senders can't receive STOP replies at all. If a two-way sender happens to receive one anyway, Twilio's Advanced Opt-Out still honors it automatically at the carrier level; Checkmeup doesn't see that bounce yet (see the Inbox).
+   Leave the Messaging Service's own status callback empty: each alert SMS sets its own `StatusCallback` (`BASE_URL` + `/webhook/twilio/sms-status/` + a token derived from `JWT_SECRET`), so a message the carrier fails after Twilio accepted it is recorded as failed ([ADR alerting](../../.about/adr/alerting.md)). It's only set when `BASE_URL` is `https://`, so local dev sends without one.
+
+   Note: opt-out compliance does **not** depend on this — checkmeup relies on its own in-app notification-channel toggle for that (see ADR alerting), since alphanumeric senders can't receive STOP replies at all. If a two-way sender happens to receive one anyway, Twilio's Advanced Opt-Out still honors it automatically at the carrier level, and the message's status callback reports it as failed (below).
 4. **Register a sender and attach it to the Messaging Service** — this step has real lead time, unlike everything else here. checkmeup registers **two sender types on the same Messaging Service**, since alphanumeric sender IDs are not available in the US or Canada at all — Twilio routes each send to whichever sender fits the destination automatically:
 
    **US/Canada — Toll-Free Verification:**

@@ -58,6 +58,10 @@ A user adds a number with consent and gets the next down alert as one text, with
   → test: apps/api/internal/handler/billing_test.go "TestGetBillingInfo/displays 0 used once the reset date has passed, even before any send applies it"
 - When SMS was the only channel, or every channel failed, the alert goes to the org's users by email.
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/every attached channel failing falls back to org user email (generalized ADR billing fallback)"
+- An SMS Twilio accepted but the carrier failed is recorded as failed once Twilio reports it, and when it was the alert's only delivery the org's users get the alert by email.
+  → test: apps/api/internal/worker/worker_test.go "TestHandleSMSStatus/undelivered records the failure and emails the org when the sms was the only delivery"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/an accepted sms keeps the fallback email only when it is the alert's only delivery (ADR alerting)"
+  → test: apps/api/internal/handler/sms_status_test.go "TestHandleSMSStatus/a wrong token is a 404 and changes nothing"
 - A Twilio rejection is recorded with Twilio's error message and shown in Settings; failures aren't retried.
   → test: apps/api/internal/twilio/twilio_test.go "TestSend/non-2xx response surfaces Twilio's error message"
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/sms channel attempts a send and records failure when Twilio isn't configured"

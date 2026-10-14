@@ -65,7 +65,8 @@ func main() {
 	wh := webhook.NewClient()
 	sl := slack.NewClient()
 	rd := rdap.NewClient()
-	sm := twilio.NewClient(cfg.TwilioAccountSID, cfg.TwilioAPIKeySID, cfg.TwilioAPIKeySecret, cfg.TwilioMessagingServiceSID)
+	sm := twilio.NewClient(cfg.TwilioAccountSID, cfg.TwilioAPIKeySID, cfg.TwilioAPIKeySecret, cfg.TwilioMessagingServiceSID,
+		twilio.StatusCallbackURL(cfg.BaseURL, cfg.JWTSecret))
 	registerTelegramWebhook(cfg, tg, logger)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())

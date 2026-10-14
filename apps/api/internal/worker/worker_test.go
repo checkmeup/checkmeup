@@ -726,7 +726,7 @@ func TestDispatchAlert(t *testing.T) {
 	// not exercised here, see webhook_test.go.
 	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 	sl := slack.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
-	sm := twilio.NewClient("", "", "", "") // not configured: Send always errors, no network call
+	sm := twilio.NewClient("", "", "", "", "") // not configured: Send always errors, no network call
 	logger := testLogger()
 	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, Logger: logger}
 	msg := AlertMessage{Telegram: "down", EmailSubject: "down", EmailHTML: "<p>down</p>"}
@@ -1045,6 +1045,125 @@ func TestDispatchAlert(t *testing.T) {
 		sent := DispatchAlert(context.Background(), n, org.ID, MonitorRef{Type: "cron", ID: monitorID}, smsMsg)
 		if !sent {
 			t.Fatal("want the email fallback to count as delivered when the only attached channel (sms) fails")
+		}
+	})
+
+	t.Run("an accepted sms keeps the fallback email only when it is the alert's only delivery (ADR alerting)", func(t *testing.T) {
+		sids := []string{"SM-only", "SM-second"}
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]string{"sid": sids[0]})
+			sids = sids[1:]
+		}))
+		defer srv.Close()
+		twilioN := n
+		twilioN.SMS = twilio.NewClientWithBaseURL(srv.URL, srv.Client())
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN", EmailSubject: "down", EmailHTML: "<p>down</p>"}
+
+		org := testOrg(t, queries, pool)
+		upgradeOrgPlan(t, queries, org.ID, db.PlanSolo)
+		onlyMonitor := uuid.New()
+		attachNotificationChannel(t, queries, testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"}).ID, "cron", onlyMonitor)
+		DispatchAlert(context.Background(), twilioN, org.ID, MonitorRef{Type: "cron", ID: onlyMonitor}, smsMsg)
+
+		// An email channel is attached after the sms one, but delivers first.
+		secondMonitor := uuid.New()
+		attachNotificationChannel(t, queries, testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550007"}).ID, "cron", secondMonitor)
+		attachNotificationChannel(t, queries, testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "ops@example.com"}).ID, "cron", secondMonitor)
+		DispatchAlert(context.Background(), twilioN, org.ID, MonitorRef{Type: "cron", ID: secondMonitor}, smsMsg)
+
+		only, err := queries.TakeSMSMessage(context.Background(), "SM-only")
+		if err != nil {
+			t.Fatalf("take SM-only: %v", err)
+		}
+		if only.FallbackSubject.String != "down" || only.FallbackHtml.String != "<p>down</p>" {
+			t.Fatalf("SM-only fallback = %q / %q, want the alert's email", only.FallbackSubject.String, only.FallbackHtml.String)
+		}
+		second, err := queries.TakeSMSMessage(context.Background(), "SM-second")
+		if err != nil {
+			t.Fatalf("take SM-second: %v", err)
+		}
+		if second.FallbackSubject.Valid {
+			t.Fatalf("SM-second fallback = %q, want none: the email channel delivered the alert", second.FallbackSubject.String)
+		}
+	})
+}
+
+func TestHandleSMSStatus(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	n := Notifiers{Queries: queries, Mailer: email.NewSender(""), Logger: testLogger()}
+	ctx := context.Background()
+
+	// setup records a sent alert sms; withFallback as when it was the alert's only delivery.
+	setup := func(t *testing.T, withFallback bool) (db.NotificationChannel, string) {
+		t.Helper()
+		org := testOrg(t, queries, pool)
+		testUser(t, queries, org.ID)
+		c := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+		sid := "SM" + uuid.NewString()
+		params := db.InsertSMSMessageParams{Sid: sid, OrgID: org.ID, ChannelID: c.ID}
+		if withFallback {
+			params.FallbackSubject = pgtype.Text{String: "down", Valid: true}
+			params.FallbackHtml = pgtype.Text{String: "<p>down</p>", Valid: true}
+		}
+		if err := queries.InsertSMSMessage(ctx, params); err != nil {
+			t.Fatalf("insert sms message: %v", err)
+		}
+		return c, sid
+	}
+	delivery := func(t *testing.T, c db.NotificationChannel) (string, string) {
+		t.Helper()
+		got, err := queries.GetNotificationChannel(ctx, db.GetNotificationChannelParams{ID: c.ID, OrgID: c.OrgID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		return got.LastDeliveryStatus.String, got.LastDeliveryDetail.String
+	}
+
+	t.Run("undelivered records the failure and emails the org when the sms was the only delivery", func(t *testing.T) {
+		c, sid := setup(t, true)
+		if !HandleSMSStatus(ctx, n, sid, "undelivered", "30003") {
+			t.Fatal("want the fallback email sent")
+		}
+		if status, detail := delivery(t, c); status != "failed" || detail != "undelivered (error 30003)" {
+			t.Fatalf("delivery = %q, %q; want failed, undelivered (error 30003)", status, detail)
+		}
+	})
+
+	t.Run("failed without a stored fallback records the failure only", func(t *testing.T) {
+		c, sid := setup(t, false)
+		if HandleSMSStatus(ctx, n, sid, "failed", "") {
+			t.Fatal("want no fallback email: another channel delivered the alert")
+		}
+		if status, detail := delivery(t, c); status != "failed" || detail != "failed" {
+			t.Fatalf("delivery = %q, %q; want failed, failed", status, detail)
+		}
+	})
+
+	t.Run("delivered records success", func(t *testing.T) {
+		c, sid := setup(t, true)
+		if HandleSMSStatus(ctx, n, sid, "delivered", "") {
+			t.Fatal("want no fallback email for a delivered sms")
+		}
+		if status, detail := delivery(t, c); status != "success" || detail != "delivered" {
+			t.Fatalf("delivery = %q, %q; want success, delivered", status, detail)
+		}
+	})
+
+	t.Run("a non-final status leaves the message for the final one", func(t *testing.T) {
+		_, sid := setup(t, true)
+		HandleSMSStatus(ctx, n, sid, "sent", "")
+		if !HandleSMSStatus(ctx, n, sid, "undelivered", "30005") {
+			t.Fatal("want the final status to still act after a non-final one")
+		}
+	})
+
+	t.Run("only the first final status acts", func(t *testing.T) {
+		_, sid := setup(t, true)
+		HandleSMSStatus(ctx, n, sid, "undelivered", "30003")
+		if HandleSMSStatus(ctx, n, sid, "undelivered", "30003") {
+			t.Fatal("want a repeated callback to send no second fallback email")
 		}
 	})
 }

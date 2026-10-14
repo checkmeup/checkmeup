@@ -720,7 +720,7 @@ func (h *NotificationChannelHandler) sendTestSlack(config map[string]any) error 
 
 func (h *NotificationChannelHandler) sendTestSMS(config map[string]any) error {
 	phone, _ := config["phone_number"].(string)
-	_, err := h.sm.Send(strings.TrimSpace(phone), "Checkmeup: this is a test SMS alert. You're all set!")
+	_, _, err := h.sm.Send(strings.TrimSpace(phone), "Checkmeup: this is a test SMS alert. You're all set!")
 	return err
 }
 
