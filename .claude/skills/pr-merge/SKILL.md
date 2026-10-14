@@ -131,13 +131,10 @@ its own, and confirm it if you want certainty:
 gh run list --workflow=release.yml --limit 1   # release + "Deploy to production" jobs
 ```
 
-Never tell the user a merged change "still needs a deploy" — this
-section said exactly that until 2026-08-05 and it was wrong. The
+Never tell the user a merged change "still needs a deploy". The
 `make deploy`/`kamal` prohibition in CLAUDE.md scopes *who runs the
 command locally* (never Claude); it is not a claim that deploys are
-manual. That was true when this skill was written (2026-07-07) and
-stopped being true when auto-deploy landed (2026-07-18, `5bb3292`)
-without this section being updated.
+manual.
 
 ## Cleanup (optional)
 

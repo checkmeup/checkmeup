@@ -1,10 +1,10 @@
 # Inbox
 
-## Check Search Console once the changelog branch ships
+## Check Search Console after the changelog release
 
 2026-10-13 · session review
 
-`feat/changelog-noindex-release-notes` (release notes `noindex`, `/changelog`, trailing-slash 301, path-only canonical) isn't merged yet. Google drops pages only after a recrawl, which can take weeks. The "Page with redirect" count should grow as trailing-slash variants become 301s. The guess that today's 4 redirect pages are the `http://` and `www.` variants was never checked. Settled when Search Console shows the release notes excluded by `noindex`, no trailing-slash duplicates indexed, and the redirect pages accounted for.
+Release notes `noindex`, `/changelog`, the trailing-slash 301 and the path-only canonical shipped on 2026-10-13. Google drops pages only after a recrawl, which can take weeks. The "Page with redirect" count should grow as trailing-slash variants become 301s. The guess that today's 4 redirect pages are the `http://` and `www.` variants was never checked. Settled when Search Console shows the release notes excluded by `noindex`, no trailing-slash duplicates indexed, and the redirect pages accounted for.
 
 ## WhatsApp provider
 
@@ -69,3 +69,9 @@ Rewriting the epics as PRDs found three places where the code had moved away fro
 2026-10-14 · tech-debts.md
 
 `checkOverdue`, `buildUptimeDownAlert` and `buildPortDownAlert` each build their own `AlertMessage` (Telegram, email subject and HTML, webhook, Slack, SMS: one `fmt.Sprintf` per field), unlike SSL and domain, which share `expiredMessages`/`expiringSoonMessages`. Their reason text really differs per type, so one shared template would lose the phrasing or take as many parameters as it saves. Left as is; settled by extracting a shared builder when a fourth near-identical case shows up, or by deciding never to.
+
+## SMS delivery failures after Twilio accepts a send
+
+2026-10-14 · twilio-setup.md
+
+Checkmeup records a send as failed only when Twilio rejects the API call. A message Twilio accepts and a carrier later drops (an unreachable number, a STOP opt-out on a two-way sender) still reads as delivered, and the org's email fallback never fires. Catching it needs a status-callback endpoint (e.g. `POST /webhooks/twilio/sms-status`) verified by `X-Twilio-Signature`, set as the Messaging Service's status callback. Settled by building it or deciding the gap is acceptable.

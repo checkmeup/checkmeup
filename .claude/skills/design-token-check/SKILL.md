@@ -41,7 +41,7 @@ grep -rnE "#[0-9a-fA-F]{3,8}\b" --include="*.vue" . | grep -v "style.css"
 `docs/reference/design.md`'s token table before flagging it:
 
 - A hex value that matches a documented token (e.g. `#1D9E75` ==
-  `--green-500`) should be replaced with the token.
+  `--color-green-500`) should be replaced with the token.
 - A hex value with **no** token match may be a deliberate fixed color —
   e.g. `HomeView.vue`'s macOS-traffic-light mockup dots
   (`#ff5f57`/`#febc2e`/`#28c840`) are supposed to look like real macOS
@@ -49,8 +49,8 @@ grep -rnE "#[0-9a-fA-F]{3,8}\b" --include="*.vue" . | grep -v "style.css"
   "fix" those; note them as intentional.
 
 **3. For real hits**, replace with the matching token from
-`docs/reference/design.md` (36 tokens documented — brand greens, status
-colors, and per-theme neutrals/surfaces/accents), using the
+`docs/reference/design.md` (brand greens, status colors, and per-theme
+neutrals/surfaces/accents), using the
 `bg-[var(--token)]` / `text-[var(--token)]` Tailwind form, never a raw
 CSS custom-property reference.
 

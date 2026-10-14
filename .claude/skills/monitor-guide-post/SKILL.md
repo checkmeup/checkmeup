@@ -5,11 +5,11 @@ description: Write a new evergreen SEO guide post explaining one monitor type (e
 
 # Monitor-type guide post
 
-Three of these exist — `cron-job-monitoring-guide`, `uptime-monitoring-guide`,
-`port-tcp-monitoring-guide` — sharing one fixed structure and voice, distinct
+Four of these exist — `cron-job-monitoring-guide`, `uptime-monitoring-guide`,
+`port-tcp-monitoring-guide`, `dns-record-monitoring-guide` — sharing one fixed structure and voice, distinct
 from `release-notes` posts (which announce a shipped version) and disaster-story
 posts like `ssl-certificate-expired-story` (a one-off narrative, not this
-pattern). Read one of the three existing guide posts in full before writing —
+pattern). Read one of the existing guide posts in full before writing —
 this file describes the shape, not the prose voice.
 
 ## Steps
@@ -27,14 +27,13 @@ public site indefinitely. Find the check's implementation (e.g.
 `apps/api/internal/worker/worker_<type>.go`), and confirm: what the check
 actually does (protocol-aware or transport-only?), what config fields exist,
 what counts as failure, what the available check intervals are, and the
-current free-tier monitor limit (`docs/reference/limits.md` /
-`internal/billing/plans.go`). Note anything the feature does *not* do —
+current free-tier monitor limit (`internal/billing/plans.go`, ADR billing). Note anything the feature does *not* do —
 the "what this doesn't prove" section (see step 3) depends on knowing the
 real limits, not assumed ones.
 
 **3. Write the content file** at
 `apps/web/src/blog/posts/<type>-monitoring-guide.ts`, following this fixed
-section order (see the three existing posts for exact tone/length per
+section order (see the existing posts for exact tone/length per
 section — roughly 900-1100 words total):
 
 1. **Hook paragraph** — a concrete failure scenario this monitor type catches

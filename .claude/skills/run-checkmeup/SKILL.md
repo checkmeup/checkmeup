@@ -34,11 +34,6 @@ be re-run any number of times against an already-started stack — each
 run signs up a fresh timestamped email, so it never collides with a
 previous run's data.
 
-This was run fresh end-to-end while authoring this skill: `start` → `check`
-→ `stop`, all three passed, including a real sign-up → cookie → create
-cron monitor → list-it-back round trip and the web dev server's `/api`
-proxy to the Go backend.
-
 ## Direct invocation (what most PRs actually need)
 
 Most changes touch either a Go handler/query or a Vue component in
@@ -46,12 +41,9 @@ isolation — the full `smoke.sh` flow is for confirming the whole stack
 still wires together, not the first thing to reach for on every PR.
 
 ```bash
-cd apps/api && go test -count=1 ./...      # Go backend — ~25s, no separate test DB needed
-cd apps/web && bun run test                # Vue frontend (Vitest) — ~15s, 57 files / 550+ tests
+cd apps/api && go test -count=1 ./...      # Go backend — needs `make db`
+cd apps/web && bun run test                # Vue frontend (Vitest)
 ```
-
-Both were run clean during this skill's authoring (all packages `ok`, 554
-frontend tests passed).
 
 ## Run (human path)
 
@@ -69,15 +61,12 @@ normal local dev loop, not agent-drivable without a browser.
   points `DATABASE_URL` at host `db`**, which only resolved inside that
   container's network. On the plain host it must be `localhost:5432` —
   copy the line from `apps/api/.env.example`.
-- **Don't grep `/proc/*/cmdline` to find/kill a process you started with
-  `&` in Bash.** Each Bash tool call runs your command through a wrapper
-  shell whose own `cmdline` contains the literal text of the command you
-  just wrote — so a pattern like `grep -qE "api-test|vite"` matches your
-  *own* wrapper process too, and `kill`ing it kills the tool call itself
-  (exit 144, silent — the rest of the command never runs). Match on
-  `/proc/PID/comm` instead (just the short binary name, immune to this),
-  or better: use `smoke.sh stop`, which tracks real PIDs from launch time
-  and never greps.
+- **Don't `pkill -f` a pattern to stop a process you started with `&` in
+  Bash.** Each Bash tool call runs through a wrapper shell whose command
+  line contains the text you just wrote, so a pattern like `api-test|vite`
+  matches the wrapper too, and killing it kills the tool call itself
+  (exit 144, silent). Use `smoke.sh stop`, which tracks real PIDs from
+  launch time and never greps.
 - **No screenshot / browser step.** The run-skill authoring process
   normally wants a screenshot as proof of a working GUI; this project's
   explicit "don't use Playwright" rule means that step is replaced by the
@@ -93,6 +82,5 @@ normal local dev loop, not agent-drivable without a browser.
   log lines — check `/tmp/checkmeup-smoke/api.log` or `web.log` directly
   for the full trace if that's not enough.
 - If port 8080 or 5173 is already bound from a previous unclean session,
-  `smoke.sh stop` won't find it (no PID file) — find it via
-  `/proc/*/comm` matching `api` or `vite`-launched `node`, per the
-  Gotchas note above, rather than a `cmdline` grep.
+  `smoke.sh stop` won't find it (no PID file) — find the holder with
+  `lsof -ti :8080` (or `:5173`) and stop it by that PID.

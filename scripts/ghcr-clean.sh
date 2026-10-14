@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deletes old ghcr.io/checkmeup/checkmeup container image versions, keeping
 # only the N most recent (default 5). Kamal never prunes GHCR itself — every
-# deploy leaves the previous image behind (docs/deploy.md).
+# deploy leaves the previous image behind (docs/reference/deploy.md).
 #
 # Requires a classic GitHub PAT with read:packages + delete:packages scopes,
 # passed via GHCR_CLEANUP_TOKEN or (reusing the existing deploy secret)

@@ -30,7 +30,7 @@ top of the `Up` block referencing the ADR, not just an inline aside:
 ```sql
 -- +goose Up
 
--- ADR-NNN (link the reasoning, don't restate it in full)
+-- ADR <subject> (link the reasoning, don't restate it in full)
 ALTER TABLE orgs ADD COLUMN ...;
 
 -- +goose Down
@@ -63,8 +63,8 @@ handler:
 - Every tenant-scoped query **must** filter by `org_id`. Silent
   cross-tenant data leaks are the failure mode if this is skipped.
 - If the new table/column feeds into an existing plan-limit check (monitor
-  count, channel count, etc. — see `docs/reference/limits.md` and
-  ADR billing), confirm whether the limit logic needs updating too.
+  count, channel count, etc. — see ADR billing and
+  `internal/billing/plans.go`), confirm whether the limit logic needs updating too.
 
 **6. Verify.**
 

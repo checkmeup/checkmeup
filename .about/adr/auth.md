@@ -1,14 +1,14 @@
 # Authentication: browser sessions, API keys, two-factor and org membership
 
-Date: 2026-10-13
+Date: 2026-10-14
 
 A browser session is a short-lived JWT (15 min, HS256, claims `sub` user and `org`) in the `access_token` httpOnly cookie, with a refresh token in the `refresh_token` cookie, stored hashed in the database and rotated on use (7 days). Both cookies are `HttpOnly`, `SameSite=Strict`, `Secure` in production and `Path=/`; `SameSite=Strict` is the CSRF protection, so there is no CSRF token. Browser sessions never use the `Authorization` header. The frontend retries a `401` once through `POST /auth/refresh`; `auth.init()` uses plain `fetch` instead, because a `401` on `/me` at startup just means "not signed in".
 
 The public API is for scripts and third-party servers and authenticates with an `X-API-Key` header, never `Authorization`, so the two mechanisms stay visibly apart in code and logs. A key belongs to one org, is shown once, stored hashed, starts with `cmu_live_`, can be revoked at any time and is rate limited on its own (ADR limits). Read-only scoping is agreed but not built; it must exist before the first write endpoint under `/api/v1/public` (see the Inbox).
 
-TOTP secrets must be recoverable, so they are encrypted in the application with AES-256-GCM under `TOTP_ENCRYPTION_KEY` (32 bytes, base64), the nonce stored with the ciphertext. Backup codes are one-way hashed.
+Two-factor sign-in isn't built yet (PRD two-factor-auth). TOTP secrets must be recoverable, so they are to be encrypted in the application with AES-256-GCM under `TOTP_ENCRYPTION_KEY` (32 bytes, base64), the nonce stored with the ciphertext. Backup codes are to be one-way hashed.
 
-A user belongs to exactly one org. Inviting an email that already has an account, in any org, is refused with "This email is already registered".
+A user belongs to exactly one org. Invites aren't built yet (PRD team-management); inviting an email that already has an account, in any org, is to be refused with "This email is already registered".
 
 ## Considered options
 

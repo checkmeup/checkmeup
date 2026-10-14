@@ -2,7 +2,7 @@
 title: Activating Billing (Paddle)
 type: reference
 status: active
-updated: 2026-07-05
+updated: 2026-10-14
 tags: [billing, paddle, ops]
 ---
 
@@ -48,12 +48,12 @@ All the code is ready (PRD billing, PRD annual-billing, [ADR billing](../../.abo
 
 Paddle's sandbox and production are fully separate environments — separate API keys, client-side tokens, price IDs, and API host (`sandbox-api.paddle.com` vs `api.paddle.com`, selected by `PADDLE_ENVIRONMENT`/`VITE_PADDLE_ENVIRONMENT`). A sandbox key against the production host (or vice versa) just fails.
 
-| | `apps/api/.env` (backend, local dev) | `apps/web/.env` (frontend, local dev) | repo-root `.env` (Kamal, production) |
+| | `apps/api/.env` (backend, local dev) | `apps/web/.env` (frontend, local dev) | GitHub Actions secrets (production; repo-root `.env` for a break-glass deploy) |
 |---|---|---|---|
 | Environment | `PADDLE_ENVIRONMENT=sandbox` | `VITE_PADDLE_ENVIRONMENT=sandbox` | omit `PADDLE_ENVIRONMENT`/`VITE_PADDLE_ENVIRONMENT` — both default to `production` |
 | Credentials | Sandbox API key, webhook secret, price IDs (from Paddle's Sandbox account) | Sandbox client-side token | Live API key, webhook secret, price IDs, client-side token |
 
-`apps/api/.env.example` and `apps/web/.env.example` already default to sandbox — copy them as-is for local dev. For production, the repo-root `.env` (Kamal secrets, gitignored) should either leave the environment vars out entirely or set them explicitly to `production`; [`config/deploy.yml`](../../config/deploy.yml) reads the Paddle secrets into the running container (`env.secret`) and the client-side token/environment into the frontend build (`builder.args`, since Vite only bakes `VITE_*` vars in at build time).
+`apps/api/.env.example` and `apps/web/.env.example` already default to sandbox — copy them as-is for local dev. For production, the GitHub Actions secrets (and a break-glass repo-root `.env`) should either leave the environment vars out entirely or set them explicitly to `production`; [`config/deploy.yml`](../../config/deploy.yml) reads the Paddle secrets into the running container (`env.secret`) and the client-side token/environment into the frontend build (`builder.args`, since Vite only bakes `VITE_*` vars in at build time).
 
 ## What's already handled in code, so you don't need to configure it manually
 

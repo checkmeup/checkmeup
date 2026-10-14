@@ -2,7 +2,7 @@
 title: DoS / Overload Vulnerability Audit
 type: reference
 status: active
-updated: 2026-07-12
+updated: 2026-10-14
 tags: [security, dos, audit]
 ---
 
@@ -18,9 +18,9 @@ The concrete, file/line-cited claims below are now re-checked mechanically by th
 
 ## Things that are fine
 
-- All six check loops (cron overdue, uptime, SSL, domain, port, dns) bounded via a 50-goroutine semaphore (`checkConcurrency`, `worker.go:33`) ✓ — fixed 2026-07-04, cron's `checkOverdue` was the last one still processing sequentially; dns added 2026-07-29 (PRD dns-monitoring) following the same pattern; `checkStuckCronRuns` (PRD zombie-job-detection, 2026-07-30) added as a seventh loop, same bounded pattern
+- All six check loops (cron overdue, uptime, SSL, domain, port, dns) bounded via a 50-goroutine semaphore (`checkConcurrency` in `worker.go`) ✓ — fixed 2026-07-04, cron's `checkOverdue` was the last one still processing sequentially; dns added 2026-07-29 (PRD dns-monitoring) following the same pattern; `checkStuckCronRuns` (PRD zombie-job-detection, 2026-07-30) added as a seventh loop, same bounded pattern
 - `cron_runs` (ADR workers, PRD zombie-job-detection's start-ping/stuck-run table) pruned after 30 days by `DeleteOldCronRuns`, alongside the existing `cron_pings` cleanup (`worker.go`'s `pruneOldPings`) ✓ — added 2026-07-30
-- Incident list queries capped at `LIMIT 200` (`queries/monitors.sql:93`, `queries/uptime.sql:107`, `queries/port.sql:103`, `queries/dns.sql`'s `ListDNSIncidents`) ✓
+- Incident list queries capped at `LIMIT 200` (`queries/monitors.sql`, `queries/uptime.sql`, `queries/port.sql`, `queries/dns.sql`) ✓
 - Manual (status-page) incident list queries also capped at `LIMIT 200` (`queries/incidents.sql`'s `ListStatusPageIncidents` and `ListActiveStatusPageIncidentsForPage`) ✓ — fixed 2026-07-12; the public status page's resolved-incidents section was already paginated (`LIMIT $2 OFFSET $3`), but the private dashboard list and the public page's active-incidents section had no cap until this pass
 - `uptime_checks`, `port_checks`, and `dns_checks` pruned after 90 days by `DeleteOldUptimeChecks`/`DeleteOldPortChecks`/`DeleteOldDNSChecks`, alongside the existing `cron_pings` cleanup (`worker.go`'s `pruneOldPings`) ✓ — dns added 2026-07-29 (PRD dns-monitoring)
 - Resolved manual incidents pruned after 90 days by `DeleteOldStatusPageIncidents`, same daily cleanup pass as the checks above — uniform across every plan, no per-plan creation limit needed ✓ — added 2026-07-12; still-active incidents are exempt regardless of age, only resolved ones age out
@@ -29,8 +29,8 @@ The concrete, file/line-cited claims below are now re-checked mechanically by th
 - Maintenance windows capped at 100 per org total (`maxMaintenanceWindows`, `maintenance.go`'s `CreateMaintenanceWindow`; `ListMaintenanceWindows` also `LIMIT 200`) ✓ — added 2026-07-12. Unlike incidents, maintenance windows have no retention/pruning of old ones, so this caps cumulative creation rather than a concurrently-active count. `409 too_many_maintenance_windows` on the 101st.
 - API keys capped at 100 active per org (`maxAPIKeys`, `api_keys.go`'s `CreateAPIKey`; `ListAPIKeys` also `LIMIT 200`) ✓ — added 2026-07-12. `409 too_many_api_keys` on the 101st; revoking one frees a slot.
 - `loadActiveIncidents` (`status_public.go`) fetches every active incident's update timeline in one batched query (`ListStatusPageIncidentUpdatesForIncidents`, `WHERE incident_id = ANY(...)`), not one query per incident ✓ — fixed 2026-07-12. The per-resource caps above bound each piece individually, but a page with many active incidents was still issuing that many separate DB round-trips on every unauthenticated page load before this; now it's always 2 queries regardless of how many active incidents apply to the page.
-- Public status page rate-limited at 300/min by IP, same as its badge endpoints (`server.go:89`) ✓
-- Every authenticated route carries a blanket 300 req/min-per-org limit on top of any tighter per-route limit (`server.go:128`) ✓
+- Public status page rate-limited at 300/min by IP, same as its badge endpoints (`server.go`) ✓
+- Every authenticated route carries a blanket 300 req/min-per-org limit on top of any tighter per-route limit (`server.go`) ✓
 - Monitor creation is plan-limited (10–1000 per plan) ✓
 - Cron pings and uptime check reads are paginated ✓
 - Request body capped at 64 KB globally ✓

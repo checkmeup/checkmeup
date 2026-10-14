@@ -2,7 +2,7 @@
 title: Design System
 type: reference
 status: active
-updated: 2026-07-05
+updated: 2026-10-14
 tags: [design, tokens, colors, logo]
 ---
 
@@ -31,15 +31,15 @@ The icon is a stylized `C`/bracket that morphs into a checkmark. Two greens in t
 Redesigned July 2026 ("Redesign v2") to a lower-contrast, near-black/near-white neutral
 scale with translucent surfaces, replacing the earlier flat-hex GitHub-dark-style palette.
 
-**Brand greens** (fixed hex, both themes — the raw scale never changes)
+**Brand greens** (Tailwind theme colors in `style.css`'s `@theme`; fixed hex, both themes)
 
 | Token | Hex |
 |---|---|
-| `--green-100` | `#D3F5E9` |
-| `--green-300` | `#4DC9A0` |
-| `--green-500` | `#1D9E75` |
-| `--green-700` | `#0F6E56` |
-| `--green-900` | `#08392E` |
+| `--color-green-100` | `#D3F5E9` |
+| `--color-green-300` | `#4DC9A0` |
+| `--color-green-500` | `#1D9E75` |
+| `--color-green-700` | `#0F6E56` |
+| `--color-green-900` | `#08392E` |
 
 **Status colors** (semantic — never rebrand these)
 
@@ -128,4 +128,4 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   `style.css` — every `font-mono` utility class (timestamps, ping URLs, uptime stats)
   picks it up automatically. Falls back to `ui-monospace`/`SFMono-Regular`.
 
-Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates and is out of scope for PRD theme's theme toggle. See PRD theme's epic note for why.
+Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates the theme toggle, and PRD theme lists a dark status page as a non-goal.

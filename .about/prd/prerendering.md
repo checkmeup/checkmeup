@@ -26,5 +26,5 @@ Every public page's raw HTML has its own title, description, Open Graph tags and
 - A prerendered route is served from its own `index.html` without a redirect.
   → test: apps/api/internal/server/server_test.go "TestHandleSPA/prerendered route directory serves its index.html without a redirect"
 - Fetching any blog post's URL without running JavaScript returns its title, description and `og:title`, `og:description`, `og:image`.
-- Fetching `/`, `/pricing`, `/docs`, `/faq`, `/about`, `/terms`, `/privacy`, `/refund` and `/blog` without JavaScript returns a page with an `<h1>` and its own title and Open Graph tags.
+- Fetching `/`, `/pricing`, `/docs`, `/faq`, `/about`, `/terms`, `/privacy`, `/refund`, `/blog` and `/changelog` without JavaScript returns a page with an `<h1>` and its own title and Open Graph tags.
 - `sitemap.xml` and the `noindex` tags keep working on the prerendered pages.

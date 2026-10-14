@@ -1,12 +1,12 @@
 # Local development: toolchain in mise, services in Docker
 
-Date: 2026-10-13
+Date: 2026-10-14
 
 Development runs on the host; there is no devcontainer. Languages and command-line tools (Go, Bun, Node, golangci-lint, sqlc, air, goose, gcov2lcov, the Codacy linters) are pinned in `mise.toml` at the versions CI pins, so local tools can't quietly drift from CI's. `make setup` installs them.
 
 External services run in Docker from the root `docker-compose.yml`, each with its own `make` target. Today that is only Postgres (`make db`), on CI's `postgres:17-alpine` image with CI's credentials and port, so one `DATABASE_URL` on `localhost:5432` works locally, in CI and as the tests' fallback. A service added later (a mail catcher, an S3 stand-in) gets a compose service and a `make` target the same way.
 
-Git hooks are the baloo plugin's, configured in `.claude/baloo.yml`: on commit they check Conventional Commits (lines up to 140), no AI co-author, no secrets, no conflict markers and no large files, then run lint-staged (oxlint and oxfmt); on push they refuse merge commits. A new session writes them into `.git/hooks`.
+Git hooks are the baloo plugin's, configured in `.claude/baloo.yml`: on commit they check Conventional Commits (lines up to 140), no AI co-author, no secrets, no conflict markers, no large files and no stale ADR Date, then run lint-staged (oxlint and oxfmt); on push they refuse merge commits. A new session writes them into `.git/hooks`.
 
 Kamal stays out of `mise.toml`: only the operator runs it, on the break-glass deploy path, and installs it with `gem install kamal`.
 

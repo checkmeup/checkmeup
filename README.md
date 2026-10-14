@@ -4,7 +4,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/6354d576310e41ab86a9fdd8572366b6)](https://app.codacy.com/gh/checkmeup/checkmeup/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
-Cron, uptime, SSL, domain expiry, and port (TCP) monitors with Telegram, Slack and SMS alerts and white-label status pages.
+Cron, uptime, SSL, domain expiry, port (TCP) and DNS record monitors, with Telegram, email, Slack, webhook and SMS alerts, and public status pages for your clients.
 
 ## Stack
 
@@ -12,14 +12,13 @@ Cron, uptime, SSL, domain expiry, and port (TCP) monitors with Telegram, Slack a
 | ----- | ------------------------------------------------ |
 | API   | Go · Chi · sqlc · goose · PostgreSQL             |
 | Web   | Vue 3 · Vite · Pinia · TanStack Query · Tailwind |
-| Infra | Hetzner · Kamal · Traefik                        |
+| Infra | Hetzner · Kamal · kamal-proxy                    |
 
 ## Development
 
 ```bash
-# Prerequisites: Docker (for PostgreSQL)
-docker-compose up -d db
-
+make setup  # once: tools from mise.toml, bun install, apps/api/.env
+make db     # PostgreSQL in Docker on localhost:5432
 make dev    # API on :8080 · Web on :5173
 make test   # lint + test + coverage
 make build  # production build

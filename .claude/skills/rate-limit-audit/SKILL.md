@@ -7,7 +7,7 @@ description: Audit apps/api/internal/server/server.go for routes with no rate-li
 
 PRD security-hardening established that every route gets rate-limit coverage — either its
 own `.With(httprate...)` wrapper, or an enclosing `r.Group`/`r.Route`
-block's blanket `r.Use(httprate.Limit(...))` (chi propagates middleware
+block's blanket `r.Use(httprate.LimitBy(...))` (chi propagates middleware
 down through nested route blocks even though `Route()` mounts a
 sub-router, so a parent's `r.Use()` still wraps everything nested inside
 it). It's easy to add a new endpoint and forget this.
@@ -28,18 +28,17 @@ exceptions" section for the two routes that are deliberately unlimited
 **2. For each real finding**, add rate limiting following the existing
 patterns in `server.go`:
 
-- Public, unauthenticated route → `r.With(httprate.LimitByIP(N,
-  duration)).Verb(...)`, tuned to the endpoint's abuse potential (compare
+- Public, unauthenticated route → `r.With(httprate.LimitBy(N,
+  duration, clientIPKey)).Verb(...)`, tuned to the endpoint's abuse potential (compare
   neighboring routes — auth endpoints are tight, e.g. sign-up at 5/hour;
   status-page badges are generous at 300/min since they're embed-friendly)
 - Authenticated route inside the `RequireAuth` group → usually needs
-  nothing extra, it inherits the blanket 300/min-per-org limit at
-  server.go:128; add a tighter `.With(httprate.Limit(N, duration,
-  httprate.WithKeyFuncs(authOrgKey)))` only if the action is unusually
+  nothing extra, it inherits the group's blanket 300/min-per-org limit; add a
+  tighter `.With(httprate.LimitBy(N, duration, authOrgKey))` only if the action is unusually
   expensive (real third-party API calls, like `/billing/checkout`) or
   spammable (like notification-channel test-sends)
 - New top-level route group (like `/public` for the API-key-authed
-  routes) → needs its own `r.Use(httprate.Limit(...))`, since it isn't
+  routes) → needs its own `r.Use(httprate.LimitBy(...))`, since it isn't
   nested under the session-auth group's blanket limit
 
 **3. Verify** by re-running the audit script — should return to "All

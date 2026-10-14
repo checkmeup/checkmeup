@@ -50,8 +50,8 @@ should fit one of these, not invent a fourth without strong justification:
    `MarkUptimeMonitorDown`, `RecordPortCheckUp`, etc. The id comes from
    a monitor row the background worker already fetched via an
    org-agnostic-but-not-request-facing listing query (e.g.
-   `ListOverdueCronMonitors`), not from any HTTP request. See
-   `apps/api/internal/worker/worker.go`'s call sites.
+   `ListOverdueCronMonitors`), not from any HTTP request. See the call sites in
+   `apps/api/internal/worker/worker_*.go`.
 2. **Self-lookup by authenticated identity** — `GetUserByID`,
    `UpdateUserPassword`, `AcceptUserTerms`, `TouchAPIKeyLastUsed`. The id
    is the caller's *own* ID from verified JWT claims or an

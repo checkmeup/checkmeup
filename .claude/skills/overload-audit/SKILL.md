@@ -7,8 +7,8 @@ description: Re-verify the concrete, greppable claims in docs/reference/limits.m
 
 [`docs/reference/limits.md`](../../../docs/reference/limits.md) is a DoS/
 overload security audit — a checklist of "things that are fine" (bounded
-concurrency, capped queries, rate limits, plan limits), each with a
-file/line citation. It already drifted stale once: four findings were
+concurrency, capped queries, rate limits, plan limits), each citing the
+file it lives in. It already drifted stale once: four findings were
 fixed in code across earlier commits without the doc being updated, so it
 read as if open vulnerabilities were still open when they weren't. This
 skill re-verifies the concrete, mechanically-checkable subset of that
@@ -72,7 +72,7 @@ claims... still hold."
 - The public status page + its two badge endpoints are still IP-rate-limited
   at 300/min (`server.go`)
 - The `RequireAuth` group still carries its blanket 300/min-per-org
-  `httprate.Limit(...)`
+  `httprate.LimitBy(...)`
 - The global 64 KB `http.MaxBytesReader` request-body cap is still wired
 - Every plan in `internal/billing/plans.go` still has a finite (non `-1`)
   `MonitorTotal`

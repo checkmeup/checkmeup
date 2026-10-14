@@ -19,7 +19,7 @@ command it was supposed to only preview.
 ## Follow-up
 
 - `CLAUDE.md`'s Don't section got a first-line warning against running
-  `make deploy`/`make ghcr-clean`/`kamal <anything>`/`docker build`\`buildx`
+  `make deploy`/`make ghcr-clean`/`kamal <anything>`/`docker build`/`buildx`
   against `config/deploy.yml` at all outside the human operator — `-n` is
   explicitly called out as not a safe way to preview this target.
 - 2026-07-27: turned into a deterministic guard — a `PreToolUse` hook

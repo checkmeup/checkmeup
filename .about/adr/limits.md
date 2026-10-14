@@ -1,8 +1,8 @@
 # Rate limits, safety caps and data retention
 
-Date: 2026-10-13
+Date: 2026-10-14
 
-Rate limits are in-process `go-chi/httprate` middleware, per route, keyed by the narrowest thing that fits: IP for auth, sign-up, webhooks and badges, the ping token for pings, the org (plus IP) for feature suggestions, the API key for the public API. A limited request gets `429` with `Retry-After`; counters reset when the process restarts. The current routes and numbers are in `apps/api/internal/server/server.go` and `docs/reference/limits.md`. Badges are keyed by IP, not slug: a badge URL is public, and keying by slug would let one page's many embedders exhaust everyone's limit.
+Rate limits are in-process `go-chi/httprate` middleware, per route, keyed by the narrowest thing that fits: IP for auth, sign-up, webhooks and badges, the ping token for pings, the org (plus IP) for feature suggestions, the API key for the public API. A limited request gets `429` with `Retry-After`; counters reset when the process restarts. The current routes and numbers are in `apps/api/internal/server/server.go`. Badges are keyed by IP, not slug: a badge URL is public, and keying by slug would let one page's many embedders exhaust everyone's limit.
 
 Resources that grow by human action rather than by plan get a flat cap, the same on every plan, with a `LIMIT 200` on their list query: 100 updates per incident, 100 maintenance windows per org, 100 active API keys per org, 100 active manual incidents per org. Hitting one returns `409` with its own code (`too_many_incident_updates`, `too_many_maintenance_windows`, `too_many_api_keys`, `too_many_active_incidents`), never `plan_limit_reached`, because upgrading doesn't lift it; only resolving, deleting or revoking does.
 

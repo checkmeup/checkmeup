@@ -2,7 +2,7 @@
 title: Deployment Guide
 type: reference
 status: active
-updated: 2026-08-05
+updated: 2026-10-14
 tags: [ops, deployment, kamal, hetzner]
 ---
 
@@ -12,28 +12,12 @@ Kamal 2 on Hetzner CX23 · kamal-proxy SSL · GHCR image registry
 
 ---
 
-## How the dev workflow changed
-
-**Nothing changed for day-to-day development.** You still use:
-
-```bash
-make dev    # hot-reload API + Vue dev server
-make test   # lint + test + coverage
-```
-
-What is new:
-
-| Before | After |
-|--------|-------|
-| No production setup | `make deploy cmd=deploy` ships to prod |
-| Single `.env` (dev only) | Two env files: `apps/api/.env` (dev) and `.env` (Kamal/prod secrets) |
-| Devcontainer had no Docker CLI | Devcontainer has Docker CLI + buildx + Kamal gem |
-| No image registry | Images pushed to `ghcr.io/checkmeup/checkmeup` on every deploy |
+## Env files
 
 The two `.env` files are intentionally separate:
 
 - **`apps/api/.env`** — local dev only; `DATABASE_URL` points to `localhost:5432` (`make db`, repo-root `docker-compose.yml`); committed as `.env.example` template, real file gitignored
-- **`.env`** (repo root) — Kamal/prod secrets only; never touches the running dev server; always gitignored
+- **`.env`** (repo root) — prod secrets for a break-glass deploy from the Mac; never touches the running dev server; always gitignored. CI deploys read the same secrets from GitHub Actions secrets instead (`release.yml`)
 
 ---
 
@@ -125,20 +109,17 @@ GitHub Container Registry charges for private packages only:
 | Free | 500 MB | 1 GB/mo | $0.008/GB/day storage, $0.50/GB transfer |
 | Pro ($4/mo) | 2 GB | 10 GB/mo | same rates |
 
-Our image is ~150–250 MB compressed. Each deploy creates a new tagged image.
-**Kamal does not prune old images automatically** — storage accumulates over time.
+Our image is ~150–250 MB compressed. Each deploy creates a new tagged image, and
+Kamal never prunes GHCR itself: after every deploy, `release.yml` runs
+`scripts/ghcr-clean.sh 5`, keeping the five newest versions (`make ghcr-clean`
+is the manual equivalent).
 
-Prune old images periodically:
+Old images on the server itself are pruned by hand:
 
 ```bash
 # On the server (SSH in as deploy):
 docker image prune -a --filter "until=720h"   # remove images older than 30 days
-
-# Or via Kamal:
-kamal app images              # list images on server
 ```
-
-In practice: 10 deploys/week × 200 MB = 2 GB/month — stays within free tier unless deploying very frequently or the image grows large.
 
 If the `ghcr.io/checkmeup/checkmeup` package is set to **public** (no auth needed to pull), storage and transfer are completely free. Go to GitHub → Packages → checkmeup → Package settings → Change visibility → Public.
 
@@ -146,9 +127,9 @@ If the `ghcr.io/checkmeup/checkmeup` package is set to **public** (no auth neede
 
 CX23 includes **20 TB/month** outbound. At MVP scale this is effectively unlimited. Inbound traffic is always free.
 
-### Hidden cost: build time
+### Build time
 
-Every `kamal deploy` builds the Docker image on your **local machine**. The build takes 1–3 minutes. This is CPU and energy on your Mac, not a monetary cost, but worth knowing — especially since:
+A CI deploy builds the image on the GitHub runner; a break-glass `kamal deploy` builds it on your Mac. Either way the build takes 1–3 minutes:
 
 - Go dependency layer is cached between deploys (only rebuilt when `go.mod` changes)
 - Bun dependency layer is cached between deploys (only rebuilt when `package.json` changes)
@@ -160,7 +141,7 @@ Every `kamal deploy` builds the Docker image on your **local machine**. The buil
 
 ### Secrets file
 
-Create `.env` in the repo root (gitignored — never commit this):
+Production secrets live in GitHub Actions secrets, read by `release.yml`. For a break-glass deploy, create `.env` in the repo root (gitignored — never commit this) with the same values. The full list is `env.secret` in [`config/deploy.yml`](../../config/deploy.yml) plus the build-time `VITE_*` values; the core four:
 
 ```bash
 KAMAL_REGISTRY_PASSWORD=ghp_...   # GitHub PAT with write:packages scope
@@ -266,10 +247,10 @@ content) causes Kamal to pass an empty `-p` flag to `docker login`, which fails.
 
 | Secret | Location | How to rotate |
 |--------|----------|---------------|
-| `KAMAL_REGISTRY_PASSWORD` | `.env` only | Regenerate PAT on GitHub → update `.env` |
-| `JWT_SECRET` | `.env` only | Update `.env`; all active sessions expire on next deploy |
-| `POSTGRES_PASSWORD` | `.env` + server | Changing requires: stop app, `docker exec` into db container, `ALTER USER`, update `.env`, redeploy |
-| `DATABASE_URL` | `.env` only | Update if host/port/user/password changes |
+| `KAMAL_REGISTRY_PASSWORD` | `.env` (CI uses `GITHUB_TOKEN`) | Regenerate PAT on GitHub → update `.env` |
+| `JWT_SECRET` | GitHub secrets + `.env` | Update both; all active sessions expire on the next deploy |
+| `POSTGRES_PASSWORD` | GitHub secrets + `.env` + server | Changing requires: stop app, `docker exec` into db container, `ALTER USER`, update the secrets, redeploy |
+| `DATABASE_URL` | GitHub secrets + `.env` | Update if host/port/user/password changes |
 
 `.kamal/secrets` re-exports from the shell environment — it never contains literal values:
 

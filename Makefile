@@ -1,4 +1,4 @@
-.PHONY: setup db install update lint test dev build clean migrate migrate-create deploy ghcr-clean next
+.PHONY: setup db install update lint test dev build clean migrate migrate-create deploy ghcr-clean
 
 # One-time local setup: toolchain from mise.toml, JS deps, and a starter
 # apps/api/.env (never overwrites an existing one).
@@ -70,9 +70,3 @@ migrate:
 migrate-create:
 	@test -n "$(name)" || (echo "Usage: make migrate-create name=your_migration_name" && exit 1)
 	goose -dir apps/api/migrations create $(name) sql
-
-merge:
-	git pull origin main
-	git checkout main
-	git merge next
-	git push -u origin main
