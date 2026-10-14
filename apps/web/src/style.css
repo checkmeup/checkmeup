@@ -11,13 +11,14 @@
      (timestamps, ping URLs, response times, uptime stats) — loaded via Google
      Fonts link tags in index.html. */
   --font-sans:
-    Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, sfmono-regular, monospace;
 }
 
 :root {
   /* Native controls (checkboxes, date pickers, scrollbars) follow the theme. */
   color-scheme: dark;
+
   --bg: #0e1211;
   --surface: #131816;
   --surface-raised: #1a201e;
@@ -92,6 +93,7 @@
    <html> (see lib/theme.ts). */
 :root[data-theme='light'] {
   color-scheme: light;
+
   --bg: #fff;
   --surface: #f7f9f7;
   --surface-raised: #f1f4f1;

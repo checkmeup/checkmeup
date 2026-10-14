@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -95,15 +97,27 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
 		return
 	}
-	ctx := r.Context()
-	hours := int32(checkHistoryHours)
+	results, err := h.loadHourResults(r.Context(), orgID, int32(checkHistoryHours))
+	if err != nil {
+		slog.ErrorContext(r.Context(), "list check history failed", "err", err)
+		respond.InternalError(w)
+		return
+	}
+	respond.JSON(w, http.StatusOK, checkHistoryResponse{
+		Hours:    checkHistoryHours,
+		Monitors: buildCheckHistory(time.Now(), checkHistoryHours, results),
+	})
+}
+
+// loadHourResults collects the org's hourly check counts from every monitor
+// type that keeps a check history. A cron incident hour counts as one failed
+// check, since a missed ping leaves no row of its own.
+func (h *MonitorHandler) loadHourResults(ctx context.Context, orgID uuid.UUID, hours int32) ([]hourResult, error) {
 	var results []hourResult
 
 	uptime, err := h.queries.ListUptimeCheckHistory(ctx, db.ListUptimeCheckHistoryParams{OrgID: orgID, Hours: hours})
 	if err != nil {
-		slog.ErrorContext(ctx, "list uptime check history failed", "err", err)
-		respond.InternalError(w)
-		return
+		return nil, fmt.Errorf("uptime: %w", err)
 	}
 	for _, row := range uptime {
 		results = append(results, hourResult{"uptime", row.MonitorID, row.Hour.Time, row.Checks, row.Failures})
@@ -111,9 +125,7 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 
 	port, err := h.queries.ListPortCheckHistory(ctx, db.ListPortCheckHistoryParams{OrgID: orgID, Hours: hours})
 	if err != nil {
-		slog.ErrorContext(ctx, "list port check history failed", "err", err)
-		respond.InternalError(w)
-		return
+		return nil, fmt.Errorf("port: %w", err)
 	}
 	for _, row := range port {
 		results = append(results, hourResult{"port", row.MonitorID, row.Hour.Time, row.Checks, row.Failures})
@@ -121,9 +133,7 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 
 	dns, err := h.queries.ListDNSCheckHistory(ctx, db.ListDNSCheckHistoryParams{OrgID: orgID, Hours: hours})
 	if err != nil {
-		slog.ErrorContext(ctx, "list dns check history failed", "err", err)
-		respond.InternalError(w)
-		return
+		return nil, fmt.Errorf("dns: %w", err)
 	}
 	for _, row := range dns {
 		results = append(results, hourResult{"dns", row.MonitorID, row.Hour.Time, row.Checks, row.Failures})
@@ -131,9 +141,7 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 
 	pings, err := h.queries.ListCronPingHistory(ctx, db.ListCronPingHistoryParams{OrgID: orgID, Hours: hours})
 	if err != nil {
-		slog.ErrorContext(ctx, "list cron ping history failed", "err", err)
-		respond.InternalError(w)
-		return
+		return nil, fmt.Errorf("cron pings: %w", err)
 	}
 	for _, row := range pings {
 		results = append(results, hourResult{"cron", row.MonitorID, row.Hour.Time, row.Checks, row.Failures})
@@ -141,16 +149,10 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 
 	incidentHours, err := h.queries.ListCronIncidentHours(ctx, db.ListCronIncidentHoursParams{OrgID: orgID, Hours: hours})
 	if err != nil {
-		slog.ErrorContext(ctx, "list cron incident hours failed", "err", err)
-		respond.InternalError(w)
-		return
+		return nil, fmt.Errorf("cron incidents: %w", err)
 	}
 	for _, row := range incidentHours {
 		results = append(results, hourResult{"cron", row.MonitorID, row.Hour.Time, 0, 1})
 	}
-
-	respond.JSON(w, http.StatusOK, checkHistoryResponse{
-		Hours:    checkHistoryHours,
-		Monitors: buildCheckHistory(time.Now(), checkHistoryHours, results),
-	})
+	return results, nil
 }
