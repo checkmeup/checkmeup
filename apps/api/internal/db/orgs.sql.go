@@ -12,7 +12,7 @@ import (
 )
 
 const getOrgByID = `-- name: GetOrgByID :one
-SELECT id, name, plan, created_at, updated_at, telegram_chat_id, subscription_status, plan_renews_at, billing_cycle, alert_email, email_alerts_enabled, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at FROM orgs WHERE id = $1
+SELECT id, name, plan, created_at, updated_at, subscription_status, plan_renews_at, billing_cycle, paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at FROM orgs WHERE id = $1
 `
 
 func (q *Queries) GetOrgByID(ctx context.Context, id uuid.UUID) (Org, error) {
@@ -24,12 +24,9 @@ func (q *Queries) GetOrgByID(ctx context.Context, id uuid.UUID) (Org, error) {
 		&i.Plan,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TelegramChatID,
 		&i.SubscriptionStatus,
 		&i.PlanRenewsAt,
 		&i.BillingCycle,
-		&i.AlertEmail,
-		&i.EmailAlertsEnabled,
 		&i.PaddleCustomerID,
 		&i.PaddleSubscriptionID,
 		&i.SmsCreditsUsedThisMonth,

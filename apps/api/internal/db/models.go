@@ -668,12 +668,9 @@ type Org struct {
 	Plan                    Plan               `json:"plan"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	TelegramChatID          pgtype.Text        `json:"telegram_chat_id"`
 	SubscriptionStatus      string             `json:"subscription_status"`
 	PlanRenewsAt            pgtype.Timestamptz `json:"plan_renews_at"`
 	BillingCycle            string             `json:"billing_cycle"`
-	AlertEmail              pgtype.Text        `json:"alert_email"`
-	EmailAlertsEnabled      bool               `json:"email_alerts_enabled"`
 	PaddleCustomerID        pgtype.Text        `json:"paddle_customer_id"`
 	PaddleSubscriptionID    pgtype.Text        `json:"paddle_subscription_id"`
 	SmsCreditsUsedThisMonth int32              `json:"sms_credits_used_this_month"`

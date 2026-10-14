@@ -75,7 +75,7 @@ func testLogger() *slog.Logger {
 // a deliverable channel create one explicitly via testNotificationChannel,
 // since dispatchAlert reads monitor_notification_channels, not org fields
 // (ADR alerting).
-func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.CreateOrgRow {
+func testOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
 	t.Helper()
 	org, err := queries.CreateOrg(context.Background(), "test-"+uuid.NewString())
 	if err != nil {

@@ -1,11 +1,7 @@
 -- name: CreateOrg :one
--- Columns listed rather than RETURNING *: orgs still has the legacy
--- telegram_chat_id / alert_email / email_alerts_enabled columns, dropped in a
--- later release once no running code reads them.
 INSERT INTO orgs (name)
 VALUES ($1)
-RETURNING id, name, plan, created_at, updated_at, subscription_status, plan_renews_at, billing_cycle,
-  paddle_customer_id, paddle_subscription_id, sms_credits_used_this_month, sms_credits_reset_at;
+RETURNING *;
 
 -- name: CreateUser :one
 INSERT INTO users (org_id, email, password_hash, terms_version, terms_accepted_at)

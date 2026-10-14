@@ -29,9 +29,3 @@ PRD multi-region-checks needs compute in more than one region, against one VPS a
 2026-10-13 · decision backlog · kept 2026-10-14
 
 Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-route rate limits (ADR limits) only bound one IP or account, and API, database and worker share one box (ADR infrastructure). Options: a CDN/WAF such as Cloudflare, or nothing for now; a proxy must keep real client IPs for the per-IP limits. Settled by that choice, recorded in ADR infrastructure. Not something to test live.
-
-## Drop the legacy org alert columns
-
-2026-10-13 · notification channels epic
-
-`orgs.telegram_chat_id`, `orgs.alert_email` and `orgs.email_alerts_enabled` were kept after the move to notification channels (ADR alerting) as a rollback path, to be dropped by a later migration once the cutover had run cleanly in production. It has run since 2026-06-21. Since 2026-10-14 no code reads or writes them: `CreateOrg` lists its columns instead of `RETURNING *`, and the unused `UpdateOrg*` queries are gone. Settled by the migration that drops them, shipped in a release after that one is deployed, since migrations run at container start while the previous container still serves (`cmd/api/main.go`).

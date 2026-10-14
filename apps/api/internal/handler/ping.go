@@ -158,11 +158,8 @@ func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.
 // previously-down cron monitor has checked in again. The incident is
 // resolved regardless of AlertsEnabled — only the alert send itself is
 // gated by that setting (matches the uptime-monitor worker's pattern).
-// Routed through worker.DispatchAlert (not org.TelegramChatID/AlertEmail
-// directly) so cron recovery alerts respect the monitor's attached
-// notification_channels — including webhook (PRD webhook-alerts) — same as every other
-// alert path; this used to be a special case still wired to the pre-PRD notification-channels
-// org-level fields.
+// Routed through worker.DispatchAlert so cron recovery alerts respect the
+// monitor's attached notification_channels, same as every other alert path.
 func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.CronMonitor, now time.Time) {
 	inc, err := h.queries.ResolveLatestCronIncident(ctx, monitor.ID)
 	if err != nil || !monitor.AlertsEnabled {
