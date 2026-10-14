@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { DNSMonitor, PortMonitor, SSLMonitor, UptimeMonitor } from '@/api/monitors'
+import type {
+  CronMonitor,
+  DNSMonitor,
+  PortMonitor,
+  SSLMonitor,
+  UptimeMonitor,
+} from '@/api/monitors'
 import {
+  cronRow,
   attentionSentence,
   dnsRow,
   fmtDaysLeft,
@@ -108,6 +115,21 @@ describe('row builders', () => {
       'handshake failed',
     )
     expect(sslRow(ssl({ errorMsg: 'stale' }), now).note).toBeNull()
+  })
+
+  it("says when a cron monitor's next ping is due, or how long ago it was due", () => {
+    const cron = (nextPingAt: string | null) =>
+      ({
+        id: 'c1',
+        name: 'backup',
+        schedule: '0 3 * * *',
+        status: 'up',
+        lastPingAt: null,
+        nextPingAt,
+      }) as CronMonitor
+    expect(cronRow(cron('2026-10-14T16:00:00Z'), now).metricSub).toBe('next ping in 4h')
+    expect(cronRow(cron('2026-10-14T11:53:00Z'), now).metricSub).toBe('was due 7m ago')
+    expect(cronRow(cron(null), now).metricSub).toBe('last ping')
   })
 
   it('notes a port monitor that expects the port closed', () => {

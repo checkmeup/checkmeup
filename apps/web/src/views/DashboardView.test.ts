@@ -186,6 +186,27 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('2 of 3 up')
   })
 
+  it('counts paused monitors on their own, not as fine or in the uptime average', () => {
+    uptimeData.value = [
+      uptimeMonitor({ status: 'up', uptime24h: 100 }),
+      uptimeMonitor({ id: 'u2', status: 'down', uptime24h: 90 }),
+      uptimeMonitor({ id: 'u3', status: 'paused', uptime24h: 0 }),
+    ]
+    const wrapper = mountView()
+
+    expect(wrapper.find('h1').text()).toContain('1 monitor needs you.')
+    expect(wrapper.find('h1').text()).toContain('The other one is fine. 1 is paused.')
+    expect(wrapper.text()).toContain('95.00% average uptime today')
+    expect(wrapper.text()).toContain('1 of 2 up · 1 paused')
+  })
+
+  it('says so when every monitor is paused', () => {
+    uptimeData.value = [uptimeMonitor({ status: 'paused' })]
+    const wrapper = mountView()
+
+    expect(wrapper.find('h1').text()).toBe('All your monitors are paused.')
+  })
+
   it('shows SMS credits used/limit when the plan has a limit', () => {
     uptimeData.value = [uptimeMonitor()]
     billingData.value = { smsCreditsUsed: 3, smsCreditsLimit: 10 }

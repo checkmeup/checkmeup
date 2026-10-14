@@ -111,6 +111,14 @@ export function relativeTime(iso: string | null, now = Date.now()): string {
   return m < 1 ? 'in <1m' : `in ${magnitude}`
 }
 
+// Under a cron row's last ping: when the next one is due, or, once that time
+// has passed without one, how long ago it was due.
+function nextPingNote(nextPingAt: string | null, now: number): string {
+  if (!nextPingAt) return 'last ping'
+  const due = relativeTime(nextPingAt, now)
+  return new Date(nextPingAt).getTime() < now ? `was due ${due}` : `next ping ${due}`
+}
+
 export function fmtPct(v: number | null): string {
   if (v === null || v === undefined) return '—'
   return `${v.toFixed(2)}%`
@@ -148,7 +156,7 @@ export function cronRow(m: CronMonitor, now = Date.now()): MonitorRow {
     target: m.schedule,
     note: null,
     metric: relativeTime(m.lastPingAt, now),
-    metricSub: m.nextPingAt ? `next ping ${relativeTime(m.nextPingAt, now)}` : 'last ping',
+    metricSub: nextPingNote(m.nextPingAt, now),
     lastChecked: relativeTime(m.lastPingAt, now),
     daysUntilExpiry: null,
     uptime24h: null,
