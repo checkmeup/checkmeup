@@ -81,6 +81,14 @@ func StatusCallbackURL(baseURL, key string) string {
 	return strings.TrimSuffix(baseURL, "/") + StatusCallbackPath + "/" + StatusCallbackToken(key)
 }
 
+// APIError is Twilio's rejection of a send, carrying its message ("The 'To'
+// number ... is not a valid phone number") for the channel's delivery status.
+type APIError struct {
+	Message string
+}
+
+func (e *APIError) Error() string { return "twilio: " + e.Message }
+
 // messageResponse holds the fields Send reads from Twilio's reply: the new
 // message's SID on success, the error message otherwise.
 type messageResponse struct {
@@ -127,7 +135,7 @@ func (c *Client) Send(to, body string) (sid string, statusCode int, err error) {
 	_ = json.NewDecoder(resp.Body).Decode(&mr)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		if mr.Message != "" {
-			return "", resp.StatusCode, fmt.Errorf("twilio: %s", mr.Message)
+			return "", resp.StatusCode, &APIError{Message: mr.Message}
 		}
 		return "", resp.StatusCode, fmt.Errorf("twilio returned HTTP %d", resp.StatusCode)
 	}

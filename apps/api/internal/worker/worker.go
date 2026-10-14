@@ -326,8 +326,13 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 	status, detail := "success", fmt.Sprintf("%d", statusCode)
 	if sendErr != nil {
 		status = "failed"
-		if statusCode == 0 {
+		var apiErr *twilio.APIError
+		switch {
+		case statusCode == 0:
 			detail = "timeout / connection error"
+		case errors.As(sendErr, &apiErr):
+			// PRD sms-alerts: Settings shows why Twilio refused it.
+			detail = fmt.Sprintf("%d: %s", statusCode, apiErr.Message)
 		}
 	}
 	if err := n.Queries.UpdateNotificationChannelDelivery(ctx, db.UpdateNotificationChannelDeliveryParams{

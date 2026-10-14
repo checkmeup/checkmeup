@@ -1048,6 +1048,31 @@ func TestDispatchAlert(t *testing.T) {
 		}
 	})
 
+	t.Run("a Twilio rejection is recorded on the channel with Twilio's message", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": "The 'To' number +9721212121212 is not a valid phone number."})
+		}))
+		defer srv.Close()
+		twilioN := n
+		twilioN.SMS = twilio.NewClientWithBaseURL(srv.URL, srv.Client())
+
+		org := testOrg(t, queries, pool)
+		upgradeOrgPlan(t, queries, org.ID, db.PlanSolo)
+		monitorID := uuid.New()
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+9721212121212"})
+		attachNotificationChannel(t, queries, channel.ID, "cron", monitorID)
+		DispatchAlert(context.Background(), twilioN, org.ID, MonitorRef{Type: "cron", ID: monitorID}, AlertMessage{SMS: "checkmeup: X is DOWN"})
+
+		got, err := queries.GetNotificationChannel(context.Background(), db.GetNotificationChannelParams{ID: channel.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("get channel: %v", err)
+		}
+		if want := "400: The 'To' number +9721212121212 is not a valid phone number."; got.LastDeliveryStatus.String != "failed" || got.LastDeliveryDetail.String != want {
+			t.Fatalf("last delivery = %q, %q; want failed, %q", got.LastDeliveryStatus.String, got.LastDeliveryDetail.String, want)
+		}
+	})
+
 	t.Run("an accepted sms keeps the fallback email only when it is the alert's only delivery (ADR alerting)", func(t *testing.T) {
 		sids := []string{"SM-only", "SM-second"}
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

@@ -63,5 +63,6 @@ A user adds a number with consent and gets the next down alert as one text, with
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/an accepted sms keeps the fallback email only when it is the alert's only delivery (ADR alerting)"
   → test: apps/api/internal/handler/sms_status_test.go "TestHandleSMSStatus/a wrong token is a 404 and changes nothing"
 - A Twilio rejection is recorded with Twilio's error message and shown in Settings; failures aren't retried.
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/a Twilio rejection is recorded on the channel with Twilio's message"
   → test: apps/api/internal/twilio/twilio_test.go "TestSend/non-2xx response surfaces Twilio's error message"
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/sms channel attempts a send and records failure when Twilio isn't configured"
