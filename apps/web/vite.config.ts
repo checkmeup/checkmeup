@@ -11,7 +11,9 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
+    // true listens on every address, IPv6 included: browsers that resolve
+    // localhost to ::1 first can't reach a server bound to 0.0.0.0 alone.
+    host: true,
     port: 5173,
     proxy: {
       '/api': {
