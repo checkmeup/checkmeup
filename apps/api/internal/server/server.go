@@ -116,6 +116,11 @@ func (s *Server) buildRouter() *chi.Mux {
 	if s.cfg.StaticDir != "" {
 		r.Get("/*", s.handleSPA)
 	}
+	// kamal-proxy's health check (its default path, config/deploy.yml sets
+	// none): a new container takes traffic only once this answers 200. It
+	// must be a real route — the SPA fallback answers a path with no web-app
+	// route with a 404 (ADR seo).
+	r.Get("/up", s.handleHealth)
 
 	// No-auth public endpoints
 	r.With(httprate.LimitBy(60, time.Minute, pingTokenKey)).Get("/ping/{token}", ping.ReceivePing)

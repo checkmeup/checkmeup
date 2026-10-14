@@ -142,6 +142,30 @@ func TestRoutes_PublicHealthDoesNotRequireAuth(t *testing.T) {
 	}
 }
 
+// kamal-proxy holds a deploy until GET /up answers 200; with the web app's
+// routes known, the SPA fallback answers it with a 404, which failed a deploy.
+func TestRoutes_KamalHealthCheckIsUpWithTheSPARoutesKnown(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"index.html":      "<html>app</html>",
+		"404.html":        "<html>not-found</html>",
+		"spa-routes.json": `["/"]`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	srv, _ := testServer(t, &config.Config{StaticDir: dir})
+
+	req := httptest.NewRequest(http.MethodGet, "/up", http.NoBody)
+	w := httptest.NewRecorder()
+	srv.router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /up status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+}
+
 func TestRoutes_UnknownAPIPathIs404(t *testing.T) {
 	srv, _ := testServer(t, nil)
 

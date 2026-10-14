@@ -24,6 +24,7 @@ PATH_RE = re.compile(r'\.(?:Get|Post|Put|Patch|Delete)\("([^"]*)"')
 BLOCK_OPENERS = ("r.Route(", "r.Group(")
 KNOWN_EXCEPTIONS = {
     "/health": "load-balancer/monitoring health check — not user-reachable data",
+    "/up": "kamal-proxy's deploy health check (same handler as /health) — not user-reachable data",
     "/*": "static file serving (SPA catch-all) — no per-request cost, not a data endpoint",
 }
 
