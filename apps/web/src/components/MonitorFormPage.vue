@@ -40,7 +40,7 @@ function goBack() {
 
 <template>
   <AppLayout>
-    <div class="mx-auto flex max-w-[720px] flex-col gap-8 px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 *:max-w-[720px] pt-8 pb-20 md:px-6">
       <div class="flex flex-col gap-4">
         <button
           type="button"

@@ -52,7 +52,8 @@ watch(slug, (val) => {
         slugStatus.value = 'available'
         slugMessage.value = 'Available'
       } else {
-        slugStatus.value = result.reason.includes('format') || result.reason.includes('letter') ? 'invalid' : 'taken'
+        slugStatus.value =
+          result.reason.includes('format') || result.reason.includes('letter') ? 'invalid' : 'taken'
         slugMessage.value = result.reason
       }
     } catch {
@@ -104,40 +105,36 @@ async function submit() {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6 *:max-w-[720px]">
       <div class="mb-8 flex flex-col items-start gap-4">
-        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+        <button
+          type="button"
+          class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
           @click="router.push({ name: 'status-pages' })"
         >
           ← Back
         </button>
-        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">New status page</h1>
+        <h1
+          class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]"
+        >
+          New status page
+        </h1>
       </div>
 
-      <form
-        class="flex flex-col gap-6"
-        @submit.prevent="submit"
-      >
+      <form class="flex flex-col gap-6" @submit.prevent="submit">
         <div>
           <Label for="title">Page title</Label>
-          <Input
-            id="title"
-            v-model="title"
-            placeholder="Acme Status"
-            class="mt-1"
-            required
-          />
+          <Input id="title" v-model="title" placeholder="Acme Status" class="mt-1" required />
         </div>
 
         <div>
           <Label for="slug">Slug</Label>
-          <Input
-            id="slug"
-            v-model="slug"
-            placeholder="acme"
-            class="mt-1"
-          />
-          <p v-if="slugStatus !== 'idle'" class="text-xs mt-1" :style="{ color: slugColors[slugStatus] ?? 'var(--text-muted)' }">
+          <Input id="slug" v-model="slug" placeholder="acme" class="mt-1" />
+          <p
+            v-if="slugStatus !== 'idle'"
+            class="text-xs mt-1"
+            :style="{ color: slugColors[slugStatus] ?? 'var(--text-muted)' }"
+          >
             {{ slugStatus === 'checking' ? 'Checking…' : slugMessage }}
           </p>
           <p v-else class="text-xs mt-1 text-[var(--text-muted)]">
@@ -146,7 +143,9 @@ async function submit() {
         </div>
 
         <div>
-          <Label for="description">Description <span class="text-[var(--text-muted)]">(optional)</span></Label>
+          <Label for="description"
+            >Description <span class="text-[var(--text-muted)]">(optional)</span></Label
+          >
           <Input
             id="description"
             v-model="description"
@@ -156,7 +155,9 @@ async function submit() {
         </div>
 
         <div>
-          <Label for="logoUrl">Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label>
+          <Label for="logoUrl"
+            >Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label
+          >
           <Input
             id="logoUrl"
             v-model="logoUrl"
@@ -169,7 +170,10 @@ async function submit() {
         <p v-else-if="error" class="text-sm text-[var(--status-down)]">{{ error }}</p>
 
         <div class="flex gap-3 pt-1">
-          <Button type="submit" :disabled="submitting || slugStatus === 'taken' || slugStatus === 'invalid'">
+          <Button
+            type="submit"
+            :disabled="submitting || slugStatus === 'taken' || slugStatus === 'invalid'"
+          >
             {{ submitting ? 'Creating…' : 'Create page' }}
           </Button>
           <Button variant="secondary" type="button" @click="router.push({ name: 'status-pages' })">

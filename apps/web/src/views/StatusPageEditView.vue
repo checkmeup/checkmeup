@@ -70,23 +70,25 @@ async function submit() {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6 *:max-w-[720px]">
       <div class="mb-8 flex flex-col items-start gap-4">
-        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+        <button
+          type="button"
+          class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
           @click="router.push({ name: 'status-page-detail', params: { id } })"
         >
           ← Back
         </button>
-        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Edit status page</h1>
+        <h1
+          class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]"
+        >
+          Edit status page
+        </h1>
       </div>
 
       <div v-if="loading" class="text-sm text-[var(--text-muted)]">Loading…</div>
 
-      <form
-        v-else
-        class="flex flex-col gap-6"
-        @submit.prevent="submit"
-      >
+      <form v-else class="flex flex-col gap-6" @submit.prevent="submit">
         <div>
           <Label>Slug</Label>
           <p class="mt-1 text-sm font-mono text-[var(--text-dim)]">/status/{{ slug }}</p>
@@ -101,13 +103,27 @@ async function submit() {
         </div>
 
         <div>
-          <Label for="description">Description <span class="text-[var(--text-muted)]">(optional)</span></Label>
-          <Input id="description" v-model="description" placeholder="Live status of our services" class="mt-1" />
+          <Label for="description"
+            >Description <span class="text-[var(--text-muted)]">(optional)</span></Label
+          >
+          <Input
+            id="description"
+            v-model="description"
+            placeholder="Live status of our services"
+            class="mt-1"
+          />
         </div>
 
         <div>
-          <Label for="logoUrl">Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label>
-          <Input id="logoUrl" v-model="logoUrl" placeholder="https://example.com/logo.png" class="mt-1" />
+          <Label for="logoUrl"
+            >Logo URL <span class="text-[var(--text-muted)]">(optional)</span></Label
+          >
+          <Input
+            id="logoUrl"
+            v-model="logoUrl"
+            placeholder="https://example.com/logo.png"
+            class="mt-1"
+          />
         </div>
 
         <div>
@@ -134,8 +150,7 @@ async function submit() {
           </label>
           <p v-if="hobbyPlanNoBrandingToggle" class="mt-1 text-xs text-[var(--text-muted)]">
             Hiding branding requires a paid plan —
-            <RouterLink to="/billing" class="underline text-[var(--accent)]"
-              >view plans</RouterLink
+            <RouterLink to="/billing" class="underline text-[var(--accent)]">view plans</RouterLink
             >.
           </p>
         </div>

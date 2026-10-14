@@ -44,7 +44,7 @@ function formatDate(iso: string | null): string {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[1000px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6">
       <h1 class="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Settings</h1>
 
       <!-- Appearance -->
