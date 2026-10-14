@@ -4,6 +4,7 @@ import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import FeatureCard from '@/components/FeatureCard.vue'
+import CheckStrip from '@/components/CheckStrip.vue'
 import { useTheme } from '@/lib/theme'
 import { useSeo } from '@/composables/useSeo'
 import logoDark from '@/assets/logo-dark.svg'
@@ -12,6 +13,16 @@ import { statusRows, plans, customers, testimonials } from '@/content/home'
 
 const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
+
+// A 40-tick strip for the status page mockup: as many failed ticks as the
+// row's uptime percentage leaves, spread through the run.
+function ticksFor(pct: string) {
+  const failures = Math.round(((100 - parseFloat(pct)) / 100) * 40)
+  const every = failures > 0 ? Math.floor(40 / (failures + 1)) : 0
+  return Array.from({ length: 40 }, (_, i) => ({
+    ok: !(failures > 0 && i > 0 && i % every === 0 && i / every <= failures),
+  }))
+}
 
 useSeo({
   title: 'Checkmeup — monitoring for freelancers & client sites',
@@ -65,52 +76,28 @@ useHead({
 
     <!-- Our Customers -->
     <section class="border-y border-[var(--border)]">
-      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">
-        <p
-          class="text-center text-xs mb-6 text-[var(--text-muted)] font-mono"
-        >
-          Trusted by freelancers and solo devs worldwide
-        </p>
-
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
-          <!-- Overlapping avatars -->
-          <div class="flex -space-x-3">
+      <div
+        class="mx-auto flex max-w-[1200px] flex-col items-start gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      >
+        <div class="flex items-center gap-4">
+          <div class="flex -space-x-2.5">
             <img
               v-for="c in customers"
               :key="c.name"
               :src="c.avatar"
               :alt="c.name"
               :title="`${c.name} · ${c.role}`"
-              class="w-7 h-7 rounded-full object-cover"
-              style="box-shadow: 0 0 0 2px var(--bg)"
+              class="h-7 w-7 rounded-full object-cover ring-2 ring-[var(--bg)]"
             />
           </div>
-
-          <!-- Count + label -->
-          <div class="text-center sm:text-left">
-            <span class="text-sm font-semibold text-[var(--text-strong)]">200+</span>
-            <span class="text-sm ml-1 text-[var(--text-dim)]"
-              >freelancers monitoring client sites with Checkmeup</span
-            >
-          </div>
+          <p class="text-sm text-[var(--text-dim)]">
+            <span class="font-semibold text-[var(--text-strong)]">200+</span>
+            freelancers monitoring client sites with Checkmeup
+          </p>
         </div>
-
-        <!-- Customer type pills -->
-        <div class="flex flex-wrap justify-center gap-2 mt-6">
-          <span
-            v-for="tag in [
-              'Freelancers',
-              'Solo agency operators',
-              'Web agencies',
-              'Solo developers',
-              'SaaS startups',
-            ]"
-            :key="tag"
-            class="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--text-muted)]"
-          >
-            {{ tag }}
-          </span>
-        </div>
+        <p class="text-[13px] text-[var(--text-muted)]">
+          Freelancers · Solo agency operators · Web agencies · Solo developers · SaaS startups
+        </p>
       </div>
     </section>
 
@@ -275,53 +262,33 @@ useHead({
     </section>
 
     <!-- Status pages highlight -->
-    <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <section class="border-t border-[var(--border)]">
       <div
-        class="rounded-[20px] border p-8 sm:p-12 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-[52px] items-center bg-[var(--card)] border-[var(--border)]"
+        class="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-16"
       >
-        <div class="flex-1">
-          <div
-            class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mb-4 border border-[var(--border)] bg-[var(--surface)] text-[var(--accent-emphasis)]"
-          >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path
-                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-              />
-            </svg>
-            Status pages
-          </div>
+        <div class="flex flex-col gap-5">
+          <p class="text-[13px] font-semibold text-[var(--accent)]">Status pages</p>
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-4 tracking-[-0.035em] text-[var(--text-strong)]"
+            class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
           >
             Give your clients a page they can bookmark.
           </h2>
-          <p class="text-base leading-relaxed mb-6 text-[var(--text-muted)]">
+          <p class="text-[17px] leading-relaxed text-[var(--text-dim)]">
             Create a branded status page for every client site. They see uptime, incidents, and
             maintenance windows — you stay in control, and it looks like your work.
           </p>
           <RouterLink
             to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
+            class="self-start rounded-[10px] bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
           >
             Create a status page →
           </RouterLink>
 
-          <div
-            class="mt-6 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
-          >
-            <p class="text-sm mb-2.5 text-[var(--text-muted)]">
+          <div class="mt-2 flex flex-col gap-2.5 border-t border-[var(--border)] pt-5">
+            <p class="text-sm text-[var(--text-dim)]">
               Embed a live status badge anywhere — links straight to your status page
             </p>
-            <a href="https://checkmeup.net/status/checkmeup-net">
+            <a href="https://checkmeup.net/status/checkmeup-net" class="self-start">
               <img
                 src="https://checkmeup.net/status/checkmeup-net/badge.svg"
                 alt="When you run a successful product, your monitors run quietly"
@@ -330,40 +297,33 @@ useHead({
           </div>
         </div>
 
-        <!-- Status page mockup -->
+        <!-- Status page mockup: mirrors the real public page's layout -->
         <div
-          class="w-full rounded-xl border overflow-hidden text-sm border-[var(--border)]"
+          class="flex flex-col gap-6 rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[0_24px_60px_rgb(0_0_0/8%)] sm:p-8"
         >
-          <div
-            class="flex items-center px-4 py-3 border-b border-[var(--border)] bg-[var(--surface)]"
-          >
-            <img :src="logo" alt="Checkmeup" class="h-[15px] w-auto" />
-          </div>
-          <div
-            class="px-4 py-2.5 border-b border-[var(--border)] bg-[var(--accent-wash-dim)]"
-          >
-            <span class="text-xs font-semibold text-[var(--accent)]"
-              >● All systems operational</span
+          <img :src="logo" alt="Checkmeup" class="h-[18px] w-auto self-start" />
+          <div class="flex items-center gap-3">
+            <span
+              class="h-3 w-3 rounded-full bg-[var(--status-up)] shadow-[0_0_0_5px_var(--accent-wash)]"
+            ></span>
+            <span class="text-[24px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]"
+              >All systems operational</span
             >
           </div>
-          <div
-            v-for="row in statusRows"
-            :key="row.name"
-            class="px-4 py-3 border-b last:border-0 border-[var(--border)] bg-[var(--surface)]"
-          >
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[var(--text-dim)]">{{ row.name }}</span>
-              <span
-                class="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--accent-wash)] text-[var(--accent)]"
-              >
-                Operational
-              </span>
-            </div>
-            <div class="h-1.5 rounded overflow-hidden bg-[var(--accent-wash)]">
-              <div
-                class="h-full rounded"
-                :style="{ width: row.pct, backgroundColor: 'var(--accent)' }"
-              ></div>
+          <div class="flex flex-col">
+            <div
+              v-for="row in statusRows"
+              :key="row.name"
+              class="flex flex-col gap-2.5 border-t border-[var(--border)] py-4"
+            >
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-sm font-medium text-[var(--text-strong)]">{{ row.name }}</span>
+                <span class="inline-flex items-center gap-2 text-[13px] text-[var(--text-dim)]">
+                  <span class="h-2 w-2 rounded-full bg-[var(--status-up)]"></span>
+                  Operational
+                </span>
+              </div>
+              <CheckStrip size="sm" :checks="ticksFor(row.pct)" />
             </div>
           </div>
         </div>
@@ -372,182 +332,136 @@ useHead({
 
     <!-- Pricing teaser -->
     <section class="border-t border-[var(--border)]">
-      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
-        <h2
-          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
-        >
-          Simple pricing.
-        </h2>
-        <p class="mb-10 text-[var(--text-dim)]">Start free. Scale as you grow.</p>
+      <div class="mx-auto max-w-[1200px] px-4 py-20 sm:px-6">
+        <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div class="flex flex-col gap-3">
+            <h2
+              class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
+            >
+              Simple pricing.
+            </h2>
+            <p class="text-[17px] text-[var(--text-dim)]">Start free. Scale as you grow.</p>
+          </div>
+          <RouterLink
+            to="/pricing"
+            class="text-sm font-semibold text-[var(--accent)] hover:underline"
+          >
+            See full pricing details →
+          </RouterLink>
+        </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div
+          class="grid gap-px overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-4"
+        >
           <div
             v-for="plan in plans"
             :key="plan.name"
-            class="rounded-2xl border p-6 text-left relative flex flex-col"
-            :style="{
-              backgroundColor: plan.highlight ? 'var(--accent-wash-dim)' : 'var(--card)',
-              borderColor: plan.highlight ? 'var(--accent)' : 'var(--border)',
-            }"
+            class="flex flex-col p-6"
+            :class="
+              plan.highlight
+                ? 'bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg))]'
+                : 'bg-[var(--bg)]'
+            "
           >
-            <div
-              v-if="plan.highlight"
-              class="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full bg-[var(--accent)] text-[var(--on-accent)]"
-            >
-              Most popular
+            <div class="mb-1 flex items-center justify-between gap-2">
+              <span class="font-semibold text-[var(--text-strong)]">{{ plan.name }}</span>
+              <span v-if="plan.highlight" class="text-xs font-semibold text-[var(--accent)]"
+                >Most popular</span
+              >
             </div>
-            <div class="text-sm font-semibold mb-1 text-[var(--text-strong)]">
-              {{ plan.name }}
-            </div>
-            <p class="text-xs mb-4 text-[var(--text-muted)]">{{ plan.description }}</p>
-            <div class="text-2xl font-semibold mb-5 text-[var(--text-strong)]">
+            <p class="mb-5 text-[13px] text-[var(--text-dim)]">{{ plan.description }}</p>
+            <div class="mb-6 text-[32px] font-semibold tracking-[-0.035em] text-[var(--text-strong)]">
               {{ plan.price === 0 ? 'Free' : `$${plan.price}` }}
-              <span
-                v-if="plan.price > 0"
-                class="text-sm font-normal text-[var(--text-muted)]"
+              <span v-if="plan.price > 0" class="text-sm font-normal tracking-normal text-[var(--text-dim)]"
                 >/mo</span
               >
             </div>
 
-            <div
-              class="pt-4 mb-5 border-t flex flex-col gap-2.5 border-[var(--border)]"
-            >
-              <div
-                v-for="s in plan.stats"
-                :key="s.label"
-                class="flex items-center gap-2 text-xs text-[var(--text-dim)]"
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  stroke-width="3"
-                >
+            <ul class="mb-6 flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
+              <li v-for="st in plan.stats" :key="st.label" class="flex items-center gap-2">
+                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <strong class="text-[var(--text-strong)]">{{ s.value }}</strong
-                >&nbsp;{{ s.label }}
-              </div>
-              <div
-                v-for="e in plan.extras"
-                :key="e"
-                class="flex items-start gap-2 text-xs leading-relaxed text-[var(--text-dim)]"
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  stroke-width="3"
-                  style="margin-top: 3px; flex-shrink: 0"
-                >
+                <span><strong class="font-semibold text-[var(--text-strong)]">{{ st.value }}</strong> {{ st.label }}</span>
+              </li>
+              <li v-for="e in plan.extras" :key="e" class="flex items-start gap-2 leading-relaxed">
+                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" class="mt-[3px] flex-shrink-0">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {{ e }}
-              </div>
-            </div>
+              </li>
+            </ul>
 
             <RouterLink
               to="/sign-up"
-              class="mt-auto text-center text-xs font-medium px-4 py-2.5 rounded-[10px] transition-opacity hover:opacity-90"
-              :style="
+              class="mt-auto rounded-[10px] px-4 py-2.5 text-center text-sm font-semibold transition-colors"
+              :class="
                 plan.highlight
-                  ? 'background-color: var(--accent); color: var(--on-accent)'
-                  : 'border: 1px solid var(--border); color: var(--text-strong)'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)]'
+                  : 'border border-[var(--border-strong)] text-[var(--text-strong)] hover:bg-[var(--surface-raised)]'
               "
             >
               {{ plan.cta }}
             </RouterLink>
           </div>
         </div>
-
-        <RouterLink
-          to="/pricing"
-          class="inline-flex items-center gap-1 mt-8 text-sm transition-opacity hover:opacity-80 text-[var(--accent-emphasis)]"
-        >
-          See full pricing details →
-        </RouterLink>
       </div>
     </section>
 
     <!-- Testimonials -->
     <section class="border-t border-[var(--border)]">
-      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div class="text-center mb-12">
+      <div class="mx-auto max-w-[1200px] px-4 py-20 sm:px-6">
+        <div class="mb-12 flex max-w-[640px] flex-col gap-3">
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
+            class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
           >
             Loved by freelancers and solo devs.
           </h2>
-          <p class="text-base text-[var(--text-dim)]">
+          <p class="text-[17px] text-[var(--text-dim)]">
             Monitoring that gets out of your way — so you can focus on client work.
           </p>
         </div>
 
-        <div class="grid sm:grid-cols-3 gap-4">
-          <div
+        <div class="grid gap-x-10 gap-y-12 sm:grid-cols-3">
+          <figure
             v-for="t in testimonials"
             :key="t.name"
-            class="rounded-2xl border p-6 flex flex-col gap-4 bg-[var(--card)] border-[var(--border)]"
+            class="flex flex-col gap-5 border-t border-[var(--border)] pt-6"
           >
-            <div class="flex items-center gap-3">
-              <img
-                :src="t.avatar"
-                :alt="t.name"
-                class="w-10 h-10 rounded-full object-cover flex-shrink-0"
-              />
-              <div>
-                <div class="text-sm font-semibold text-[var(--text-strong)]">
-                  {{ t.name }}
-                </div>
-                <div class="text-xs text-[var(--text-muted)]">{{ t.role }}</div>
-              </div>
-            </div>
-            <!-- Stars -->
-            <div class="flex gap-0.5">
-              <svg class="text-[var(--accent)]"
-                v-for="i in 5"
-                :key="i"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                />
-              </svg>
-            </div>
-            <p class="text-sm leading-relaxed text-[var(--text-dim)]">"{{ t.quote }}"</p>
-          </div>
+            <blockquote class="text-[17px] leading-relaxed text-[var(--text)]">
+              “{{ t.quote }}”
+            </blockquote>
+            <figcaption class="mt-auto flex items-center gap-3">
+              <img :src="t.avatar" :alt="t.name" class="h-9 w-9 flex-shrink-0 rounded-full object-cover" />
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold text-[var(--text-strong)]">{{ t.name }}</span>
+                <span class="text-[13px] text-[var(--text-dim)]">{{ t.role }}</span>
+              </span>
+            </figcaption>
+          </figure>
         </div>
       </div>
     </section>
 
     <!-- CTA banner -->
     <section class="border-t border-[var(--border)]">
-      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div
-          class="rounded-[20px] text-center px-10 py-[72px] border bg-[var(--accent-wash-dim)] border-[var(--cta-border)]"
-        >
+      <div
+        class="mx-auto flex max-w-[1200px] flex-wrap items-end justify-between gap-8 px-4 py-20 sm:px-6"
+      >
+        <div class="flex flex-col gap-3">
           <h2
-            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
+            class="text-[34px] leading-[1.05] font-semibold tracking-[-0.04em] text-[var(--text-strong)] sm:text-[48px]"
           >
             Start monitoring in 60 seconds.
           </h2>
-          <p class="mb-8 text-base text-[var(--text-dim)]">
-            Free plan included. No credit card required.
-          </p>
-          <RouterLink
-            to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
-          >
-            Create free account →
-          </RouterLink>
+          <p class="text-[17px] text-[var(--text-dim)]">Free plan included. No credit card required.</p>
         </div>
+        <RouterLink
+          to="/sign-up"
+          class="rounded-[10px] bg-[var(--accent)] px-7 py-3 text-[15px] font-semibold text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
+        >
+          Create free account →
+        </RouterLink>
       </div>
     </section>
   </LandingLayout>
