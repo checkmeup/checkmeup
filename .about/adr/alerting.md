@@ -2,7 +2,7 @@
 
 Date: 2026-10-14
 
-A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side; whether bearer-like secrets such as a Slack webhook URL should be masked is open (see the Inbox).
+A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A Slack or webhook channel's URL is bearer-like, since whoever holds it can post to it, so after creation the API returns it masked (host plus the last few characters), and an update that leaves it empty keeps the stored one. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side. A Telegram chat ID, an email address and a phone number are returned as stored: none of them lets anyone send on its own.
 
 A monitor always has somewhere to alert: when it has no enabled channel attached, or nothing it tried was delivered, the alert goes to the email of every user in the org. This applied to existing orgs too, on purpose: a monitor going down with nobody told is worse than an unasked-for email.
 
@@ -17,8 +17,11 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 ## Considered options
 
 - One Telegram chat and one email per org (until 2026-06-20): replaced by channels so a monitor can route to several destinations of any type.
+- Returning Slack and webhook URLs as stored (until 2026-10-14): any leak of an API response (XSS, a shared screen, a future team member) would hand out a working way to post to the user's channel.
 - A channel group entity: neither healthchecks.io nor UptimeRobot needs one; no demand.
 - Viber: since February 2024 Viber bots require a commercial agreement with Rakuten, so there is no self-serve way to get a bot token. Reconsider only if self-serve bots return.
+- Signal (2026-10-14): Signal has no bot or business API; the only path is self-hosting `signal-cli` on a phone number registered as a bot, which Signal's anti-abuse systems may ban, and an always-on process ADR workers avoids. Demand is unconfirmed. Reconsider if Signal opens an official API or users keep asking.
+- Microsoft Teams (2026-10-14): building and testing it needs a Microsoft 365 business tenant, and Microsoft is retiring the Office 365 Connector incoming webhook for Power Automate workflows, so the mechanism itself is moving. Revisit if users ask for it.
 - AWS SNS for SMS: needs an AWS account and IAM for one call, unlike every other integration here (one API key, one HTTP call).
 - Vonage for SMS: similar pricing, weaker 10DLC registration tooling.
 - Postmark, AWS SES or Zoho SMTP for email: Postmark's free tier is too small, SES needs AWS, Zoho's shared IP hurts deliverability.

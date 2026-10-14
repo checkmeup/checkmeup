@@ -115,7 +115,7 @@ export const content: ContentBlock[] = [
   {
     type: 'ul',
     items: [
-      'No voice-call alerts — UptimeRobot and Healthchecks.io both offer it as a more attention-grabbing escalation than SMS. Checkmeup has Telegram, email, Slack, webhooks, and SMS today; voice, WhatsApp, and Signal are on the roadmap but not shipped.',
+      'No voice-call alerts — UptimeRobot and Healthchecks.io both offer it as a more attention-grabbing escalation than SMS. Checkmeup has Telegram, email, Slack, webhooks, and SMS today; voice and WhatsApp are on the roadmap but not shipped.',
       'No native mobile app — UptimeRobot has iOS/Android apps with push notifications. Checkmeup is a responsive web app; there is no dedicated mobile client.',
       'No two-factor authentication yet — UptimeRobot offers it on paid plans today. It is designed and queued on the Checkmeup roadmap but not live.',
       'No team/multi-user accounts yet — Cronitor and UptimeRobot both support additional seats. Checkmeup is single-user per organization for now; team management is planned but not built.',
