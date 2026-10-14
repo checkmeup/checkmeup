@@ -94,11 +94,8 @@ const facts = computed(() => {
               class="text-[34px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[44px]"
             >
               {{ headline.main }}
-              <template v-if="headline.soft">
-                <br />
-                <span class="text-[var(--text-muted)]">{{ headline.soft }}</span>
-              </template>
             </h1>
+            <p v-if="headline.soft" class="text-lg text-[var(--text)]">{{ headline.soft }}</p>
             <p class="text-base text-[var(--text-dim)]">{{ facts }}</p>
           </div>
           <AddMonitorMenu />

@@ -171,7 +171,7 @@ describe('DashboardView', () => {
     const wrapper = mountView()
 
     expect(wrapper.find('h1').text()).toContain('2 monitors need you.')
-    expect(wrapper.find('h1').text()).toContain('The other 2 are fine.')
+    expect(wrapper.text()).toContain('The other 2 are fine.')
   })
 
   it('summarizes average uptime and up count under the headline', () => {
@@ -195,7 +195,8 @@ describe('DashboardView', () => {
     const wrapper = mountView()
 
     expect(wrapper.find('h1').text()).toContain('1 monitor needs you.')
-    expect(wrapper.find('h1').text()).toContain('The other one is fine. 1 is paused.')
+    expect(wrapper.find('h1').text()).toBe('1 monitor needs you.')
+    expect(wrapper.text()).toContain('The other one is fine. 1 is paused.')
     expect(wrapper.text()).toContain('95.00% average uptime today')
     expect(wrapper.text()).toContain('1 of 2 up · 1 paused')
   })
