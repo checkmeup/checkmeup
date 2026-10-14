@@ -416,13 +416,13 @@ const statusPageHTML = `<!DOCTYPE html>
   --bg:#0e1211;--surface:#131816;--surface-raised:#1a201e;--border:#232a27;--border-strong:#323b37;
   --text-muted:#7a847f;--text-dim:#9aa39e;--text:#ecf0ee;--text-strong:#ecf0ee;
   --status-up:#3fbf8f;--status-degraded:#ebae4a;--status-down:#f0605a;--status-paused:#7a847f;
-  --tick-up:#2f6e58;--tick-empty:#1c2220;--accent:#4dc9a0;--on-accent:#06201a;
+  --tick-up:#2f6e58;--tick-empty:#1c2220;--accent:#4dc9a0;--on-accent:#06201a;--accent-wash:rgb(77 201 160 / 12%);--nav-bg:rgb(14 18 17 / 85%);
 }
 :root[data-theme='light']{
   --bg:#fff;--surface:#f7f9f7;--surface-raised:#f1f4f1;--border:#e4e8e4;--border-strong:#d6dcd7;
   --text-muted:#6f7873;--text-dim:#59625d;--text:#111714;--text-strong:#111714;
   --status-up:#12805f;--status-degraded:#a86200;--status-down:#c93a2e;--status-paused:#6f7873;
-  --tick-up:#a9dcc7;--tick-empty:#ebeeeb;--accent:#0f6e56;--on-accent:#fff;
+  --tick-up:#a9dcc7;--tick-empty:#ebeeeb;--accent:#0f6e56;--on-accent:#fff;--accent-wash:rgb(15 110 86 / 10%);--nav-bg:rgb(255 255 255 / 88%);
 }
 .tone-up{--tone:var(--status-up);--tick:var(--tick-up)}
 .tone-down{--tone:var(--status-down);--tick:var(--status-down)}
@@ -432,26 +432,30 @@ const statusPageHTML = `<!DOCTYPE html>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5}
 .mono{font-family:'Geist Mono',ui-monospace,monospace}
-.page{max-width:760px;margin:0 auto;padding:40px 20px 72px}
-.page.layout-grid{max-width:1120px}
-.head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:48px}
+.page{max-width:880px;margin:0 auto;padding:56px 24px 72px}
+.page.layout-grid{max-width:1200px}
+.topbar{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border);background:var(--nav-bg);backdrop-filter:blur(12px)}
+.topbar-inner{max-width:880px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar-inner.wide{max-width:1200px}
 .head-left{display:flex;align-items:center;gap:12px;min-width:0}
-.logo{display:block;max-height:36px;width:auto;border-radius:8px}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
-.page-name{font-size:15px;font-weight:600;color:var(--text-strong)}
-.subtitle{font-size:13px;color:var(--text-dim)}
+.logo{display:block;max-height:32px;width:auto;border-radius:8px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-wash);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
+.page-name{font-size:15px;font-weight:600;color:var(--text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .theme-toggle{width:36px;height:36px;border-radius:8px;border:0;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
 .theme-toggle:hover{background:var(--surface-raised)}
 .theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .theme-toggle .icon-moon{display:none}
 :root[data-theme='light'] .theme-toggle .icon-sun{display:none}
 :root[data-theme='light'] .theme-toggle .icon-moon{display:block}
-.overall{display:flex;flex-direction:column;gap:10px;margin-bottom:44px}
-.overall h1{display:flex;align-items:center;gap:14px;font-size:34px;line-height:1.1;font-weight:600;letter-spacing:-.035em;color:var(--text-strong)}
+.overall{display:flex;flex-direction:column;gap:10px;margin-bottom:48px}
+.overall h1{display:flex;align-items:center;gap:16px;font-size:44px;line-height:1.05;font-weight:600;letter-spacing:-.04em;color:var(--text-strong)}
+.overall .description{font-size:17px;color:var(--text-dim);max-width:640px}
 .overall .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--tone);box-shadow:0 0 0 5px color-mix(in srgb,var(--tone) 18%,transparent)}
 .overall p{font-size:15px;color:var(--text-dim)}
-.section-title{font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:12px}
-.incident{border-radius:14px;padding:20px 22px;margin-bottom:28px;background:color-mix(in srgb,var(--tone) 9%,transparent)}
+.section-title{font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--text-strong);margin-bottom:16px}
+.eyebrow{font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:12px}
+.incidents-active{margin-bottom:48px}
+.incident{padding:20px 0 6px;border-top:1px solid var(--border)}
 .incident-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
 .incident-title{font-size:17px;font-weight:600;letter-spacing:-.015em;color:var(--text-strong)}
 .label{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--tone);white-space:nowrap}
@@ -469,13 +473,13 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .monitors{display:flex;flex-direction:column}
 .monitor{padding:18px 0;border-top:1px solid var(--border)}
 .monitor-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
-.monitor-name{font-weight:500;font-size:15px;color:var(--text-strong);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar{display:flex;gap:2px;height:28px}
+.monitor-name{font-weight:600;font-size:15px;color:var(--text-strong);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{display:flex;gap:2px;height:32px}
 .seg{flex:1;min-width:1px;border-radius:2px;background:var(--tick);cursor:default}
 .bar-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:12.5px;color:var(--text-dim)}
 .monitor-note{margin:0 0 10px;font-size:13.5px;color:var(--text-dim)}
 .empty{color:var(--text-dim);font-size:14px;text-align:center;padding:32px 0;border-top:1px solid var(--border)}
-.incidents-history{margin-top:44px}
+.incidents-history{margin-top:56px}
 .history-row{padding:14px 0;border-top:1px solid var(--border)}
 .history-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 .history-title{font-size:15px;font-weight:500;color:var(--text-strong)}
@@ -498,19 +502,16 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
   .content-grid{flex-direction:column;gap:32px}
   .content-grid .monitors{grid-template-columns:1fr;width:100%}
   .sidebar{min-width:0;width:100%}
-  .overall h1{font-size:28px}
+  .overall h1{font-size:34px}
 }
 </style>
 </head>
 <body>
-<div class="page {{if eq .Layout "grid"}}layout-grid{{end}}">
-  <header class="head">
+<header class="topbar">
+  <div class="topbar-inner{{if eq .Layout "grid"}} wide{{end}}">
     <div class="head-left">
       {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="{{.Title}} logo">{{else}}<div class="avatar" aria-hidden="true">{{.Initials}}</div>{{end}}
-      <div>
-        <div class="page-name">{{.Title}}</div>
-        {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}
-      </div>
+      <div class="page-name">{{.Title}}</div>
     </div>
     <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">
       <svg class="icon-sun" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -528,10 +529,13 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
       </svg>
     </button>
-  </header>
+  </div>
+</header>
+<div class="page {{if eq .Layout "grid"}}layout-grid{{end}}">
 
   <section class="overall tone-{{tone .OverallColor}}">
     <h1><span class="dot" aria-hidden="true"></span>{{.Overall}}</h1>
+    {{if .Description}}<p class="description">{{.Description}}</p>{{end}}
     <p>{{if .ActiveIncidents}}{{len .ActiveIncidents}} active incident{{if ne (len .ActiveIncidents) 1}}s{{end}} · {{end}}Last updated {{.UpdatedAt}}</p>
   </section>
 
@@ -544,7 +548,12 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
       {{end}}
     </div>
     <div class="sidebar">
-      {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+      {{if .ActiveIncidents}}
+      <section>
+        <h2 class="eyebrow">Active incidents</h2>
+        {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+      </section>
+      {{end}}
       {{if .ResolvedIncidents}}
       <section class="incidents-history">
         <h2 class="section-title">Past incidents</h2>
@@ -555,8 +564,14 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
     </div>
   </div>
   {{else}}
-  {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+  {{if .ActiveIncidents}}
+  <section class="incidents-active">
+    <h2 class="eyebrow">Active incidents</h2>
+    {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
+  </section>
+  {{end}}
 
+  <h2 class="section-title">Monitors</h2>
   <div class="monitors">
     {{range .Monitors}}{{template "monitorCard" .}}{{end}}
     {{if not .Monitors}}

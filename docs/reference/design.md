@@ -139,6 +139,6 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   `style.css` — every `font-mono` utility class (timestamps, ping URLs, uptime stats)
   picks it up automatically. Falls back to `ui-monospace`/`SFMono-Regular`.
 
-Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered Go template. It carries its own copy of these tokens (light and dark, switched by `status-theme.js`) and loads Geist from Google Fonts; statuses reach it as the badge hex colors and are restyled through `tone-*` classes (`statusTone`), so keep its token block in sync with `style.css`.
+Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered Go template. It carries its own copy of these tokens (light and dark, switched by `status-theme.js`) and loads Geist from Google Fonts; statuses reach it as the badge hex colors and are restyled through `tone-*` classes (`statusTone`), so keep its token block in sync with `style.css`. It follows the app's layout: a top bar with a hairline under it, a 44px sentence headline, active incidents as hairline rows, and a 22px "Monitors" section.
 
 The embeddable status badges (`status_public_badges.go`) can't switch with a theme, since they sit on whatever page embeds them, so they always use the light theme's status colors, which carry white text at AA contrast, with `--text-dim` (light) as the label segment. Keep `badgeFill` in sync with the light status tokens.
