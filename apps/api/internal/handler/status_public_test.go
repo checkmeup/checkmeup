@@ -605,3 +605,19 @@ func mustExec(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 		t.Fatalf("exec %q: %v", sql, err)
 	}
 }
+
+func TestStatusTone_MapsEachStatusColorToItsTone(t *testing.T) {
+	cases := []struct{ color, want string }{
+		{statusColorGreen, "up"},
+		{statusColorRed, "down"},
+		{statusColorAmber, "warn"},
+		{statusColorLight, "none"},
+		{statusColorGray, "paused"},
+		{statusColorBlue, "paused"},
+	}
+	for _, c := range cases {
+		if got := statusTone(c.color); got != c.want {
+			t.Fatalf("statusTone(%s) = %q, want %q", c.color, got, c.want)
+		}
+	}
+}

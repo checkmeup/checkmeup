@@ -135,4 +135,4 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   `style.css` — every `font-mono` utility class (timestamps, ping URLs, uptime stats)
   picks it up automatically. Falls back to `ui-monospace`/`SFMono-Regular`.
 
-Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered template with its own fixed light palette (hardcoded, not these tokens) — it predates the theme toggle, and PRD theme lists a dark status page as a non-goal.
+Note: the public status page (`apps/api/internal/handler/status_public.go`) is a separate, server-rendered Go template. It carries its own copy of these tokens (light and dark, switched by `status-theme.js`) and loads Geist from Google Fonts; statuses reach it as the badge hex colors and are restyled through `tone-*` classes (`statusTone`), so keep its token block in sync with `style.css`.

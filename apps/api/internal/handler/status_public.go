@@ -29,6 +29,10 @@ func NewStatusPublicHandler(pool *pgxpool.Pool) *StatusPublicHandler {
 	funcs := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
+		// The page styles each status by a tone class rather than by the hex
+		// the view model carries (which also colors the SVG badges), so the
+		// colors follow the page's light/dark tokens.
+		"tone": statusTone,
 	}
 	tmpl := template.Must(template.New("status").Funcs(funcs).Parse(statusPageHTML))
 	return &StatusPublicHandler{queries: db.New(pool), tmpl: tmpl}
@@ -372,6 +376,23 @@ const (
 	statusColorBlue  = "#3B82F6"
 )
 
+// statusTone maps a status color to the tone class the page template styles
+// it with. A minor incident is quiet (the paused gray), matching the app.
+func statusTone(color string) string {
+	switch color {
+	case statusColorGreen:
+		return "up"
+	case statusColorRed:
+		return "down"
+	case statusColorAmber:
+		return "warn"
+	case statusColorLight:
+		return "none"
+	default:
+		return "paused"
+	}
+}
+
 // ─── HTML template ────────────────────────────────────────────────────────────
 
 const statusPageHTML = `<!DOCTYPE html>
@@ -385,100 +406,114 @@ const statusPageHTML = `<!DOCTYPE html>
 <meta property="og:description" content="{{if .Description}}{{.Description}}{{else}}{{.Title}} status page — live uptime, incidents, and maintenance updates.{{end}}">
 <meta property="og:type" content="website">
 {{if .LogoURL}}<link rel="icon" href="{{.LogoURL}}">{{else}}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{{end}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="/status-theme.js"></script>
 <style>
-/* Mirrors apps/web/src/style.css — keep both in sync if the token set changes. */
+/* Mirrors the tokens in apps/web/src/style.css — keep both in sync if the token set changes. */
 :root{
-  --bg:#0a0f0d;--surface:#101512;--surface-raised:#1a221d;--border:rgb(255 255 255 / 8%);
-  --text-muted:rgb(242 245 243 / 28%);--text-dim:rgb(242 245 243 / 55%);--text:#f2f5f3;--text-strong:#f2f5f3;
-  --status-up:#1d9e75;--status-degraded:#f59e0b;--status-down:#ef4444;--status-paused:#94a3b8;
-  --card:rgb(255 255 255 / 3.5%);--accent:#1d9e75;--accent-wash:rgb(29 158 117 / 13%);--on-accent:#fff;
+  --bg:#0e1211;--surface:#131816;--surface-raised:#1a201e;--border:#232a27;--border-strong:#323b37;
+  --text-muted:#7a847f;--text-dim:#9aa39e;--text:#ecf0ee;--text-strong:#ecf0ee;
+  --status-up:#3fbf8f;--status-degraded:#ebae4a;--status-down:#f0605a;--status-paused:#7a847f;
+  --tick-up:#2f6e58;--tick-empty:#1c2220;--accent:#4dc9a0;--on-accent:#06201a;
 }
 :root[data-theme='light']{
-  --bg:#fbfdfc;--surface:#f2f6f4;--surface-raised:#e7ede9;--border:rgb(0 0 0 / 8%);
-  --text-muted:rgb(11 15 12 / 45%);--text-dim:rgb(11 15 12 / 70%);--text:#0d1512;--text-strong:#0d1512;
-  --card:rgb(0 0 0 / 3%);--accent:#0f6e56;--accent-wash:rgb(15 110 86 / 10%);
+  --bg:#fff;--surface:#f7f9f7;--surface-raised:#f1f4f1;--border:#e4e8e4;--border-strong:#d6dcd7;
+  --text-muted:#6f7873;--text-dim:#59625d;--text:#111714;--text-strong:#111714;
+  --status-up:#12805f;--status-degraded:#a86200;--status-down:#c93a2e;--status-paused:#6f7873;
+  --tick-up:#a9dcc7;--tick-empty:#ebeeeb;--accent:#0f6e56;--on-accent:#fff;
 }
+.tone-up{--tone:var(--status-up);--tick:var(--tick-up)}
+.tone-down{--tone:var(--status-down);--tick:var(--status-down)}
+.tone-warn{--tone:var(--status-degraded);--tick:var(--status-degraded)}
+.tone-paused{--tone:var(--status-paused);--tick:var(--status-paused)}
+.tone-none{--tone:var(--text-muted);--tick:var(--tick-empty)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
-.page{max-width:720px;margin:0 auto;padding:40px 20px 64px}
-.page.layout-grid{max-width:1040px}
-.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}
-.head-left{display:flex;align-items:center;gap:12px}
-.logo{display:block;max-height:38px;width:auto;border-radius:10px}
-.avatar{width:38px;height:38px;border-radius:10px;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
-h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)}
-.subtitle{margin-top:3px;font-size:13px;color:var(--text-muted)}
-.theme-toggle{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-raised);color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.page{max-width:760px;margin:0 auto;padding:40px 20px 72px}
+.page.layout-grid{max-width:1120px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:48px}
+.head-left{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{display:block;max-height:36px;width:auto;border-radius:8px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
+.page-name{font-size:15px;font-weight:600;color:var(--text-strong)}
+.subtitle{font-size:13px;color:var(--text-dim)}
+.theme-toggle{width:36px;height:36px;border-radius:8px;border:0;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.theme-toggle:hover{background:var(--surface-raised)}
+.theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .theme-toggle .icon-moon{display:none}
 :root[data-theme='light'] .theme-toggle .icon-sun{display:none}
 :root[data-theme='light'] .theme-toggle .icon-moon{display:block}
-.banner{border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;margin-bottom:22px}
-.dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-.banner-count{margin-left:auto;font-size:12px;font-weight:500;color:var(--text-muted)}
-.incident{border-radius:12px;padding:18px 20px;margin-bottom:26px}
-.incident-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
-.incident-title{font-size:14px;font-weight:700;color:var(--text-strong)}
-.incident-status-chip{padding:2px 9px;border-radius:100px;background:var(--surface-raised);color:var(--text-dim);font-size:10.5px;font-weight:600}
-.incident-affected{margin:8px 0 14px;font-size:12.5px;color:var(--text-muted)}
-.timeline-row{display:flex;gap:12px;padding-bottom:14px}
+.overall{display:flex;flex-direction:column;gap:10px;margin-bottom:44px}
+.overall h1{display:flex;align-items:center;gap:14px;font-size:34px;line-height:1.1;font-weight:600;letter-spacing:-.035em;color:var(--text-strong)}
+.overall .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--tone);box-shadow:0 0 0 5px color-mix(in srgb,var(--tone) 18%,transparent)}
+.overall p{font-size:15px;color:var(--text-dim)}
+.section-title{font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:12px}
+.incident{border-radius:14px;padding:20px 22px;margin-bottom:28px;background:color-mix(in srgb,var(--tone) 9%,transparent)}
+.incident-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.incident-title{font-size:17px;font-weight:600;letter-spacing:-.015em;color:var(--text-strong)}
+.label{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--tone);white-space:nowrap}
+.label::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--tone);flex-shrink:0}
+.label.quiet{color:var(--text-dim)}
+.incident-status{font-size:13px;color:var(--text-dim)}
+.incident-affected{margin:4px 0 14px;font-size:14px;color:var(--text-dim)}
+.timeline-row{display:flex;gap:14px;padding-bottom:14px}
 .timeline-rail{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.timeline-dot{width:7px;height:7px;border-radius:50%;margin-top:5px}
-.timeline-line{width:1px;flex:1;margin-top:4px}
-.timeline-status{font-size:12.5px;font-weight:600;color:var(--text-strong)}
-.timeline-time{font-weight:400;color:var(--text-muted);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px}
-.timeline-message{font-size:12.5px;color:var(--text-dim);margin-top:3px;line-height:1.5}
-.incidents-history{margin-top:24px;margin-bottom:8px}
-.section-title{font-size:12.5px;font-weight:600;color:var(--text-dim);margin-bottom:10px}
-.history-row{padding:12px 0;border-top:1px solid var(--border)}
-.history-head{display:flex;align-items:center;gap:8px}
-.history-title{font-size:13px;font-weight:600;color:var(--text-strong)}
-.history-meta{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
-.history-summary{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
-.pagination{display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px}
-.pagination a{color:var(--accent);text-decoration:none}
+.timeline-dot{width:8px;height:8px;border-radius:50%;margin-top:7px;background:var(--tone)}
+.timeline-line{width:1px;flex:1;margin-top:4px;background:color-mix(in srgb,var(--tone) 35%,transparent)}
+.timeline-status{font-size:14px;font-weight:600;color:var(--text-strong)}
+.timeline-time{font-weight:400;color:var(--text-dim);font-size:12.5px}
+.timeline-message{font-size:14px;color:var(--text);margin-top:2px}
+.monitors{display:flex;flex-direction:column}
+.monitor{padding:18px 0;border-top:1px solid var(--border)}
+.monitor-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+.monitor-name{font-weight:500;font-size:15px;color:var(--text-strong);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{display:flex;gap:2px;height:28px}
+.seg{flex:1;min-width:1px;border-radius:2px;background:var(--tick);cursor:default}
+.bar-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:12.5px;color:var(--text-dim)}
+.monitor-note{margin:0 0 10px;font-size:13.5px;color:var(--text-dim)}
+.empty{color:var(--text-dim);font-size:14px;text-align:center;padding:32px 0;border-top:1px solid var(--border)}
+.incidents-history{margin-top:44px}
+.history-row{padding:14px 0;border-top:1px solid var(--border)}
+.history-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.history-title{font-size:15px;font-weight:500;color:var(--text-strong)}
+.history-meta{margin-left:auto;font-size:12.5px;color:var(--text-dim);white-space:nowrap}
+.history-summary{margin-top:4px;font-size:14px;color:var(--text-dim)}
+.pagination{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid var(--border);font-size:14px}
+.pagination a{color:var(--accent);text-decoration:none;font-weight:500}
 .pagination a:hover{text-decoration:underline}
-.monitors{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
-.monitor{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
-.monitor-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-.monitor-name{font-weight:600;font-size:14px;color:var(--text-strong)}
-.chip{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;color:#fff;letter-spacing:.03em;text-transform:uppercase;flex-shrink:0}
-.bar{display:flex;gap:1.5px}
-.seg{height:24px;flex:1;border-radius:1px;cursor:default}
-.bar-labels{display:flex;justify-content:space-between;margin-top:5px;font-size:10.5px;color:var(--text-muted)}
-.monitor-note{margin:0 0 10px;font-size:12px;color:var(--text-muted)}
-.footer{margin-top:36px;padding-top:22px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-muted)}
-.footer p+p{margin-top:6px}
-.footer a{color:var(--text-muted);text-decoration:none}
-.footer a:hover{text-decoration:underline}
-.content-grid{display:flex;gap:24px;align-items:flex-start;margin-bottom:8px}
-.content-grid .monitors{flex:1.6;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0}
-.content-grid .monitor{padding:15px 16px}
-.content-grid .monitor-name{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.content-grid .seg{height:18px}
+.footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;font-size:13px;color:var(--text-dim)}
+.footer a{color:var(--text-dim);text-decoration:none}
+.footer a:hover{color:var(--text);text-decoration:underline}
+.footer-links{display:flex;gap:14px;flex-wrap:wrap}
+.content-grid{display:flex;gap:48px;align-items:flex-start}
+.content-grid .monitors{flex:1.6;display:grid;grid-template-columns:1fr 1fr;column-gap:32px;min-width:0}
+.content-grid .bar{height:20px}
 .content-grid .bar-labels{display:none}
-.sidebar{flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px}
-.sidebar-card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:16px 18px}
-.sidebar-incidents{display:flex;flex-direction:column;gap:16px}
+.sidebar{flex:1;min-width:280px;display:flex;flex-direction:column;gap:28px}
+.sidebar .incidents-history{margin-top:0}
 @media (max-width:860px){
-  .content-grid{flex-direction:column}
-  .content-grid .monitors{grid-template-columns:1fr}
+  .content-grid{flex-direction:column;gap:32px}
+  .content-grid .monitors{grid-template-columns:1fr;width:100%}
   .sidebar{min-width:0;width:100%}
+  .overall h1{font-size:28px}
 }
 </style>
 </head>
 <body>
 <div class="page {{if eq .Layout "grid"}}layout-grid{{end}}">
-  <div class="head">
+  <header class="head">
     <div class="head-left">
-      {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="{{.Title}} logo">{{else}}<div class="avatar">{{.Initials}}</div>{{end}}
+      {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="{{.Title}} logo">{{else}}<div class="avatar" aria-hidden="true">{{.Initials}}</div>{{end}}
       <div>
-        <h1>{{.Title}}</h1>
+        <div class="page-name">{{.Title}}</div>
         {{if .Description}}<p class="subtitle">{{.Description}}</p>{{end}}
       </div>
     </div>
     <button class="theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">
-      <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="icon-sun" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/>
         <line x1="12" y1="1" x2="12" y2="3"/>
         <line x1="12" y1="21" x2="12" y2="23"/>
@@ -489,45 +524,33 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
         <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
       </svg>
-      <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="icon-moon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
       </svg>
     </button>
-  </div>
+  </header>
 
-  <div class="banner" style="background:{{.OverallColor}}18;border:1px solid {{.OverallColor}}44">
-    <span class="dot" style="background:{{.OverallColor}}"></span>
-    <span style="color:{{.OverallColor}}">{{.Overall}}</span>
-    {{if .ActiveIncidents}}
-    <span class="banner-count">{{len .ActiveIncidents}} active incident{{if ne (len .ActiveIncidents) 1}}s{{end}}</span>
-    {{end}}
-  </div>
+  <section class="overall tone-{{tone .OverallColor}}">
+    <h1><span class="dot" aria-hidden="true"></span>{{.Overall}}</h1>
+    <p>{{if .ActiveIncidents}}{{len .ActiveIncidents}} active incident{{if ne (len .ActiveIncidents) 1}}s{{end}} · {{end}}Last updated {{.UpdatedAt}}</p>
+  </section>
 
   {{if eq .Layout "grid"}}
   <div class="content-grid">
     <div class="monitors">
       {{range .Monitors}}{{template "monitorCard" .}}{{end}}
       {{if not .Monitors}}
-      <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
+      <p class="empty">No monitors on this page yet.</p>
       {{end}}
     </div>
     <div class="sidebar">
-      {{if .ActiveIncidents}}
-      <div class="sidebar-incidents">
-        {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
-      </div>
-      {{end}}
+      {{range .ActiveIncidents}}{{template "incidentCard" .}}{{end}}
       {{if .ResolvedIncidents}}
-      <div class="sidebar-card">
+      <section class="incidents-history">
         <h2 class="section-title">Past incidents</h2>
         {{range .ResolvedIncidents}}{{template "historyRow" .}}{{end}}
-        {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
-        <div class="pagination">
-          {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
-          {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
-        </div>
-        {{end}}
-      </div>
+        {{template "pagination" .}}
+      </section>
       {{end}}
     </div>
   </div>
@@ -537,49 +560,56 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
   <div class="monitors">
     {{range .Monitors}}{{template "monitorCard" .}}{{end}}
     {{if not .Monitors}}
-    <p style="color:var(--text-muted);font-size:14px;text-align:center;padding:32px 0">No monitors on this page yet.</p>
+    <p class="empty">No monitors on this page yet.</p>
     {{end}}
   </div>
 
   {{if .ResolvedIncidents}}
-  <div class="incidents-history">
+  <section class="incidents-history">
     <h2 class="section-title">Past incidents</h2>
     {{range .ResolvedIncidents}}{{template "historyRow" .}}{{end}}
-    {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
-    <div class="pagination">
-      {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
-      {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
-    </div>
-    {{end}}
-  </div>
+    {{template "pagination" .}}
+  </section>
   {{end}}
   {{end}}
 
-  <div class="footer">
-    <p>Last updated {{.UpdatedAt}}</p>
+  <footer class="footer">
+    <span>Last updated {{.UpdatedAt}}</span>
     {{if not .HideBranding}}
-    <p>Powered by <a href="https://checkmeup.net">Checkmeup</a></p>
-    <p><a href="https://checkmeup.net/faq">FAQ</a> · <a href="https://checkmeup.net/terms">Terms</a> · <a href="https://checkmeup.net/privacy">Privacy</a></p>
+    <span class="footer-links">
+      <span>Powered by <a href="https://checkmeup.net">Checkmeup</a></span>
+      <a href="https://checkmeup.net/faq">FAQ</a>
+      <a href="https://checkmeup.net/terms">Terms</a>
+      <a href="https://checkmeup.net/privacy">Privacy</a>
+    </span>
     {{end}}
-  </div>
+  </footer>
 </div>
 </body>
 </html>
 
+{{define "pagination"}}
+  {{if or .HasPrevIncidentsPage .HasNextIncidentsPage}}
+  <nav class="pagination" aria-label="Past incidents pages">
+    {{if .HasPrevIncidentsPage}}<a href="?incidents_page={{sub .ResolvedIncidentsPage 1}}">← Newer</a>{{else}}<span></span>{{end}}
+    {{if .HasNextIncidentsPage}}<a href="?incidents_page={{add .ResolvedIncidentsPage 1}}">Older →</a>{{end}}
+  </nav>
+  {{end}}
+{{end}}
+
 {{define "incidentCard"}}
-  <div class="incident" style="border:1px solid {{.SeverityColor}}4D;background:{{.SeverityColor}}14">
+  <section class="incident tone-{{tone .SeverityColor}}">
     <div class="incident-header">
-      <span class="chip" style="background:{{.SeverityColor}}">{{.Severity}}</span>
-      <span class="incident-status-chip">{{.StatusLabel}}</span>
-      <span class="incident-title">{{.Title}}</span>
+      <span class="label">{{.Severity}}</span>
+      <span class="incident-status">· {{.StatusLabel}}</span>
     </div>
+    <h2 class="incident-title">{{.Title}}</h2>
     {{if .Affected}}<p class="incident-affected">Affecting: {{.Affected}}</p>{{end}}
-    {{$incidentColor := .SeverityColor}}
     {{range .Updates}}
     <div class="timeline-row">
-      <div class="timeline-rail">
-        <span class="timeline-dot" style="background:{{$incidentColor}}"></span>
-        {{if not .IsLast}}<span class="timeline-line" style="background:{{$incidentColor}}59"></span>{{end}}
+      <div class="timeline-rail" aria-hidden="true">
+        <span class="timeline-dot"></span>
+        {{if not .IsLast}}<span class="timeline-line"></span>{{end}}
       </div>
       <div>
         <div class="timeline-status">{{.StatusLabel}} <span class="timeline-time">· {{.RelativeTime}}</span></div>
@@ -587,14 +617,14 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
       </div>
     </div>
     {{end}}
-  </div>
+  </section>
 {{end}}
 
 {{define "monitorCard"}}
     <div class="monitor">
       <div class="monitor-header">
         <span class="monitor-name">{{.DisplayName}}</span>
-        <span class="chip" style="background:{{.StatusColor}}">{{.StatusLabel}}</span>
+        <span class="label tone-{{tone .StatusColor}}{{if eq (tone .StatusColor) "up"}} quiet{{end}}">{{.StatusLabel}}</span>
       </div>
       {{if and (eq .Type "ssl") .ExpiresAt}}
       <p class="monitor-note">Certificate expires {{.ExpiresAt}} ({{.DaysLeft}} days)</p>
@@ -606,7 +636,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text-strong)
       <p class="monitor-note">{{.MaintenanceMessage}}</p>
       {{end}}
       <div class="bar">
-        {{range .Bar}}<div class="seg" style="background:{{.Color}}" title="{{.Label}}"></div>{{end}}
+        {{range .Bar}}<div class="seg tone-{{tone .Color}}" title="{{.Label}}"></div>{{end}}
       </div>
       <div class="bar-labels"><span>90 days ago</span><span>Today</span></div>
     </div>
