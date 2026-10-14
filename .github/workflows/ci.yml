@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Checkout is the only step that uses GITHUB_TOKEN; Codacy has its own token.
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Lint & Test
