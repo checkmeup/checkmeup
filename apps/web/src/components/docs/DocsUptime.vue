@@ -1,6 +1,6 @@
 <template>
   <section id="uptime" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">
       Uptime monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
@@ -77,10 +77,10 @@
           including Hobby) — add an optional keyword check alongside the status code, so a
           maintenance page served with a 200 or an error embedded in a JSON response still
           trips an alert. Set it to require the keyword (<code
-            class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+            class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
             >Contains</code
           >) or to fail when it's present (<code
-            class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+            class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
             >Does not contain</code
           >), with an optional case-sensitive toggle. We search the first 512 KB of the
           response body — no extra request, and the body itself is never stored, only the
@@ -94,11 +94,11 @@
         <span>
           <strong class="text-[var(--text-strong)]">JSON assertions</strong> — assert on one or
           more fields in a JSON response, e.g.
-          <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+          <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
             >$.status</code
           >
           equals
-          <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+          <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
             >ok</code
           >. Each assertion is a path, a comparator (equals, not equals, contains, &gt;, &lt;),
           and an expected value; add as many as you need — all of them must pass, same 512 KB

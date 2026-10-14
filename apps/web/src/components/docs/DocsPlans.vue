@@ -4,25 +4,25 @@ import { RouterLink } from 'vue-router'
 
 <template>
   <section id="plans" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Plans & limits</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Plans & limits</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Limits are per organization and apply across all monitor types combined. The free Hobby
       plan is meant to be genuinely usable, not a trial.
     </p>
-    <div class="rounded-xl border overflow-hidden border-[var(--border)]">
+    <div class="overflow-hidden rounded-[14px] border border-[var(--border)]">
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-[var(--surface)]">
-            <th class="text-left px-4 py-3 font-medium text-[var(--text-muted)]">
+            <th class="px-4 py-2.5 text-left text-[12.5px] font-medium text-[var(--text-dim)]">
               Plan
             </th>
-            <th class="text-left px-4 py-3 font-medium text-[var(--text-muted)]">
+            <th class="px-4 py-2.5 text-left text-[12.5px] font-medium text-[var(--text-dim)]">
               Monitors
             </th>
-            <th class="text-left px-4 py-3 font-medium text-[var(--text-muted)]">
+            <th class="px-4 py-2.5 text-left text-[12.5px] font-medium text-[var(--text-dim)]">
               Status pages
             </th>
-            <th class="text-left px-4 py-3 font-medium text-[var(--text-muted)]">
+            <th class="px-4 py-2.5 text-left text-[12.5px] font-medium text-[var(--text-dim)]">
               SMS credits/mo
             </th>
           </tr>

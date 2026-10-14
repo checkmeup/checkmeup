@@ -1,6 +1,6 @@
 <template>
   <section id="cron" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">
       Cron job monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
@@ -8,7 +8,7 @@
       if the ping doesn't arrive on schedule, you get alerted.
     </p>
     <pre
-      class="rounded-xl border p-4 text-xs overflow-x-auto font-mono leading-relaxed mb-4 bg-[var(--surface)] border-[var(--border)] text-[var(--color-green-300)]"
+      class="mb-4 overflow-x-auto rounded-[14px] bg-[var(--surface)] p-5 font-mono text-[13px] leading-relaxed text-[var(--text)]"
     ><code># Add this to the end of any cron job, script, or pipeline step
 curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;
 
@@ -67,7 +67,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
         <span
           ><strong class="text-[var(--text-strong)]">Attach custom data to a ping</strong> —
           add query params to the ping URL and they're stored with that ping, e.g.
-          <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+          <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
             >curl -s
             "https://checkmeup.net/ping/&lt;token&gt;?build=142&amp;state=success"</code
           >. Capped at 20 key/value pairs, 64 characters per key, 256 per value — extra pairs

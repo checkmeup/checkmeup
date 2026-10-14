@@ -1,6 +1,6 @@
 <template>
   <section id="sms" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">SMS alerts</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">SMS alerts</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Text alerts to a phone number — available on Solo, Startup, and Enterprise (not Hobby),
       since carrier fees give SMS a real per-message cost the other channels don't have. Set
@@ -13,7 +13,7 @@
       </li>
       <li>
         Enter the number in E.164 format (e.g.
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >+14155551234</code
         >) and check the consent box — required before any automated text can be sent to that
         number.

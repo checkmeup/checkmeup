@@ -1,6 +1,6 @@
 <template>
   <section id="slack" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Slack alerts</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Slack alerts</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Post alerts to any Slack channel via an Incoming Webhook. Set it up in
       <strong class="text-[var(--text-strong)]">Settings → Notification channels</strong>:
@@ -13,7 +13,7 @@
       </li>
       <li>
         Copy the Webhook URL (starts with
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >https://hooks.slack.com/services/</code
         >).
       </li>

@@ -1,6 +1,6 @@
 <template>
   <section id="telegram" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Telegram alerts</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Telegram alerts</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Every monitor type can alert through Telegram. Set it up in
       <strong class="text-[var(--text-strong)]">Settings → Notification channels</strong>:
@@ -16,7 +16,7 @@
           >@checkmeupnet_bot</a
         >
         in Telegram and send
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >/start</code
         >.
       </li>

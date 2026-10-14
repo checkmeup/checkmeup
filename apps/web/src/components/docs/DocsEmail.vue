@@ -1,6 +1,6 @@
 <template>
   <section id="email" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Email alerts</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Email alerts</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Send alerts to any email address — use alongside Telegram and Slack, or on its own. Set
       it up in
@@ -12,7 +12,7 @@
       </li>
       <li>
         Enter an address — can be a shared inbox like
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >alerts@yourteam.com</code
         >
         rather than your login email.

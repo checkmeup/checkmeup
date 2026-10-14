@@ -1,6 +1,6 @@
 <template>
   <section id="port" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">
       Port (TCP) monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">

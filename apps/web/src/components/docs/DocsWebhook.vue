@@ -1,6 +1,6 @@
 <template>
   <section id="webhook" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Webhook alerts</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Webhook alerts</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       A generic alert channel for wiring monitor events into your own automation — PagerDuty,
       a custom script, or anything else that isn't a first-class integration. Set it up in
@@ -10,7 +10,7 @@
       <li>
         Click <strong class="text-[var(--text-strong)]">Add channel</strong>, choose Webhook,
         and enter a URL that starts with
-        <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+        <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
           >https://</code
         >.
       </li>
@@ -27,13 +27,13 @@
     <p class="text-sm leading-relaxed mt-4 mb-4 text-[var(--text-dim)]">
       On every down/recovery event (and for the test button), Checkmeup sends a single
       unretried
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >POST</code
       >
       with a JSON body:
     </p>
     <pre
-      class="rounded-xl border p-4 text-xs overflow-x-auto font-mono leading-relaxed mb-4 bg-[var(--surface)] border-[var(--border)] text-[var(--color-green-300)]"
+      class="mb-4 overflow-x-auto rounded-[14px] bg-[var(--surface)] p-5 font-mono text-[13px] leading-relaxed text-[var(--text)]"
     ><code>{
   "eventType": "down",
   "monitorName": "api.example.com",
@@ -43,7 +43,7 @@
 }</code></pre>
     <p class="text-sm leading-relaxed text-[var(--text-dim)]">
       The request carries an
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >X-Checkmeup-Signature</code
       >
       header — a hex-encoded HMAC-SHA256 of the raw body, signed with your channel's secret —

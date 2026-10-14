@@ -54,9 +54,9 @@ const sections = [
 <template>
   <LandingLayout>
     <!-- Hero -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
+    <section class="mx-auto max-w-[1200px] px-4 pt-16 pb-10 sm:px-6 sm:pt-24 sm:pb-12">
       <h1
-        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]"
+        class="mb-4 text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
       >
         Documentation
       </h1>
@@ -66,7 +66,7 @@ const sections = [
       </p>
     </section>
 
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-24 flex flex-col lg:flex-row gap-12">
+    <div class="mx-auto flex max-w-[1200px] flex-col gap-12 px-4 pb-24 sm:px-6 lg:flex-row">
       <!-- Sidebar nav -->
       <nav class="lg:w-56 flex-shrink-0">
         <div
@@ -76,7 +76,7 @@ const sections = [
             v-for="s in sections"
             :key="s.id"
             :href="`#${s.id}`"
-            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline text-[var(--text-dim)]"
+            class="whitespace-nowrap rounded-lg px-3 py-2 text-sm text-[var(--text-dim)] transition-colors hover:bg-[var(--surface-raised)] hover:text-[var(--text)]"
           >
             {{ s.label }}
           </a>

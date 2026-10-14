@@ -18,7 +18,7 @@ const sortedPosts = [...articlesMeta].reverse()
   <LandingLayout>
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-3 text-[var(--text-strong)]">Blog</h1>
+      <h1 class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[60px] mb-3 text-[var(--text-strong)]">Blog</h1>
       <p class="text-lg text-[var(--text-dim)]">Monitoring guides, building notes, and the occasional opinion. Release notes are in the <RouterLink to="/changelog" class="underline hover:no-underline text-[var(--accent)]">changelog</RouterLink>.</p>
     </section>
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
 import { useSeo } from '@/composables/useSeo'

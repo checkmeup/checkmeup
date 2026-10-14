@@ -35,8 +35,8 @@ useHead({
 <template>
   <LandingLayout>
     <!-- Hero -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
-      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]">
+    <section class="max-w-[1200px] mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
+      <h1 class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[60px] mb-4 text-[var(--text-strong)]">
         Frequently asked questions
       </h1>
       <p class="text-lg max-w-2xl text-[var(--text-dim)]">
@@ -44,7 +44,7 @@ useHead({
       </p>
     </section>
 
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-24 flex flex-col lg:flex-row gap-12">
+    <div class="max-w-[1200px] mx-auto px-4 sm:px-6 pb-24 flex flex-col lg:flex-row gap-12">
       <!-- Sidebar nav -->
       <nav class="lg:w-56 flex-shrink-0">
         <div class="lg:sticky lg:top-24 flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1">
@@ -62,7 +62,7 @@ useHead({
       <!-- Content -->
       <div class="flex-1 min-w-0 space-y-16">
         <section v-for="c in faqCategories" :key="c.id" :id="c.id" class="scroll-mt-24">
-          <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">{{ c.label }}</h2>
+          <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{{ c.label }}</h2>
           <div class="space-y-0 divide-y border-[var(--border)]">
             <div v-for="faq in c.entries" :key="faq.q" class="py-5 border-[var(--border)]">
               <h3 class="text-sm font-semibold mb-2 text-[var(--text-strong)]">{{ faq.q }}</h3>

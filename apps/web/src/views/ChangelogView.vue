@@ -21,7 +21,7 @@ const sortedReleases = [...releasesMeta].reverse()
   <LandingLayout>
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-3 text-[var(--text-strong)]">Changelog</h1>
+      <h1 class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-[60px] mb-3 text-[var(--text-strong)]">Changelog</h1>
       <p class="text-lg text-[var(--text-dim)]">Every release, newest first. Guides and essays live on the <RouterLink to="/blog" class="underline hover:no-underline text-[var(--accent)]">blog</RouterLink>.</p>
     </section>
 
@@ -34,7 +34,7 @@ const sortedReleases = [...releasesMeta].reverse()
           class="py-8 scroll-mt-20 border-[var(--border)]"
         >
           <div class="mb-3 text-xs text-[var(--text-muted)]">{{ release.date }}</div>
-          <h2 class="text-xl font-semibold mb-2 text-[var(--text-strong)]">{{ release.title }}</h2>
+          <h2 class="mb-2 text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">{{ release.title }}</h2>
           <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">{{ release.excerpt }}</p>
           <RouterLink
             :to="`/blog/${release.slug}`"

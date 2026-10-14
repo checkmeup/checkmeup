@@ -176,7 +176,7 @@ useHead({
 
           <pre
             v-else-if="block.type === 'code'"
-            class="rounded-xl border p-5 text-xs overflow-x-auto font-mono leading-relaxed bg-[var(--surface)] border-[var(--border)] text-[var(--color-green-300)]"
+            class="overflow-x-auto rounded-[14px] bg-[var(--surface)] p-5 font-mono text-[13px] leading-relaxed text-[var(--text)]"
           ><code>{{ block.text }}</code></pre>
 
           <ul v-else-if="block.type === 'ul'" class="space-y-2 pl-1">
@@ -196,7 +196,7 @@ useHead({
             <img
               :src="block.src"
               :alt="block.alt"
-              class="rounded-xl border w-full border-[var(--border)]"
+              class="w-full rounded-[14px] border border-[var(--border)]"
               loading="lazy"
             />
             <figcaption
@@ -209,7 +209,7 @@ useHead({
 
           <div
             v-else-if="block.type === 'table'"
-            class="rounded-xl border border-[var(--border)]"
+            class="rounded-[14px] border border-[var(--border)]"
           >
             <div
               class="grid"

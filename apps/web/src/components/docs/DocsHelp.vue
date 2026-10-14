@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 
 <template>
   <section id="help" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Need help?</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Need help?</h2>
     <p class="text-sm leading-relaxed mb-6 text-[var(--text-dim)]">
       There's no support ticket queue — questions, bug reports, and feature requests all reach
       an engineer directly.

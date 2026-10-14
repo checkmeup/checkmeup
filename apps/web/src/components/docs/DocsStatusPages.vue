@@ -1,9 +1,9 @@
 <template>
   <section id="status-pages" class="scroll-mt-24">
-    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-strong)]">Status pages</h2>
+    <h2 class="mb-4 text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Status pages</h2>
     <p class="text-sm leading-relaxed mb-4 text-[var(--text-dim)]">
       Create a public status page at
-      <code class="px-1 rounded text-xs bg-[var(--surface-raised)]"
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
         >checkmeup.net/status/your-slug</code
       >
       and add any of your monitors to it. Visitors see live status and incident history — no
