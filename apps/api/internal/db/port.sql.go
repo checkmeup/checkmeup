@@ -584,7 +584,9 @@ func (q *Queries) ResumePortMonitor(ctx context.Context, arg ResumePortMonitorPa
 const updatePortMonitor = `-- name: UpdatePortMonitor :one
 UPDATE port_monitors
 SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, alerts_enabled = $8,
-    max_alerts_per_incident = $9, alert_after_n_failures = $10, updated_at = NOW()
+    max_alerts_per_incident = $9, alert_after_n_failures = $10,
+    next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
 `
@@ -602,6 +604,7 @@ type UpdatePortMonitorParams struct {
 	AlertAfterNFailures  int32             `json:"alert_after_n_failures"`
 }
 
+// next_check_at: see UpdateUptimeMonitor.
 func (q *Queries) UpdatePortMonitor(ctx context.Context, arg UpdatePortMonitorParams) (PortMonitor, error) {
 	row := q.db.QueryRow(ctx, updatePortMonitor,
 		arg.ID,

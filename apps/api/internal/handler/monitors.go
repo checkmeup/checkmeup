@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -471,6 +472,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
+		NextPingAt:           pgtype.Timestamptz{Time: computeNextPing(req.Schedule, time.Now(), int(req.GracePeriodMins)), Valid: true},
 	})
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return

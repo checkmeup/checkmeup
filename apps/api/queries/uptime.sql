@@ -10,10 +10,14 @@ SELECT * FROM uptime_monitors WHERE id = $1 AND org_id = $2;
 SELECT * FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateUptimeMonitor :one
+-- next_check_at moves up to the last check plus the new interval when that's
+-- sooner, so a shorter interval applies at once; LEAST never postpones a
+-- pending first check or post-resume check (last_checked_at NULL is ignored).
 UPDATE uptime_monitors
 SET name = $3, url = $4, interval_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
     alert_after_n_failures = $8, keyword = $9, keyword_mode = $10, keyword_case_sensitive = $11,
     json_assertions = $12, max_response_time_ms = $13, http_method = $14, accepted_status_codes = $15,
+    next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $5)),
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;

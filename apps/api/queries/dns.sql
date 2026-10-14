@@ -15,9 +15,11 @@ SELECT * FROM dns_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 -- NULL (baseline not yet re-captured) — either way the prior "auto-captured"
 -- flag no longer applies. The next successful check re-captures it if the
 -- value is NULL (RecordDNSCheckUp's COALESCE), same as at creation.
+-- next_check_at: see UpdateUptimeMonitor.
 UPDATE dns_monitors
 SET name = $3, hostname = $4, record_type = $5, expected_value = $6, baseline_captured = FALSE,
     interval_mins = $7, alerts_enabled = $8, max_alerts_per_incident = $9, alert_after_n_failures = $10,
+    next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;

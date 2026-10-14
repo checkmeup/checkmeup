@@ -679,23 +679,32 @@ func (q *Queries) ResumeCronMonitor(ctx context.Context, arg ResumeCronMonitorPa
 const updateCronMonitor = `-- name: UpdateCronMonitor :one
 UPDATE cron_monitors
 SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
-    alert_after_n_failures = $8, max_duration_mins = $9, updated_at = NOW()
+    alert_after_n_failures = $8, max_duration_mins = $9,
+    next_ping_at = CASE
+        WHEN next_ping_at IS NOT NULL AND (schedule <> $4 OR grace_period_mins <> $5) THEN $10
+        ELSE next_ping_at
+    END,
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
 `
 
 type UpdateCronMonitorParams struct {
-	ID                   uuid.UUID   `json:"id"`
-	OrgID                uuid.UUID   `json:"org_id"`
-	Name                 string      `json:"name"`
-	Schedule             string      `json:"schedule"`
-	GracePeriodMins      int32       `json:"grace_period_mins"`
-	AlertsEnabled        bool        `json:"alerts_enabled"`
-	MaxAlertsPerIncident int32       `json:"max_alerts_per_incident"`
-	AlertAfterNFailures  int32       `json:"alert_after_n_failures"`
-	MaxDurationMins      pgtype.Int4 `json:"max_duration_mins"`
+	ID                   uuid.UUID          `json:"id"`
+	OrgID                uuid.UUID          `json:"org_id"`
+	Name                 string             `json:"name"`
+	Schedule             string             `json:"schedule"`
+	GracePeriodMins      int32              `json:"grace_period_mins"`
+	AlertsEnabled        bool               `json:"alerts_enabled"`
+	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
+	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
+	MaxDurationMins      pgtype.Int4        `json:"max_duration_mins"`
+	NextPingAt           pgtype.Timestamptz `json:"next_ping_at"`
 }
 
+// A changed schedule or grace period moves next_ping_at to $10, computed
+// from now with the new ones, so the job gets one full new window; other
+// edits leave it alone, and so does a monitor still waiting for its first ping.
 func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorParams) (CronMonitor, error) {
 	row := q.db.QueryRow(ctx, updateCronMonitor,
 		arg.ID,
@@ -707,6 +716,7 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
 		arg.MaxDurationMins,
+		arg.NextPingAt,
 	)
 	var i CronMonitor
 	err := row.Scan(

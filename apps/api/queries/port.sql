@@ -10,9 +10,12 @@ SELECT * FROM port_monitors WHERE id = $1 AND org_id = $2;
 SELECT * FROM port_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdatePortMonitor :one
+-- next_check_at: see UpdateUptimeMonitor.
 UPDATE port_monitors
 SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, alerts_enabled = $8,
-    max_alerts_per_incident = $9, alert_after_n_failures = $10, updated_at = NOW()
+    max_alerts_per_incident = $9, alert_after_n_failures = $10,
+    next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 

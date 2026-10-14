@@ -13,9 +13,17 @@ SELECT * FROM cron_monitors WHERE ping_token = $1;
 SELECT * FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateCronMonitor :one
+-- A changed schedule or grace period moves next_ping_at to $10, computed
+-- from now with the new ones, so the job gets one full new window; other
+-- edits leave it alone, and so does a monitor still waiting for its first ping.
 UPDATE cron_monitors
 SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_alerts_per_incident = $7,
-    alert_after_n_failures = $8, max_duration_mins = $9, updated_at = NOW()
+    alert_after_n_failures = $8, max_duration_mins = $9,
+    next_ping_at = CASE
+        WHEN next_ping_at IS NOT NULL AND (schedule <> $4 OR grace_period_mins <> $5) THEN $10
+        ELSE next_ping_at
+    END,
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
