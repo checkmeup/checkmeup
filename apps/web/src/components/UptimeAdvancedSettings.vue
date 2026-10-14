@@ -61,7 +61,7 @@ function toggleStatusCode(code: number) {
         <select
           id="httpMethod"
           v-model="httpMethod"
-          class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
+          class="mt-1 w-full h-10 rounded-lg border pl-3 text-sm"
         >
           <option v-for="opt in httpMethodOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}

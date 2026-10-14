@@ -14,7 +14,9 @@ const router = useRouter()
 const title = ref('')
 const message = ref('')
 const severity = ref<IncidentSeverity>('minor')
-const monitors = ref<{ monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string; name: string }[]>([])
+const monitors = ref<
+  { monitorType: 'cron' | 'uptime' | 'ssl' | 'domain' | 'port'; monitorId: string; name: string }[]
+>([])
 const submitting = ref(false)
 const error = ref('')
 const overlapWarning = ref('')
@@ -70,23 +72,32 @@ async function submit(confirmOverlap = false) {
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6 *:max-w-[720px]">
       <div class="mb-8 flex flex-col items-start gap-4">
-        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+        <button
+          type="button"
+          class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
           @click="router.push({ name: 'incidents' })"
         >
           ← Back
         </button>
-        <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">Declare incident</h1>
+        <h1
+          class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]"
+        >
+          Declare incident
+        </h1>
       </div>
 
-      <form
-        class="flex flex-col gap-6"
-        @submit.prevent="submit(false)"
-      >
+      <form class="flex flex-col gap-6" @submit.prevent="submit(false)">
         <div>
           <Label for="title">Title</Label>
-          <Input id="title" v-model="title" placeholder="Elevated API latency" class="mt-1" required />
+          <Input
+            id="title"
+            v-model="title"
+            placeholder="Elevated API latency"
+            class="mt-1"
+            required
+          />
         </div>
 
         <div>
@@ -104,9 +115,11 @@ async function submit(confirmOverlap = false) {
           <select
             id="severity"
             v-model="severity"
-            class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
+            class="mt-1 w-full h-10 rounded-lg border pl-3 text-sm"
           >
-            <option v-for="opt in severityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            <option v-for="opt in severityOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
           </select>
         </div>
 

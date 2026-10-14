@@ -24,7 +24,11 @@ function setIncident(updated: Incident) {
   queryClient.setQueryData(['incident', id], updated)
 }
 
-const severityLabels: Record<string, string> = { minor: 'Minor', major: 'Major', critical: 'Critical' }
+const severityLabels: Record<string, string> = {
+  minor: 'Minor',
+  major: 'Major',
+  critical: 'Critical',
+}
 const severityColors: Record<string, string> = {
   minor: 'var(--status-paused)',
   major: 'var(--status-degraded)',
@@ -149,9 +153,13 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
 
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-[720px] px-4 pt-8 pb-20 md:px-6">
+    <div class="mx-auto max-w-[1200px] px-4 pt-8 pb-20 md:px-6 *:max-w-[720px]">
       <div class="mb-8 flex flex-col items-start gap-4">
-        <button type="button" class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]" @click="router.push({ name: 'incidents' })">
+        <button
+          type="button"
+          class="py-1 text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+          @click="router.push({ name: 'incidents' })"
+        >
           ← Back
         </button>
       </div>
@@ -162,8 +170,18 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         <div class="mb-10">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div v-if="!editingTitle" class="flex items-center gap-2 flex-1">
-              <h1 class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] md:text-[34px]">{{ incident.title }}</h1>
-              <button type="button" class="text-sm text-[var(--text-dim)] hover:text-[var(--text)]" @click="startEditTitle">Edit</button>
+              <h1
+                class="text-[34px] leading-[1.08] font-semibold tracking-[-0.035em] break-words text-[var(--text-strong)] md:text-[44px]"
+              >
+                {{ incident.title }}
+              </h1>
+              <button
+                type="button"
+                class="text-sm text-[var(--text-dim)] hover:text-[var(--text)]"
+                @click="startEditTitle"
+              >
+                Edit
+              </button>
             </div>
             <div v-else class="flex items-center gap-2 flex-1">
               <Input v-model="titleDraft" class="flex-1" />
@@ -173,12 +191,20 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
           </div>
 
           <div class="flex items-center gap-4 text-sm">
-            <span class="inline-flex items-center gap-2 font-medium" :style="{ color: severityColors[incident.severity] }">
-              <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: severityColors[incident.severity] }"></span>
+            <span
+              class="inline-flex items-center gap-2 font-medium"
+              :style="{ color: severityColors[incident.severity] }"
+            >
+              <span
+                class="h-2 w-2 rounded-full"
+                :style="{ backgroundColor: severityColors[incident.severity] }"
+              ></span>
               {{ severityLabels[incident.severity] }}
             </span>
             <span class="text-[var(--text-dim)]">{{ statusLabels[incident.status] }}</span>
-            <span class="text-[var(--text-muted)]">{{ incident.monitorCount }} monitor{{ incident.monitorCount === 1 ? '' : 's' }}</span>
+            <span class="text-[var(--text-muted)]"
+              >{{ incident.monitorCount }} monitor{{ incident.monitorCount === 1 ? '' : 's' }}</span
+            >
           </div>
 
           <div v-if="incident.monitors?.length" class="mt-3 flex flex-wrap gap-1.5">
@@ -193,20 +219,16 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
         </div>
 
         <!-- Post a new update -->
-        <div
-          v-if="!isResolved"
-          class="mb-10 rounded-[14px] bg-[var(--surface)] p-6"
-        >
+        <div v-if="!isResolved" class="mb-10 rounded-[14px] bg-[var(--surface)] p-6">
           <Label for="newMessage">Post an update</Label>
           <Input id="newMessage" v-model="newMessage" placeholder="What's changed?" class="mt-1" />
           <div class="flex items-center gap-3 mt-3">
-            <select
-              v-model="newStatus"
-              class="h-10 rounded-lg border px-3 text-sm"
-            >
+            <select v-model="newStatus" class="h-10 rounded-lg border pl-3 text-sm">
               <option v-for="s in statusOrder" :key="s" :value="s">{{ statusLabels[s] }}</option>
             </select>
-            <Button :disabled="posting" @click="postUpdate">{{ posting ? 'Posting…' : 'Post update' }}</Button>
+            <Button :disabled="posting" @click="postUpdate">{{
+              posting ? 'Posting…' : 'Post update'
+            }}</Button>
           </div>
         </div>
 
@@ -214,16 +236,22 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
 
         <!-- Updates feed -->
         <div class="mb-6 flex flex-col">
-          <h2 class="mb-1 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Updates</h2>
+          <h2 class="mb-1 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">
+            Updates
+          </h2>
           <div
             v-for="u in incident.updates"
             :key="u.id"
             class="border-t border-[var(--border)] py-4"
           >
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-sm font-semibold text-[var(--text-strong)]">{{ statusLabels[u.status] }}</span>
+              <span class="text-sm font-semibold text-[var(--text-strong)]">{{
+                statusLabels[u.status]
+              }}</span>
               <div class="flex items-center gap-2">
-                <span class="font-mono text-xs text-[var(--text-dim)]">{{ formatDate(u.createdAt) }}</span>
+                <span class="font-mono text-xs text-[var(--text-dim)]">{{
+                  formatDate(u.createdAt)
+                }}</span>
                 <button
                   v-if="editingUpdateId !== u.id"
                   class="text-xs text-[var(--text-muted)]"
@@ -233,17 +261,22 @@ const isResolved = computed(() => incident.value?.status === 'resolved')
                 </button>
               </div>
             </div>
-            <p v-if="editingUpdateId !== u.id" class="text-[15px] text-[var(--text)]">{{ u.message }}</p>
+            <p v-if="editingUpdateId !== u.id" class="text-[15px] text-[var(--text)]">
+              {{ u.message }}
+            </p>
             <div v-else class="flex items-center gap-2 mt-1">
               <Input v-model="editDraft" class="flex-1" />
-              <Button size="sm" :disabled="savingUpdate" @click="saveUpdateMessage(u.id)">Save</Button>
+              <Button size="sm" :disabled="savingUpdate" @click="saveUpdateMessage(u.id)"
+                >Save</Button
+              >
               <Button size="sm" variant="secondary" @click="editingUpdateId = ''">Cancel</Button>
             </div>
           </div>
         </div>
 
         <div class="flex justify-end">
-          <Button class="text-[var(--status-down)]"
+          <Button
+            class="text-[var(--status-down)]"
             v-if="!confirmDelete"
             variant="secondary"
             @click="confirmDelete = true"

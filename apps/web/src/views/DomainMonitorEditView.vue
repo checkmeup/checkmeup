@@ -124,7 +124,7 @@ async function submit() {
       <select
         id="alertLimit"
         v-model="maxAlertsPerIncident"
-        class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
+        class="mt-1 w-full h-10 rounded-lg border pl-3 text-sm"
       >
         <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -140,7 +140,7 @@ async function submit() {
       <select
         id="alertFilter"
         v-model="alertAfterNFailures"
-        class="mt-1 w-full h-10 rounded-lg border px-3 text-sm"
+        class="mt-1 w-full h-10 rounded-lg border pl-3 text-sm"
       >
         <option v-for="opt in alertFilterOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}

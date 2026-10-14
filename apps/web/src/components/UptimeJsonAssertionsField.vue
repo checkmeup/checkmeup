@@ -34,7 +34,7 @@ function removeAssertion(i: number) {
       <Input v-model="a.path" placeholder="$.status" class="flex-1 min-w-0" />
       <select
         v-model="a.comparator"
-        class="rounded-lg border px-2 py-2 text-sm"
+        class="rounded-lg border pl-2 py-2 text-sm"
       >
         <option v-for="opt in comparatorOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
