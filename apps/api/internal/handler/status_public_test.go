@@ -467,7 +467,7 @@ func TestStatusPublicServePageBadge(t *testing.T) {
 		if !strings.Contains(body, "operational") {
 			t.Fatalf("want badge text 'operational', got %s", body)
 		}
-		if !strings.Contains(body, statusColorGreen) {
+		if !strings.Contains(body, badgeFillUp) {
 			t.Fatalf("want the green fill color, got %s", body)
 		}
 	})
@@ -587,8 +587,8 @@ func TestRenderBadgeSVG(t *testing.T) {
 	if !strings.Contains(svg, "status") || !strings.Contains(svg, "operational") {
 		t.Fatalf("want label and value text present, got %s", svg)
 	}
-	if !strings.Contains(svg, statusColorGreen) {
-		t.Fatalf("want the fill color present, got %s", svg)
+	if !strings.Contains(svg, badgeFillUp) {
+		t.Fatalf("want the up fill color present, got %s", svg)
 	}
 
 	t.Run("escapes text that could break the SVG markup", func(t *testing.T) {
@@ -597,6 +597,21 @@ func TestRenderBadgeSVG(t *testing.T) {
 			t.Fatalf("want the label HTML-escaped, got %s", svg)
 		}
 	})
+}
+
+func TestBadgeFill_UsesTheLightThemeStatusColors(t *testing.T) {
+	cases := []struct{ color, want string }{
+		{statusColorGreen, badgeFillUp},
+		{statusColorAmber, badgeFillDegraded},
+		{statusColorRed, badgeFillDown},
+		{statusColorGray, badgeFillUnknown},
+		{statusColorLight, badgeFillUnknown},
+	}
+	for _, tc := range cases {
+		if got := badgeFill(tc.color); got != tc.want {
+			t.Fatalf("badgeFill(%q) = %q, want %q", tc.color, got, tc.want)
+		}
+	}
 }
 
 func mustExec(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {

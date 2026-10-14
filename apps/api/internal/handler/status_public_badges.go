@@ -24,6 +24,32 @@ func badgeStatusWord(color string) string {
 	}
 }
 
+// The badge palette is the light theme's status colors (docs/reference/design.md):
+// each carries white text at AA contrast, and a badge sits on whatever page
+// embeds it, so it can't switch with a theme. The label segment is the light
+// theme's dim text color.
+const (
+	badgeLabelFill    = "#59625d"
+	badgeFillUp       = "#12805f"
+	badgeFillDegraded = "#a86200"
+	badgeFillDown     = "#c93a2e"
+	badgeFillUnknown  = "#6f7873"
+)
+
+// badgeFill maps a status color to the fill of the badge's value segment.
+func badgeFill(color string) string {
+	switch color {
+	case statusColorGreen:
+		return badgeFillUp
+	case statusColorAmber:
+		return badgeFillDegraded
+	case statusColorRed:
+		return badgeFillDown
+	default:
+		return badgeFillUnknown
+	}
+}
+
 func writeBadge(w http.ResponseWriter, label, value, color string) {
 	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "max-age=60") // PRD status-badges: short TTL so embedders/CDNs don't hammer this on every page load
@@ -31,8 +57,9 @@ func writeBadge(w http.ResponseWriter, label, value, color string) {
 }
 
 // renderBadgeSVG draws a flat, shields.io-style two-segment badge: a gray
-// label segment and a colored value segment. Built by hand (no badge
-// library/external service — ADR's no-new-infra principle) using a rough
+// label segment and a colored value segment, without the glossy gradient.
+// Built by hand (no badge library/external service — ADR's no-new-infra
+// principle) using a rough
 // per-character width estimate, which only needs to avoid clipping text,
 // not be pixel-perfect.
 func renderBadgeSVG(label, value, color string) string {
@@ -41,15 +68,10 @@ func renderBadgeSVG(label, value, color string) string {
 	totalW := labelW + valueW
 
 	return fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="20" role="img" aria-label="%s: %s">
-<linearGradient id="s" x2="0" y2="100%%">
-<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-<stop offset="1" stop-opacity=".1"/>
-</linearGradient>
 <clipPath id="r"><rect width="%d" height="20" rx="3" fill="#fff"/></clipPath>
 <g clip-path="url(#r)">
-<rect width="%d" height="20" fill="#555"/>
+<rect width="%d" height="20" fill="%s"/>
 <rect x="%d" width="%d" height="20" fill="%s"/>
-<rect width="%d" height="20" fill="url(#s)"/>
 </g>
 <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,sans-serif" font-size="11">
 <text x="%d" y="14">%s</text>
@@ -58,9 +80,8 @@ func renderBadgeSVG(label, value, color string) string {
 </svg>`,
 		totalW, html.EscapeString(label), html.EscapeString(value),
 		totalW,
-		labelW,
-		labelW, valueW, color,
-		totalW,
+		labelW, badgeLabelFill,
+		labelW, valueW, badgeFill(color),
 		labelW/2, html.EscapeString(label),
 		labelW+valueW/2, html.EscapeString(value),
 	)
