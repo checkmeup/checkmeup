@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import CtaBanner from '@/components/CtaBanner.vue'
 import { findFaqCategory } from '@/faq/faqs'
 import { useSeo } from '@/composables/useSeo'
 
@@ -121,37 +122,29 @@ const featureRows: TableRow[] = [
 <template>
   <LandingLayout>
     <!-- Hero -->
-    <section class="max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+    <section class="mx-auto flex max-w-[1200px] flex-col items-start gap-6 px-4 pt-16 pb-12 sm:px-6 sm:pt-24">
       <h1
-        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4 text-[var(--text-strong)]"
+        class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
       >
         Simple, honest pricing
       </h1>
-      <p class="text-lg sm:text-xl max-w-xl mx-auto mb-8 text-[var(--text-dim)]">
+      <p class="max-w-xl text-[17px] leading-relaxed text-[var(--text-dim)] sm:text-lg">
         Start free. Pay only when you grow. No per-seat fees, no hidden costs.
       </p>
 
-      <div class="inline-flex rounded-md border p-1 border-[var(--border)]">
+      <div class="inline-flex gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
         <button
           type="button"
-          class="px-4 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
-          :style="
-            cycle === 'monthly'
-              ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-              : 'color: var(--text-muted)'
-          "
+          class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+          :class="cycle === 'monthly' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
           @click="cycle = 'monthly'"
         >
           Monthly
         </button>
         <button
           type="button"
-          class="px-4 py-1.5 rounded text-sm transition-colors hover:cursor-pointer"
-          :style="
-            cycle === 'annual'
-              ? 'background-color: var(--surface-raised); color: var(--text-strong)'
-              : 'color: var(--text-muted)'
-          "
+          class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
+          :class="cycle === 'annual' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
           @click="cycle = 'annual'"
         >
           Annual
@@ -161,28 +154,24 @@ const featureRows: TableRow[] = [
     </section>
 
     <!-- Plan cards -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <section class="mx-auto max-w-[1200px] px-4 pb-16 sm:px-6 sm:pb-24">
+      <div
+        class="grid gap-px overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-4"
+      >
         <div
           v-for="plan in plans"
           :key="plan.name"
-          class="rounded-2xl border p-7 flex flex-col relative"
-          :style="{
-            backgroundColor: plan.highlight ? 'var(--surface-raised)' : 'var(--surface)',
-            borderColor: plan.highlight ? 'var(--color-green-500)' : 'var(--border)',
-          }"
+          class="flex flex-col p-7"
+          :class="
+            plan.highlight ? 'bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg))]' : 'bg-[var(--bg)]'
+          "
         >
-          <!-- Popular badge -->
-          <div
-            v-if="plan.highlight"
-            class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full bg-[var(--accent)] text-[var(--on-accent)]"
-          >
-            Most popular
-          </div>
-
           <div class="mb-5">
-            <div class="text-base font-semibold mb-1 text-[var(--text-strong)]">
-              {{ plan.name }}
+            <div class="mb-1 flex items-center justify-between gap-2">
+              <span class="text-base font-semibold text-[var(--text-strong)]">{{ plan.name }}</span>
+              <span v-if="plan.highlight" class="text-xs font-semibold text-[var(--accent)]"
+                >Most popular</span
+              >
             </div>
             <p class="text-xs leading-relaxed text-[var(--text-muted)]">
               {{ plan.description }}
@@ -191,14 +180,14 @@ const featureRows: TableRow[] = [
 
           <div class="mb-6">
             <template v-if="plan.price === 0">
-              <span class="text-4xl font-bold text-[var(--text-strong)]">Free</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">Free</span>
             </template>
             <template v-else-if="cycle === 'monthly'">
-              <span class="text-4xl font-bold text-[var(--text-strong)]">${{ plan.price }}</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">${{ plan.price }}</span>
               <span class="text-sm ml-1 text-[var(--text-muted)]">/month</span>
             </template>
             <template v-else>
-              <span class="text-4xl font-bold text-[var(--text-strong)]">${{ plan.annualPrice }}</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">${{ plan.annualPrice }}</span>
               <span class="text-sm ml-1 text-[var(--text-muted)]">/year</span>
               <p class="text-xs mt-1 text-[var(--text-muted)]">
                 (${{ effectiveMonthly(plan) }}/mo, billed annually)
@@ -327,43 +316,43 @@ const featureRows: TableRow[] = [
 
           <RouterLink
             to="/sign-up"
-            class="block text-sm font-semibold text-center px-4 py-2.5 rounded-[10px] transition-colors"
-            :style="{
-              backgroundColor: plan.highlight ? 'var(--color-green-500)' : 'var(--surface-raised)',
-              color: plan.highlight ? 'var(--on-accent)' : 'var(--text)',
-              border: plan.highlight ? 'none' : '1px solid var(--border)',
-            }"
+            class="block rounded-[10px] px-4 py-2.5 text-center text-sm font-semibold transition-colors"
+            :class="
+              plan.highlight
+                ? 'bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-hover)]'
+                : 'border border-[var(--border-strong)] text-[var(--text-strong)] hover:bg-[var(--surface-raised)]'
+            "
           >
             {{ plan.cta }}
           </RouterLink>
         </div>
       </div>
 
-      <p class="text-center text-xs mt-6 text-[var(--text-muted)]">
+      <p class="mt-6 text-[13px] text-[var(--text-dim)]">
         All prices in USD. Billing handled by Paddle — taxes calculated at checkout based on
         your location.
       </p>
     </section>
 
     <!-- Feature comparison table -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-xl font-semibold mb-6 text-center text-[var(--text-strong)]">
+    <section class="mx-auto max-w-[1200px] px-4 pb-20 sm:px-6 sm:pb-28">
+      <h2 class="mb-6 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">
         Full feature comparison
       </h2>
 
-      <div class="rounded-xl border overflow-hidden border-[var(--border)]">
+      <div class="overflow-x-auto rounded-[14px] border border-[var(--border)]">
         <!-- Table header -->
         <div
-          class="grid grid-cols-5 border-b border-[var(--border)] bg-[var(--surface)]"
+          class="grid min-w-[640px] grid-cols-5 bg-[var(--surface)]"
         >
-          <div class="col-span-1 px-4 py-3 text-xs font-medium text-[var(--text-muted)]">
+          <div class="col-span-1 px-4 py-2.5 text-[12.5px] font-medium text-[var(--text-dim)]">
             Feature
           </div>
           <div
             v-for="plan in plans"
             :key="plan.name"
-            class="px-4 py-3 text-xs font-semibold text-center"
-            :style="{ color: plan.highlight ? 'var(--color-green-400)' : 'var(--text-dim)' }"
+            class="px-4 py-2.5 text-center text-[12.5px] font-semibold"
+            :class="plan.highlight ? 'text-[var(--accent)]' : 'text-[var(--text-dim)]'"
           >
             {{ plan.name }}
           </div>
@@ -371,27 +360,23 @@ const featureRows: TableRow[] = [
 
         <!-- Table rows -->
         <div
-          v-for="(row, i) in featureRows"
+          v-for="row in featureRows"
           :key="row.label"
-          class="grid grid-cols-5 border-b last:border-b-0"
-          :style="{
-            borderColor: 'var(--border)',
-            backgroundColor: i % 2 === 0 ? 'var(--bg)' : 'var(--surface)',
-          }"
+          class="grid min-w-[640px] grid-cols-5 border-t border-[var(--border)]"
         >
-          <div class="col-span-1 px-4 py-3 text-xs text-[var(--text-dim)]">
+          <div class="col-span-1 px-4 py-3 text-[13px] text-[var(--text)]">
             {{ row.label }}
           </div>
           <div
             v-for="(val, j) in row.values"
             :key="j"
-            class="px-4 py-3 text-xs text-center font-medium"
+            class="px-4 py-3 text-center font-mono text-[13px]"
             :style="{
               color:
                 val === '—'
                   ? 'var(--text-muted)'
                   : val === '✓'
-                    ? 'var(--color-green-500)'
+                    ? 'var(--accent)'
                     : 'var(--text-strong)',
             }"
           >
@@ -402,43 +387,28 @@ const featureRows: TableRow[] = [
     </section>
 
     <!-- FAQ -->
-    <section id="billing" class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-2xl font-semibold mb-10 text-center text-[var(--text-strong)]">
+    <section id="billing" class="mx-auto max-w-[1200px] px-4 pb-20 sm:px-6 sm:pb-28">
+      <h2 class="mb-6 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">
         Frequently asked questions
       </h2>
 
-      <div class="space-y-0 divide-y border-[var(--border)]">
-        <div v-for="faq in billingFaqs" :key="faq.q" class="py-5 border-[var(--border)]">
-          <h3 class="text-sm font-semibold mb-2 text-[var(--text-strong)]">{{ faq.q }}</h3>
-          <p class="text-sm leading-relaxed text-[var(--text-dim)]">{{ faq.a }}</p>
+      <div class="max-w-[760px]">
+        <div v-for="faq in billingFaqs" :key="faq.q" class="border-t border-[var(--border)] py-5">
+          <h3 class="mb-2 font-semibold text-[var(--text-strong)]">{{ faq.q }}</h3>
+          <p class="text-[15px] leading-relaxed text-[var(--text-dim)]">{{ faq.a }}</p>
         </div>
       </div>
 
-      <p class="text-center mt-8">
-        <RouterLink to="/faq" class="text-sm transition-colors text-[var(--accent)]">
+      <p class="mt-6">
+        <RouterLink to="/faq" class="text-sm font-semibold text-[var(--accent)] hover:underline">
           See all FAQs →
         </RouterLink>
       </p>
     </section>
 
-    <!-- CTA -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <div
-        class="rounded-2xl text-center px-8 py-14 border bg-[var(--accent-wash-dim)] border-[var(--cta-border)]"
-      >
-        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]">
-          Start monitoring in 60 seconds.
-        </h2>
-        <p class="mb-8 text-base text-[var(--text-dim)]">
-          Free plan included. No credit card required.
-        </p>
-        <RouterLink
-          to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
-        >
-          Create free account →
-        </RouterLink>
-      </div>
-    </section>
+    <CtaBanner
+      title="Start monitoring in 60 seconds."
+      subtitle="Free plan included. No credit card required."
+    />
   </LandingLayout>
 </template>

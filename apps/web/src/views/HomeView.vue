@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import CtaBanner from '@/components/CtaBanner.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import FeatureCard from '@/components/FeatureCard.vue'
 import CheckStrip from '@/components/CheckStrip.vue'
@@ -443,26 +444,9 @@ useHead({
       </div>
     </section>
 
-    <!-- CTA banner -->
-    <section class="border-t border-[var(--border)]">
-      <div
-        class="mx-auto flex max-w-[1200px] flex-wrap items-end justify-between gap-8 px-4 py-20 sm:px-6"
-      >
-        <div class="flex flex-col gap-3">
-          <h2
-            class="text-[34px] leading-[1.05] font-semibold tracking-[-0.04em] text-[var(--text-strong)] sm:text-[48px]"
-          >
-            Start monitoring in 60 seconds.
-          </h2>
-          <p class="text-[17px] text-[var(--text-dim)]">Free plan included. No credit card required.</p>
-        </div>
-        <RouterLink
-          to="/sign-up"
-          class="rounded-[10px] bg-[var(--accent)] px-7 py-3 text-[15px] font-semibold text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
-        >
-          Create free account →
-        </RouterLink>
-      </div>
-    </section>
+    <CtaBanner
+      title="Start monitoring in 60 seconds."
+      subtitle="Free plan included. No credit card required."
+    />
   </LandingLayout>
 </template>

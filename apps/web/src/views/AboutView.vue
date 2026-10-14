@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
+import CtaBanner from '@/components/CtaBanner.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
@@ -42,14 +43,11 @@ const values = [
 
     <!-- Hero -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <div
-        class="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full mb-6 border border-[var(--border)] bg-[var(--card)] text-[var(--text-dim)]"
-      >
-        <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent)]"></span>
+      <p class="mb-6 text-[13px] font-semibold text-[var(--accent)]">
         Independent · Bootstrapped · Built in the open
-      </div>
+      </p>
 
-      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-6 leading-tight text-[var(--text-strong)]">
+      <h1 class="mb-6 text-[40px] leading-[1.05] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[54px]">
         Built by a developer<br class="hidden sm:block" /> who got paged at 2&nbsp;am.
       </h1>
 
@@ -68,25 +66,25 @@ const values = [
 
     <!-- The builder -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold mb-8 text-[var(--text-muted)]">Who's building this</h2>
+      <h2 class="mb-8 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Who's building this</h2>
 
       <div class="flex flex-col sm:flex-row gap-8 items-start">
         <!-- Avatar placeholder -->
         <div
-          class="w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl font-bold border bg-[var(--surface-raised)] border-[var(--border)] text-[var(--accent)]"
+          class="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent-wash)] text-2xl font-semibold text-[var(--accent)]"
         >
           AM
         </div>
 
         <div class="flex-1">
           <div class="flex items-center gap-3 mb-2 flex-wrap">
-            <span class="text-xl font-bold text-[var(--text-strong)]">Andrew Molyuk</span>
+            <span class="text-xl font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Andrew Molyuk</span>
             <div class="flex items-center gap-2">
               <a
                 href="https://github.com/andrewmolyuk"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="transition-colors text-[var(--text-muted)]"
+                class="text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
                 aria-label="GitHub"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -97,7 +95,7 @@ const values = [
                 href="https://linkedin.com/in/andrewmolyuk"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="transition-colors text-[var(--text-muted)]"
+                class="text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
                 aria-label="LinkedIn"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -108,7 +106,7 @@ const values = [
                 href="https://andrew.molyuk.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="transition-colors text-[var(--text-muted)]"
+                class="text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
                 aria-label="Personal site"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -118,13 +116,13 @@ const values = [
             </div>
           </div>
 
-          <p class="text-sm leading-relaxed mb-3 text-[var(--text-dim)]">
+          <p class="mb-3 text-[15px] leading-relaxed text-[var(--text-dim)]">
             25+ years writing software — from enterprise video platforms processing 23 billion events a day, to voting systems handling 30 million concurrent connections, to building and leading remote engineering teams across two continents.
           </p>
-          <p class="text-sm leading-relaxed mb-3 text-[var(--text-dim)]">
+          <p class="mb-3 text-[15px] leading-relaxed text-[var(--text-dim)]">
             After spending years in the high-scale world — AWS, Kubernetes, microservices, the whole catalogue — I kept coming back to the same observation: the boring, reliable tools are the ones that actually stay running. Checkmeup is built on that principle. Go backend, PostgreSQL, a handful of Hetzner servers. No distributed systems unless the problem actually demands it.
           </p>
-          <p class="text-sm leading-relaxed text-[var(--text-dim)]">
+          <p class="text-[15px] leading-relaxed text-[var(--text-dim)]">
             I'm based in Israel. Checkmeup is independent and bootstrapped — no VC, no growth hacking, no hockey-stick pressure. Just a developer building a tool that should exist.
           </p>
         </div>
@@ -138,17 +136,17 @@ const values = [
 
     <!-- Values -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold mb-8 text-[var(--text-muted)]">How we work</h2>
+      <h2 class="mb-8 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">How we work</h2>
 
       <div class="space-y-10">
         <div v-for="v in values" :key="v.title" class="flex gap-5 items-start">
           <div
-            class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-[var(--surface-raised)] text-[var(--accent)]"
+            class="mt-1 flex-shrink-0 text-[var(--accent)]" aria-hidden="true"
             v-html="v.icon"
           ></div>
           <div>
             <h3 class="font-semibold mb-2 text-[var(--text-strong)]">{{ v.title }}</h3>
-            <p class="text-sm leading-relaxed text-[var(--text-dim)]">{{ v.body }}</p>
+            <p class="text-[15px] leading-relaxed text-[var(--text-dim)]">{{ v.body }}</p>
           </div>
         </div>
       </div>
@@ -161,7 +159,7 @@ const values = [
 
     <!-- Stack transparency -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold mb-2 text-[var(--text-muted)]">The stack</h2>
+      <h2 class="mb-2 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">The stack</h2>
       <p class="text-sm mb-8 text-[var(--text-dim)]">
         Boring by design. Every choice here was made to maximize reliability and minimize operational complexity — not to be impressive on a conference slide.
       </p>
@@ -172,17 +170,17 @@ const values = [
           :key="item.label"
           class="flex items-baseline gap-4 text-sm"
         >
-          <span class="w-28 flex-shrink-0 text-xs font-medium text-[var(--text-muted)]">{{ item.label }}</span>
-          <span class="text-[var(--text-dim)]">{{ item.value }}</span>
+          <span class="w-28 flex-shrink-0 text-[13px] font-medium text-[var(--text-dim)]">{{ item.label }}</span>
+          <span class="font-mono text-[13.5px] text-[var(--text)]">{{ item.value }}</span>
         </div>
       </div>
 
-      <p class="text-xs mt-8 text-[var(--text-muted)]">
+      <p class="mt-8 text-[13px] text-[var(--text-dim)]">
         Architecture decisions are documented in the
         <a href="https://github.com/checkmeup/checkmeup/tree/main/.about/adr/" target="_blank" rel="noopener noreferrer" class="hover:underline text-[var(--accent)]">ADR log</a>
         in the public repo — including the choices that weren't obvious.
       </p>
-      <p class="text-xs mt-3 text-[var(--text-muted)]">
+      <p class="mt-3 text-[13px] text-[var(--text-dim)]">
         The code itself is source-available under the
         <a href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" class="hover:underline text-[var(--accent)]">Business Source License</a>
         — free to read, self-host, and modify; the one restriction is reselling Checkmeup itself as a competing hosted monitoring service. It converts to Apache 2.0 in 2030.
@@ -196,7 +194,7 @@ const values = [
 
     <!-- Principles -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold mb-8 text-[var(--text-muted)]">Things we won't do</h2>
+      <h2 class="mb-8 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Things we won't do</h2>
 
       <ul class="space-y-4">
         <li class="flex items-start gap-3 text-sm text-[var(--text-dim)]">
@@ -225,7 +223,7 @@ const values = [
 
     <!-- Contact / reach out -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold mb-4 text-[var(--text-muted)]">Get in touch</h2>
+      <h2 class="mb-4 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">Get in touch</h2>
       <p class="text-sm leading-relaxed mb-6 text-[var(--text-dim)]">
         Questions, bug reports, feature ideas, complaints about the docs — all welcome. There's no support ticket queue. You'll reach an engineer.
       </p>
@@ -253,25 +251,9 @@ const values = [
       </div>
     </section>
 
-    <!-- CTA -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <div
-        class="rounded-2xl text-center px-8 py-14 border bg-[var(--accent-wash-dim)] border-[var(--cta-border)]"
-      >
-        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]">
-          Try it. It's free.
-        </h2>
-        <p class="mb-8 text-base text-[var(--text-dim)]">
-          10 monitors, no credit card, no expiry date on the free plan.
-        </p>
-        <RouterLink
-          to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90 bg-[var(--accent)] text-[var(--on-accent)]"
-        >
-          Create free account →
-        </RouterLink>
-      </div>
-    </section>
-
+    <CtaBanner
+      title="Try it. It's free."
+      subtitle="10 monitors, no credit card, no expiry date on the free plan."
+    />
   </LandingLayout>
 </template>
