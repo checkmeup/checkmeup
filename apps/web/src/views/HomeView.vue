@@ -4,13 +4,12 @@ import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
 import HeroSection from '@/components/HeroSection.vue'
-import FeatureCard from '@/components/FeatureCard.vue'
 import CheckStrip from '@/components/CheckStrip.vue'
 import { useTheme } from '@/lib/theme'
 import { useSeo } from '@/composables/useSeo'
 import logoDark from '@/assets/logo-dark.svg'
 import logoLight from '@/assets/logo-light.svg'
-import { statusRows, plans, customers, testimonials } from '@/content/home'
+import { statusRows, plans, testimonials, monitorTypes } from '@/content/home'
 
 const { theme } = useTheme()
 const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
@@ -75,177 +74,57 @@ useHead({
   <LandingLayout>
     <HeroSection />
 
-    <!-- Our Customers -->
-    <section class="border-y border-[var(--border)]">
-      <div
-        class="mx-auto flex max-w-[1200px] flex-col items-start gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-      >
-        <div class="flex items-center gap-4">
-          <div class="flex -space-x-2.5">
-            <img
-              v-for="c in customers"
-              :key="c.name"
-              :src="c.avatar"
-              :alt="c.name"
-              :title="`${c.name} · ${c.role}`"
-              class="h-7 w-7 rounded-full object-cover ring-2 ring-[var(--bg)]"
-            />
-          </div>
-          <p class="text-sm text-[var(--text-dim)]">
-            <span class="font-semibold text-[var(--text-strong)]">200+</span>
-            freelancers monitoring client sites with Checkmeup
+    <!-- Monitor types: a spec sheet, one row per type -->
+    <section class="border-t border-[var(--border)]">
+      <div class="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-24">
+        <div class="mb-10 max-w-[640px]">
+          <h2
+            class="mb-3 text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
+          >
+            Six monitor types, one dashboard.
+          </h2>
+          <p class="text-base text-[var(--text-dim)]">
+            What each one watches, how often it looks, and when it wakes you up.
           </p>
         </div>
-        <p class="text-[13px] text-[var(--text-muted)]">
-          Freelancers · Solo agency operators · Web agencies · Solo developers · SaaS startups
+
+        <div class="overflow-x-auto rounded-[14px] border border-[var(--border)]">
+          <table class="w-full min-w-[760px] border-collapse text-left text-sm">
+            <thead>
+              <tr class="bg-[var(--surface)] text-[13px] text-[var(--text-dim)]">
+                <th scope="col" class="px-5 py-3 font-medium">Monitor</th>
+                <th scope="col" class="px-5 py-3 font-medium">Watches</th>
+                <th scope="col" class="px-5 py-3 font-medium">How often</th>
+                <th scope="col" class="px-5 py-3 font-medium">Alerts you when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="m in monitorTypes"
+                :key="m.name"
+                class="border-t border-[var(--border)] align-top"
+              >
+                <th scope="row" class="px-5 py-4 font-semibold text-[var(--text-strong)]">
+                  {{ m.name }}
+                </th>
+                <td class="px-5 py-4 text-[var(--text-dim)]">{{ m.watches }}</td>
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <span class="font-mono text-[13px] text-[var(--text)]">{{ m.often }}</span>
+                  <span v-if="m.oftenNote" class="block text-xs text-[var(--text-muted)]">{{
+                    m.oftenNote
+                  }}</span>
+                </td>
+                <td class="px-5 py-4 text-[var(--text-dim)]">{{ m.alerts }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-4 text-[13px] text-[var(--text-muted)]">
+          Alerts go to Telegram, email, Slack, a webhook, or SMS on paid plans.
+          <RouterLink to="/docs" class="text-[var(--accent)] hover:underline"
+            >How each one works →</RouterLink
+          >
         </p>
-      </div>
-    </section>
-
-    <!-- Features -->
-    <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
-      <div class="mb-12 max-w-[640px]">
-        <h2
-          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em] text-[var(--text-strong)]"
-        >
-          Everything you need to stay on top.
-        </h2>
-        <p class="text-base text-[var(--text-dim)]">
-          Six monitor types, one dashboard, zero blind spots.
-        </p>
-      </div>
-
-      <div class="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-        <FeatureCard
-          title="Cron job monitoring"
-          description="Ping a URL after each run. Miss a ping and we alert you immediately — before your backups rot or invoices stop sending."
-          :bullets="[
-            'Custom grace periods',
-            'Execution history & logs',
-            'Telegram, Slack, email & SMS alerts',
-          ]"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="Uptime monitoring"
-          description="We poll your URLs as often as every 1 minute and alert you the moment your site goes down or returns an unexpected status code."
-          :bullets="['1-minute check intervals', 'Response time tracking', 'Incident history']"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="SSL expiry monitoring"
-          description="Get ahead of certificate expiry with early warnings at 30, 14, and 7 days. Never let a forgotten cert take your site offline."
-          :bullets="['Multi-threshold alerts', 'Issuer & expiry details', 'Daily checks']"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="Domain expiry monitoring"
-          description="Track your domain's registration separately from its SSL certificate — rarer to lapse, but far more catastrophic when it does."
-          :bullets="['Multi-threshold alerts', 'Registrar & expiry details', 'Daily checks']"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path
-                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-              />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="Port (TCP) monitoring"
-          description="Raw TCP connect checks for mail servers, databases, and any other non-HTTP service — plus a security mode that alerts if a port that should be closed becomes reachable."
-          :bullets="['Any host and port', 'Open or closed expected state', 'Connect-time history']"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <rect x="2" y="9" width="6" height="6" rx="1" />
-              <rect x="16" y="9" width="6" height="6" rx="1" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-            </svg>
-          </template>
-        </FeatureCard>
-
-        <FeatureCard
-          title="DNS record monitoring"
-          description="Watch a hostname's A, AAAA, CNAME, MX, TXT, or NS record and get alerted the moment it changes or stops resolving — a hijack or a migration gone sideways doesn't fail the way a downed server does."
-          :bullets="[
-            'Pin a value or auto-capture a baseline',
-            'Old value → new value in every alert',
-            'Lookup errors read differently than a change',
-          ]"
-        >
-          <template #icon>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--accent)"
-              stroke-width="1.75"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </template>
-        </FeatureCard>
       </div>
     </section>
 

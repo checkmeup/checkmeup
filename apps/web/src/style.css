@@ -75,6 +75,13 @@
      deep green. */
   --on-accent: #06201a;
 
+  /* The hero's terminal panel: dark in both themes, a step lighter than the
+     page in dark mode so it still reads as a panel. */
+  --terminal-bg: #1a201e;
+  --terminal-text: #ecf0ee;
+  --terminal-dim: #7a847f;
+  --terminal-accent: var(--color-green-300);
+
   /* CTA banner (HomeView, PricingView, AboutView) — flat accent wash with a
      tinted border; same value both themes since it reads fine on either. */
   --cta-border: rgb(29 158 117 / 25%);
@@ -110,6 +117,7 @@
   --accent-wash-dim: rgb(15 110 86 / 5%);
   --nav-bg: rgb(255 255 255 / 88%);
   --on-accent: #fff;
+  --terminal-bg: #111714;
 }
 
 @layer base {

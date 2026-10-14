@@ -28,11 +28,8 @@ describe('HomeView', () => {
   it('renders the hero heading and subheading', () => {
     const wrapper = mountHome()
 
-    expect(wrapper.text()).toContain('Know before')
-    expect(wrapper.text()).toContain('your client does.')
-    expect(wrapper.text()).toContain(
-      'Cron job monitoring, uptime checks, SSL and domain expiry alerts',
-    )
+    expect(wrapper.find('h1').text()).toBe('Know before your client does.')
+    expect(wrapper.text()).toContain('Add one line to the end of a cron job')
   })
 
   it('renders the hero CTA links', () => {
@@ -40,15 +37,15 @@ describe('HomeView', () => {
 
     const links = wrapper.findAllComponents({ name: 'RouterLink' })
     const signUp = links.find((c) => c.text().includes('Start free'))
-    const signIn = links.find((c) => c.text().includes('Sign in'))
+    const docs = links.find((c) => c.text().includes('Read the docs'))
 
     expect(signUp).toBeTruthy()
     expect(signUp!.props('to')).toBe('/sign-up')
-    expect(signIn).toBeTruthy()
-    expect(signIn!.props('to')).toBe('/sign-in')
+    expect(docs).toBeTruthy()
+    expect(docs!.props('to')).toBe('/docs')
   })
 
-  it('renders all six monitor feature cards', () => {
+  it('lists all six monitor types in the spec table', () => {
     const wrapper = mountHome()
 
     expect(wrapper.text()).toContain('Cron job monitoring')
@@ -108,13 +105,12 @@ describe('HomeView', () => {
     expect(ctas[0].props('to')).toBe('/sign-up')
   })
 
-  it('renders the hero live mockup', () => {
+  it('shows the cron line and the alert it produces in the hero', () => {
     const wrapper = mountHome()
 
-    const preview = wrapper.find('[aria-label="Example dashboard"]')
-    expect(preview.text()).toContain('1 monitor needs you.')
-    expect(preview.text()).toContain('shop.example.com')
-    expect(preview.findAll('li')).toHaveLength(4)
+    const example = wrapper.find('[aria-label="Example: a cron job and its missed-ping alert"]')
+    expect(example.text()).toContain('curl -fsS checkmeup.net/ping/')
+    expect(example.text()).toContain('nightly-backup missed its 03:00 ping')
   })
 
   it('renders the status page live mockup', () => {

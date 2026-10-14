@@ -60,7 +60,7 @@ reads as text on `--bg` (WCAG AA, 4.5:1), not just as a dot or fill.
 | Token | Dark | Light | Use |
 |---|---|---|---|
 | `--bg` | `#0E1211` | `#FFFFFF` | Page background |
-| `--surface` | `#131816` | `#F7F9F7` | Table headers, nav-adjacent chrome, the hero mockup |
+| `--surface` | `#131816` | `#F7F9F7` | Table headers, nav-adjacent chrome |
 | `--surface-raised` | `#1A201E` | `#F1F4F1` | Active nav item, hover backgrounds |
 | `--card` | `rgb(236 240 238 / 3%)` | `rgb(17 23 20 / 3%)` | Feature/testimonial/pricing card fill |
 | `--border` | `#232A27` | `#E4E8E4` | Dividers, table rules |
@@ -128,6 +128,10 @@ there) — the flat wash reads fine in both themes without a per-theme gradient 
   1200px page grid with the landing page: a left-aligned `PageHero`, then rows with a 260px
   label column and a text column capped at 680px (`LabeledSection.vue`, the same component
   Settings and Billing use). Docs and FAQ keep their sticky section nav in that left column.
+- **Landing hero** (`HeroSection.vue`) shows the product's one moment of value instead of a
+  dashboard mockup: a crontab line ending in the ping `curl`, in a terminal panel
+  (`--terminal-*` tokens: dark in both themes), and the missed-ping alert it produces. The
+  monitor types below it are a spec table (`monitorTypes` in `content/home.ts`), not icon cards.
 
 ## Typography
 

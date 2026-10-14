@@ -85,36 +85,50 @@ export const plans: PricingPlan[] = [
   },
 ]
 
-export const customers = [
+// The landing page's spec sheet of monitor types. Intervals and thresholds
+// match DocsView — keep the two in sync.
+export const monitorTypes = [
   {
-    name: 'Alex M.',
-    role: 'DevOps Engineer',
-    avatar: 'img/customer1.png',
+    name: 'Cron job monitoring',
+    watches: 'A ping your job sends when it finishes',
+    often: 'your schedule',
+    oftenNote: 'plus a grace period',
+    alerts: 'A ping is later than the grace period you chose, or a started run never finishes',
   },
   {
-    name: 'Priya S.',
-    role: 'Full-Stack Dev',
-    avatar: 'img/customer2.png',
+    name: 'Uptime monitoring',
+    watches: 'A URL: its status code, a keyword, or JSON fields',
+    often: '1 min',
+    oftenNote: '5 min on Hobby',
+    alerts: 'The response is an error, too slow, or missing what you expect',
   },
   {
-    name: 'James K.',
-    role: 'Agency CTO',
-    avatar: 'img/customer3.png',
+    name: 'SSL expiry monitoring',
+    watches: 'The certificate on port 443',
+    often: 'daily',
+    oftenNote: null,
+    alerts: 'It expires in 30, 14 or 7 days, or is already invalid',
   },
   {
-    name: 'Layla H.',
-    role: 'Startup Founder',
-    avatar: 'img/customer4.png',
+    name: 'Domain expiry monitoring',
+    watches: "The domain's registration",
+    often: 'daily',
+    oftenNote: null,
+    alerts: 'It expires in 30, 14 or 7 days, or already has',
   },
   {
-    name: 'Dan W.',
-    role: 'Backend Engineer',
-    avatar: 'img/customer5.png',
+    name: 'Port (TCP) monitoring',
+    watches: 'A raw TCP connect to host:port',
+    often: '1 min',
+    oftenNote: '5 min on Hobby',
+    alerts: 'The port stops answering — or, for one that should stay closed, starts',
   },
   {
-    name: 'Zoe C.',
-    role: 'Platform Engineer',
-    avatar: 'img/customer6.png',
+    name: 'DNS record monitoring',
+    watches: 'An A, AAAA, CNAME, MX, TXT or NS record',
+    often: '1 min',
+    oftenNote: '5 min on Hobby',
+    alerts: 'The record changes or stops resolving',
   },
 ]
 

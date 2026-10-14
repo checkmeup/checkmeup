@@ -1,74 +1,25 @@
 <script setup lang="ts">
-import CheckStrip from '@/components/CheckStrip.vue'
-import StatusLabel from '@/components/StatusLabel.vue'
-import type { Tone } from '@/lib/monitorRows'
-
-// The product preview beside the headline is built from the app's own
-// components with example data, so it always looks like the real dashboard.
-function ticks(pattern: string) {
-  return pattern.split('').map((ch) => ({ ok: ch === '-' ? null : ch === 'u', slow: ch === 's' }))
-}
-
-const previewRows: {
-  name: string
-  type: string
-  tone: Tone
-  label: string
-  metric: string
-  pattern: string
-}[] = [
-  {
-    name: 'shop.example.com',
-    type: 'Uptime',
-    tone: 'down',
-    label: 'Down',
-    metric: 'HTTP 502',
-    pattern: 'uuuuuuuuuuuuuuuuuuuuduuuuuuuuuuuuuudddddd',
-  },
-  {
-    name: 'nightly-db-backup',
-    type: 'Cron',
-    tone: 'up',
-    label: 'Up',
-    metric: 'ran 03:00',
-    pattern: 'uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu',
-  },
-  {
-    name: 'api.example.com',
-    type: 'Uptime',
-    tone: 'up',
-    label: 'Up',
-    metric: '142 ms',
-    pattern: 'uuuuuuuuuuuuuusuuuuuuuuuuuuuuuuuuuuuuuuu',
-  },
-  {
-    name: 'example.com',
-    type: 'SSL',
-    tone: 'warn',
-    label: 'Expiring soon',
-    metric: '12 days',
-    pattern: 'uuuuuuuuuuuuuuuuuuuussssssssssssssssssss',
-  },
-]
+import { RouterLink } from 'vue-router'
 </script>
 
 <template>
+  <!-- The hero shows the product's one moment of value: the line you add to a
+       cron job, and the alert you get when that job stops. -->
   <section class="mx-auto max-w-[1200px] px-4 pt-16 pb-20 sm:px-6 md:pt-24">
-    <div class="grid items-center gap-14 lg:grid-cols-[1fr_1.05fr]">
-      <div class="flex flex-col gap-6">
-        <h1
-          class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
-        >
-          Know before<br />
-          <span class="text-[var(--text-muted)]">your client does.</span>
-        </h1>
-
-        <p class="max-w-[500px] text-[17px] leading-relaxed text-[var(--text-dim)]">
-          Cron job monitoring, uptime checks, SSL and domain expiry alerts, and raw TCP port
-          checks — for every client site you maintain. Get alerted on Telegram, Slack, or email
-          before your client ever notices something's wrong.
+    <div class="grid items-center gap-14 lg:grid-cols-2">
+      <div class="flex min-w-0 flex-col gap-6">
+        <p class="font-mono text-[13px] text-[var(--text-dim)]">
+          cron · uptime · ssl · domain · port · dns
         </p>
-
+        <h1
+          class="text-[44px] leading-[1.0] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[64px]"
+        >
+          Know before your client does.
+        </h1>
+        <p class="max-w-[480px] text-[17px] leading-relaxed text-[var(--text-dim)] sm:text-lg">
+          Add one line to the end of a cron job, or paste a URL. When something stops, you hear
+          about it on Telegram, Slack or email — before the person who pays you does.
+        </p>
         <div class="flex flex-col gap-3 sm:flex-row">
           <RouterLink
             to="/sign-up"
@@ -77,59 +28,71 @@ const previewRows: {
             Start free — no credit card
           </RouterLink>
           <RouterLink
-            to="/sign-in"
+            to="/docs"
             class="rounded-[10px] border border-[var(--border-strong)] px-6 py-3 text-center text-[15px] font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-raised)]"
           >
-            Sign in →
+            Read the docs
           </RouterLink>
         </div>
-        <p class="text-[13px] text-[var(--text-dim)]">
-          Built for freelancers and solo devs with client sites.
-        </p>
       </div>
 
-      <!-- Product preview -->
       <div
-        aria-label="Example dashboard"
+        aria-label="Example: a cron job and its missed-ping alert"
         role="img"
-        class="flex flex-col gap-5 rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-5 shadow-[0_24px_60px_rgb(0_0_0/8%)] sm:p-7"
+        class="flex min-w-0 flex-col gap-3.5"
       >
-        <div class="flex flex-col gap-1">
-          <span class="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">
-            1 monitor needs you.
-          </span>
-          <span class="text-sm text-[var(--text-dim)]">
-            99.62% average uptime today · 3 of 4 up
-          </span>
-        </div>
-
-        <div class="flex items-center gap-4 border-y border-[var(--border)] py-4">
-          <span
-            class="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[var(--status-down)] shadow-[0_0_0_4px_var(--status-down-wash)]"
-          ></span>
-          <div class="flex min-w-0 flex-col">
-            <span class="font-semibold text-[var(--text-strong)]">shop.example.com</span>
-            <span class="text-[13.5px] text-[var(--status-down)]">
-              Down — the last check failed: 502 Bad Gateway.
-            </span>
+        <div
+          class="overflow-x-auto rounded-[14px] bg-[var(--terminal-bg)] px-5 py-5 font-mono text-[13.5px] leading-[1.75] text-[var(--terminal-text)]"
+        >
+          <div class="mb-2.5 flex justify-between text-xs text-[var(--terminal-dim)]">
+            <span>crontab -e</span>
+            <span>server-01</span>
+          </div>
+          <div class="text-[var(--terminal-dim)]"># nightly database backup</div>
+          <div class="whitespace-nowrap">
+            0 3 * * * /opt/backup.sh
+            <span class="text-[var(--terminal-accent)]"
+              >&amp;&amp; curl -fsS checkmeup.net/ping/k7f2c9</span
+            >
           </div>
         </div>
 
-        <ul class="flex flex-col">
-          <li
-            v-for="row in previewRows"
-            :key="row.name"
-            class="grid grid-cols-[110px_1fr_auto] items-center gap-4 border-t border-[var(--border)] py-2.5 first:border-t-0 sm:grid-cols-[120px_1fr_110px_80px]"
+        <div class="flex items-center gap-2.5 pl-5 font-mono text-xs text-[var(--text-muted)]">
+          <svg
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
           >
-            <StatusLabel :tone="row.tone" :label="row.label" />
-            <span class="min-w-0 truncate text-sm">
-              <span class="font-medium text-[var(--text-strong)]">{{ row.name }}</span>
-              <span class="text-[var(--text-dim)]"> · {{ row.type }}</span>
-            </span>
-            <div class="hidden sm:block"><CheckStrip size="sm" :checks="ticks(row.pattern)" /></div>
-            <span class="text-right font-mono text-[13px] text-[var(--text)]">{{ row.metric }}</span>
-          </li>
-        </ul>
+            <line x1="12" y1="4" x2="12" y2="20" />
+            <polyline points="6 14 12 20 18 14" />
+          </svg>
+          03:00 passes, no ping arrives
+        </div>
+
+        <div
+          class="flex items-start gap-3.5 rounded-[14px] border border-[var(--border)] bg-[var(--bg)] px-5 py-[18px] shadow-[0_18px_40px_rgb(0_0_0/7%)]"
+        >
+          <img src="/favicon.svg" alt="" class="h-9 w-9 flex-shrink-0" />
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <div class="flex justify-between gap-3 text-[13px] text-[var(--text-muted)]">
+              <span class="font-semibold text-[var(--text-strong)]">Checkmeup</span>
+              <span class="font-mono">03:05</span>
+            </div>
+            <div
+              class="flex items-center gap-2 text-[15px] font-semibold text-[var(--text-strong)]"
+            >
+              <span class="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--status-down)]"></span>
+              nightly-backup missed its 03:00 ping
+            </div>
+            <div class="text-sm text-[var(--text-dim)]">
+              Last ping yesterday at 03:00 · grace period 5 min · Telegram
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
