@@ -65,9 +65,9 @@ useHead({
 
     <!-- Our Customers -->
     <section class="border-y" style="border-color: var(--border)">
-      <div class="max-w-[1100px] mx-auto px-4 sm:px-6 py-10">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">
         <p
-          class="text-center text-xs uppercase tracking-widest mb-6"
+          class="text-center text-xs mb-6"
           style="color: var(--text-muted); font-family: var(--font-mono)"
         >
           Trusted by freelancers and solo devs worldwide
@@ -117,10 +117,10 @@ useHead({
     </section>
 
     <!-- Features -->
-    <section class="max-w-[1100px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
-      <div class="text-center mb-12">
+    <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
+      <div class="mb-12 max-w-[640px]">
         <h2
-          class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight"
+          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
           style="color: var(--text-strong)"
         >
           Everything you need to stay on top.
@@ -130,7 +130,7 @@ useHead({
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
         <FeatureCard
           title="Cron job monitoring"
           description="Ping a URL after each run. Miss a ping and we alert you immediately — before your backups rot or invoices stop sending."
@@ -278,7 +278,7 @@ useHead({
     </section>
 
     <!-- Status pages highlight -->
-    <section class="max-w-[1100px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <section class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
       <div
         class="rounded-[20px] border p-8 sm:p-12 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-[52px] items-center"
         style="background-color: var(--card); border-color: var(--border)"
@@ -309,7 +309,7 @@ useHead({
             Status pages
           </div>
           <h2
-            class="text-2xl sm:text-3xl font-extrabold mb-4 tracking-tight"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-4 tracking-[-0.035em]"
             style="color: var(--text-strong)"
           >
             Give your clients a page they can bookmark.
@@ -320,7 +320,7 @@ useHead({
           </p>
           <RouterLink
             to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-md transition-opacity hover:opacity-90"
+            class="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-[10px] transition-opacity hover:opacity-90"
             style="background-color: var(--accent); color: var(--on-accent)"
           >
             Create a status page →
@@ -389,9 +389,9 @@ useHead({
 
     <!-- Pricing teaser -->
     <section class="border-t" style="border-color: var(--border)">
-      <div class="max-w-[1100px] mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
         <h2
-          class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight"
+          class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
           style="color: var(--text-strong)"
         >
           Simple pricing.
@@ -419,7 +419,7 @@ useHead({
               {{ plan.name }}
             </div>
             <p class="text-xs mb-4" style="color: var(--text-muted)">{{ plan.description }}</p>
-            <div class="text-2xl font-extrabold mb-5" style="color: var(--text-strong)">
+            <div class="text-2xl font-semibold mb-5" style="color: var(--text-strong)">
               {{ plan.price === 0 ? 'Free' : `$${plan.price}` }}
               <span
                 v-if="plan.price > 0"
@@ -475,7 +475,7 @@ useHead({
 
             <RouterLink
               to="/sign-up"
-              class="mt-auto text-center text-xs font-medium px-4 py-2.5 rounded-md transition-opacity hover:opacity-90"
+              class="mt-auto text-center text-xs font-medium px-4 py-2.5 rounded-[10px] transition-opacity hover:opacity-90"
               :style="
                 plan.highlight
                   ? 'background-color: var(--accent); color: var(--on-accent)'
@@ -499,10 +499,10 @@ useHead({
 
     <!-- Testimonials -->
     <section class="border-t" style="border-color: var(--border)">
-      <div class="max-w-[1100px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div class="text-center mb-12">
           <h2
-            class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
             style="color: var(--text-strong)"
           >
             Loved by freelancers and solo devs.
@@ -556,13 +556,13 @@ useHead({
 
     <!-- CTA banner -->
     <section class="border-t" style="border-color: var(--border)">
-      <div class="max-w-[1100px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div
           class="rounded-[20px] text-center px-10 py-[72px] border"
           style="background-color: var(--accent-wash-dim); border-color: var(--cta-border)"
         >
           <h2
-            class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight"
+            class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]"
             style="color: var(--text-strong)"
           >
             Start monitoring in 60 seconds.
@@ -572,7 +572,7 @@ useHead({
           </p>
           <RouterLink
             to="/sign-up"
-            class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-opacity hover:opacity-90"
+            class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90"
             style="background-color: var(--accent); color: var(--on-accent)"
           >
             Create free account →

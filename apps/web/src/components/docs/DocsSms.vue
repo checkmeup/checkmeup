@@ -1,6 +1,6 @@
 <template>
   <section id="sms" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">SMS alerts</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">SMS alerts</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Text alerts to a phone number — available on Solo, Startup, and Enterprise (not Hobby),
       since carrier fees give SMS a real per-message cost the other channels don't have. Set

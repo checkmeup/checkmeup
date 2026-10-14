@@ -7,30 +7,24 @@ defineProps<{
 </script>
 
 <template>
-  <div
-    class="rounded-2xl border p-6"
-    style="background-color: var(--card); border-color: var(--border)"
-  >
-    <div
-      class="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
-      style="background-color: var(--accent-wash)"
-    >
+  <div class="flex flex-col border-t border-[var(--border)] pt-6">
+    <div class="mb-3 text-[var(--accent)]" aria-hidden="true">
       <slot name="icon" />
     </div>
-    <h3 class="font-semibold text-base mb-2" style="color: var(--text-strong)">
+    <h3 class="mb-2 text-[17px] font-semibold tracking-[-0.015em] text-[var(--text-strong)]">
       {{ title }}
     </h3>
-    <p class="text-sm leading-relaxed" style="color: var(--text-dim)">
+    <p class="text-[15px] leading-relaxed text-[var(--text-dim)]">
       {{ description }}
     </p>
     <ul class="mt-4 space-y-2">
       <li
         v-for="bullet in bullets"
         :key="bullet"
-        class="flex items-center gap-2 text-xs"
-        style="color: var(--text-dim)"
+        class="flex items-center gap-2 text-[13px] text-[var(--text-dim)]"
       >
         <svg
+          aria-hidden="true"
           width="12"
           height="12"
           viewBox="0 0 24 24"

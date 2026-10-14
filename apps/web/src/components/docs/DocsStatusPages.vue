@@ -1,6 +1,6 @@
 <template>
   <section id="status-pages" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Status pages</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Status pages</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Create a public status page at
       <code class="px-1 rounded text-xs" style="background-color: var(--surface-raised)"

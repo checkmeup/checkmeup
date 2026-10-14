@@ -42,8 +42,8 @@ async function submit() {
 <template>
   <AuthLayout>
     <div class="space-y-1">
-      <h1 class="text-lg font-semibold" style="color: var(--text-strong)">Sign in</h1>
-      <p class="text-sm" style="color: var(--text-muted)">Enter your credentials to continue.</p>
+      <h1 class="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Sign in</h1>
+      <p class="text-sm text-[var(--text-dim)]">Enter your credentials to continue.</p>
     </div>
 
     <form class="space-y-4" @submit.prevent="submit">
@@ -89,7 +89,7 @@ async function submit() {
 
     <p class="text-center text-sm" style="color: var(--text-muted)">
       No account?
-      <RouterLink to="/sign-up" class="font-medium" style="color: var(--color-green-500)">
+      <RouterLink to="/sign-up" class="font-medium" style="color: var(--accent)">
         Sign up
       </RouterLink>
     </p>

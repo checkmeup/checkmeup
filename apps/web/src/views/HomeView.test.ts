@@ -112,9 +112,10 @@ describe('HomeView', () => {
   it('renders the hero live mockup', () => {
     const wrapper = mountHome()
 
-    expect(wrapper.text()).toContain('checkmeup.net — Monitor')
-    expect(wrapper.text()).toContain('Uptime 24h')
-    expect(wrapper.find('svg path').exists()).toBe(true)
+    const preview = wrapper.find('[aria-label="Example dashboard"]')
+    expect(preview.text()).toContain('1 monitor needs you.')
+    expect(preview.text()).toContain('shop.example.com')
+    expect(preview.findAll('li')).toHaveLength(4)
   })
 
   it('renders the status page live mockup', () => {

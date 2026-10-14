@@ -1,6 +1,6 @@
 <template>
   <section id="uptime" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">
       Uptime monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
@@ -14,7 +14,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Request method</strong> — GET, HEAD, or
@@ -24,7 +24,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Accepted status codes</strong> — choose
@@ -35,7 +35,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Request timeout</strong> — 1 to 30
@@ -46,7 +46,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Response time tracking</strong> — every
@@ -56,7 +56,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Incident history</strong> — start time,
@@ -67,7 +67,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Uptime percentage</strong> — rolling
@@ -77,7 +77,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span>
           <strong style="color: var(--text-strong)">Keyword monitoring</strong> (every plan,
@@ -99,7 +99,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span>
           <strong style="color: var(--text-strong)">JSON assertions</strong> — assert on one or

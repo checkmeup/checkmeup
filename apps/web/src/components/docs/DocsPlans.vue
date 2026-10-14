@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 
 <template>
   <section id="plans" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Plans & limits</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Plans & limits</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Limits are per organization and apply across all monitor types combined. The free Hobby
       plan is meant to be genuinely usable, not a trial.
@@ -67,7 +67,7 @@ import { RouterLink } from 'vue-router'
     <RouterLink
       to="/pricing"
       class="inline-flex items-center gap-1 mt-4 text-sm transition-colors"
-      style="color: var(--color-green-500)"
+      style="color: var(--accent)"
     >
       Full pricing details →
     </RouterLink>

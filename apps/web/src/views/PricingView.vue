@@ -123,7 +123,7 @@ const featureRows: TableRow[] = [
     <!-- Hero -->
     <section class="max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
       <h1
-        class="text-4xl sm:text-5xl font-bold tracking-tight mb-4"
+        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4"
         style="color: var(--text-strong)"
       >
         Simple, honest pricing
@@ -156,7 +156,7 @@ const featureRows: TableRow[] = [
           @click="cycle = 'annual'"
         >
           Annual
-          <span class="ml-1" style="color: var(--color-green-500)">— 2 months free</span>
+          <span class="ml-1" style="color: var(--accent)">— 2 months free</span>
         </button>
       </div>
     </section>
@@ -218,7 +218,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -236,7 +236,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -254,7 +254,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -272,7 +272,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -290,7 +290,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -305,7 +305,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -324,7 +324,7 @@ const featureRows: TableRow[] = [
                 fill="none"
                 stroke="currentColor"
                 stroke-width="3"
-                style="color: var(--color-green-500)"
+                style="color: var(--accent)"
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -337,7 +337,7 @@ const featureRows: TableRow[] = [
 
           <RouterLink
             to="/sign-up"
-            class="block text-sm font-semibold text-center px-4 py-2.5 rounded-md transition-colors"
+            class="block text-sm font-semibold text-center px-4 py-2.5 rounded-[10px] transition-colors"
             :style="{
               backgroundColor: plan.highlight ? 'var(--color-green-500)' : 'var(--surface-raised)',
               color: plan.highlight ? 'var(--on-accent)' : 'var(--text)',
@@ -357,7 +357,7 @@ const featureRows: TableRow[] = [
 
     <!-- Feature comparison table -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-xl font-bold mb-6 text-center" style="color: var(--text-strong)">
+      <h2 class="text-xl font-semibold mb-6 text-center" style="color: var(--text-strong)">
         Full feature comparison
       </h2>
 
@@ -414,7 +414,7 @@ const featureRows: TableRow[] = [
 
     <!-- FAQ -->
     <section id="billing" class="max-w-3xl mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
-      <h2 class="text-2xl font-bold mb-10 text-center" style="color: var(--text-strong)">
+      <h2 class="text-2xl font-semibold mb-10 text-center" style="color: var(--text-strong)">
         Frequently asked questions
       </h2>
 
@@ -426,7 +426,7 @@ const featureRows: TableRow[] = [
       </div>
 
       <p class="text-center mt-8">
-        <RouterLink to="/faq" class="text-sm transition-colors" style="color: var(--color-green-500)">
+        <RouterLink to="/faq" class="text-sm transition-colors" style="color: var(--accent)">
           See all FAQs →
         </RouterLink>
       </p>
@@ -441,7 +441,7 @@ const featureRows: TableRow[] = [
           border-color: var(--cta-border);
         "
       >
-        <h2 class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight" style="color: var(--text-strong)">
+        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]" style="color: var(--text-strong)">
           Start monitoring in 60 seconds.
         </h2>
         <p class="mb-8 text-base" style="color: var(--text-dim)">
@@ -449,7 +449,7 @@ const featureRows: TableRow[] = [
         </p>
         <RouterLink
           to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-opacity hover:opacity-90"
+          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90"
           style="background-color: var(--accent); color: var(--on-accent)"
         >
           Create free account →

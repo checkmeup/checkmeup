@@ -1,6 +1,6 @@
 <template>
   <section id="cron" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">
       Cron job monitoring
     </h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
@@ -25,7 +25,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Schedule presets</strong> — every hour,
@@ -36,7 +36,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Grace period</strong> — how late a ping
@@ -47,7 +47,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Execution history</strong> — every ping
@@ -59,7 +59,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Stuck run detection</strong> — send a
@@ -72,7 +72,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Attach custom data to a ping</strong> —
@@ -83,7 +83,7 @@ curl -s https://checkmeup.net/ping/&lt;your-monitor-token&gt;</code></pre>
           >. Capped at 20 key/value pairs, 64 characters per key, 256 per value — extra pairs
           are silently dropped rather than failing the ping. Only the most recent ping's data
           is kept (each ping overwrites it, it isn't a history). Read it back through the
-          <a href="#api" class="underline" style="color: var(--color-green-500)">public API</a
+          <a href="#api" class="underline" style="color: var(--accent)">public API</a
           >.</span
         >
       </li>

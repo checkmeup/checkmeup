@@ -21,7 +21,7 @@ const subprocessors = [
 <template>
   <LandingLayout>
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-24 sm:pt-24">
-      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text-strong)">
+      <h1 class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] mb-2" style="color: var(--text-strong)">
         Privacy Policy
       </h1>
       <p class="text-sm mb-12" style="color: var(--text-muted)">Effective {{ effectiveDate }}</p>
@@ -113,7 +113,7 @@ const subprocessors = [
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">8. Security</h2>
           <p>
             Passwords are hashed with bcrypt, never stored in plain text. Sessions use httpOnly, SameSite
-            cookies (see <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)">Terms</RouterLink> for how this works). No method of transmission or storage is
+            cookies (see <RouterLink to="/terms" class="underline" style="color: var(--accent)">Terms</RouterLink> for how this works). No method of transmission or storage is
             perfectly secure, but we take reasonable measures to protect your data.
           </p>
         </section>
@@ -132,7 +132,7 @@ const subprocessors = [
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">10. Children's privacy</h2>
           <p>
             The Service is not directed at children and isn't intended for anyone under the age stated in
-            our <RouterLink to="/terms" class="underline" style="color: var(--color-green-500)">Terms</RouterLink>' eligibility requirement. We don't knowingly collect data from
+            our <RouterLink to="/terms" class="underline" style="color: var(--accent)">Terms</RouterLink>' eligibility requirement. We don't knowingly collect data from
             children. If you believe a child has provided us data, email us and we'll delete it.
           </p>
         </section>
@@ -149,7 +149,7 @@ const subprocessors = [
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">12. Contact</h2>
           <p>
             Questions about this policy or your data:
-            <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--color-green-500)"
+            <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--accent)"
               >andrew@checkmeup.net</a
             >.
           </p>

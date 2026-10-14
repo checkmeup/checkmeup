@@ -1,6 +1,6 @@
 <template>
   <section id="maintenance" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">
       Maintenance windows
     </h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
@@ -14,7 +14,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Planned or unplanned</strong> — set a
@@ -27,7 +27,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Multiple monitors per window</strong> —
@@ -38,7 +38,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Visible on status pages</strong> — any
@@ -49,7 +49,7 @@
       <li class="flex items-start gap-2">
         <span
           class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5"
-          style="background-color: var(--color-green-500)"
+          style="background-color: var(--accent)"
         ></span>
         <span
           ><strong style="color: var(--text-strong)">Up to 100 per org</strong> — on every

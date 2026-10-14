@@ -1,6 +1,6 @@
 <template>
   <section id="slack" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Slack alerts</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Slack alerts</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Post alerts to any Slack channel via an Incoming Webhook. Set it up in
       <strong style="color: var(--text-strong)">Settings → Notification channels</strong>:

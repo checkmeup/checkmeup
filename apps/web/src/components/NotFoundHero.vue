@@ -60,7 +60,7 @@ defineProps<{
         404
       </div>
 
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4" style="color: var(--text-strong)">
+      <h1 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold tracking-[-0.035em] mb-4" style="color: var(--text-strong)">
         {{ heading }}
       </h1>
 

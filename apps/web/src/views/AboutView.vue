@@ -50,7 +50,7 @@ const values = [
         Independent · Bootstrapped · Built in the open
       </div>
 
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-6 leading-tight" style="color: var(--text-strong)">
+      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-6 leading-tight" style="color: var(--text-strong)">
         Built by a developer<br class="hidden sm:block" /> who got paged at 2&nbsp;am.
       </h1>
 
@@ -69,7 +69,7 @@ const values = [
 
     <!-- The builder -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold uppercase tracking-widest mb-8" style="color: var(--text-muted)">Who's building this</h2>
+      <h2 class="text-xs font-semibold mb-8" style="color: var(--text-muted)">Who's building this</h2>
 
       <div class="flex flex-col sm:flex-row gap-8 items-start">
         <!-- Avatar placeholder -->
@@ -143,7 +143,7 @@ const values = [
 
     <!-- Values -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold uppercase tracking-widest mb-8" style="color: var(--text-muted)">How we work</h2>
+      <h2 class="text-xs font-semibold mb-8" style="color: var(--text-muted)">How we work</h2>
 
       <div class="space-y-10">
         <div v-for="v in values" :key="v.title" class="flex gap-5 items-start">
@@ -167,7 +167,7 @@ const values = [
 
     <!-- Stack transparency -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: var(--text-muted)">The stack</h2>
+      <h2 class="text-xs font-semibold mb-2" style="color: var(--text-muted)">The stack</h2>
       <p class="text-sm mb-8" style="color: var(--text-dim)">
         Boring by design. Every choice here was made to maximize reliability and minimize operational complexity — not to be impressive on a conference slide.
       </p>
@@ -185,12 +185,12 @@ const values = [
 
       <p class="text-xs mt-8" style="color: var(--text-muted)">
         Architecture decisions are documented in the
-        <a href="https://github.com/checkmeup/checkmeup/tree/main/.about/adr/" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">ADR log</a>
+        <a href="https://github.com/checkmeup/checkmeup/tree/main/.about/adr/" target="_blank" rel="noopener noreferrer" style="color: var(--accent)" class="hover:underline">ADR log</a>
         in the public repo — including the choices that weren't obvious.
       </p>
       <p class="text-xs mt-3" style="color: var(--text-muted)">
         The code itself is source-available under the
-        <a href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" style="color: var(--color-green-500)" class="hover:underline">Business Source License</a>
+        <a href="https://github.com/checkmeup/checkmeup/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" style="color: var(--accent)" class="hover:underline">Business Source License</a>
         — free to read, self-host, and modify; the one restriction is reselling Checkmeup itself as a competing hosted monitoring service. It converts to Apache 2.0 in 2030.
       </p>
     </section>
@@ -202,23 +202,23 @@ const values = [
 
     <!-- Principles -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold uppercase tracking-widest mb-8" style="color: var(--text-muted)">Things we won't do</h2>
+      <h2 class="text-xs font-semibold mb-8" style="color: var(--text-muted)">Things we won't do</h2>
 
       <ul class="space-y-4">
         <li class="flex items-start gap-3 text-sm" style="color: var(--text-dim)">
-          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--color-green-500)"></span>
+          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--accent)"></span>
           <span>Sell or share your data. Your monitors, your alert history, your email — none of it.</span>
         </li>
         <li class="flex items-start gap-3 text-sm" style="color: var(--text-dim)">
-          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--color-green-500)"></span>
+          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--accent)"></span>
           <span>Raise VC money and change the pricing model six months later. Bootstrapped means the incentives stay aligned with you.</span>
         </li>
         <li class="flex items-start gap-3 text-sm" style="color: var(--text-dim)">
-          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--color-green-500)"></span>
+          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--accent)"></span>
           <span>Add features just because competitors have them. Every addition has a maintenance cost. We'd rather do three things well than fifteen things adequately.</span>
         </li>
         <li class="flex items-start gap-3 text-sm" style="color: var(--text-dim)">
-          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--color-green-500)"></span>
+          <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2" style="background-color: var(--accent)"></span>
           <span>Write vague status page updates. If something breaks, we explain what broke, why, and what changed.</span>
         </li>
       </ul>
@@ -231,14 +231,14 @@ const values = [
 
     <!-- Contact / reach out -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
-      <h2 class="text-xs font-semibold uppercase tracking-widest mb-4" style="color: var(--text-muted)">Get in touch</h2>
+      <h2 class="text-xs font-semibold mb-4" style="color: var(--text-muted)">Get in touch</h2>
       <p class="text-sm leading-relaxed mb-6" style="color: var(--text-dim)">
         Questions, bug reports, feature ideas, complaints about the docs — all welcome. There's no support ticket queue. You'll reach an engineer.
       </p>
       <div class="flex flex-wrap gap-4">
         <a
           href="mailto:andrew@checkmeup.net"
-          class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors"
+          class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors"
           style="color: var(--text-dim); border-color: var(--border); background-color: var(--surface)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -250,7 +250,7 @@ const values = [
           href="https://github.com/checkmeup/checkmeup/issues"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors"
+          class="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-[10px] border transition-colors"
           style="color: var(--text-dim); border-color: var(--border); background-color: var(--surface)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -267,7 +267,7 @@ const values = [
         class="rounded-2xl text-center px-8 py-14 border"
         style="background-color: var(--accent-wash-dim); border-color: var(--cta-border)"
       >
-        <h2 class="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight" style="color: var(--text-strong)">
+        <h2 class="text-[30px] leading-[1.1] sm:text-[38px] font-semibold mb-3 tracking-[-0.035em]" style="color: var(--text-strong)">
           Try it. It's free.
         </h2>
         <p class="mb-8 text-base" style="color: var(--text-dim)">
@@ -275,7 +275,7 @@ const values = [
         </p>
         <RouterLink
           to="/sign-up"
-          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-md transition-opacity hover:opacity-90"
+          class="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3 rounded-[10px] transition-opacity hover:opacity-90"
           style="background-color: var(--accent); color: var(--on-accent)"
         >
           Create free account →

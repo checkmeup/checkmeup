@@ -24,8 +24,8 @@ async function submit() {
 <template>
   <AuthLayout>
     <div class="space-y-1">
-      <h1 class="text-lg font-semibold" style="color: var(--text-strong)">Reset password</h1>
-      <p class="text-sm" style="color: var(--text-muted)">
+      <h1 class="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Reset password</h1>
+      <p class="text-sm text-[var(--text-dim)]">
         Enter your email and we'll send you a reset link.
       </p>
     </div>
@@ -57,7 +57,7 @@ async function submit() {
     </template>
 
     <p class="text-center text-sm" style="color: var(--text-muted)">
-      <RouterLink to="/sign-in" class="font-medium" style="color: var(--color-green-500)">
+      <RouterLink to="/sign-in" class="font-medium" style="color: var(--accent)">
         Back to sign in
       </RouterLink>
     </p>

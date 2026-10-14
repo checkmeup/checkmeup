@@ -1,6 +1,6 @@
 <template>
   <section id="api" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Public API</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Public API</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       Read a monitor's current status from scripts, CI pipelines, or your own dashboard —
       useful for a build step that should surface its result somewhere else, or a status

@@ -56,11 +56,11 @@ async function signOut() {
       <input v-model="agreed" type="checkbox" class="mt-0.5" />
       <span>
         I agree to the
-        <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--color-green-500)"
+        <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--accent)"
           >Terms of Service</RouterLink
         >
         and
-        <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--color-green-500)"
+        <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--accent)"
           >Privacy Policy</RouterLink
         >.
       </span>

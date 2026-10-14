@@ -1,215 +1,135 @@
+<script setup lang="ts">
+import CheckStrip from '@/components/CheckStrip.vue'
+import StatusLabel from '@/components/StatusLabel.vue'
+import type { Tone } from '@/lib/monitorRows'
+
+// The product preview beside the headline is built from the app's own
+// components with example data, so it always looks like the real dashboard.
+function ticks(pattern: string) {
+  return pattern.split('').map((ch) => ({ ok: ch === '-' ? null : ch === 'u', slow: ch === 's' }))
+}
+
+const previewRows: {
+  name: string
+  type: string
+  tone: Tone
+  label: string
+  metric: string
+  pattern: string
+}[] = [
+  {
+    name: 'shop.example.com',
+    type: 'Uptime',
+    tone: 'down',
+    label: 'Down',
+    metric: 'HTTP 502',
+    pattern: 'uuuuuuuuuuuuuuuuuuuuduuuuuuuuuuuuuudddddd',
+  },
+  {
+    name: 'nightly-db-backup',
+    type: 'Cron',
+    tone: 'up',
+    label: 'Up',
+    metric: 'ran 03:00',
+    pattern: 'uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu',
+  },
+  {
+    name: 'api.example.com',
+    type: 'Uptime',
+    tone: 'up',
+    label: 'Up',
+    metric: '142 ms',
+    pattern: 'uuuuuuuuuuuuuusuuuuuuuuuuuuuuuuuuuuuuuuu',
+  },
+  {
+    name: 'example.com',
+    type: 'SSL',
+    tone: 'warn',
+    label: 'Expiring soon',
+    metric: '12 days',
+    pattern: 'uuuuuuuuuuuuuuuuuuuussssssssssssssssssss',
+  },
+]
+</script>
+
 <template>
-  <!-- Hero -->
-  <section class="relative pt-16 pb-0 overflow-hidden">
-    <!-- Grid texture -->
-    <div
-      class="absolute inset-0 pointer-events-none"
-      style="
-        background-image:
-          linear-gradient(var(--border) 1px, transparent 1px),
-          linear-gradient(90deg, var(--border) 1px, transparent 1px);
-        background-size: 48px 48px;
-      "
-    ></div>
-    <!-- Accent glow, top-right -->
-    <div
-      class="absolute pointer-events-none"
-      style="
-        top: -100px;
-        right: -120px;
-        width: 700px;
-        height: 600px;
-        background: radial-gradient(ellipse at 70% 30%, var(--accent-wash) 0%, transparent 65%);
-      "
-    ></div>
-    <!-- Bottom fade -->
-    <div
-      class="absolute inset-x-0 bottom-0 pointer-events-none"
-      style="height: 120px; background: linear-gradient(to bottom, transparent, var(--bg))"
-    ></div>
-
-    <div
-      class="relative max-w-[1160px] mx-auto px-4 sm:px-7 pt-16 pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-14 items-center"
-    >
-      <!-- Left: copy -->
-      <div class="text-center lg:text-left">
-        <div
-          class="inline-flex items-center gap-2 text-xs font-normal px-3 py-1.5 rounded-full mb-6"
-          style="
-            border: 1px solid var(--border);
-            background-color: var(--card);
-            color: var(--text-dim);
-          "
-        >
-          <span
-            class="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse"
-            style="background-color: var(--accent)"
-          ></span>
-          Built for freelancers &amp; solo devs with client sites
-        </div>
-
+  <section class="mx-auto max-w-[1200px] px-4 pt-16 pb-20 sm:px-6 md:pt-24">
+    <div class="grid items-center gap-14 lg:grid-cols-[1fr_1.05fr]">
+      <div class="flex flex-col gap-6">
         <h1
-          class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-5 leading-[1.08]"
-          style="color: var(--text-strong)"
+          class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
         >
           Know before<br />
-          <span style="color: var(--accent-emphasis)">your client does.</span>
+          <span class="text-[var(--text-muted)]">your client does.</span>
         </h1>
 
-        <p
-          class="text-[16.5px] font-normal mx-auto lg:mx-0 mb-8 max-w-[480px]"
-          style="color: var(--text-muted)"
-        >
+        <p class="max-w-[500px] text-[17px] leading-relaxed text-[var(--text-dim)]">
           Cron job monitoring, uptime checks, SSL and domain expiry alerts, and raw TCP port
           checks — for every client site you maintain. Get alerted on Telegram, Slack, or email
           before your client ever notices something's wrong.
         </p>
 
-        <div
-          class="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3"
-        >
+        <div class="flex flex-col gap-3 sm:flex-row">
           <RouterLink
             to="/sign-up"
-            class="w-full sm:w-auto text-[15px] font-semibold px-6 py-3 rounded-md transition-opacity hover:opacity-90"
-            style="background-color: var(--accent); color: var(--on-accent)"
+            class="rounded-[10px] bg-[var(--accent)] px-6 py-3 text-center text-[15px] font-semibold text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)]"
           >
             Start free — no credit card
           </RouterLink>
           <RouterLink
             to="/sign-in"
-            class="w-full sm:w-auto text-sm px-6 py-3 rounded-md border transition-colors bg-[var(--bg)] hover:bg-[var(--surface-raised)]"
-            style="color: var(--text-dim); border-color: var(--border)"
+            class="rounded-[10px] border border-[var(--border-strong)] px-6 py-3 text-center text-[15px] font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-raised)]"
           >
             Sign in →
           </RouterLink>
         </div>
+        <p class="text-[13px] text-[var(--text-dim)]">
+          Built for freelancers and solo devs with client sites.
+        </p>
       </div>
 
-      <!-- Right: product screenshot -->
+      <!-- Product preview -->
       <div
-        class="rounded-2xl border overflow-hidden text-left"
-        style="border-color: var(--border); background-color: var(--surface)"
+        aria-label="Example dashboard"
+        role="img"
+        class="flex flex-col gap-5 rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-5 shadow-[0_24px_60px_rgb(0_0_0/8%)] sm:p-7"
       >
-        <!-- Fake browser chrome -->
-        <div
-          class="flex items-center gap-1.5 px-4 py-3 border-b"
-          style="border-color: var(--border); background-color: var(--surface-raised)"
-        >
-          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #ff5f57"></span>
-          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #febc2e"></span>
-          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #28c840"></span>
-          <span
-            class="flex-1 text-center font-mono text-xs"
-            style="color: var(--text-muted); margin-right: 76px"
-          >
-            checkmeup.net — Monitor
+        <div class="flex flex-col gap-1">
+          <span class="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">
+            1 monitor needs you.
+          </span>
+          <span class="text-sm text-[var(--text-dim)]">
+            99.62% average uptime today · 3 of 4 up
           </span>
         </div>
 
-        <div class="p-5 sm:p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <span class="font-mono text-xs" style="color: var(--text-muted)">← Back</span>
-            <span class="text-base font-semibold" style="color: var(--text-strong)"
-              >checkmeup.net</span
-            >
-          </div>
-
-          <div
-            class="flex items-start justify-between pb-4 mb-4 border-b"
-            style="border-color: var(--border)"
-          >
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="relative inline-block w-2.5 h-2.5">
-                  <span
-                    class="absolute inset-0 rounded-full animate-ping"
-                    style="background-color: var(--status-up); opacity: 0.55"
-                  ></span>
-                  <span
-                    class="absolute inset-0 rounded-full"
-                    style="background-color: var(--status-up)"
-                  ></span>
-                </span>
-                <span class="text-sm font-semibold" style="color: var(--status-up)">Up</span>
-              </div>
-              <div class="font-mono text-xs" style="color: var(--text-muted)">
-                https://checkmeup.net
-              </div>
-              <div class="font-mono text-xs mt-0.5" style="color: var(--text-muted)">
-                Every 10 min · Last checked 7m ago
-              </div>
-            </div>
-            <div class="flex gap-2">
-              <button
-                class="px-2.5 py-1.5 rounded-md border text-xs"
-                style="
-                  border-color: var(--border);
-                  background-color: var(--card);
-                  color: var(--text-dim);
-                "
-              >
-                Edit
-              </button>
-              <button
-                class="px-2.5 py-1.5 rounded-md border text-xs"
-                style="
-                  border-color: var(--border);
-                  background-color: var(--card);
-                  color: var(--text-dim);
-                "
-              >
-                Pause
-              </button>
-              <button
-                class="px-2.5 py-1.5 rounded-md border text-xs"
-                style="
-                  border-color: var(--status-down-wash);
-                  background-color: var(--status-down-wash);
-                  color: var(--status-down);
-                "
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 mb-4">
-            <div class="text-center py-3 border-r" style="border-color: var(--border)">
-              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
-                100.00%
-              </div>
-              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 24h</div>
-            </div>
-            <div class="text-center py-3 border-r" style="border-color: var(--border)">
-              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
-                100.00%
-              </div>
-              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 7d</div>
-            </div>
-            <div class="text-center py-3">
-              <div class="font-mono text-xl font-medium" style="color: var(--text-strong)">
-                99.91%
-              </div>
-              <div class="text-xs mt-1" style="color: var(--text-muted)">Uptime 30d</div>
-            </div>
-          </div>
-
-          <div class="pt-4 border-t" style="border-color: var(--border)">
-            <div class="text-xs font-medium mb-2.5" style="color: var(--text-dim)">
-              Response time — last 24h
-            </div>
-            <svg viewBox="0 0 640 48" fill="none" class="w-full h-12 block">
-              <path
-                d="M0 34 C10 32 18 27 32 30 C46 33 54 24 68 27 C82 30 92 37 106 34 C120 31 128 22 142 25 C156 28 166 34 180 31 C194 28 202 20 216 23 C230 26 240 33 254 29 C268 25 278 17 292 21 C306 25 316 33 330 29 C344 25 352 17 366 21 C380 25 392 33 406 29 C420 25 428 17 442 21 C456 25 468 33 482 29 C496 25 504 17 518 21 C532 25 544 33 558 29 C572 25 580 17 594 21 C608 25 620 33 634 29 C638 27 640 26 640 27"
-                style="stroke: var(--status-up); stroke-width: 1.5px"
-                fill="none"
-              />
-            </svg>
-            <div class="font-mono text-xs mt-1.5" style="color: var(--text-muted)">
-              Red dots = failed checks. Y axis = response time (max 77ms).
-            </div>
+        <div class="flex items-center gap-4 border-y border-[var(--border)] py-4">
+          <span
+            class="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[var(--status-down)] shadow-[0_0_0_4px_var(--status-down-wash)]"
+          ></span>
+          <div class="flex min-w-0 flex-col">
+            <span class="font-semibold text-[var(--text-strong)]">shop.example.com</span>
+            <span class="text-[13.5px] text-[var(--status-down)]">
+              Down — the last check failed: 502 Bad Gateway.
+            </span>
           </div>
         </div>
+
+        <ul class="flex flex-col">
+          <li
+            v-for="row in previewRows"
+            :key="row.name"
+            class="grid grid-cols-[110px_1fr_auto] items-center gap-4 border-t border-[var(--border)] py-2.5 first:border-t-0 sm:grid-cols-[120px_1fr_110px_80px]"
+          >
+            <StatusLabel :tone="row.tone" :label="row.label" />
+            <span class="min-w-0 truncate text-sm">
+              <span class="font-medium text-[var(--text-strong)]">{{ row.name }}</span>
+              <span class="text-[var(--text-dim)]"> · {{ row.type }}</span>
+            </span>
+            <CheckStrip size="sm" :checks="ticks(row.pattern)" class="hidden sm:flex" />
+            <span class="text-right font-mono text-[13px] text-[var(--text)]">{{ row.metric }}</span>
+          </li>
+        </ul>
       </div>
     </div>
   </section>

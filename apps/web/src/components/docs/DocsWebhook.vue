@@ -1,6 +1,6 @@
 <template>
   <section id="webhook" class="scroll-mt-24">
-    <h2 class="text-2xl font-bold mb-4" style="color: var(--text-strong)">Webhook alerts</h2>
+    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-strong)">Webhook alerts</h2>
     <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">
       A generic alert channel for wiring monitor events into your own automation — PagerDuty,
       a custom script, or anything else that isn't a first-class integration. Set it up in

@@ -56,7 +56,7 @@ const sections = [
     <!-- Hero -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-12">
       <h1
-        class="text-4xl sm:text-5xl font-bold tracking-tight mb-4"
+        class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-4"
         style="color: var(--text-strong)"
       >
         Documentation
@@ -77,7 +77,7 @@ const sections = [
             v-for="s in sections"
             :key="s.id"
             :href="`#${s.id}`"
-            class="text-sm px-3 py-1.5 rounded-md whitespace-nowrap transition-colors hover:underline"
+            class="text-sm px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-colors hover:underline"
             style="color: var(--text-dim)"
           >
             {{ s.label }}

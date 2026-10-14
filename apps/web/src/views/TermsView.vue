@@ -14,7 +14,7 @@ const effectiveDate = '2026-06-17'
 <template>
   <LandingLayout>
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-24 sm:pt-24">
-      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style="color: var(--text-strong)">
+      <h1 class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] mb-2" style="color: var(--text-strong)">
         Terms of Service
       </h1>
       <p class="text-sm mb-12" style="color: var(--text-muted)">Effective {{ effectiveDate }}</p>
@@ -26,7 +26,7 @@ const effectiveDate = '2026-06-17'
             Checkmeup is operated by Andrew Molyuk, a sole proprietor (עוסק פטור) based in Israel.
             Checkmeup ("we", "us") provides cron, uptime, SSL certificate, domain, port, and DNS record monitoring with alerting and
             public status pages ("the Service"). By creating an account you agree to these Terms and to our
-            <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)">Privacy Policy</RouterLink>.
+            <RouterLink to="/privacy" class="underline" style="color: var(--accent)">Privacy Policy</RouterLink>.
           </p>
         </section>
 
@@ -68,7 +68,7 @@ const effectiveDate = '2026-06-17'
             plan's price, we'll give you at least 30 days' notice before it takes effect on your next billing
             cycle. Refund requests made within 30 days of a charge are honored in full, no questions asked —
             see our
-            <RouterLink to="/refund" class="underline" style="color: var(--color-green-500)">Refund Policy</RouterLink>.
+            <RouterLink to="/refund" class="underline" style="color: var(--accent)">Refund Policy</RouterLink>.
           </p>
         </section>
 
@@ -86,7 +86,7 @@ const effectiveDate = '2026-06-17'
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">7. Third-party links and services</h2>
           <p>
             The Service integrates with third parties you choose to connect (e.g. Telegram) and relies on
-            subprocessors to operate (see our <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)">Privacy Policy</RouterLink>). We aren't responsible for the content, availability, or practices of
+            subprocessors to operate (see our <RouterLink to="/privacy" class="underline" style="color: var(--accent)">Privacy Policy</RouterLink>). We aren't responsible for the content, availability, or practices of
             third-party sites or services, including the URLs and systems you choose to monitor.
           </p>
         </section>
@@ -126,7 +126,7 @@ const effectiveDate = '2026-06-17'
             You can delete your account at any time. We may suspend or terminate an account immediately, without
             prior notice, for violation of these Terms or to protect the Service or other users. On
             termination, your data is deleted per the retention terms in our
-            <RouterLink to="/privacy" class="underline" style="color: var(--color-green-500)">Privacy Policy</RouterLink>.
+            <RouterLink to="/privacy" class="underline" style="color: var(--accent)">Privacy Policy</RouterLink>.
           </p>
         </section>
 
@@ -165,7 +165,7 @@ const effectiveDate = '2026-06-17'
           <h2 class="text-lg font-semibold mb-2" style="color: var(--text-strong)">15. Contact</h2>
           <p>
             Questions about these Terms:
-            <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--color-green-500)"
+            <a href="mailto:andrew@checkmeup.net" class="underline" style="color: var(--accent)"
               >andrew@checkmeup.net</a
             >.
           </p>

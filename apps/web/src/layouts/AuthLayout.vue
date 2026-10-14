@@ -10,7 +10,7 @@ const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
 
 <template>
   <div class="min-h-screen flex items-center justify-center px-4" style="background-color: var(--bg)">
-    <div class="w-full max-w-sm space-y-6">
+    <div class="w-full max-w-[400px] space-y-8 py-12">
       <!-- Logo -->
       <div class="flex justify-center">
         <RouterLink to="/">
@@ -19,8 +19,7 @@ const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
       </div>
 
       <!-- Card -->
-      <div class="rounded-xl border p-6 space-y-4"
-           style="background-color: var(--surface); border-color: var(--border)">
+      <div class="space-y-4 rounded-[18px] border border-[var(--border)] p-7">
         <slot />
       </div>
     </div>

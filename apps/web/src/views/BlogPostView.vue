@@ -141,7 +141,7 @@ useHead({
         </div>
 
         <h1
-          class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-6"
+          class="text-[34px] leading-[1.05] sm:text-[44px] font-semibold tracking-[-0.035em] leading-tight mb-6"
           style="color: var(--text-strong)"
         >
           {{ post.title }}
@@ -165,7 +165,7 @@ useHead({
 
           <h2
             v-else-if="block.type === 'h2'"
-            class="text-xl font-bold pt-4"
+            class="text-xl font-semibold pt-4"
             style="color: var(--text-strong)"
           >
             {{ block.text }}
@@ -198,7 +198,7 @@ useHead({
             >
               <span
                 class="flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2"
-                style="background-color: var(--color-green-500)"
+                style="background-color: var(--accent)"
               ></span>
               {{ item }}
             </li>
@@ -305,7 +305,7 @@ useHead({
             target="_blank"
             rel="noopener noreferrer"
             class="underline hover:no-underline transition-colors"
-            style="color: var(--color-green-500)"
+            style="color: var(--accent)"
             >Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a
           >.
         </p>
@@ -336,7 +336,7 @@ useHead({
           </RouterLink>
           <RouterLink
             to="/sign-up"
-            class="text-sm font-medium px-4 py-2 rounded-md transition-colors"
+            class="text-sm font-medium px-4 py-2 rounded-[10px] transition-colors"
             style="background-color: var(--color-green-500); color: var(--on-accent)"
           >
             Try Checkmeup free →

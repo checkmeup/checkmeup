@@ -50,8 +50,8 @@ async function submit() {
 <template>
   <AuthLayout>
     <div class="space-y-1">
-      <h1 class="text-lg font-semibold" style="color: var(--text-strong)">Set new password</h1>
-      <p class="text-sm" style="color: var(--text-muted)">Choose a new password for your account.</p>
+      <h1 class="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Set new password</h1>
+      <p class="text-sm text-[var(--text-dim)]">Choose a new password for your account.</p>
     </div>
 
     <form class="space-y-4" @submit.prevent="submit">

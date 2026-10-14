@@ -52,8 +52,8 @@ async function submit() {
 <template>
   <AuthLayout>
     <div class="space-y-1">
-      <h1 class="text-lg font-semibold" style="color: var(--text-strong)">Create account</h1>
-      <p class="text-sm" style="color: var(--text-muted)">Start monitoring your services for free.</p>
+      <h1 class="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">Create account</h1>
+      <p class="text-sm text-[var(--text-dim)]">Start monitoring your services for free.</p>
     </div>
 
     <form class="space-y-4" @submit.prevent="submit">
@@ -85,11 +85,11 @@ async function submit() {
         <input v-model="acceptedTerms" type="checkbox" class="mt-0.5" />
         <span>
           I agree to the
-          <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--color-green-500)"
+          <RouterLink to="/terms" target="_blank" class="underline" style="color: var(--accent)"
             >Terms of Service</RouterLink
           >
           and
-          <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--color-green-500)"
+          <RouterLink to="/privacy" target="_blank" class="underline" style="color: var(--accent)"
             >Privacy Policy</RouterLink
           >.
         </span>
@@ -104,14 +104,14 @@ async function submit() {
 
     <p class="text-center text-sm" style="color: var(--text-muted)">
       Already have an account?
-      <RouterLink to="/sign-in" class="font-medium" style="color: var(--color-green-500)">
+      <RouterLink to="/sign-in" class="font-medium" style="color: var(--accent)">
         Sign in
       </RouterLink>
     </p>
 
     <p class="text-center text-xs" style="color: var(--text-muted)">
       Questions?
-      <RouterLink to="/faq#getting-started" style="color: var(--color-green-500)">
+      <RouterLink to="/faq#getting-started" style="color: var(--accent)">
         See the FAQ
       </RouterLink>
     </p>

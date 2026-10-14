@@ -18,8 +18,8 @@ const sortedPosts = [...articlesMeta].reverse()
   <LandingLayout>
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-3" style="color: var(--text-strong)">Blog</h1>
-      <p class="text-lg" style="color: var(--text-dim)">Monitoring guides, building notes, and the occasional opinion. Release notes are in the <RouterLink to="/changelog" class="underline hover:no-underline" style="color: var(--color-green-500)">changelog</RouterLink>.</p>
+      <h1 class="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] mb-3" style="color: var(--text-strong)">Blog</h1>
+      <p class="text-lg" style="color: var(--text-dim)">Monitoring guides, building notes, and the occasional opinion. Release notes are in the <RouterLink to="/changelog" class="underline hover:no-underline" style="color: var(--accent)">changelog</RouterLink>.</p>
     </section>
 
     <section class="max-w-3xl mx-auto px-4 sm:px-6 pb-24">
@@ -37,13 +37,13 @@ const sortedPosts = [...articlesMeta].reverse()
             <span>{{ post.readTime }}</span>
           </div>
           <h2
-            class="text-xl font-bold mb-2 transition-colors group-hover:underline"
+            class="text-xl font-semibold mb-2 transition-colors group-hover:underline"
             style="color: var(--text-strong); text-decoration-color: var(--color-green-500)"
           >
             {{ post.title }}
           </h2>
           <p class="text-sm leading-relaxed mb-4" style="color: var(--text-dim)">{{ post.excerpt }}</p>
-          <span class="text-sm font-medium transition-colors" style="color: var(--color-green-500)">
+          <span class="text-sm font-medium transition-colors" style="color: var(--accent)">
             Read post →
           </span>
         </RouterLink>
