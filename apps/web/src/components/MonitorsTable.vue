@@ -179,9 +179,21 @@ function open(row: MonitorRow) {
             :aria-expanded="!collapsed.has(g.key)"
             @click="toggleGroup(g.key)"
           >
-            <span aria-hidden="true" class="w-3 text-[var(--text-muted)]">{{
-              collapsed.has(g.key) ? '▸' : '▾'
-            }}</span>
+            <svg
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="flex-shrink-0 text-[var(--text-dim)] transition-transform duration-150"
+              :class="collapsed.has(g.key) ? '-rotate-90' : ''"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
             <span class="truncate font-semibold text-[var(--text-strong)]">{{ g.name }}</span>
             <span class="flex-shrink-0 text-[var(--text-muted)]">{{ g.rows.length }}</span>
             <span v-if="g.attention > 0" class="ml-auto flex-shrink-0 text-[var(--status-down)]">
@@ -232,9 +244,21 @@ function open(row: MonitorRow) {
                 :aria-expanded="!collapsed.has(g.key)"
                 @click="toggleGroup(g.key)"
               >
-                <span aria-hidden="true" class="w-3 text-[var(--text-muted)]">{{
-                  collapsed.has(g.key) ? '▸' : '▾'
-                }}</span>
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="flex-shrink-0 text-[var(--text-dim)] transition-transform duration-150"
+                  :class="collapsed.has(g.key) ? '-rotate-90' : ''"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
                 <span class="font-semibold text-[var(--text-strong)]">{{ g.name }}</span>
                 <span class="text-[var(--text-muted)]">{{ monitorCountLabel(g.rows.length) }}</span>
                 <span v-if="g.attention > 0" class="text-[var(--status-down)]">
