@@ -45,12 +45,16 @@ clean:
 	rm -Rf apps/web/dist
 	rm -Rf apps/web/coverage
 
+# Calls scripts/ghcr-clean.sh directly rather than `$(MAKE) ghcr-clean`: Make
+# runs any recipe line that mentions $(MAKE) even under -n, so with it here
+# `make -n deploy` really deployed (docs/incidents/2026-07-02-…). .env is
+# already loaded in this shell.
 deploy:
 	bash -c 'set -a && source .env && set +a && \
 	  cmd="$(or $(cmd),deploy)"; \
 	  kamal "$$cmd"; status=$$?; \
 	  if [ $$status -eq 0 ] && { [ "$$cmd" = "deploy" ] || [ "$$cmd" = "setup" ]; }; then \
-	    $(MAKE) ghcr-clean; \
+	    bash scripts/ghcr-clean.sh $(or $(keep),5); \
 	  fi; \
 	  exit $$status'
 

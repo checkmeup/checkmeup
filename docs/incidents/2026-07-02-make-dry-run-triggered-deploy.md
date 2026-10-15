@@ -27,3 +27,10 @@ command it was supposed to only preview.
   `block_docker_deploy_build.py`) now blocks all of these commands for
   Claude at the tool-call level, including flag-shuffled dry runs like
   `make -n deploy`, rather than relying on the written warning alone.
+- 2026-10-15: root cause removed. `deploy` now calls `scripts/ghcr-clean.sh`
+  directly instead of `$(MAKE) ghcr-clean`, so no line of its recipe mentions
+  `$(MAKE)` and `make -n deploy` only prints. Checked on a copy of the recipe
+  with `kamal` and the cleanup script stubbed out: the old recipe ran
+  `kamal deploy` under `-n`, the new one runs nothing, and a real run still
+  deploys and then prunes. The hooks stay: the rule is that only the human
+  operator deploys, not that `-n` is unsafe.
