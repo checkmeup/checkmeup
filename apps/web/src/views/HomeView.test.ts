@@ -163,10 +163,16 @@ describe('HomeView', () => {
   it('shows the real Telegram message and webhook payload of a missed ping', () => {
     const wrapper = mountHome()
 
-    const blocks = wrapper.findAll('pre').map((p) => p.text())
-    expect(blocks.some((b) => b.includes('nightly-backup missed its ping'))).toBe(true)
-    expect(blocks.some((b) => b.includes('"eventType": "down"'))).toBe(true)
-    expect(blocks.some((b) => b.includes('X-Checkmeup-Signature'))).toBe(true)
+    const figures = wrapper.findAll('figure').map((f) => f.text())
+    const telegram = figures.find((t) => t.startsWith('Telegram'))!
+    expect(telegram).toContain('nightly-backup missed its ping')
+    expect(telegram).toContain('0 3 * * *')
+
+    const webhook = wrapper.find('pre').text()
+    expect(webhook).toContain('POST /hooks/checkmeup HTTP/1.1')
+    expect(webhook).toContain('X-Checkmeup-Signature: 7c1e9a…f03b')
+    expect(webhook).toContain('"eventType": "down",')
+    expect(webhook).toContain('"timestamp": "2026-10-15T03:05:18Z"\n}')
   })
 
   it('copies the badge snippet in the chosen format', async () => {

@@ -120,23 +120,31 @@ export const monitorTypes = [
 // apps/api/internal/worker — keep them in sync. The expected time already
 // includes the grace period, so a 03:00 job with 5 minutes' grace is
 // expected at 03:05.
-export const sampleTelegram = `🔴 nightly-backup missed its ping
+export const sampleTelegram = {
+  name: 'nightly-backup',
+  headline: 'missed its ping',
+  time: '03:05',
+  details: [
+    { label: 'Schedule', value: '0 3 * * *', code: true },
+    { label: 'Expected at', value: '03:05:00 UTC', code: false },
+    { label: 'Missed by', value: '18s', code: false },
+  ],
+}
 
-Schedule: 0 3 * * *
-Expected at: 03:05:00 UTC
-Missed by: 18s`
-
-export const sampleWebhook = `POST /hooks/checkmeup HTTP/1.1
-Content-Type: application/json
-X-Checkmeup-Signature: 7c1e9a…f03b
-
-{
-  "eventType": "down",
-  "monitorName": "nightly-backup",
-  "monitorType": "cron",
-  "reason": "missed its ping — expected at 03:05:00 UTC, missed by 18s",
-  "timestamp": "2026-10-15T03:05:18Z"
-}`
+export const sampleWebhook = {
+  requestLine: 'POST /hooks/checkmeup HTTP/1.1',
+  headers: [
+    { name: 'Content-Type', value: 'application/json' },
+    { name: 'X-Checkmeup-Signature', value: '7c1e9a…f03b' },
+  ],
+  body: {
+    eventType: 'down',
+    monitorName: 'nightly-backup',
+    monitorType: 'cron',
+    reason: 'missed its ping — expected at 03:05:00 UTC, missed by 18s',
+    timestamp: '2026-10-15T03:05:18Z',
+  },
+}
 
 // The production status page of checkmeup.net itself; the landing hero shows
 // its live 90-day strip.

@@ -180,20 +180,56 @@ useHead({
               >
             </p>
           </div>
-          <div class="grid min-w-0 gap-4 lg:grid-cols-[1fr_1.4fr]">
+          <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[1fr_1.4fr]">
+            <!-- Telegram: drawn as the message itself, like the hero's alert. -->
             <figure class="flex min-w-0 flex-col gap-2">
               <figcaption class="font-mono text-xs text-[var(--text-muted)]">Telegram</figcaption>
-              <pre
-                class="h-full rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--text)] [overflow-wrap:anywhere]"
-              >{{ sampleTelegram }}</pre>
+              <div
+                class="flex items-start gap-3.5 rounded-[14px] border border-[var(--border-strong)] bg-[var(--bg)] px-5 py-[18px] shadow-[0_18px_40px_rgb(0_0_0/7%)]"
+              >
+                <img src="/favicon.svg" alt="" class="h-9 w-9 flex-shrink-0" />
+                <div class="flex min-w-0 flex-1 flex-col gap-2">
+                  <div class="flex justify-between gap-3 text-[13px] text-[var(--text-muted)]">
+                    <span class="font-semibold text-[var(--text-strong)]">Checkmeup</span>
+                    <span class="font-mono">{{ sampleTelegram.time }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-[15px] text-[var(--text-strong)]">
+                    <span class="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--status-down)]"></span>
+                    <span
+                      ><strong class="font-semibold">{{ sampleTelegram.name }}</strong>
+                      {{ sampleTelegram.headline }}</span
+                    >
+                  </div>
+                  <dl class="flex flex-col gap-1 text-sm">
+                    <div v-for="d in sampleTelegram.details" :key="d.label" class="flex gap-1.5">
+                      <dt class="text-[var(--text-dim)]">{{ d.label }}:</dt>
+                      <dd
+                        :class="
+                          d.code
+                            ? 'rounded bg-[var(--surface-raised)] px-1.5 font-mono text-[13px] text-[var(--text-strong)]'
+                            : 'text-[var(--text)]'
+                        "
+                      >
+                        {{ d.value }}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
             </figure>
+            <!-- Webhook: the request as sent, lightly highlighted. -->
             <figure class="flex min-w-0 flex-col gap-2">
               <figcaption class="font-mono text-xs text-[var(--text-muted)]">
                 Webhook · signed with HMAC-SHA256 of the body
               </figcaption>
               <pre
-                class="h-full rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--text)] [overflow-wrap:anywhere]"
-              >{{ sampleWebhook }}</pre>
+                class="rounded-[14px] border border-[var(--border-strong)] bg-[var(--surface-raised)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--text-strong)] [overflow-wrap:anywhere]"
+              ><span class="font-semibold">{{ sampleWebhook.requestLine }}</span>
+<template v-for="h in sampleWebhook.headers" :key="h.name"><span class="text-[var(--text-dim)]">{{ h.name }}:</span> {{ h.value }}
+</template>
+{<template v-for="([key, value], i) in Object.entries(sampleWebhook.body)" :key="key">
+  <span class="text-[var(--accent)]">"{{ key }}"</span>: "{{ value }}"{{ i < Object.keys(sampleWebhook.body).length - 1 ? ',' : '' }}</template>
+}</pre>
             </figure>
           </div>
         </div>
