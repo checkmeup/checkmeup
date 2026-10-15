@@ -134,3 +134,18 @@ SET project_id = CASE WHEN id = ANY(sqlc.arg('monitor_ids')::uuid[]) THEN sqlc.a
 WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
+
+-- name: GetMonitorProject :one
+-- The project of one monitor of any type, for an alert's [Project] prefix
+-- (ADR alerting); no row when the monitor has no project.
+SELECT p.id, p.name FROM projects p
+WHERE p.org_id = sqlc.arg('org_id') AND p.id = (
+    CASE sqlc.arg('monitor_type')::text
+        WHEN 'cron'   THEN (SELECT m.project_id FROM cron_monitors m   WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+        WHEN 'uptime' THEN (SELECT m.project_id FROM uptime_monitors m WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+        WHEN 'ssl'    THEN (SELECT m.project_id FROM ssl_monitors m    WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+        WHEN 'domain' THEN (SELECT m.project_id FROM domain_monitors m WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+        WHEN 'port'   THEN (SELECT m.project_id FROM port_monitors m   WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+        WHEN 'dns'    THEN (SELECT m.project_id FROM dns_monitors m    WHERE m.id = sqlc.arg('monitor_id') AND m.org_id = sqlc.arg('org_id'))
+    END
+);

@@ -56,6 +56,12 @@ A user with monitors for several clients can see each client's monitors as one g
   → test: apps/api/internal/handler/projects_test.go "TestDeleteProject/deleting a project leaves its monitors in place, without a project"
 - The `/monitors` list shows one group per project plus "No project", each with how many of its monitors need attention; `?project=` shows one project's monitors.
 - An alert for a monitor in project "Acme" reads `[Acme]` before the monitor name on Telegram, email (body and subject), Slack and SMS, and its webhook event carries `projectId` and `projectName`.
+  → test: apps/api/internal/worker/worker_project_test.go "TestProjectAlert_NamesTheProjectOnEveryChannel"
+  → test: apps/api/internal/worker/worker_project_test.go "TestProjectAlert_SlackHeader"
+  → test: apps/api/internal/worker/worker_project_test.go "TestProjectAlert_EscapesTheProjectNameInHTML"
+  → test: apps/api/internal/worker/worker_project_test.go "TestDispatchAlert_Project/a monitor in a project sends its project on the webhook event"
 - An alert for a monitor without a project is byte for byte what it was before projects.
+  → test: apps/api/internal/worker/worker_project_test.go "TestDispatchAlert_Project/a monitor without a project gets the message exactly as built"
+  → test: apps/api/internal/worker/worker_project_test.go "TestDispatchAlert_Project/a monitor without a project sends the event without project fields"
 - A 1001st project in one org is refused with `409 too_many_projects` (ADR limits).
   → test: apps/api/internal/handler/projects_test.go "TestCreateProject/the 1001st project is refused"

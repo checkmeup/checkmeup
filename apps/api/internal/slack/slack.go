@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/checkmeup/checkmeup/internal/deliver"
 	"github.com/checkmeup/checkmeup/internal/httpsafe"
@@ -58,6 +59,36 @@ func RecoveryMessage(monitorName, monitorType, downtime string) Message {
 		Text:   header,
 		Blocks: []block{headerBlock(header), sectionBlock(body)},
 	}
+}
+
+// WithProject returns msg with "[project] " before the monitor name in its
+// header and notification text (ADR alerting): both start with an icon and
+// a space, then the name.
+func (m Message) WithProject(project string) Message {
+	out := Message{Text: insertAfterIcon(m.Text, "["+escapeMrkdwn(project)+"] ")}
+	for _, b := range m.Blocks {
+		if b.Type == "header" && b.Text != nil {
+			b.Text = &textObj{Type: b.Text.Type, Text: insertAfterIcon(b.Text.Text, "["+project+"] ")}
+		}
+		out.Blocks = append(out.Blocks, b)
+	}
+	return out
+}
+
+// insertAfterIcon inserts prefix after s's first space, or before s when it
+// has none.
+func insertAfterIcon(s, prefix string) string {
+	i := strings.IndexByte(s, ' ')
+	if i < 0 {
+		return prefix + s
+	}
+	return s[:i+1] + prefix + s[i+1:]
+}
+
+// escapeMrkdwn escapes the three characters Slack's mrkdwn text treats as
+// control characters.
+func escapeMrkdwn(s string) string {
+	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(s)
 }
 
 // TestMessage returns a Slack message used by the "Send test message" button

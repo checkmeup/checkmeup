@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"log/slog"
 	"net"
 	"net/http"
@@ -125,6 +126,8 @@ type MonitorRef struct {
 // the per-incident alert cap counts one notification event regardless of how
 // many channels (or the fallback) it went out on.
 func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon MonitorRef, msg AlertMessage) bool {
+	msg = withMonitorProject(ctx, n, orgID, mon, msg)
+
 	channels, err := n.Queries.ListMonitorNotificationChannels(ctx, db.ListMonitorNotificationChannelsParams{
 		MonitorType: mon.Type, MonitorID: mon.ID,
 	})
@@ -151,6 +154,53 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 		return dispatchFallbackEmail(ctx, n, orgID, msg, mon.ID)
 	}
 	return sent
+}
+
+// withMonitorProject names the monitor's project in msg (ADR alerting), looked
+// up here, once per alert, rather than in every monitor type's worker query.
+// A monitor without a project, or a failed lookup, leaves msg as it is: the
+// alert still goes out.
+func withMonitorProject(ctx context.Context, n Notifiers, orgID uuid.UUID, mon MonitorRef, msg AlertMessage) AlertMessage {
+	p, err := n.Queries.GetMonitorProject(ctx, db.GetMonitorProjectParams{OrgID: orgID, MonitorType: mon.Type, MonitorID: mon.ID})
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("worker: look up monitor project", "monitor_id", mon.ID, "err", err)
+		}
+		return msg
+	}
+	return projectAlert(msg, p.ID.String(), p.Name)
+}
+
+// projectAlert puts "[name] " before the monitor name on every channel and
+// the project on the webhook event. Every Telegram and email body starts
+// "<icon> <b>monitor</b>", so the prefix goes before the first <b>.
+func projectAlert(msg AlertMessage, id, name string) AlertMessage {
+	htmlPrefix := "[" + html.EscapeString(name) + "] "
+	msg.Telegram = insertBeforeBold(msg.Telegram, htmlPrefix)
+	msg.EmailHTML = insertBeforeBold(msg.EmailHTML, htmlPrefix)
+	msg.EmailSubject = "[" + name + "] " + msg.EmailSubject
+	if msg.Webhook != nil {
+		ev := *msg.Webhook
+		ev.ProjectID, ev.ProjectName = id, name
+		msg.Webhook = &ev
+	}
+	if msg.Slack != nil {
+		msg.Slack = slackMsg(msg.Slack.WithProject(name))
+	}
+	if msg.SMS != "" {
+		msg.SMS = TruncateSMS("Checkmeup: [" + name + "] " + strings.TrimPrefix(msg.SMS, "Checkmeup: "))
+	}
+	return msg
+}
+
+// insertBeforeBold inserts prefix before s's first <b>, or before s when it
+// has none.
+func insertBeforeBold(s, prefix string) string {
+	i := strings.Index(s, "<b>")
+	if i < 0 {
+		return prefix + s
+	}
+	return s[:i] + prefix + s[i:]
 }
 
 // sendToChannel delivers msg via a single channel's provider, logging (not

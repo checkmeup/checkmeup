@@ -318,6 +318,40 @@ func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) (i
 	return result.RowsAffected(), nil
 }
 
+const getMonitorProject = `-- name: GetMonitorProject :one
+SELECT p.id, p.name FROM projects p
+WHERE p.org_id = $1 AND p.id = (
+    CASE $2::text
+        WHEN 'cron'   THEN (SELECT m.project_id FROM cron_monitors m   WHERE m.id = $3 AND m.org_id = $1)
+        WHEN 'uptime' THEN (SELECT m.project_id FROM uptime_monitors m WHERE m.id = $3 AND m.org_id = $1)
+        WHEN 'ssl'    THEN (SELECT m.project_id FROM ssl_monitors m    WHERE m.id = $3 AND m.org_id = $1)
+        WHEN 'domain' THEN (SELECT m.project_id FROM domain_monitors m WHERE m.id = $3 AND m.org_id = $1)
+        WHEN 'port'   THEN (SELECT m.project_id FROM port_monitors m   WHERE m.id = $3 AND m.org_id = $1)
+        WHEN 'dns'    THEN (SELECT m.project_id FROM dns_monitors m    WHERE m.id = $3 AND m.org_id = $1)
+    END
+)
+`
+
+type GetMonitorProjectParams struct {
+	OrgID       uuid.UUID `json:"org_id"`
+	MonitorType string    `json:"monitor_type"`
+	MonitorID   uuid.UUID `json:"monitor_id"`
+}
+
+type GetMonitorProjectRow struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// The project of one monitor of any type, for an alert's [Project] prefix
+// (ADR alerting); no row when the monitor has no project.
+func (q *Queries) GetMonitorProject(ctx context.Context, arg GetMonitorProjectParams) (GetMonitorProjectRow, error) {
+	row := q.db.QueryRow(ctx, getMonitorProject, arg.OrgID, arg.MonitorType, arg.MonitorID)
+	var i GetMonitorProjectRow
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, org_id, name, created_at, updated_at FROM projects WHERE id = $1 AND org_id = $2
 `

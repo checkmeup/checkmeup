@@ -62,6 +62,10 @@ type Event struct {
 	Reason           string `json:"reason,omitempty"`           // down only
 	DowntimeDuration string `json:"downtimeDuration,omitempty"` // recovery only
 	Timestamp        string `json:"timestamp"`
+	// The monitor's project (ADR projects); left out when it has none, so
+	// an event for a monitor without a project is what it was before.
+	ProjectID   string `json:"projectId,omitempty"`
+	ProjectName string `json:"projectName,omitempty"`
 }
 
 // Send POSTs event to url, signed with secret. Reports the response status

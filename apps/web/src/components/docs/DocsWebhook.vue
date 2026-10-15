@@ -41,6 +41,16 @@
   "reason": "HTTP 503",
   "timestamp": "2026-07-10T14:32:00Z"
 }</code></pre>
+    <p class="mb-4 text-sm leading-relaxed text-[var(--text-dim)]">
+      For a monitor in a project, the body also carries
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
+        >projectId</code
+      >
+      and
+      <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
+        >projectName</code
+      >; for a monitor without one, they are left out.
+    </p>
     <p class="text-sm leading-relaxed text-[var(--text-dim)]">
       The request carries an
       <code class="rounded-md bg-[var(--surface-raised)] px-1.5 py-0.5 font-mono text-[0.85em]"
