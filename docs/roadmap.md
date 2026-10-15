@@ -10,7 +10,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-(empty)
+- [PRD projects](../.about/prd/projects.md) — Projects: group monitors by client, `[Project]` in alerts. Model decided ([ADR projects](../.about/adr/projects.md)).
 
 ### Next
 
