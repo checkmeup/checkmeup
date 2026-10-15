@@ -15,7 +15,7 @@ const thresholds = {
   monitors: 100,
 }
 
-// The line under the hero's live strip: only the totals big enough to show,
+// The line under the hero's live strip, between its date labels: only the totals big enough to show,
 // or null when none are and the line should stay empty.
 export function statsLine(stats: PlatformStats): string | null {
   const fmt = (n: number) => n.toLocaleString('en-US')
@@ -25,7 +25,7 @@ export function statsLine(stats: PlatformStats): string | null {
   if (stats.incidents30d >= thresholds.incidents30d)
     parts.push(`${fmt(stats.incidents30d)} outages caught`)
   if (parts.length === 0) return null
-  const line = `Across Checkmeup in the last 30 days: ${parts.join(' · ')}`
+  const line = `${parts.join(' · ')} across Checkmeup in the last 30 days`
   return stats.monitors >= thresholds.monitors
     ? `${line} · ${fmt(stats.monitors)} monitors running now`
     : line

@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import CheckStrip from '@/components/CheckStrip.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import { monitorTypes, ownStatusSlug, ownStatusTitle } from '@/content/home'
-import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
+import { liveStrip, stripTotals, type StatusSummary } from '@/lib/statusSummary'
 import { statsLine, type PlatformStats } from '@/lib/platformStats'
 
 // The strip shows checkmeup.net's own status page, live. While it loads
@@ -19,6 +19,14 @@ const skeleton = Array.from({ length: 90 }, () => ({ ok: null }))
 const summary = ref<StatusSummary | null>(null)
 const failed = ref(false)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
+
+// Above the strip: its uptime and average response, over the 90 days a wide
+// screen shows and the 30 a phone does.
+const totals = computed(() =>
+  summary.value
+    ? { wide: stripTotals(summary.value, 90), narrow: stripTotals(summary.value, 30) }
+    : null,
+)
 
 // Under the strip: Checkmeup's platform totals, where they're big enough.
 const stats = ref<string | null>(null)
@@ -179,32 +187,58 @@ onMounted(async () => {
       class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6"
       :aria-busy="!live && !failed"
     >
-      <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span v-if="!failed">
-          <a
-            :href="`/status/${ownStatusSlug}`"
-            class="font-semibold text-[var(--text-strong)] hover:underline"
-            >{{ summary?.title ?? ownStatusTitle }}</a
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span v-if="!failed">
+            <a
+              :href="`/status/${ownStatusSlug}`"
+              class="font-semibold text-[var(--text-strong)] hover:underline"
+              >{{ summary?.title ?? ownStatusTitle }}</a
+            >
+            <span class="text-[var(--text-dim)]"> · live</span>
+          </span>
+          <span v-else>
+            <span class="font-semibold text-[var(--text-strong)]">nightly-backup</span>
+            <span class="text-[var(--text-dim)]"> · Cron · example</span>
+          </span>
+          <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
+          <StatusLabel v-else-if="failed" tone="down" label="Down" />
+          <span
+            v-else
+            class="h-[18px] w-40 rounded-full bg-[var(--tick-empty)] motion-safe:animate-pulse"
+            ><span class="sr-only">Loading status</span></span
           >
-          <span class="text-[var(--text-dim)]">
-            · monitored by Checkmeup · live, last
-            <span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days</span
+        </div>
+        <!-- The strip's own numbers. A fixed line height, and a skeleton of
+             it while loading, so nothing shifts when they arrive. -->
+        <p class="min-h-5 text-sm leading-5 text-[var(--text-dim)]">
+          <template v-if="totals">
+            <span
+              v-for="(t, size) in totals"
+              :key="size"
+              :class="size === 'narrow' ? 'sm:hidden' : 'max-sm:hidden'"
+            >
+              <template v-if="t.uptime !== undefined"
+                ><strong class="font-semibold text-[var(--text-strong)]">{{ t.uptime }}%</strong>
+                uptime ·
+              </template>
+              <template v-if="t.latencyMs !== undefined"
+                ><strong class="font-semibold text-[var(--text-strong)]"
+                  >{{ t.latencyMs }} ms</strong
+                >
+                avg response ·
+              </template>
+              last {{ size === 'narrow' ? 30 : 90 }} days
+            </span>
+          </template>
+          <span v-else-if="failed"
+            >last <span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days</span
           >
-        </span>
-        <span v-else>
-          <span class="font-semibold text-[var(--text-strong)]">nightly-backup</span>
-          <span class="text-[var(--text-dim)]">
-            · Cron · example, last <span class="sm:hidden">30</span
-            ><span class="max-sm:hidden">90</span> days</span
-          >
-        </span>
-        <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
-        <StatusLabel v-else-if="failed" tone="down" label="Down" />
-        <span
-          v-else
-          class="h-[18px] w-40 rounded-full bg-[var(--tick-empty)] motion-safe:animate-pulse"
-          ><span class="sr-only">Loading status</span></span
-        >
+          <span
+            v-else
+            class="block h-5 w-72 max-w-full rounded bg-[var(--tick-empty)] motion-safe:animate-pulse"
+          ></span>
+        </p>
       </div>
       <a
         v-if="live"
@@ -222,15 +256,13 @@ onMounted(async () => {
         :checks="skeleton"
         :narrow-last="30"
       />
-      <div class="flex justify-between text-xs text-[var(--text-muted)]">
+      <!-- Date labels, with Checkmeup-wide totals between them; on phones
+           the totals wrap to their own line below. -->
+      <div class="flex flex-wrap justify-between gap-x-6 gap-y-1 text-xs text-[var(--text-muted)]">
         <span><span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days ago</span>
+        <span class="text-center max-sm:order-last max-sm:w-full max-sm:text-left">{{ stats }}</span>
         <span>Today</span>
       </div>
-      <!-- Height reserved up front, so the line arriving doesn't push the
-           page down. -->
-      <p class="mt-1 min-h-5 font-mono text-xs leading-5 text-[var(--text-dim)]">
-        {{ stats }}
-      </p>
     </div>
   </section>
 </template>

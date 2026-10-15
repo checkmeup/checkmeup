@@ -14,7 +14,13 @@ const summary: StatusSummary = {
   overall: 'All systems operational',
   tone: 'up',
   monitors: 3,
-  days: Array.from({ length: 90 }, (_, i) => ({ date: `day ${i}`, tone: 'up' as const })),
+  // The oldest 60 days ran slower than the last 30.
+  days: Array.from({ length: 90 }, (_, i) => ({
+    date: `day ${i}`,
+    tone: 'up' as const,
+    uptime: 100,
+    latencyMs: i < 60 ? 300 : 150,
+  })),
 }
 
 afterEach(() => {
@@ -52,7 +58,12 @@ describe('HeroSection status strip', () => {
     const wrapper = mountHero()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Across Checkmeup in the last 30 days: 28,396 checks')
+    expect(wrapper.text()).toContain('28,396 checks across Checkmeup in the last 30 days')
+    // 90 days for wide screens ((60×300 + 30×150) / 90 = 250 ms), the last
+    // 30 for phones.
+    const numbers = wrapper.find('p.min-h-5').text().replace(/\s+/g, ' ')
+    expect(numbers).toContain('100% uptime · 250 ms avg response · last 90 days')
+    expect(numbers).toContain('100% uptime · 150 ms avg response · last 30 days')
     expect(wrapper.text()).not.toContain('cron pings')
     expect(wrapper.text()).toContain('All systems operational')
     expect(wrapper.text()).not.toContain('Loading status')
@@ -64,7 +75,7 @@ describe('HeroSection status strip', () => {
     const wrapper = mountHero()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('example, last')
+    expect(wrapper.text()).toContain('nightly-backup · Cron · example')
     expect(wrapper.text()).toContain('Down')
     expect(wrapper.text()).not.toContain('Loading status')
   })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { liveStrip, type StatusSummary } from './statusSummary'
+import { liveStrip, stripTotals, type StatusSummary } from './statusSummary'
 
 describe('liveStrip', () => {
   it('maps each day to a tick and the headline to a status label', () => {
@@ -49,5 +49,41 @@ describe('liveStrip', () => {
   it('shows a page with no data yet as waiting', () => {
     const summary: StatusSummary = { title: 't', overall: 'x', tone: 'none', monitors: 0, days: [] }
     expect(liveStrip(summary).tone).toBe('waiting')
+  })
+})
+
+describe('stripTotals', () => {
+  const summary: StatusSummary = {
+    title: 't',
+    overall: 'x',
+    tone: 'up',
+    monitors: 2,
+    days: [
+      { date: 'Oct 12', tone: 'none' },
+      { date: 'Oct 13', tone: 'up', uptime: 100, latencyMs: 200 },
+      { date: 'Oct 14', tone: 'down', uptime: 99.97, latencyMs: 181 },
+      { date: 'Oct 15', tone: 'up', uptime: 100, latencyMs: 190 },
+    ],
+  }
+
+  it('averages the measured days in range', () => {
+    // mean uptime 99.99, mean latency 190.33…
+    expect(stripTotals(summary, 4)).toEqual({ uptime: 99.99, latencyMs: 190 })
+  })
+
+  it('truncates uptime, so 99.996% shows as 99.99% rather than 100%', () => {
+    const almost: StatusSummary = { ...summary, days: [{ date: 'Oct 15', tone: 'down', uptime: 99.996 }] }
+    expect(stripTotals(almost, 90).uptime).toBe(99.99)
+  })
+
+  it('only looks at the last N days', () => {
+    expect(stripTotals(summary, 1)).toEqual({ uptime: 100, latencyMs: 190 })
+  })
+
+  it('leaves out what no day measured', () => {
+    expect(stripTotals({ ...summary, days: [{ date: 'Oct 12', tone: 'up' }] }, 90)).toEqual({
+      uptime: undefined,
+      latencyMs: undefined,
+    })
   })
 })

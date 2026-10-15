@@ -16,6 +16,26 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: {
+      // The landing hero's live status strip and platform totals come from
+      // production in dev: a local database has no checkmeup-net status
+      // page (ownStatusSlug in src/content/home.ts) and too little traffic
+      // to clear the stats thresholds, so the hero would only ever show its
+      // example. Both are read-only public endpoints. Listed before '/api'
+      // and '/status/' because the first matching entry wins.
+      // LANDING_DATA=local sends them to the local API instead, for work on
+      // the endpoints themselves.
+      ...(process.env.LANDING_DATA === 'local'
+        ? {}
+        : {
+            '/status/checkmeup-net/summary.json': {
+              target: 'https://checkmeup.net',
+              changeOrigin: true,
+            },
+            '/api/v1/stats': {
+              target: 'https://checkmeup.net',
+              changeOrigin: true,
+            },
+          }),
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
