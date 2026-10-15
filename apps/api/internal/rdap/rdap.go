@@ -98,7 +98,9 @@ func (c *Client) fetch(domain string) (*http.Response, error) {
 
 	if resp.StatusCode == http.StatusNotFound {
 		_ = resp.Body.Close()
-		return nil, errors.New("domain not found in registry (rdap 404)")
+		// rdap.org answers 404 both for a domain nobody registered and for
+		// a TLD whose registry has no RDAP service at all.
+		return nil, errors.New("no RDAP record (rdap 404): the domain isn't registered, or its registry doesn't publish RDAP")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()

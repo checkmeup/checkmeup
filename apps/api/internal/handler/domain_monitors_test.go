@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -108,6 +109,8 @@ func TestCreateDomainMonitor(t *testing.T) {
 			{"missing name", createDomainMonitorRequest{Domain: "example.com"}},
 			{"missing domain", createDomainMonitorRequest{Name: "x"}},
 			{"domain is just a scheme", createDomainMonitorRequest{Name: "x", Domain: "https://"}},
+			// ADR domain-lookups: the .de registry publishes no expiry date.
+			{"a TLD whose registry publishes no expiry", createDomainMonitorRequest{Name: "x", Domain: "example.de"}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -116,6 +119,22 @@ func TestCreateDomainMonitor(t *testing.T) {
 					t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
 				}
 			})
+		}
+	})
+
+	t.Run("a TLD without RDAP but with WHOIS is accepted, and a refused one says why", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		w := doAuthed(t, http.MethodPost, monitorH.CreateDomainMonitor, u.access, createDomainMonitorRequest{
+			Name: "Israeli client", Domain: "sagsuget.co.il",
+		})
+		if w.Code != http.StatusCreated {
+			t.Fatalf("want 201 for .co.il, got %d: %s", w.Code, w.Body.String())
+		}
+		w = doAuthed(t, http.MethodPost, monitorH.CreateDomainMonitor, u.access, createDomainMonitorRequest{
+			Name: "German client", Domain: "example.de",
+		})
+		if !strings.Contains(w.Body.String(), ".de registry doesn't publish domain expiry dates") {
+			t.Fatalf("want the reason, got %s", w.Body.String())
 		}
 	})
 
@@ -300,6 +319,7 @@ func TestUpdateDomainMonitor(t *testing.T) {
 		}{
 			{"missing name", updateDomainMonitorRequest{Domain: "example.com"}},
 			{"missing domain", updateDomainMonitorRequest{Name: "x"}},
+			{"a TLD whose registry publishes no expiry", updateDomainMonitorRequest{Name: "x", Domain: "example.eu"}},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {

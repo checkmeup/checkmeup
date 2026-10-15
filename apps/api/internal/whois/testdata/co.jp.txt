@@ -1,0 +1,23 @@
+[ JPRS database provides information on network administration. Its use is    ]
+[ restricted to network administration purposes. For further information,     ]
+[ use 'whois -h whois.jprs.jp help'. To suppress Japanese output, add'/e'     ]
+[ at the end of command, e.g. 'whois -h whois.jprs.jp xxx/e'.                 ]
+Domain Information:
+a. [Domain Name]                SONY.CO.JP
+g. [Organization]               Sony Group Corporation
+l. [Organization Type]          Corporation
+m. [Administrative Contact]     AI16483JP
+n. [Technical Contact]          TH1072JP
+n. [Technical Contact]          KT31032JP
+p. [Name Server]                a1-166.akam.net
+p. [Name Server]                a13-66.akam.net
+p. [Name Server]                a16-67.akam.net
+p. [Name Server]                a24-66.akam.net
+p. [Name Server]                a3-65.akam.net
+p. [Name Server]                a8-65.akam.net
+s. [Signing Key]                
+[State]                         Connected (2027/03/31)
+[Registered Date]                
+[Connected Date]                2011/04/15
+[Last Update]                   2026/04/01 01:03:06 (JST)
+

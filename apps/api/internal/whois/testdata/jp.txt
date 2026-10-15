@@ -1,0 +1,29 @@
+[ JPRS database provides information on network administration. Its use is    ]
+[ restricted to network administration purposes. For further information,     ]
+[ use 'whois -h whois.jprs.jp help'. To suppress Japanese output, add'/e'     ]
+[ at the end of command, e.g. 'whois -h whois.jprs.jp xxx/e'.                 ]
+Domain Information:
+[Domain Name]                   YANDEX.JP
+
+[Registrant]                    rayvec.INC.
+
+[Name Server]                   ns1.muumuu-domain.com
+[Name Server]                   ns2.muumuu-domain.com
+[Signing Key]                   
+
+[Created on]                    2009/11/25
+[Expires on]                    2026/11/30
+[Status]                        Active
+[Last Updated]                  2026/03/31 16:45:26 (JST)
+
+Contact Information:
+[Name]                          GMO Pepabo, Inc.
+[Email]                         admin@muumuu-domain.com
+[Web Page]                      http://muumuu-domain.com/?mode=whois-policy
+[Postal code]                   810-0001
+[Postal Address]                22F Tenjin Sumitomo Life FJ Business Center
+                                2-8-35 Tenjin
+                                Chuo-ku,Fukuoka-City,Fukuoka,8100001,Jpan
+[Phone]                         092-713-7999
+[Fax]                           092-713-7944
+

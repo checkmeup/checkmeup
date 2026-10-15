@@ -2,22 +2,25 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
+	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
 // ─── Domain monitor checks ───────────────────────────────────────────────────
 //
 // Mirrors the SSL monitor checks in worker_ssl.go (same 30/14/7-day threshold
 // pattern via that file's sslCrossedThreshold, same flag-reset-on-renewal
-// logic) — the only differences are the data source (RDAP lookup instead of
-// a TLS handshake) and the field names (registrar instead of issuer).
+// logic) — the only differences are the data source (an RDAP or WHOIS lookup
+// instead of a TLS handshake) and the field names (registrar instead of issuer).
 
 func checkDomainMonitors(ctx context.Context, n Notifiers) {
 	monitors, err := n.Queries.ListDueDomainMonitors(ctx)
@@ -42,7 +45,7 @@ func checkDomainMonitors(ctx context.Context, n Notifiers) {
 }
 
 func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor) {
-	lookup, lookupErr := n.RDAP.Lookup(m.Domain)
+	lookup, lookupErr := lookupDomain(n, m.Domain)
 	var daysLeft int
 	if lookupErr == nil {
 		daysLeft = int(time.Until(lookup.ExpiresAt).Hours() / 24)
@@ -67,6 +70,23 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 	}); err != nil {
 		n.Logger.Error("domain worker: update check", "monitor_id", m.ID, "err", err)
 	}
+}
+
+// lookupDomain reads a domain's registrar and expiry over RDAP, or over WHOIS
+// for the TLDs whose registries have no RDAP service (ADR domain-lookups).
+// A TLD whose registry publishes no expiry date fails with the reason.
+func lookupDomain(n Notifiers, domain string) (rdap.Result, error) {
+	if msg := whois.Unsupported(domain); msg != "" {
+		return rdap.Result{}, errors.New(msg)
+	}
+	if whois.Supports(domain) && n.WHOIS != nil {
+		res, err := n.WHOIS.Lookup(domain)
+		if errors.Is(err, whois.ErrNotRegistered) {
+			return rdap.Result{}, errors.New("domain not found in registry (whois)")
+		}
+		return rdap.Result{Registrar: res.Registrar, ExpiresAt: res.ExpiresAt}, err
+	}
+	return n.RDAP.Lookup(domain)
 }
 
 // domainCheckResult is the outcome of one RDAP lookup: the fields to persist

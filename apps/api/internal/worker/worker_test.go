@@ -21,6 +21,7 @@ package worker
 // CreateCheckout and settings.go's TestTelegram.
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -48,6 +49,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -2181,6 +2183,92 @@ func TestCheckDomainMonitors(t *testing.T) {
 		}
 		if !gotExpiresAt.Valid || !gotExpiresAt.Time.Equal(expiresAt) {
 			t.Fatalf("want expiresAt %v, got %v", expiresAt, gotExpiresAt.Time)
+		}
+	})
+
+	// whoisNotifiers answers every WHOIS query with answer. RDAP answers 404
+	// for anything else due in the shared test database, which other
+	// packages' tests may be filling at the same time.
+	whoisNotifiers := func(t *testing.T, answer string) Notifiers {
+		t.Helper()
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = ln.Close() })
+		go func() {
+			for {
+				conn, err := ln.Accept()
+				if err != nil {
+					return
+				}
+				_, _ = bufio.NewReader(conn).ReadString('\n')
+				_, _ = conn.Write([]byte(answer))
+				_ = conn.Close()
+			}
+		}()
+		rdapSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		t.Cleanup(rdapSrv.Close)
+		return Notifiers{
+			Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger,
+			RDAP:  rdap.NewClientWithHTTPClient(rdapSrv.Client(), rdapSrv.URL+"/domain/"),
+			WHOIS: whois.NewClientWithAddr(func(string) string { return ln.Addr().String() }),
+		}
+	}
+
+	domainRow := func(t *testing.T, id uuid.UUID) (status, registrar, errorMsg string, expiresAt pgtype.Timestamptz) {
+		t.Helper()
+		var reg, msg pgtype.Text
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, registrar, error_msg, expires_at FROM domain_monitors WHERE id = $1", id,
+		).Scan(&status, &reg, &msg, &expiresAt); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		return status, reg.String, msg.String, expiresAt
+	}
+
+	t.Run("a TLD without RDAP is looked up over WHOIS (ADR domain-lookups)", func(t *testing.T) {
+		expires := time.Now().AddDate(0, 0, 200).UTC()
+		n := whoisNotifiers(t, fmt.Sprintf("domain:       sagsuget.co.il\nvalidity:     %s\nregistrar name: Live\n", expires.Format("02-01-2006")))
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "sagsuget.co.il")
+
+		checkDomainMonitors(context.Background(), n)
+
+		status, registrar, _, expiresAt := domainRow(t, mon.ID)
+		if status != "up" || registrar != "Live" {
+			t.Fatalf("want up with registrar Live, got %q / %q", status, registrar)
+		}
+		if !expiresAt.Valid || expiresAt.Time.Format("2006-01-02") != expires.Format("2006-01-02") {
+			t.Fatalf("want expiry %s, got %v", expires.Format("2006-01-02"), expiresAt.Time)
+		}
+	})
+
+	t.Run("a domain the WHOIS registry doesn't know is an error, not expired", func(t *testing.T) {
+		n := whoisNotifiers(t, "% No data was found to match the request criteria.\n")
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "nobody-registered-this.co.il")
+
+		checkDomainMonitors(context.Background(), n)
+
+		status, _, errorMsg, _ := domainRow(t, mon.ID)
+		if status != "error" || !strings.Contains(errorMsg, "not found in registry (whois)") {
+			t.Fatalf("want an error saying the domain isn't in the registry, got %q / %q", status, errorMsg)
+		}
+	})
+
+	t.Run("a TLD whose registry publishes no expiry says so instead of asking anyone", func(t *testing.T) {
+		n := whoisNotifiers(t, "")
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.de")
+
+		checkDomainMonitors(context.Background(), n)
+
+		status, _, errorMsg, _ := domainRow(t, mon.ID)
+		if status != "error" || !strings.Contains(errorMsg, ".de registry doesn't publish domain expiry dates") {
+			t.Fatalf("want the .de explanation, got %q / %q", status, errorMsg)
 		}
 	})
 

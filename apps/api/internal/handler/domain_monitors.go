@@ -15,6 +15,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
+	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
 // ─── response types ──────────────────────────────────────────────────────────
@@ -84,6 +85,20 @@ func domainMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.U
 	return orgID, monitorID, true
 }
 
+// parseDomain is parseHostname plus a refusal of TLDs whose registries
+// publish no expiry date at all (ADR domain-lookups): a monitor for one could
+// only ever show an error.
+func parseDomain(raw string) (string, error) {
+	domain, err := parseHostname(raw)
+	if err != nil {
+		return "", err
+	}
+	if msg := whois.Unsupported(domain); msg != "" {
+		return "", errors.New(msg)
+	}
+	return domain, nil
+}
+
 // ─── handlers ────────────────────────────────────────────────────────────────
 
 // ListDomainMonitors GET /api/v1/monitors/domain
@@ -136,7 +151,7 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 	// Apex domain has the same shape requirements as an SSL monitor's
 	// hostname (no scheme, no path, no port) — reusing parseHostname avoids
 	// duplicating that validation.
-	domain, err := parseHostname(req.Domain)
+	domain, err := parseDomain(req.Domain)
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return
@@ -247,7 +262,7 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		respond.Error(w, http.StatusBadRequest, "name is required", "bad_request")
 		return
 	}
-	domain, err := parseHostname(req.Domain)
+	domain, err := parseDomain(req.Domain)
 	if err != nil {
 		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
 		return

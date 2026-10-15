@@ -24,6 +24,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
 // Maximum concurrent outbound checks per tick across uptime, SSL, and domain loops.
@@ -41,6 +42,7 @@ type Notifiers struct {
 	Slack    *slack.Client
 	SMS      *twilio.Client
 	RDAP     *rdap.Client
+	WHOIS    *whois.Client
 	Logger   *slog.Logger
 
 	// HTTPClient and TCPDialer back the uptime and port checks respectively.

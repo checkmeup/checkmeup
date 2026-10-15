@@ -19,6 +19,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/whois"
 	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
@@ -65,13 +66,14 @@ func main() {
 	wh := webhook.NewClient()
 	sl := slack.NewClient()
 	rd := rdap.NewClient()
+	wi := whois.NewClient()
 	sm := twilio.NewClient(cfg.TwilioAccountSID, cfg.TwilioAPIKeySID, cfg.TwilioAPIKeySecret, cfg.TwilioMessagingServiceSID,
 		twilio.StatusCallbackURL(cfg.BaseURL, cfg.JWTSecret))
 	registerTelegramWebhook(cfg, tg, logger)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
-	go worker.Run(workerCtx, worker.Notifiers{Queries: db.New(pool), Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, RDAP: rd, Logger: logger})
+	go worker.Run(workerCtx, worker.Notifiers{Queries: db.New(pool), Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, RDAP: rd, WHOIS: wi, Logger: logger})
 
 	srv := server.New(cfg, logger, pool, version)
 	if err := srv.Start(); err != nil {
@@ -117,4 +119,3 @@ func registerTelegramWebhook(cfg *config.Config, tg *telegram.Client, logger *sl
 	}
 	logger.Info("telegram webhook registered", "url", webhookURL)
 }
-
