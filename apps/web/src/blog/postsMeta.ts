@@ -15,6 +15,26 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'monitoring-many-clients',
+    slug: 'monitoring-many-clients',
+    kind: 'article',
+    title: 'Monitoring Many Clients Without Losing Track',
+    date: 'October 15, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "Five or six checks per client turns into fifty monitors in one list by the tenth client, and an alert at 2 AM that doesn't say whose site it is. A practical setup for freelancers and agencies: one baseline per client, grouping by client instead of check type, and alerts that name the client on every channel.",
+  },
+  {
+    file: 'rdap-vs-whois-domain-expiry',
+    slug: 'rdap-vs-whois-domain-expiry',
+    kind: 'article',
+    title: 'RDAP vs WHOIS: Why Some Domains Hide Their Expiry',
+    date: 'October 15, 2026',
+    readTime: '6 min read',
+    excerpt:
+      'Look up when a .com expires and you get a date in a second; try an .io, .co.il or .de domain and you may get an error or a false "not found". Here\'s where expiry dates come from, why many country-code registries have no RDAP, how their WHOIS answers differ, and how to check your own domain from the command line.',
+  },
+  {
     file: 'v1-53-domain-whois',
     slug: 'v1-53-domain-whois',
     kind: 'release',
