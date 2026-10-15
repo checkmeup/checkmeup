@@ -6,15 +6,23 @@ ARG VITE_PADDLE_ENVIRONMENT=production
 ARG VITE_GTM_ID
 WORKDIR /app
 
-COPY apps/web/package.json ./
-RUN bun install --ignore-scripts
+# Install from the workspace's bun.lock, so production builds on exactly the
+# versions CI tested. --frozen-lockfile fails the build if the lockfile is out
+# of date instead of quietly resolving newer versions. Every workspace's
+# package.json has to be present for bun to match the lockfile.
+COPY package.json bun.lock ./
+COPY apps/web/package.json apps/web/
+COPY apps/api/package.json apps/api/
+RUN bun install --frozen-lockfile --ignore-scripts
 
-COPY apps/web .
+COPY apps/web apps/web
+WORKDIR /app/apps/web
 ENV VITE_APP_VERSION=$APP_VERSION \
     VITE_PADDLE_CLIENT_TOKEN=$VITE_PADDLE_CLIENT_TOKEN \
     VITE_PADDLE_ENVIRONMENT=$VITE_PADDLE_ENVIRONMENT \
-    VITE_GTM_ID=$VITE_GTM_ID
-RUN node scripts/generate-sitemap.mjs && ./node_modules/.bin/vite build && ./node_modules/.bin/vite-node -c vite.prerender.config.ts scripts/prerender.mts
+    VITE_GTM_ID=$VITE_GTM_ID \
+    PATH=/app/apps/web/node_modules/.bin:/app/node_modules/.bin:$PATH
+RUN node scripts/generate-sitemap.mjs && vite build && vite-node -c vite.prerender.config.ts scripts/prerender.mts
 
 # ── Stage 2: Build Go API (native arch + cross-compile target) ──────────────
 FROM --platform=${BUILDPLATFORM} golang:1.25-bookworm AS backend
@@ -47,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend /api /api
-COPY --from=frontend /app/dist /static
+COPY --from=frontend /app/apps/web/dist /static
 COPY apps/api/migrations /migrations
 
 ENV MIGRATIONS_DIR=/migrations \
