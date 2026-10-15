@@ -35,11 +35,25 @@ describe('HeroSection status strip', () => {
     expect(ticks.every((t) => t.attributes('style')?.includes('var(--tick-empty)'))).toBe(true)
   })
 
-  it('shows the live status once it arrives', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => summary }))
+  it('shows the live status, and the platform totals big enough to show, once they arrive', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          url === '/api/v1/stats'
+            ? {
+                ok: true,
+                json: async () => ({ monitors: 9, pings30d: 0, checks30d: 28396, incidents30d: 7 }),
+              }
+            : { ok: true, json: async () => summary },
+        ),
+      ),
+    )
     const wrapper = mountHero()
     await flushPromises()
 
+    expect(wrapper.text()).toContain('Across Checkmeup in the last 30 days: 28,396 checks')
+    expect(wrapper.text()).not.toContain('cron pings')
     expect(wrapper.text()).toContain('All systems operational')
     expect(wrapper.text()).not.toContain('Loading status')
     expect(wrapper.find('a[aria-label="checkmeup.net status page"]').exists()).toBe(true)

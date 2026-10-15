@@ -5,6 +5,7 @@ import CheckStrip from '@/components/CheckStrip.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import { monitorTypes, ownStatusSlug, ownStatusTitle } from '@/content/home'
 import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
+import { statsLine, type PlatformStats } from '@/lib/platformStats'
 
 // The strip shows checkmeup.net's own status page, live. While it loads
 // (and in the prerendered HTML, which has no backend) it's a skeleton of the
@@ -19,11 +20,24 @@ const summary = ref<StatusSummary | null>(null)
 const failed = ref(false)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
 
+// Under the strip: Checkmeup's platform totals, where they're big enough.
+const stats = ref<string | null>(null)
+
 function scrollToRow(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
+async function loadStats() {
+  try {
+    const res = await fetch('/api/v1/stats')
+    if (res.ok) stats.value = statsLine((await res.json()) as PlatformStats)
+  } catch {
+    // Network error: the line stays empty.
+  }
+}
+
 onMounted(async () => {
+  void loadStats()
   try {
     const res = await fetch(`/status/${ownStatusSlug}/summary.json`)
     if (res.ok) summary.value = (await res.json()) as StatusSummary
@@ -212,6 +226,11 @@ onMounted(async () => {
         <span><span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days ago</span>
         <span>Today</span>
       </div>
+      <!-- Height reserved up front, so the line arriving doesn't push the
+           page down. -->
+      <p class="mt-1 min-h-5 font-mono text-xs leading-5 text-[var(--text-dim)]">
+        {{ stats }}
+      </p>
     </div>
   </section>
 </template>

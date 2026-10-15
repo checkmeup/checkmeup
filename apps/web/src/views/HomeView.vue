@@ -5,7 +5,6 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import CheckStrip from '@/components/CheckStrip.vue'
-import PlatformStats from '@/components/PlatformStats.vue'
 import { useSeo } from '@/composables/useSeo'
 import {
   statusRows,
@@ -473,8 +472,6 @@ useHead({
         <p class="mt-4 text-[13px] text-[var(--text-muted)]">{{ everyPlan }}</p>
       </div>
     </section>
-
-    <PlatformStats />
 
     <CtaBanner
       title="Find out whether tonight's backup ran."
