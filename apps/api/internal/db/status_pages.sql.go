@@ -194,7 +194,8 @@ func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (Dom
 const getPortDailyStatus90d = `-- name: GetPortDailyStatus90d :many
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count
 FROM port_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
@@ -202,8 +203,9 @@ ORDER BY 1 ASC
 `
 
 type GetPortDailyStatus90dRow struct {
-	Day       pgtype.Date `json:"day"`
-	DownCount int64       `json:"down_count"`
+	Day        pgtype.Date `json:"day"`
+	DownCount  int64       `json:"down_count"`
+	CheckCount int64       `json:"check_count"`
 }
 
 func (q *Queries) GetPortDailyStatus90d(ctx context.Context, monitorID uuid.UUID) ([]GetPortDailyStatus90dRow, error) {
@@ -215,7 +217,7 @@ func (q *Queries) GetPortDailyStatus90d(ctx context.Context, monitorID uuid.UUID
 	items := []GetPortDailyStatus90dRow{}
 	for rows.Next() {
 		var i GetPortDailyStatus90dRow
-		if err := rows.Scan(&i.Day, &i.DownCount); err != nil {
+		if err := rows.Scan(&i.Day, &i.DownCount, &i.CheckCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -362,7 +364,9 @@ const getUptimeDailyStatus90d = `-- name: GetUptimeDailyStatus90d :many
 
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count,
+    ROUND(AVG(response_time_ms))::int                       AS avg_response_ms
 FROM uptime_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
@@ -370,11 +374,15 @@ ORDER BY 1 ASC
 `
 
 type GetUptimeDailyStatus90dRow struct {
-	Day       pgtype.Date `json:"day"`
-	DownCount int64       `json:"down_count"`
+	Day           pgtype.Date `json:"day"`
+	DownCount     int64       `json:"down_count"`
+	CheckCount    int64       `json:"check_count"`
+	AvgResponseMs int32       `json:"avg_response_ms"`
 }
 
 // ─── 90-day bars for public page ─────────────────────────────────────────────
+// check_count and avg_response_ms feed the day's uptime % and latency in
+// summary.json's tooltips.
 func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UUID) ([]GetUptimeDailyStatus90dRow, error) {
 	rows, err := q.db.Query(ctx, getUptimeDailyStatus90d, monitorID)
 	if err != nil {
@@ -384,7 +392,12 @@ func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UU
 	items := []GetUptimeDailyStatus90dRow{}
 	for rows.Next() {
 		var i GetUptimeDailyStatus90dRow
-		if err := rows.Scan(&i.Day, &i.DownCount); err != nil {
+		if err := rows.Scan(
+			&i.Day,
+			&i.DownCount,
+			&i.CheckCount,
+			&i.AvgResponseMs,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

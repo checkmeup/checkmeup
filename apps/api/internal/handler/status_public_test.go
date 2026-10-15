@@ -670,6 +670,60 @@ func TestSummarizeDays_TakesEachDaysWorstTone(t *testing.T) {
 	}
 }
 
+func TestSummarizeDay_UptimeAndLatency(t *testing.T) {
+	seg := func(checks, down int64, avgMs int32) []publicBar {
+		return []publicBar{{Color: statusColorGreen, Label: "Oct 14", Checks: checks, Down: down, AvgMs: avgMs}}
+	}
+
+	t.Run("pools checks across monitors and weights latency by uptime checks", func(t *testing.T) {
+		rows := []publicMonitorRow{
+			{Bar: seg(1000, 1, 100)}, // uptime
+			{Bar: seg(3000, 0, 300)}, // uptime
+			{Bar: seg(1000, 4, 0)},   // port: counts toward uptime %, not latency
+		}
+		day := summarizeDay(rows, 0)
+		if day.Uptime == nil || *day.Uptime != 99.9 {
+			t.Fatalf("want 99.9%% (4995 of 5000 checks passed), got %v", day.Uptime)
+		}
+		if day.LatencyMs == nil || *day.LatencyMs != 250 {
+			t.Fatalf("want 250 ms ((1000×100 + 3000×300) / 4000), got %v", day.LatencyMs)
+		}
+	})
+
+	t.Run("leaves both out on a day no check ran", func(t *testing.T) {
+		day := summarizeDay([]publicMonitorRow{{Bar: seg(0, 0, 0)}}, 0)
+		if day.Uptime != nil || day.LatencyMs != nil {
+			t.Fatalf("want no uptime or latency, got %v / %v", day.Uptime, day.LatencyMs)
+		}
+	})
+}
+
+func TestBarWithStats(t *testing.T) {
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	downKey := today.AddDate(0, 0, -1).Format("2006-01-02")
+	upKey := today.Format("2006-01-02")
+	bar := barWithStats(map[string]dayCheckStats{
+		downKey: {checks: 1440, down: 2, avgMs: 180},
+		upKey:   {checks: 720, avgMs: 120},
+	})
+
+	if bar[88].Color != statusColorRed || bar[89].Color != statusColorGreen {
+		t.Fatalf("want yesterday red and today green, got %q / %q", bar[88].Color, bar[89].Color)
+	}
+	if bar[88].Checks != 1440 || bar[88].Down != 2 || bar[88].AvgMs != 180 {
+		t.Fatalf("want yesterday's stats on its segment, got %+v", bar[88])
+	}
+	if bar[89].Date != upKey || bar[89].Checks != 720 {
+		t.Fatalf("want today's stats on the last segment, got %+v", bar[89])
+	}
+	if bar[0].Checks != 0 {
+		t.Fatalf("a day without stats carries none, got %+v", bar[0])
+	}
+	if empty := barWithStats(map[string]dayCheckStats{}); empty[0].Color != statusColorLight {
+		t.Fatalf("no stats at all: want the no-data color, got %q", empty[0].Color)
+	}
+}
+
 func TestStatusPublicServeSummary(t *testing.T) {
 	authH, monitorH, statusH, _, publicH, pool := testStatusPublicHandler(t)
 	doSummary := func(slug string) *httptest.ResponseRecorder {

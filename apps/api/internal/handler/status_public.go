@@ -43,6 +43,12 @@ func NewStatusPublicHandler(pool *pgxpool.Pool) *StatusPublicHandler {
 type publicBar struct {
 	Color string
 	Label string // tooltip (used in title attr)
+	Date  string // 2006-01-02, UTC
+	// A check-based monitor's results that day (zero for cron, SSL and
+	// domain): checks run, checks failed, and for uptime monitors the
+	// average response time in ms.
+	Checks, Down int64
+	AvgMs        int32
 }
 
 type publicMonitorRow struct {

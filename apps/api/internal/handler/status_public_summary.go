@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -18,9 +19,14 @@ type statusSummary struct {
 	Days     []summaryDay `json:"days"`
 }
 
+// summaryDay is one day of the strip. Uptime (% of checks that passed) and
+// LatencyMs (uptime monitors' average response time) cover the page's
+// check-based monitors and are left out on a day none of them ran.
 type summaryDay struct {
-	Date string `json:"date"`
-	Tone string `json:"tone"`
+	Date      string   `json:"date"`
+	Tone      string   `json:"tone"`
+	Uptime    *float64 `json:"uptime,omitempty"`
+	LatencyMs *int32   `json:"latencyMs,omitempty"`
 }
 
 // toneRank orders tones by how bad they are, so a day takes its worst
@@ -32,21 +38,44 @@ var toneRank = map[string]int{"none": 0, "up": 1, "paused": 2, "warn": 3, "down"
 func summarizeDays(rows []publicMonitorRow) []summaryDay {
 	days := make([]summaryDay, 0, 90)
 	for i := range 90 {
-		day := summaryDay{Tone: "none"}
-		for _, row := range rows {
-			if i >= len(row.Bar) {
-				continue
-			}
-			if day.Date == "" {
-				day.Date = row.Bar[i].Label
-			}
-			if tone := statusTone(row.Bar[i].Color); toneRank[tone] > toneRank[day.Tone] {
-				day.Tone = tone
-			}
-		}
-		days = append(days, day)
+		days = append(days, summarizeDay(rows, i))
 	}
 	return days
+}
+
+// summarizeDay folds day i of every monitor's bar: the worst tone, plus the
+// share of checks that passed and the response time averaged over every
+// uptime check that day.
+func summarizeDay(rows []publicMonitorRow, i int) summaryDay {
+	day := summaryDay{Tone: "none"}
+	var checks, down, timedChecks, totalMs int64
+	for _, row := range rows {
+		if i >= len(row.Bar) {
+			continue
+		}
+		seg := row.Bar[i]
+		if day.Date == "" {
+			day.Date = seg.Label
+		}
+		if tone := statusTone(seg.Color); toneRank[tone] > toneRank[day.Tone] {
+			day.Tone = tone
+		}
+		checks += seg.Checks
+		down += seg.Down
+		if seg.AvgMs > 0 {
+			timedChecks += seg.Checks
+			totalMs += int64(seg.AvgMs) * seg.Checks
+		}
+	}
+	if checks > 0 {
+		uptime := math.Round(float64(checks-down)/float64(checks)*10000) / 100
+		day.Uptime = &uptime
+	}
+	if timedChecks > 0 {
+		latency := int32(math.Round(float64(totalMs) / float64(timedChecks)))
+		day.LatencyMs = &latency
+	}
+	return day
 }
 
 // ServeSummary handles GET /status/:slug/summary.json — the page's overall

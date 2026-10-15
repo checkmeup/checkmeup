@@ -28,6 +28,24 @@ describe('liveStrip', () => {
     })
   })
 
+  it("adds a day's uptime and latency to its label when they were measured", () => {
+    const summary: StatusSummary = {
+      title: 't',
+      overall: 'x',
+      tone: 'up',
+      monitors: 2,
+      days: [
+        { date: 'Oct 14', tone: 'down', uptime: 99.93, latencyMs: 182 },
+        { date: 'Oct 15', tone: 'up', uptime: 100 },
+      ],
+    }
+
+    expect(liveStrip(summary).checks.map((c) => c.label)).toEqual([
+      'Oct 14 · Outage · 99.93% uptime · 182 ms',
+      'Oct 15 · Operational · 100% uptime',
+    ])
+  })
+
   it('shows a page with no data yet as waiting', () => {
     const summary: StatusSummary = { title: 't', overall: 'x', tone: 'none', monitors: 0, days: [] }
     expect(liveStrip(summary).tone).toBe('waiting')

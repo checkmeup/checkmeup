@@ -49,9 +49,13 @@ RETURNING *;
 -- ─── 90-day bars for public page ─────────────────────────────────────────────
 
 -- name: GetUptimeDailyStatus90d :many
+-- check_count and avg_response_ms feed the day's uptime % and latency in
+-- summary.json's tooltips.
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count,
+    ROUND(AVG(response_time_ms))::int                       AS avg_response_ms
 FROM uptime_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
@@ -60,7 +64,8 @@ ORDER BY 1 ASC;
 -- name: GetPortDailyStatus90d :many
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count
 FROM port_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1

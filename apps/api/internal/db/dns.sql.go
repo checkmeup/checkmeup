@@ -142,15 +142,17 @@ func (q *Queries) DeleteOldDNSChecks(ctx context.Context) error {
 const getDNSDailyStatus90d = `-- name: GetDNSDailyStatus90d :many
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count
 FROM dns_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
 `
 
 type GetDNSDailyStatus90dRow struct {
-	Day       pgtype.Date `json:"day"`
-	DownCount int64       `json:"down_count"`
+	Day        pgtype.Date `json:"day"`
+	DownCount  int64       `json:"down_count"`
+	CheckCount int64       `json:"check_count"`
 }
 
 func (q *Queries) GetDNSDailyStatus90d(ctx context.Context, monitorID uuid.UUID) ([]GetDNSDailyStatus90dRow, error) {
@@ -162,7 +164,7 @@ func (q *Queries) GetDNSDailyStatus90d(ctx context.Context, monitorID uuid.UUID)
 	items := []GetDNSDailyStatus90dRow{}
 	for rows.Next() {
 		var i GetDNSDailyStatus90dRow
-		if err := rows.Scan(&i.Day, &i.DownCount); err != nil {
+		if err := rows.Scan(&i.Day, &i.DownCount, &i.CheckCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

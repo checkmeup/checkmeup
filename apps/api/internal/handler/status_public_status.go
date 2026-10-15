@@ -40,17 +40,13 @@ func (h *StatusPublicHandler) fillUptimeRow(ctx context.Context, id uuid.UUID, r
 	}
 
 	dailyRows, err := h.queries.GetUptimeDailyStatus90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := false
-	if err == nil && len(dailyRows) > 0 {
-		hasData = true
+	stats := map[string]dayCheckStats{}
+	if err == nil {
 		for _, d := range dailyRows {
-			if d.DownCount > 0 {
-				downDays[d.Day.Time.Format("2006-01-02")] = true
-			}
+			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount, avgMs: d.AvgResponseMs}
 		}
 	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = barWithStats(stats)
 }
 
 func (h *StatusPublicHandler) fillCronRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -107,17 +103,13 @@ func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row
 	}
 
 	dailyRows, err := h.queries.GetPortDailyStatus90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := false
-	if err == nil && len(dailyRows) > 0 {
-		hasData = true
+	stats := map[string]dayCheckStats{}
+	if err == nil {
 		for _, d := range dailyRows {
-			if d.DownCount > 0 {
-				downDays[d.Day.Time.Format("2006-01-02")] = true
-			}
+			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount}
 		}
 	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = barWithStats(stats)
 }
 
 func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -127,17 +119,40 @@ func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row 
 	}
 
 	dailyRows, err := h.queries.GetDNSDailyStatus90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := false
-	if err == nil && len(dailyRows) > 0 {
-		hasData = true
+	stats := map[string]dayCheckStats{}
+	if err == nil {
 		for _, d := range dailyRows {
-			if d.DownCount > 0 {
-				downDays[d.Day.Time.Format("2006-01-02")] = true
-			}
+			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount}
 		}
 	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = barWithStats(stats)
+}
+
+// dayCheckStats is one day of a check-based monitor's results: how many
+// checks ran, how many failed, and (uptime monitors only) their average
+// response time in ms.
+type dayCheckStats struct {
+	checks, down int64
+	avgMs        int32
+}
+
+// barWithStats builds the 90-day bar from a check-based monitor's per-day
+// stats: a day with any failed check is down, and each segment carries its
+// day's counts so summary.json can report uptime % and latency per day.
+func barWithStats(stats map[string]dayCheckStats) []publicBar {
+	downDays := map[string]bool{}
+	for day, st := range stats {
+		if st.down > 0 {
+			downDays[day] = true
+		}
+	}
+	bar := build90DayBar(downDays, len(stats) > 0)
+	for i := range bar {
+		if st, ok := stats[bar[i].Date]; ok {
+			bar[i].Checks, bar[i].Down, bar[i].AvgMs = st.checks, st.down, st.avgMs
+		}
+	}
+	return bar
 }
 
 // computeOverallStatus drives both the page banner and the badge routes
@@ -193,7 +208,7 @@ func build90DayBar(downDays map[string]bool, hasData bool) []publicBar {
 		default:
 			color = statusColorGreen
 		}
-		bar[i] = publicBar{Color: color, Label: label}
+		bar[i] = publicBar{Color: color, Label: label, Date: key}
 	}
 	return bar
 }

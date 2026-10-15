@@ -126,7 +126,8 @@ DELETE FROM dns_checks WHERE checked_at < NOW() - INTERVAL '90 days';
 -- name: GetDNSDailyStatus90d :many
 SELECT
     date_trunc('day', checked_at AT TIME ZONE 'UTC')::date AS day,
-    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count
+    COUNT(*) FILTER (WHERE NOT is_up)                       AS down_count,
+    COUNT(*)                                                AS check_count
 FROM dns_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1;
