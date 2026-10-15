@@ -30,6 +30,18 @@ describe('ChangelogView', () => {
     expect(entries[0].text()).toContain(newestFirst[0].excerpt)
   })
 
+  it('lists releases by version, newest first, including several from the same day', () => {
+    const wrapper = mount(ChangelogView)
+
+    // "v1.49–v1.51: …" → 1.49, compared as [major, minor].
+    const versions = wrapper.findAll('article h2').map((h) => {
+      const m = /^v(\d+)\.(\d+)/.exec(h.text())!
+      return Number(m[1]) * 1000 + Number(m[2])
+    })
+    expect(versions.length).toBe(releasesMeta.length)
+    expect(versions).toEqual([...versions].sort((a, b) => b - a))
+  })
+
   it('links every release to its full notes', () => {
     const wrapper = mount(ChangelogView)
 

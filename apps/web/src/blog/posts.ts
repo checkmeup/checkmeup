@@ -6,9 +6,19 @@ export type { ContentBlock, BlogPost, BlogPostMeta } from './types'
 // postsMeta.ts's array order is whatever order its entries happen to be
 // written in (not meaningful — nothing enforces it), so every consumer needs
 // a real chronological sort rather than assuming array order already is one.
+// Dates have no time of day, so several releases shipped the same day tie;
+// those go by the version their title starts with ("v1.49–v1.51: …" is
+// 1.49), or /changelog would list them in whatever order postsMeta.ts has.
 export const postsMeta = [...unsortedPostsMeta].sort(
-  (a, b) => Date.parse(a.date) - Date.parse(b.date),
+  (a, b) =>
+    Date.parse(a.date) - Date.parse(b.date) || titleVersion(a.title) - titleVersion(b.title),
 )
+
+// 1.52 → 1052 for "v1.52: …"; 0 for a title without a version (articles).
+function titleVersion(title: string): number {
+  const m = /^v(\d+)\.(\d+)/.exec(title)
+  return m ? Number(m[1]) * 1000 + Number(m[2]) : 0
+}
 
 // /blog lists only articles; release notes live on /changelog instead (see
 // BlogPostMeta.kind for why they're split).
