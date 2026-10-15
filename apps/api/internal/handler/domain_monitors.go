@@ -146,24 +146,24 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreateDomainMonitor(r.Context(), db.CreateDomainMonitorParams{
-		OrgID:  orgID,
-		Name:   req.Name,
-		Domain: domain,
+		ProjectID: projectID,
+		OrgID:     orgID,
+		Name:      req.Name,
+		Domain:    domain,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "domain", monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "domain", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -253,11 +253,13 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdateDomainMonitor(r.Context(), db.UpdateDomainMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -266,6 +268,9 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
@@ -275,10 +280,6 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "domain", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "domain", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

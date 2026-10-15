@@ -393,11 +393,12 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 	}
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeMaxAlertsPerIncident(req.MaxAlertsPerIncident)
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreateUptimeMonitor(r.Context(), db.CreateUptimeMonitorParams{
+		ProjectID:            projectID,
 		OrgID:                orgID,
 		Name:                 req.Name,
 		Url:                  strings.TrimSpace(req.URL),
@@ -412,15 +413,14 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		HttpMethod:           db.HttpMethod(req.HttpMethod),
 		AcceptedStatusCodes:  req.AcceptedStatusCodes,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "uptime", monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "uptime", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -596,11 +596,13 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 	}
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeMaxAlertsPerIncident(req.MaxAlertsPerIncident)
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdateUptimeMonitor(r.Context(), db.UpdateUptimeMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -617,14 +619,13 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		HttpMethod:           db.HttpMethod(req.HttpMethod),
 		AcceptedStatusCodes:  req.AcceptedStatusCodes,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "uptime", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "uptime", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

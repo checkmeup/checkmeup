@@ -13,19 +13,25 @@ import (
 )
 
 const createDomainMonitor = `-- name: CreateDomainMonitor :one
-INSERT INTO domain_monitors (org_id, name, domain)
-VALUES ($1, $2, $3)
+INSERT INTO domain_monitors (org_id, name, domain, project_id)
+VALUES ($1, $2, $3, $4)
 RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type CreateDomainMonitorParams struct {
-	OrgID  uuid.UUID `json:"org_id"`
-	Name   string    `json:"name"`
-	Domain string    `json:"domain"`
+	OrgID     uuid.UUID   `json:"org_id"`
+	Name      string      `json:"name"`
+	Domain    string      `json:"domain"`
+	ProjectID pgtype.UUID `json:"project_id"`
 }
 
 func (q *Queries) CreateDomainMonitor(ctx context.Context, arg CreateDomainMonitorParams) (DomainMonitor, error) {
-	row := q.db.QueryRow(ctx, createDomainMonitor, arg.OrgID, arg.Name, arg.Domain)
+	row := q.db.QueryRow(ctx, createDomainMonitor,
+		arg.OrgID,
+		arg.Name,
+		arg.Domain,
+		arg.ProjectID,
+	)
 	var i DomainMonitor
 	err := row.Scan(
 		&i.ID,
@@ -286,19 +292,23 @@ func (q *Queries) ResumeDomainMonitor(ctx context.Context, arg ResumeDomainMonit
 
 const updateDomainMonitor = `-- name: UpdateDomainMonitor :one
 UPDATE domain_monitors
-SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
+SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, 
+    project_id = CASE WHEN $8::bool THEN $9::uuid ELSE project_id END,
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type UpdateDomainMonitorParams struct {
-	ID                   uuid.UUID `json:"id"`
-	OrgID                uuid.UUID `json:"org_id"`
-	Name                 string    `json:"name"`
-	Domain               string    `json:"domain"`
-	AlertsEnabled        bool      `json:"alerts_enabled"`
-	AlertAfterNFailures  int32     `json:"alert_after_n_failures"`
-	MaxAlertsPerIncident int32     `json:"max_alerts_per_incident"`
+	ID                   uuid.UUID   `json:"id"`
+	OrgID                uuid.UUID   `json:"org_id"`
+	Name                 string      `json:"name"`
+	Domain               string      `json:"domain"`
+	AlertsEnabled        bool        `json:"alerts_enabled"`
+	AlertAfterNFailures  int32       `json:"alert_after_n_failures"`
+	MaxAlertsPerIncident int32       `json:"max_alerts_per_incident"`
+	SetProject           bool        `json:"set_project"`
+	ProjectID            pgtype.UUID `json:"project_id"`
 }
 
 func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonitorParams) (DomainMonitor, error) {
@@ -310,6 +320,8 @@ func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonit
 		arg.AlertsEnabled,
 		arg.AlertAfterNFailures,
 		arg.MaxAlertsPerIncident,
+		arg.SetProject,
+		arg.ProjectID,
 	)
 	var i DomainMonitor
 	err := row.Scan(

@@ -45,9 +45,6 @@ RETURNING *;
 -- The monitors' foreign keys set their project_id to NULL.
 DELETE FROM projects WHERE id = $1 AND org_id = $2;
 
--- name: SetCronMonitorProject :execrows
-UPDATE cron_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignCronMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones
@@ -60,9 +57,6 @@ WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
 
--- name: SetUptimeMonitorProject :execrows
-UPDATE uptime_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignUptimeMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones
@@ -75,9 +69,6 @@ WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
 
--- name: SetSSLMonitorProject :execrows
-UPDATE ssl_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignSSLMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones
@@ -90,9 +81,6 @@ WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
 
--- name: SetDomainMonitorProject :execrows
-UPDATE domain_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignDomainMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones
@@ -105,9 +93,6 @@ WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
 
--- name: SetPortMonitorProject :execrows
-UPDATE port_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignPortMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones
@@ -120,9 +105,6 @@ WHERE org_id = sqlc.arg('org_id')
   AND (id = ANY(sqlc.arg('monitor_ids')::uuid[]) OR project_id = sqlc.arg('project_id')::uuid)
 RETURNING id;
 
--- name: SetDNSMonitorProject :execrows
-UPDATE dns_monitors SET project_id = sqlc.narg('project_id'), updated_at = NOW()
-WHERE id = sqlc.arg('id') AND org_id = sqlc.arg('org_id');
 
 -- name: AssignDNSMonitorsToProject :many
 -- Puts exactly the listed monitors of this type into the project: listed ones

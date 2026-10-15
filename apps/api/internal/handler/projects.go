@@ -392,11 +392,12 @@ func (o *optionalProjectID) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// resolveProjectID checks a request's projectId against the org before the
-// monitor is written, responding 400 for a malformed or unknown project and
-// returning false. The result is NULL when the request takes the monitor out
-// of its project.
-func (h *MonitorHandler) resolveProjectID(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, p optionalProjectID) (pgtype.UUID, bool) {
+// parseProjectID reads a request's projectId for the monitor's create or
+// update query, responding 400 for a malformed one and returning false. The
+// result is NULL when the request takes the monitor out of its project.
+// Whether the project exists in the monitor's org is the foreign key's call,
+// in the same write (respondProjectRefused).
+func parseProjectID(w http.ResponseWriter, p optionalProjectID) (pgtype.UUID, bool) {
 	if !p.Set || p.Value == nil || *p.Value == "" {
 		return pgtype.UUID{}, true
 	}
@@ -405,58 +406,19 @@ func (h *MonitorHandler) resolveProjectID(w http.ResponseWriter, r *http.Request
 		respond.Error(w, http.StatusBadRequest, "invalid projectId", "bad_request")
 		return pgtype.UUID{}, false
 	}
-	if _, err := h.queries.GetProject(r.Context(), db.GetProjectParams{ID: id, OrgID: orgID}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusBadRequest, "project not found", "bad_request")
-			return pgtype.UUID{}, false
-		}
-		respond.InternalError(w)
-		return pgtype.UUID{}, false
-	}
 	return pgtype.UUID{Bytes: id, Valid: true}, true
 }
 
-// monitorProjectSetters sets one monitor's project, one closure per monitor
-// type — see projectAssigners.
-var monitorProjectSetters = map[string]func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error{
-	"cron": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetCronMonitorProject(ctx, db.SetCronMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-	"uptime": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetUptimeMonitorProject(ctx, db.SetUptimeMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-	"ssl": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetSSLMonitorProject(ctx, db.SetSSLMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-	"domain": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetDomainMonitorProject(ctx, db.SetDomainMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-	"port": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetPortMonitorProject(ctx, db.SetPortMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-	"dns": func(ctx context.Context, q *db.Queries, orgID, monitorID uuid.UUID, projectID pgtype.UUID) error {
-		_, err := q.SetDNSMonitorProject(ctx, db.SetDNSMonitorProjectParams{ID: monitorID, OrgID: orgID, ProjectID: projectID})
-		return err
-	},
-}
-
-// applyMonitorProject writes a resolved projectId onto a monitor after its
-// create or update, and into dst, the written monitor's ProjectID, so its
-// response shows it. It does nothing when the request left projectId out.
-func (h *MonitorHandler) applyMonitorProject(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, p optionalProjectID, projectID pgtype.UUID, dst *pgtype.UUID) error {
-	if !p.Set {
-		return nil
+// respondProjectRefused answers 400 when a monitor write failed because its
+// project isn't one of the org's — the (project_id, org_id) foreign key
+// (ADR projects) — and reports whether it responded. Nothing was written.
+func respondProjectRefused(w http.ResponseWriter, err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" && strings.HasSuffix(pgErr.ConstraintName, "_project_fk") {
+		respond.Error(w, http.StatusBadRequest, "project not found", "bad_request")
+		return true
 	}
-	if err := monitorProjectSetters[monitorType](ctx, h.queries, orgID, monitorID, projectID); err != nil {
-		return err
-	}
-	*dst = projectID
-	return nil
+	return false
 }
 
 // projectIDString renders a monitor's nullable project_id for its response.

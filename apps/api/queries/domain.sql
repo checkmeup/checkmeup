@@ -1,6 +1,6 @@
 -- name: CreateDomainMonitor :one
-INSERT INTO domain_monitors (org_id, name, domain)
-VALUES ($1, $2, $3)
+INSERT INTO domain_monitors (org_id, name, domain, project_id)
+VALUES ($1, $2, $3, sqlc.narg('project_id'))
 RETURNING *;
 
 -- name: GetDomainMonitor :one
@@ -11,7 +11,9 @@ SELECT * FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateDomainMonitor :one
 UPDATE domain_monitors
-SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
+SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, 
+    project_id = CASE WHEN sqlc.arg('set_project')::bool THEN sqlc.narg('project_id')::uuid ELSE project_id END,
+    updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 

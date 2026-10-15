@@ -76,8 +76,8 @@ func (q *Queries) CreateUptimeIncident(ctx context.Context, monitorID uuid.UUID)
 }
 
 const createUptimeMonitor = `-- name: CreateUptimeMonitor :one
-INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, alert_after_n_failures, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, http_method, accepted_status_codes)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, alert_after_n_failures, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, http_method, accepted_status_codes, project_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
@@ -95,6 +95,7 @@ type CreateUptimeMonitorParams struct {
 	MaxResponseTimeMs    int32       `json:"max_response_time_ms"`
 	HttpMethod           HttpMethod  `json:"http_method"`
 	AcceptedStatusCodes  []int32     `json:"accepted_status_codes"`
+	ProjectID            pgtype.UUID `json:"project_id"`
 }
 
 func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonitorParams) (UptimeMonitor, error) {
@@ -112,6 +113,7 @@ func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonit
 		arg.MaxResponseTimeMs,
 		arg.HttpMethod,
 		arg.AcceptedStatusCodes,
+		arg.ProjectID,
 	)
 	var i UptimeMonitor
 	err := row.Scan(
@@ -661,6 +663,7 @@ SET name = $3, url = $4, interval_mins = $5, alerts_enabled = $6, max_alerts_per
     alert_after_n_failures = $8, keyword = $9, keyword_mode = $10, keyword_case_sensitive = $11,
     json_assertions = $12, max_response_time_ms = $13, http_method = $14, accepted_status_codes = $15,
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $5)),
+    project_id = CASE WHEN $16::bool THEN $17::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
@@ -682,6 +685,8 @@ type UpdateUptimeMonitorParams struct {
 	MaxResponseTimeMs    int32       `json:"max_response_time_ms"`
 	HttpMethod           HttpMethod  `json:"http_method"`
 	AcceptedStatusCodes  []int32     `json:"accepted_status_codes"`
+	SetProject           bool        `json:"set_project"`
+	ProjectID            pgtype.UUID `json:"project_id"`
 }
 
 // next_check_at moves up to the last check plus the new interval when that's
@@ -704,6 +709,8 @@ func (q *Queries) UpdateUptimeMonitor(ctx context.Context, arg UpdateUptimeMonit
 		arg.MaxResponseTimeMs,
 		arg.HttpMethod,
 		arg.AcceptedStatusCodes,
+		arg.SetProject,
+		arg.ProjectID,
 	)
 	var i UptimeMonitor
 	err := row.Scan(

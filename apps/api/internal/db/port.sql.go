@@ -62,8 +62,8 @@ func (q *Queries) CreatePortIncident(ctx context.Context, monitorID uuid.UUID) (
 }
 
 const createPortMonitor = `-- name: CreatePortMonitor :one
-INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures, project_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
@@ -76,6 +76,7 @@ type CreatePortMonitorParams struct {
 	IntervalMins         int32             `json:"interval_mins"`
 	MaxAlertsPerIncident int32             `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32             `json:"alert_after_n_failures"`
+	ProjectID            pgtype.UUID       `json:"project_id"`
 }
 
 func (q *Queries) CreatePortMonitor(ctx context.Context, arg CreatePortMonitorParams) (PortMonitor, error) {
@@ -88,6 +89,7 @@ func (q *Queries) CreatePortMonitor(ctx context.Context, arg CreatePortMonitorPa
 		arg.IntervalMins,
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
+		arg.ProjectID,
 	)
 	var i PortMonitor
 	err := row.Scan(
@@ -594,6 +596,7 @@ UPDATE port_monitors
 SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, alerts_enabled = $8,
     max_alerts_per_incident = $9, alert_after_n_failures = $10,
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
+    project_id = CASE WHEN $11::bool THEN $12::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
@@ -610,6 +613,8 @@ type UpdatePortMonitorParams struct {
 	AlertsEnabled        bool              `json:"alerts_enabled"`
 	MaxAlertsPerIncident int32             `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32             `json:"alert_after_n_failures"`
+	SetProject           bool              `json:"set_project"`
+	ProjectID            pgtype.UUID       `json:"project_id"`
 }
 
 // next_check_at: see UpdateUptimeMonitor.
@@ -625,6 +630,8 @@ func (q *Queries) UpdatePortMonitor(ctx context.Context, arg UpdatePortMonitorPa
 		arg.AlertsEnabled,
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
+		arg.SetProject,
+		arg.ProjectID,
 	)
 	var i PortMonitor
 	err := row.Scan(

@@ -1,6 +1,6 @@
 -- name: CreatePortMonitor :one
-INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures, project_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, sqlc.narg('project_id'))
 RETURNING *;
 
 -- name: GetPortMonitor :one
@@ -15,6 +15,7 @@ UPDATE port_monitors
 SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, alerts_enabled = $8,
     max_alerts_per_incident = $9, alert_after_n_failures = $10,
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
+    project_id = CASE WHEN sqlc.arg('set_project')::bool THEN sqlc.narg('project_id')::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING *;

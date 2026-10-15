@@ -254,6 +254,16 @@ export function needsAttention(row: MonitorRow): boolean {
   return row.tone === 'down' || row.tone === 'warn'
 }
 
+export function monitorCountLabel(n: number): string {
+  return n === 1 ? '1 monitor' : `${n} monitors`
+}
+
+// Whether a row counts as "No project": none set, or one that's not among
+// the org's projects (deleted since the rows loaded).
+export function withoutProject(row: MonitorRow, projectIds: Set<string>): boolean {
+  return !row.projectId || !projectIds.has(row.projectId)
+}
+
 export interface MonitorGroup {
   // The project's id, or "none" for monitors without a project.
   key: string
@@ -289,7 +299,7 @@ export function groupByProject(
     group(
       'none',
       'No project',
-      rows.filter((r) => !r.projectId || !known.has(r.projectId)),
+      rows.filter((r) => withoutProject(r, known)),
     ),
   )
   return groups.filter((g) => g.rows.length > 0)

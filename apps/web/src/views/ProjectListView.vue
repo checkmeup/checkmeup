@@ -8,16 +8,17 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import MaintenanceMonitorPicker from '@/components/MaintenanceMonitorPicker.vue'
 import { projectsApi, type Project } from '@/api/projects'
-import { useProjects } from '@/composables/useProjects'
+import { useAddProject, useProjects } from '@/composables/useProjects'
 import { useMonitorRows } from '@/composables/useMonitorRows'
-import type { MonitorType } from '@/lib/monitorRows'
+import { type MonitorType, monitorCountLabel, monitorTypes } from '@/lib/monitorRows'
 
 type PickedMonitor = { monitorType: MonitorType; monitorId: string; name: string }
 
 const queryClient = useQueryClient()
 const { data, isPending: loading, error: queryError, refetch } = useProjects()
 const projects = computed<Project[]>(() => data.value ?? [])
-const { rows } = useMonitorRows()
+const { rows, isComplete: monitorsLoaded } = useMonitorRows()
+const addProject = useAddProject()
 
 const actionError = ref('')
 
@@ -34,9 +35,8 @@ async function create() {
   creating.value = true
   actionError.value = ''
   try {
-    await projectsApi.create(name)
+    await addProject(name)
     newName.value = ''
-    await queryClient.invalidateQueries({ queryKey: ['projects'] })
   } catch (e: unknown) {
     actionError.value = e instanceof Error ? e.message : 'Failed to create project'
   } finally {
@@ -58,6 +58,11 @@ function open(p: Project, m: Mode) {
   mode.value = m
   if (m === 'rename') renameValue.value = p.name
   if (m === 'monitors') {
+    if (!monitorsLoaded.value) {
+      actionError.value = 'Not every monitor list has loaded yet — try again in a moment.'
+      close()
+      return
+    }
     picked.value = rows.value
       .filter((r) => r.projectId === p.id)
       .map((r) => ({ monitorType: r.type, monitorId: r.id, name: r.name }))
@@ -73,14 +78,16 @@ function isOpen(p: Project, m: Mode) {
   return openId.value === p.id && mode.value === m
 }
 
-// Monitors show their project in lists, so assigning or deleting changes
-// every type's list as well as the projects.
+// Monitors show their project in lists and on their edit forms, so
+// assigning or deleting refreshes every type's list and single-monitor
+// queries as well as the projects.
 async function refreshAfterChange() {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ['projects'] }),
-    ...['cron', 'uptime', 'ssl', 'domain', 'port', 'dns'].map((t) =>
+    ...monitorTypes.flatMap((t) => [
       queryClient.invalidateQueries({ queryKey: [`${t}-monitors`] }),
-    ),
+      queryClient.invalidateQueries({ queryKey: [`${t}-monitor`] }),
+    ]),
   ])
 }
 
@@ -112,13 +119,16 @@ function remove(p: Project) {
   return run(() => projectsApi.delete(p.id), 'Failed to delete project', true)
 }
 
+// Saving replaces the project's monitors of every type, so it waits for
+// every type's list: a list that hasn't loaded would read as "none of
+// these", and save would take that type's monitors out of the project.
 function saveMonitors(p: Project) {
+  if (!monitorsLoaded.value) {
+    actionError.value = 'Not every monitor list has loaded yet — try again in a moment.'
+    return
+  }
   const monitors = picked.value.map((m) => ({ type: m.monitorType, id: m.monitorId }))
   return run(() => projectsApi.setMonitors(p.id, monitors), 'Failed to save monitors', true)
-}
-
-function monitorCount(n: number) {
-  return n === 1 ? '1 monitor' : `${n} monitors`
 }
 </script>
 
@@ -189,7 +199,7 @@ function monitorCount(n: number) {
                 :to="{ name: 'monitors', query: { project: p.id } }"
                 class="text-xs text-[var(--text-dim)] hover:text-[var(--text)] hover:underline"
               >
-                {{ monitorCount(p.monitorCount) }}
+                {{ monitorCountLabel(p.monitorCount) }}
               </RouterLink>
             </div>
 

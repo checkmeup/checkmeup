@@ -7,17 +7,18 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const { createMock, renameMock, deleteMock, setMonitorsMock, invalidateMock } = vi.hoisted(() => ({
-  createMock: vi.fn(),
-  renameMock: vi.fn(),
-  deleteMock: vi.fn(),
-  setMonitorsMock: vi.fn(),
-  invalidateMock: vi.fn(),
-}))
+const { addProjectMock, renameMock, deleteMock, setMonitorsMock, invalidateMock } = vi.hoisted(
+  () => ({
+    addProjectMock: vi.fn(),
+    renameMock: vi.fn(),
+    deleteMock: vi.fn(),
+    setMonitorsMock: vi.fn(),
+    invalidateMock: vi.fn(),
+  }),
+)
 
 vi.mock('@/api/projects', () => ({
   projectsApi: {
-    create: createMock,
     rename: renameMock,
     delete: deleteMock,
     setMonitors: setMonitorsMock,
@@ -39,11 +40,13 @@ vi.mock('@/composables/useProjects', () => ({
     error: projectsError,
     refetch: vi.fn(),
   }),
+  useAddProject: () => addProjectMock,
 }))
 
 const rowsData = ref<unknown[]>([])
+const rowsComplete = ref(true)
 vi.mock('@/composables/useMonitorRows', () => ({
-  useMonitorRows: () => ({ rows: rowsData }),
+  useMonitorRows: () => ({ rows: rowsData, isComplete: rowsComplete }),
 }))
 
 const acme = { id: 'p1', name: 'Acme', monitorCount: 2, createdAt: '' }
@@ -74,6 +77,7 @@ function button(wrapper: ReturnType<typeof mountView>, text: string, index = 0) 
 }
 
 beforeEach(() => {
+  rowsComplete.value = true
   projectsData.value = [acme, globex]
   projectsPending.value = false
   projectsError.value = null
@@ -108,19 +112,23 @@ describe('ProjectListView (PRD projects)', () => {
   })
 
   it('creates a project', async () => {
-    createMock.mockResolvedValueOnce({ id: 'p3', name: 'Initech', monitorCount: 0, createdAt: '' })
+    addProjectMock.mockResolvedValueOnce({
+      id: 'p3',
+      name: 'Initech',
+      monitorCount: 0,
+      createdAt: '',
+    })
     const wrapper = mountView()
     await wrapper.find('#new-project').setValue(' Initech ')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(createMock).toHaveBeenCalledExactlyOnceWith('Initech')
-    expect(invalidateMock).toHaveBeenCalledWith({ queryKey: ['projects'] })
+    expect(addProjectMock).toHaveBeenCalledExactlyOnceWith('Initech')
     expect((wrapper.find('#new-project').element as HTMLInputElement).value).toBe('')
   })
 
   it('shows why a project was refused', async () => {
-    createMock.mockRejectedValueOnce(new Error('a project with this name already exists'))
+    addProjectMock.mockRejectedValueOnce(new Error('a project with this name already exists'))
     const wrapper = mountView()
     await wrapper.find('#new-project').setValue('Acme')
     await wrapper.find('form').trigger('submit')
@@ -175,6 +183,29 @@ describe('ProjectListView (PRD projects)', () => {
     ])
     expect(invalidateMock).toHaveBeenCalledWith({ queryKey: ['projects'] })
     expect(invalidateMock).toHaveBeenCalledWith({ queryKey: ['ssl-monitors'] })
+    // An open edit form must not send the old project back.
+    expect(invalidateMock).toHaveBeenCalledWith({ queryKey: ['ssl-monitor'] })
     expect(wrapper.findComponent(Picker).exists()).toBe(false)
+  })
+
+  it("won't choose a project's monitors until every monitor list has loaded", async () => {
+    rowsComplete.value = false
+    const wrapper = mountView()
+    await button(wrapper, 'Monitors').trigger('click')
+
+    expect(wrapper.findComponent(Picker).exists()).toBe(false)
+    expect(wrapper.text()).toContain('Not every monitor list has loaded yet')
+    expect(setMonitorsMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses to save if a monitor list fails while the picker is open', async () => {
+    const wrapper = mountView()
+    await button(wrapper, 'Monitors').trigger('click')
+    rowsComplete.value = false
+    await button(wrapper, 'Save monitors').trigger('click')
+    await flushPromises()
+
+    expect(setMonitorsMock).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Not every monitor list has loaded yet')
   })
 })

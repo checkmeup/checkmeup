@@ -69,8 +69,8 @@ func (q *Queries) CreateCronIncident(ctx context.Context, monitorID uuid.UUID) (
 }
 
 const createCronMonitor = `-- name: CreateCronMonitor :one
-INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident, alert_after_n_failures, max_duration_mins)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident, alert_after_n_failures, max_duration_mins, project_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
@@ -83,6 +83,7 @@ type CreateCronMonitorParams struct {
 	MaxAlertsPerIncident int32       `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32       `json:"alert_after_n_failures"`
 	MaxDurationMins      pgtype.Int4 `json:"max_duration_mins"`
+	ProjectID            pgtype.UUID `json:"project_id"`
 }
 
 func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorParams) (CronMonitor, error) {
@@ -95,6 +96,7 @@ func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorPa
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
 		arg.MaxDurationMins,
+		arg.ProjectID,
 	)
 	var i CronMonitor
 	err := row.Scan(
@@ -692,6 +694,7 @@ SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_a
         WHEN next_ping_at IS NOT NULL AND (schedule <> $4 OR grace_period_mins <> $5) THEN $10
         ELSE next_ping_at
     END,
+    project_id = CASE WHEN $11::bool THEN $12::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
@@ -708,6 +711,8 @@ type UpdateCronMonitorParams struct {
 	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
 	MaxDurationMins      pgtype.Int4        `json:"max_duration_mins"`
 	NextPingAt           pgtype.Timestamptz `json:"next_ping_at"`
+	SetProject           bool               `json:"set_project"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
 }
 
 // A changed schedule or grace period moves next_ping_at to $10, computed
@@ -725,6 +730,8 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		arg.AlertAfterNFailures,
 		arg.MaxDurationMins,
 		arg.NextPingAt,
+		arg.SetProject,
+		arg.ProjectID,
 	)
 	var i CronMonitor
 	err := row.Scan(

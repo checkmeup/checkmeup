@@ -181,24 +181,24 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreateSSLMonitor(r.Context(), db.CreateSSLMonitorParams{
-		OrgID:    orgID,
-		Name:     req.Name,
-		Hostname: hostname,
+		ProjectID: projectID,
+		OrgID:     orgID,
+		Name:      req.Name,
+		Hostname:  hostname,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "ssl", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -266,11 +266,13 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdateSSLMonitor(r.Context(), db.UpdateSSLMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -279,6 +281,9 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
@@ -288,10 +293,6 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "ssl", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

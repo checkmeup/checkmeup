@@ -10,9 +10,11 @@ import {
   detailRouteName,
   groupByProject,
   matchesSearch,
+  monitorCountLabel,
   monitorTypes,
   needsAttention,
   typeLabel,
+  withoutProject,
 } from '@/lib/monitorRows'
 
 export type MonitorFilter = 'all' | 'problems' | MonitorType
@@ -35,27 +37,40 @@ const router = useRouter()
 
 const isProblem = needsAttention
 
+const projectIds = computed(() => new Set(props.projects.map((p) => p.id)))
+
+// The project filter in effect: "none", or one of the org's projects. An id
+// that isn't one (a deleted project, an old link) filters nothing, since
+// the select below couldn't show it or clear it.
+const activeProject = computed(() => {
+  if (project.value === 'none') return props.projects.length > 0 ? 'none' : null
+  return project.value !== null && projectIds.value.has(project.value) ? project.value : null
+})
+
+function inProject(r: MonitorRow) {
+  if (activeProject.value === null) return true
+  if (activeProject.value === 'none') return withoutProject(r, projectIds.value)
+  return r.projectId === activeProject.value
+}
+
+// The chosen project's rows: what the tabs count and filter.
+const projectRows = computed(() => props.rows.filter(inProject))
+
 // "All" and "Problems" always show; a type tab only once it has a monitor.
 const tabs = computed(() => [
-  { id: 'all' as const, label: 'All', count: props.rows.length },
-  { id: 'problems' as const, label: 'Problems', count: props.rows.filter(isProblem).length },
+  { id: 'all' as const, label: 'All', count: projectRows.value.length },
+  { id: 'problems' as const, label: 'Problems', count: projectRows.value.filter(isProblem).length },
   ...monitorTypes
     .map((t) => ({
       id: t,
       label: typeLabel[t],
-      count: props.rows.filter((r) => r.type === t).length,
+      count: projectRows.value.filter((r) => r.type === t).length,
     }))
     .filter((t) => t.count > 0 || filter.value === t.id),
 ])
 
-function inProject(r: MonitorRow) {
-  if (project.value === null) return true
-  if (project.value === 'none') return !r.projectId
-  return r.projectId === project.value
-}
-
 const visibleRows = computed(() =>
-  props.rows
+  projectRows.value
     .filter((r) =>
       filter.value === 'all'
         ? true
@@ -63,13 +78,12 @@ const visibleRows = computed(() =>
           ? isProblem(r)
           : r.type === filter.value,
     )
-    .filter(inProject)
     .filter((r) => matchesSearch(r, search.value)),
 )
 
 // Grouped only while the org has projects and no single project is picked;
 // otherwise one group without a header.
-const grouped = computed(() => props.projects.length > 0 && project.value === null)
+const grouped = computed(() => props.projects.length > 0 && activeProject.value === null)
 const groups = computed<MonitorGroup[]>(() =>
   grouped.value
     ? groupByProject(visibleRows.value, props.projects)
@@ -82,10 +96,6 @@ function toggleGroup(key: string) {
   if (next.has(key)) next.delete(key)
   else next.add(key)
   collapsed.value = next
-}
-
-function monitorCount(n: number) {
-  return n === 1 ? '1 monitor' : `${n} monitors`
 }
 
 function open(row: MonitorRow) {
@@ -122,7 +132,7 @@ function open(row: MonitorRow) {
         <label v-if="projects.length > 0" class="flex min-h-10 items-center">
           <span class="sr-only">Project</span>
           <select
-            :value="project ?? ''"
+            :value="activeProject ?? ''"
             class="h-10 rounded-[10px] border border-[var(--border-strong)] bg-transparent pr-8 pl-3 text-sm text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none"
             @change="project = ($event.target as HTMLSelectElement).value || null"
           >
@@ -226,7 +236,7 @@ function open(row: MonitorRow) {
                   collapsed.has(g.key) ? '▸' : '▾'
                 }}</span>
                 <span class="font-semibold text-[var(--text-strong)]">{{ g.name }}</span>
-                <span class="text-[var(--text-muted)]">{{ monitorCount(g.rows.length) }}</span>
+                <span class="text-[var(--text-muted)]">{{ monitorCountLabel(g.rows.length) }}</span>
                 <span v-if="g.attention > 0" class="text-[var(--status-down)]">
                   · {{ g.attention }} need attention
                 </span>

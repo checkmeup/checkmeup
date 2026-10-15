@@ -16,7 +16,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -257,7 +259,7 @@ describe('MonitorListView', () => {
       expect(wrapper.find('table').text()).toContain('Nightly backup')
     })
 
-    it('shows only one project\'s monitors, ungrouped, for ?project=', () => {
+    it("shows only one project's monitors, ungrouped, for ?project=", () => {
       routeMock.query = { project: 'p1' }
       const wrapper = mountView()
       const table = wrapper.find('table').text()
@@ -278,7 +280,32 @@ describe('MonitorListView', () => {
       routeMock.query = { type: 'cron' }
       const wrapper = mountView()
       await wrapper.find('select').setValue('p2')
-      expect(replaceMock).toHaveBeenCalledExactlyOnceWith({ query: { type: 'cron', project: 'p2' } })
+      expect(replaceMock).toHaveBeenCalledExactlyOnceWith({
+        query: { type: 'cron', project: 'p2' },
+      })
+    })
+
+    it('counts the tabs within the chosen project', () => {
+      routeMock.query = { project: 'p1' }
+      const tabs = mountView()
+        .findAll('[role="tab"]')
+        .map((t) => t.text())
+      expect(tabs).toContain('All 2')
+      expect(tabs).toContain('Problems 1')
+      expect(tabs.some((t) => t.startsWith('SSL'))).toBe(false)
+    })
+
+    it("ignores a ?project= that is not one of the org's projects, rather than hiding every monitor", () => {
+      routeMock.query = { project: 'deleted-project' }
+      const wrapper = mountView()
+      expect(groupHeaders(wrapper)).toHaveLength(2)
+      expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('')
+    })
+
+    it('counts a monitor whose project is gone as "No project" in the filter too', () => {
+      sslData.value = [{ ...ssl, projectId: 'deleted-project' }]
+      routeMock.query = { project: 'none' }
+      expect(mountView().find('table').text()).toContain('Production API')
     })
 
     it('stays a flat list with no project filter when the org has no projects', () => {

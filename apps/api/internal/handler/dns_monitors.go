@@ -323,11 +323,12 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeDNSMaxAlerts(req.MaxAlertsPerIncident)
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreateDNSMonitor(r.Context(), db.CreateDNSMonitorParams{
+		ProjectID:            projectID,
 		OrgID:                orgID,
 		Name:                 req.Name,
 		Hostname:             hostname,
@@ -337,15 +338,14 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.attachDNSMonitorChannels(r, orgID, monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "dns", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -493,11 +493,13 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeDNSMaxAlerts(req.MaxAlertsPerIncident)
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdateDNSMonitor(r.Context(), db.UpdateDNSMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -509,15 +511,14 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		h.respondDNSMonitorWriteError(w, err)
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "dns", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "dns", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

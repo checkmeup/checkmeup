@@ -65,8 +65,8 @@ func (q *Queries) CreateDNSIncident(ctx context.Context, monitorID uuid.UUID) (D
 }
 
 const createDNSMonitor = `-- name: CreateDNSMonitor :one
-INSERT INTO dns_monitors (org_id, name, hostname, record_type, expected_value, interval_mins, max_alerts_per_incident, alert_after_n_failures)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO dns_monitors (org_id, name, hostname, record_type, expected_value, interval_mins, max_alerts_per_incident, alert_after_n_failures, project_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
@@ -79,6 +79,7 @@ type CreateDNSMonitorParams struct {
 	IntervalMins         int32         `json:"interval_mins"`
 	MaxAlertsPerIncident int32         `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32         `json:"alert_after_n_failures"`
+	ProjectID            pgtype.UUID   `json:"project_id"`
 }
 
 func (q *Queries) CreateDNSMonitor(ctx context.Context, arg CreateDNSMonitorParams) (DnsMonitor, error) {
@@ -91,6 +92,7 @@ func (q *Queries) CreateDNSMonitor(ctx context.Context, arg CreateDNSMonitorPara
 		arg.IntervalMins,
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
+		arg.ProjectID,
 	)
 	var i DnsMonitor
 	err := row.Scan(
@@ -699,6 +701,7 @@ UPDATE dns_monitors
 SET name = $3, hostname = $4, record_type = $5, expected_value = $6, baseline_captured = FALSE,
     interval_mins = $7, alerts_enabled = $8, max_alerts_per_incident = $9, alert_after_n_failures = $10,
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
+    project_id = CASE WHEN $11::bool THEN $12::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
 RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
@@ -715,6 +718,8 @@ type UpdateDNSMonitorParams struct {
 	AlertsEnabled        bool          `json:"alerts_enabled"`
 	MaxAlertsPerIncident int32         `json:"max_alerts_per_incident"`
 	AlertAfterNFailures  int32         `json:"alert_after_n_failures"`
+	SetProject           bool          `json:"set_project"`
+	ProjectID            pgtype.UUID   `json:"project_id"`
 }
 
 // baseline_captured is unconditionally reset to false: an explicit edit
@@ -735,6 +740,8 @@ func (q *Queries) UpdateDNSMonitor(ctx context.Context, arg UpdateDNSMonitorPara
 		arg.AlertsEnabled,
 		arg.MaxAlertsPerIncident,
 		arg.AlertAfterNFailures,
+		arg.SetProject,
+		arg.ProjectID,
 	)
 	var i DnsMonitor
 	err := row.Scan(

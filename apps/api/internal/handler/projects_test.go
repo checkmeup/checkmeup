@@ -309,6 +309,13 @@ func TestMonitorProjectField(t *testing.T) {
 			if code != http.StatusBadRequest {
 				t.Fatalf("want 400, got %d", code)
 			}
+			var n int
+			if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM "+mt.name+"_monitors WHERE org_id = $1", u.resp.OrgID).Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			if n != 0 {
+				t.Fatalf("want no monitor created, got %d", n)
+			}
 		})
 	}
 
@@ -364,6 +371,13 @@ func TestMonitorProjectField(t *testing.T) {
 			t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
 		}
 		wantProjectID(t, listedProjectID(t, monitorH, u.access, cron, m.ID), "")
+		var name string
+		if err := pool.QueryRow(context.Background(), "SELECT name FROM cron_monitors WHERE id = $1", m.ID).Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		if name != "Backup" {
+			t.Fatalf("want the refused update to change nothing, but the name is %q", name)
+		}
 	})
 
 	t.Run("a malformed projectId is refused", func(t *testing.T) {

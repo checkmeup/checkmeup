@@ -65,9 +65,13 @@ export function useMonitorRows() {
 
   const error = computed(() => queries.map((q) => q.error?.value?.message).find(Boolean) ?? '')
 
+  // Every type's list is in, none failed — what a screen that acts on all of
+  // an org's monitors at once (assigning a project's monitors) waits for.
+  const isComplete = computed(() => queries.every((q) => q.data.value != null && !q.error?.value))
+
   function refetch() {
     queries.forEach((q) => q.refetch?.())
   }
 
-  return { rows, isPending, error, refetch }
+  return { rows, isPending, isComplete, error, refetch }
 }

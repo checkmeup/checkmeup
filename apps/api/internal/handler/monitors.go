@@ -314,11 +314,12 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreateCronMonitor(r.Context(), db.CreateCronMonitorParams{
+		ProjectID:            projectID,
 		OrgID:                orgID,
 		Name:                 req.Name,
 		Schedule:             req.Schedule,
@@ -328,15 +329,14 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "cron", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -474,11 +474,13 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdateCronMonitor(r.Context(), db.UpdateCronMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -490,14 +492,13 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
 		NextPingAt:           pgtype.Timestamptz{Time: computeNextPing(req.Schedule, time.Now(), int(req.GracePeriodMins)), Valid: true},
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "cron", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "cron", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

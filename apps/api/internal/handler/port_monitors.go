@@ -303,11 +303,12 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.CreatePortMonitor(r.Context(), db.CreatePortMonitorParams{
+		ProjectID:            projectID,
 		OrgID:                orgID,
 		Name:                 req.Name,
 		Host:                 host,
@@ -317,15 +318,14 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
 	if err := h.attachPortMonitorChannels(r, orgID, monitor.ID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "port", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -473,11 +473,13 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
-	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	projectID, ok := parseProjectID(w, req.ProjectID)
 	if !ok {
 		return
 	}
 	monitor, err := h.queries.UpdatePortMonitor(r.Context(), db.UpdatePortMonitorParams{
+		SetProject:           req.ProjectID.Set,
+		ProjectID:            projectID,
 		ID:                   monitorID,
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -489,15 +491,14 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 	})
+	if respondProjectRefused(w, err) {
+		return
+	}
 	if err != nil {
 		h.respondPortMonitorWriteError(w, err)
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, req.ChannelIDs); err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	if err := h.applyMonitorProject(r.Context(), orgID, "port", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
