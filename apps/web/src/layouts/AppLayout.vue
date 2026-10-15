@@ -51,7 +51,7 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[var(--bg)]">
+  <div class="flex min-h-screen flex-col bg-[var(--bg)]">
     <header
       class="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--nav-bg)] backdrop-blur-md"
     >
@@ -101,13 +101,10 @@ async function signOut() {
                 role="menu"
                 class="absolute top-[calc(100%+8px)] right-0 z-50 w-60 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg)] py-1.5 shadow-[0_16px_40px_rgb(0_0_0/18%)]"
               >
-                <div class="border-b border-[var(--border)] px-4 pt-1.5 pb-3">
-                  <div class="truncate text-sm text-[var(--text-strong)]">
-                    {{ auth.user?.email }}
-                  </div>
-                  <div class="mt-0.5 font-mono text-xs text-[var(--text-muted)]">
-                    {{ appVersion }}
-                  </div>
+                <div
+                  class="truncate border-b border-[var(--border)] px-4 pt-1.5 pb-3 text-sm text-[var(--text-strong)]"
+                >
+                  {{ auth.user?.email }}
                 </div>
                 <RouterLink
                   to="/settings"
@@ -197,14 +194,27 @@ async function signOut() {
         >
           Sign out
         </button>
-        <div class="px-3 pt-2 text-xs text-[var(--text-muted)]">
-          {{ auth.user?.email }} · <span class="font-mono">{{ appVersion }}</span>
+        <div class="truncate px-3 pt-2 text-xs text-[var(--text-muted)]">
+          {{ auth.user?.email }}
         </div>
       </nav>
     </header>
 
-    <main>
+    <main class="flex-1">
       <slot />
     </main>
+
+    <!-- Same version line as the landing footer: it says which release is
+         running and leads to what changed in it. -->
+    <footer class="border-t border-[var(--border)]">
+      <div class="mx-auto max-w-[1200px] px-4 py-5 md:px-6">
+        <span class="text-xs text-[var(--text-muted)]"
+          >© 2026 checkmeup.net ·
+          <RouterLink to="/changelog" class="transition-colors hover:text-[var(--text-strong)]">{{
+            appVersion
+          }}</RouterLink></span
+        >
+      </div>
+    </footer>
   </div>
 </template>
