@@ -67,8 +67,7 @@ describe('stripTotals', () => {
   }
 
   it('averages the measured days in range', () => {
-    // mean uptime 99.99, mean latency 190.33…
-    expect(stripTotals(summary, 4)).toEqual({ uptime: 99.99, latencyMs: 190 })
+    expect(stripTotals(summary, 4)).toEqual({ uptime: 99.99 })
   })
 
   it('truncates uptime, so 99.996% shows as 99.99% rather than 100%', () => {
@@ -77,13 +76,12 @@ describe('stripTotals', () => {
   })
 
   it('only looks at the last N days', () => {
-    expect(stripTotals(summary, 1)).toEqual({ uptime: 100, latencyMs: 190 })
+    expect(stripTotals(summary, 1)).toEqual({ uptime: 100 })
   })
 
-  it('leaves out what no day measured', () => {
+  it('leaves uptime out when no day measured it', () => {
     expect(stripTotals({ ...summary, days: [{ date: 'Oct 12', tone: 'up' }] }, 90)).toEqual({
       uptime: undefined,
-      latencyMs: undefined,
     })
   })
 })

@@ -20,8 +20,10 @@ const summary = ref<StatusSummary | null>(null)
 const failed = ref(false)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
 
-// Above the strip: its uptime and average response, over the 90 days a wide
-// screen shows and the 30 a phone does.
+// Above the strip: its uptime, over the 90 days a wide screen shows and the
+// 30 a phone does. Its response time stays in the day tooltips only:
+// checkmeup.net checks itself from the same host, so an average of a few ms
+// says more about that than about the site.
 const totals = computed(() =>
   summary.value
     ? { wide: stripTotals(summary.value, 90), narrow: stripTotals(summary.value, 30) }
@@ -221,12 +223,6 @@ onMounted(async () => {
               <template v-if="t.uptime !== undefined"
                 ><strong class="font-semibold text-[var(--text-strong)]">{{ t.uptime }}%</strong>
                 uptime ·
-              </template>
-              <template v-if="t.latencyMs !== undefined"
-                ><strong class="font-semibold text-[var(--text-strong)]"
-                  >{{ t.latencyMs }} ms</strong
-                >
-                avg response ·
               </template>
               last {{ size === 'narrow' ? 30 : 90 }} days
             </span>

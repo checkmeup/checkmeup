@@ -51,22 +51,16 @@ export function liveStrip(summary: StatusSummary): {
   }
 }
 
-// The strip's headline numbers over its last `lastDays` days: uptime as the
-// mean of the days' uptime, truncated (not rounded) to two decimals so it
-// never shows better than it was, and the mean of the days' average
-// response times. Each is absent when no day in the range measured it.
-export function stripTotals(
-  summary: StatusSummary,
-  lastDays: number,
-): { uptime?: number; latencyMs?: number } {
-  const days = summary.days.slice(-lastDays)
-  const uptimes = days.flatMap((d) => (d.uptime === undefined ? [] : [d.uptime]))
-  const latencies = days.flatMap((d) => (d.latencyMs === undefined ? [] : [d.latencyMs]))
-  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
-  return {
-    // The epsilon keeps float noise (99.99 × 100 = 9998.999…) from
-    // truncating a whole hundredth away.
-    uptime: uptimes.length ? Math.floor(mean(uptimes) * 100 + 1e-9) / 100 : undefined,
-    latencyMs: latencies.length ? Math.round(mean(latencies)) : undefined,
-  }
+// The strip's uptime over its last `lastDays` days: the mean of the days'
+// uptime, truncated (not rounded) to two decimals so it never shows better
+// than it was. Absent when no day in the range measured it.
+export function stripTotals(summary: StatusSummary, lastDays: number): { uptime?: number } {
+  const uptimes = summary.days
+    .slice(-lastDays)
+    .flatMap((d) => (d.uptime === undefined ? [] : [d.uptime]))
+  if (!uptimes.length) return { uptime: undefined }
+  const mean = uptimes.reduce((a, b) => a + b, 0) / uptimes.length
+  // The epsilon keeps float noise (99.99 × 100 = 9998.999…) from
+  // truncating a whole hundredth away.
+  return { uptime: Math.floor(mean * 100 + 1e-9) / 100 }
 }
