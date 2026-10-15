@@ -22,7 +22,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     date: 'October 15, 2026',
     readTime: '3 min read',
     excerpt:
-      "Domains under .il, .io, .co, .me, .us, .it, .ru, .jp, .cn and .se used to sit in Error because their registries don't run RDAP. They're now read over WHOIS, with a parser per registry; TLDs whose registries publish no expiry date at all are refused with the reason.",
+      "Domains under .il, .io, .co, .me, .us, .it, .ru, .jp, .cn and .se used to sit in Error because their registries don't run RDAP. They're now read over WHOIS, with a parser per registry; TLDs whose expiry dates can't be read at all are refused with the reason.",
   },
   {
     file: 'v1-52-projects',

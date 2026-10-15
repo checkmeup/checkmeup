@@ -39,7 +39,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "Some registries don't publish an expiry date anywhere. .de, .eu, .ch, .li and .at answer WHOIS but leave the date out, and .es only answers WHOIS from an allow list of addresses. There's nothing to monitor there, so adding a domain under one of them is now refused with that reason, instead of accepting a monitor that could only ever show an error. If you already have one, it shows the same explanation.",
+    text: "Some registries don't make an expiry date available at all. .de, .eu and .at answer WHOIS but leave the date out, and .ch, .li and .es only answer WHOIS for clients on an allow list. There's nothing to monitor there, so adding a domain under one of them is now refused with that reason, instead of accepting a monitor that could only ever show an error. If you already have one, it shows the same explanation.",
   },
   {
     type: 'p',

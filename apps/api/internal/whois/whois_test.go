@@ -88,6 +88,9 @@ func TestSupportsAndUnsupported(t *testing.T) {
 	if msg := Unsupported("example.de"); !strings.Contains(msg, ".de registry doesn't publish") {
 		t.Errorf("Unsupported(example.de) = %q", msg)
 	}
+	if msg := Unsupported("example.ch"); !strings.Contains(msg, ".ch registry only answers WHOIS for clients on its allow list") {
+		t.Errorf("Unsupported(example.ch) = %q", msg)
+	}
 	if msg := Unsupported("example.co.il"); msg != "" {
 		t.Errorf("Unsupported(example.co.il) = %q, want empty", msg)
 	}

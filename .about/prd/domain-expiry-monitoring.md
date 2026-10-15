@@ -14,7 +14,7 @@ Every monitored domain is renewed before it expires, with warnings at 30, 14 and
 
 ## Scope
 
-- A domain monitor for an apex domain, looked up daily through RDAP, or WHOIS for the TLDs whose registries have no RDAP but publish an expiry date there (.il, .io, .co, .me, .us, .it, .ru, .jp, .cn, .se): registrar, expiry, days left. A TLD whose registry publishes no expiry date (.de, .eu, .ch, .li, .at, .es) is refused with the reason ([ADR domain-lookups](../adr/domain-lookups.md)).
+- A domain monitor for an apex domain, looked up daily through RDAP, or WHOIS for the TLDs whose registries have no RDAP but publish an expiry date there (.il, .io, .co, .me, .us, .it, .ru, .jp, .cn, .se): registrar, expiry, days left. A TLD whose expiry dates can't be read at all, because the registry publishes none (.de, .eu, .at) or only answers WHOIS for allow-listed clients (.ch, .li, .es), is refused with the reason ([ADR domain-lookups](../adr/domain-lookups.md)).
 - One alert at each of 30, 14 and 7 days before expiry, and at once when expired.
 - List, detail, edit, pause and resume, delete; counted in the plan's monitor total.
 

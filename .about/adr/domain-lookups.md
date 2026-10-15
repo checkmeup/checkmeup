@@ -6,7 +6,7 @@ A domain monitor reads its domain's registrar and expiry date once a day (PRD do
 
 For those, the domain monitor asks the registry's WHOIS server over port 43 instead (internal/whois). WHOIS is free text in a different shape per registry, so each supported TLD has a fixed server and its own parser, written against that registry's real answers, which are kept as test fixtures. A TLD gets added only that way: there is no generic parsing of answers nobody has looked at, since a parser that guesses wrong could report a live domain as expiring or an expiring one as fine.
 
-Some registries without RDAP don't publish an expiry date over WHOIS either (.de, .eu, .ch, .li, .at) or don't answer WHOIS from outside an allow list (.es). Those domains can't be monitored, and the API refuses them with that reason rather than accepting a monitor that will only ever be in error.
+Some registries without RDAP don't publish an expiry date over WHOIS either (.de, .eu, .at), or only answer WHOIS for clients on an allow list (.ch, .li, .es). Those domains can't be monitored, and the API refuses them with that reason rather than accepting a monitor that will only ever be in error.
 
 A daily query per monitored domain is well within what registries' WHOIS terms allow for a domain holder checking their own registration.
 

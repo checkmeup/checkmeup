@@ -106,10 +106,18 @@ var registries = map[string]registry{
 	},
 }
 
-// noExpiry are TLDs with no RDAP service whose registries don't publish an
-// expiry date over WHOIS either (or, for .es, don't answer WHOIS from
-// outside an allow list), so a domain under them can't be monitored.
-var noExpiry = map[string]bool{"de": true, "eu": true, "ch": true, "li": true, "at": true, "es": true}
+// unreadable are TLDs with no RDAP service whose expiry dates can't be read
+// over WHOIS either, so a domain under them can't be monitored: .de, .eu and
+// .at answer without an expiry date, and .ch, .li and .es only answer
+// clients on an allow list.
+var unreadable = map[string]string{
+	"de": "doesn't publish domain expiry dates",
+	"eu": "doesn't publish domain expiry dates",
+	"at": "doesn't publish domain expiry dates",
+	"ch": "only answers WHOIS for clients on its allow list, so its domain expiry dates can't be read",
+	"li": "only answers WHOIS for clients on its allow list, so its domain expiry dates can't be read",
+	"es": "only answers WHOIS for clients on its allow list, so its domain expiry dates can't be read",
+}
 
 // ErrNotRegistered is the registry's answer for a domain nobody registered.
 var ErrNotRegistered = errors.New("domain is not registered")
@@ -127,11 +135,11 @@ func Supports(domain string) bool {
 }
 
 // Unsupported returns why domain can't be monitored, or "" when it can as
-// far as this package knows: its registry publishes no expiry date.
+// far as this package knows.
 func Unsupported(domain string) string {
 	t := tld(domain)
-	if noExpiry[t] {
-		return fmt.Sprintf("the .%s registry doesn't publish domain expiry dates, so .%s domains can't be monitored", t, t)
+	if why, ok := unreadable[t]; ok {
+		return fmt.Sprintf("the .%s registry %s, so .%s domains can't be monitored", t, why, t)
 	}
 	return ""
 }
