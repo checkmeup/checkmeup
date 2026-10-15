@@ -184,7 +184,7 @@ useHead({
             <figure class="flex min-w-0 flex-col gap-2">
               <figcaption class="font-mono text-xs text-[var(--text-muted)]">Telegram</figcaption>
               <pre
-                class="h-full rounded-[14px] bg-[var(--terminal-bg)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--terminal-text)] [overflow-wrap:anywhere]"
+                class="h-full rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--text)] [overflow-wrap:anywhere]"
               >{{ sampleTelegram }}</pre>
             </figure>
             <figure class="flex min-w-0 flex-col gap-2">
@@ -192,7 +192,7 @@ useHead({
                 Webhook · signed with HMAC-SHA256 of the body
               </figcaption>
               <pre
-                class="h-full rounded-[14px] bg-[var(--terminal-bg)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--terminal-text)] [overflow-wrap:anywhere]"
+                class="h-full rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 font-mono text-[12.5px] leading-[1.7] whitespace-pre-wrap text-[var(--text)] [overflow-wrap:anywhere]"
               >{{ sampleWebhook }}</pre>
             </figure>
           </div>
