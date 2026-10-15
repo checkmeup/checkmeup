@@ -10,7 +10,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 ### Now
 
-- [PRD projects](../.about/prd/projects.md) — Projects: group monitors by client, `[Project]` in alerts. Model decided ([ADR projects](../.about/adr/projects.md)).
+(empty)
 
 ### Next
 
@@ -21,6 +21,7 @@ Post-MVP work is tracked as **Now / Next / Later** below instead of dated phases
 
 Ordered by how easy the blocker is to clear — internal decisions first, external dependencies (providers, approval processes) last.
 
+- Per-project settings: default notification channels, maintenance windows by project, a status page from a project. A non-goal of [PRD projects](../.about/prd/projects.md), which shipped in v1.52; needs its own PRD first.
 - Multi-step (chained) API checks. A non-goal of [PRD assertion-checks](../.about/prd/assertion-checks.md), which shipped in v1.9; needs its own PRD first.
 - [PRD overlap-detection](../.about/prd/overlap-detection.md) — Overlap detection. Ping-model decision made ([ADR workers](../.about/adr/workers.md)), and PRD zombie-job-detection's start-ping endpoint + `cron_runs` table have shipped — ready to implement.
 - [PRD whatsapp-alerts](../.about/prd/whatsapp-alerts.md) — WhatsApp alerts. Blocked on the provider decision in [the Inbox](../.about/inbox.md) — external: provider choice, cost, Meta template approval lead time.

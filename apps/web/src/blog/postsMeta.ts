@@ -15,6 +15,16 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-52-projects',
+    slug: 'v1-52-projects',
+    kind: 'release',
+    title: 'v1.52: Projects, One Group per Client',
+    date: 'October 15, 2026',
+    readTime: '4 min read',
+    excerpt:
+      'Monitors can now be grouped into projects, typically one per client. The monitor list shows each project as its own section, and every alert for a project\'s monitor starts with its name, like "[Acme] nightly-backup missed its ping", so you know whose problem it is before opening the app.',
+  },
+  {
     file: 'v1-49-to-v1-51-landing-page',
     slug: 'v1-49-to-v1-51-landing-page',
     kind: 'release',
