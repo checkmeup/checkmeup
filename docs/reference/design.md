@@ -10,12 +10,12 @@ tags: [design, tokens, colors, logo]
 
 ## Logo assets
 
-All logo files live in `assets/` — do not recreate or modify them:
+All logo files live in `apps/web/src/assets/`, except the two theme wordmarks, which live in `apps/web/public/img/` so the prerendered HTML can reference them by a stable URL (an imported asset resolves to a dev-only `/src/assets/…` path during prerender). Do not recreate or modify them:
 
 | File | Use |
 |---|---|
-| `assets/logo-light.svg` | On light backgrounds (wordmark `#333333`) |
-| `assets/logo-dark.svg` | On dark backgrounds (wordmark `#DDDDDD`) |
+| `public/img/logo-light.svg` | On light backgrounds (wordmark `#333333`) |
+| `public/img/logo-dark.svg` | On dark backgrounds (wordmark `#DDDDDD`) |
 | `assets/logo-grey.svg` | Monochrome / watermark contexts |
 | `assets/logo-icon.svg` | Favicon, app icon, square placements |
 

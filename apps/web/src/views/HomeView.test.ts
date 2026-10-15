@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import HomeView from './HomeView.vue'
 
@@ -21,6 +21,16 @@ function mountHome() {
 }
 
 describe('HomeView', () => {
+  // The hero asks for checkmeup.net's live status on mount; with no server
+  // here it shows the example strip.
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('mounts without throwing', () => {
     expect(() => mountHome()).not.toThrow()
   })
@@ -80,6 +90,15 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('$99')
   })
 
+  it('compares plans by only what differs, and says once what every plan gets', () => {
+    const wrapper = mountHome()
+
+    expect(wrapper.text()).toContain('White-label status pages')
+    expect(wrapper.text()).toContain('SMS credits / month')
+    expect(wrapper.text()).toContain('Every plan: all six monitor types')
+    expect(wrapper.text()).not.toContain('Telegram, Slack & email alerts')
+  })
+
   it('marks the Startup plan as popular', () => {
     const wrapper = mountHome()
 
@@ -98,7 +117,7 @@ describe('HomeView', () => {
   it('renders the closing CTA banner', () => {
     const wrapper = mountHome()
 
-    expect(wrapper.text()).toContain('Start monitoring in 60 seconds.')
+    expect(wrapper.text()).toContain("Find out whether tonight's backup ran.")
     const links = wrapper.findAllComponents({ name: 'RouterLink' })
     const ctas = links.filter((c) => c.text().includes('Create free account'))
     expect(ctas.length).toBeGreaterThan(0)
@@ -117,7 +136,55 @@ describe('HomeView', () => {
     const wrapper = mountHome()
 
     expect(wrapper.text()).toContain('All systems operational')
-    expect(wrapper.text()).toContain('Hourly Cron Monitor')
+    expect(wrapper.text()).toContain('acme-shop.com')
     expect(wrapper.text()).toContain('Operational')
+    expect(wrapper.text()).not.toContain('Hourly Cron Monitor')
+  })
+
+  it('has no testimonials', () => {
+    const wrapper = mountHome()
+
+    expect(wrapper.find('blockquote').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Loved by')
+  })
+
+  it('links each monitor type in the hero eyebrow to its row in the spec table', () => {
+    const wrapper = mountHome()
+
+    for (const id of ['cron', 'uptime', 'ssl', 'domain', 'port', 'dns']) {
+      expect(wrapper.find(`tr#${id}`).exists()).toBe(true)
+      const link = wrapper
+        .findAllComponents({ name: 'RouterLink' })
+        .find((c) => c.text() === id)
+      expect(link!.props('to')).toEqual({ hash: `#${id}` })
+    }
+  })
+
+  it('shows the real Telegram message and webhook payload of a missed ping', () => {
+    const wrapper = mountHome()
+
+    const blocks = wrapper.findAll('pre').map((p) => p.text())
+    expect(blocks.some((b) => b.includes('nightly-backup missed its ping'))).toBe(true)
+    expect(blocks.some((b) => b.includes('"eventType": "down"'))).toBe(true)
+    expect(blocks.some((b) => b.includes('X-Checkmeup-Signature'))).toBe(true)
+  })
+
+  it('copies the badge snippet in the chosen format', async () => {
+    const writeText = vi.fn()
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    const wrapper = mountHome()
+
+    const copy = wrapper.findAll('button').find((b) => b.text() === 'Copy')!
+    await copy.trigger('click')
+    expect(writeText).toHaveBeenLastCalledWith(
+      '[![status](https://checkmeup.net/status/checkmeup-net/badge.svg)](https://checkmeup.net/status/checkmeup-net)',
+    )
+    expect(copy.text()).toBe('Copied!')
+
+    await wrapper.findAll('button').find((b) => b.text() === 'HTML')!.trigger('click')
+    await copy.trigger('click')
+    expect(writeText).toHaveBeenLastCalledWith(
+      '<a href="https://checkmeup.net/status/checkmeup-net"><img src="https://checkmeup.net/status/checkmeup-net/badge.svg" alt="status"></a>',
+    )
   })
 })

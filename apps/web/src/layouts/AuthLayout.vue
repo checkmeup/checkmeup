@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useTheme } from '@/lib/theme'
-import logoDark from '@/assets/logo-dark.svg'
-import logoLight from '@/assets/logo-light.svg'
 
-const { theme } = useTheme()
-const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
+const { logo } = useTheme()
 </script>
 
 <template>

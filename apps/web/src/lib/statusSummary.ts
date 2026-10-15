@@ -10,21 +10,32 @@ export interface StatusSummary {
   days: { date: string; tone: StatusSummary['tone'] }[]
 }
 
+// What a day's tooltip says it was, the same words as the status page.
+const dayWords: Record<StatusSummary['tone'], string> = {
+  up: 'Operational',
+  warn: 'Degraded',
+  down: 'Outage',
+  paused: 'Paused',
+  none: 'No data',
+}
+
 // Turns a summary into what StatusLabel and CheckStrip draw: a degraded day
-// is a slow tick, a day without data an empty one.
+// is a slow tick, a day without data an empty one, and each tick's label
+// names its date.
 export function liveStrip(summary: StatusSummary): {
   tone: Tone
   label: string
-  checks: { ok: boolean | null; slow?: boolean }[]
+  checks: { ok: boolean | null; slow?: boolean; label: string }[]
 } {
   return {
     tone: summary.tone === 'none' ? 'waiting' : summary.tone,
     label: summary.overall,
     checks: summary.days.map((d) => {
-      if (d.tone === 'down') return { ok: false }
-      if (d.tone === 'warn') return { ok: true, slow: true }
-      if (d.tone === 'up') return { ok: true }
-      return { ok: null }
+      const label = `${d.date} · ${dayWords[d.tone]}`
+      if (d.tone === 'down') return { ok: false, label }
+      if (d.tone === 'warn') return { ok: true, slow: true, label }
+      if (d.tone === 'up') return { ok: true, label }
+      return { ok: null, label }
     }),
   }
 }

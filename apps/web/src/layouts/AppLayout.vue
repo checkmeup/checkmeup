@@ -6,14 +6,11 @@ import { api } from '@/api/client'
 import { useTheme } from '@/lib/theme'
 import { appVersion } from '@/lib/version'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import logoDark from '@/assets/logo-dark.svg'
-import logoLight from '@/assets/logo-light.svg'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const { theme } = useTheme()
-const logo = computed(() => (theme.value === 'light' ? logoLight : logoDark))
+const { logo } = useTheme()
 
 const menuOpen = ref(false)
 const accountOpen = ref(false)

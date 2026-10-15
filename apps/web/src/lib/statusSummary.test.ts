@@ -19,7 +19,12 @@ describe('liveStrip', () => {
     expect(liveStrip(summary)).toEqual({
       tone: 'warn',
       label: 'Partial outage',
-      checks: [{ ok: true }, { ok: false }, { ok: true, slow: true }, { ok: null }],
+      checks: [
+        { ok: true, label: 'Jul 1 · Operational' },
+        { ok: false, label: 'Jul 2 · Outage' },
+        { ok: true, slow: true, label: 'Jul 3 · Degraded' },
+        { ok: null, label: 'Jul 4 · No data' },
+      ],
     })
   })
 

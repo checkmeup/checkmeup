@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export type Theme = 'light' | 'dark'
 
@@ -23,6 +23,13 @@ const theme = ref<Theme>(
     : ((document.documentElement.dataset.theme as Theme | undefined) ?? systemPreference()),
 )
 
+// The wordmark for the current theme. It's served from public/ rather than
+// imported: the prerender renders through vite-node, where an imported asset
+// resolves to its dev path (/src/assets/…), which the built site 404s on.
+const logo = computed(() =>
+  theme.value === 'light' ? '/img/logo-light.svg' : '/img/logo-dark.svg',
+)
+
 function apply(value: Theme) {
   theme.value = value
   document.documentElement.dataset.theme = value
@@ -38,5 +45,5 @@ export function useTheme() {
     apply(theme.value === 'dark' ? 'light' : 'dark')
   }
 
-  return { theme, setTheme, toggleTheme }
+  return { theme, logo, setTheme, toggleTheme }
 }

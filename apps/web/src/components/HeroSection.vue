@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import CheckStrip from '@/components/CheckStrip.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { ownStatusSlug } from '@/content/home'
+import { monitorTypes, ownStatusSlug } from '@/content/home'
 import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
 
 // Until checkmeup.net's own status page answers (and wherever it can't, like
@@ -31,14 +31,24 @@ onMounted(async () => {
   <section class="mx-auto max-w-[1200px] px-4 pt-16 pb-20 sm:px-6 md:pt-24">
     <div class="grid items-center gap-14 lg:grid-cols-2">
       <div class="flex min-w-0 flex-col gap-6">
-        <p class="font-mono text-[13px] text-[var(--text-dim)]">
-          cron · uptime · ssl · domain · port · dns
-        </p>
-        <h1
-          class="text-[44px] leading-[1.0] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[64px]"
-        >
-          Know before your client does.
-        </h1>
+        <div class="flex flex-col gap-3">
+          <!-- Each monitor type links to its row in the spec table below. -->
+          <p class="font-mono text-[13px] text-[var(--text-dim)]">
+            <template v-for="(m, i) in monitorTypes" :key="m.id"
+              ><span v-if="i > 0" aria-hidden="true"> · </span
+              ><RouterLink
+                :to="{ hash: `#${m.id}` }"
+                class="transition-colors hover:text-[var(--accent)] hover:underline"
+                >{{ m.id }}</RouterLink
+              ></template
+            >
+          </p>
+          <h1
+            class="text-[44px] leading-[1.0] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[64px]"
+          >
+            Know before your client does.
+          </h1>
+        </div>
         <p class="max-w-[480px] text-[17px] leading-relaxed text-[var(--text-dim)] sm:text-lg">
           Add one line to the end of a cron job, or paste a URL. When something stops, you hear
           about it on Telegram, Slack or email — before the person who pays you does.
@@ -65,14 +75,18 @@ onMounted(async () => {
         class="flex min-w-0 flex-col gap-3.5"
       >
         <div
-          class="overflow-x-auto rounded-[14px] bg-[var(--terminal-bg)] px-5 py-5 font-mono text-[13.5px] leading-[1.75] text-[var(--terminal-text)]"
+          class="rounded-[14px] bg-[var(--terminal-bg)] px-5 py-5 font-mono text-[12.5px] leading-[1.75] text-[var(--terminal-text)] sm:text-[13.5px]"
         >
           <div class="mb-2.5 flex justify-between text-xs text-[var(--terminal-dim)]">
             <span>crontab -e</span>
             <span>server-01</span>
           </div>
           <div class="text-[var(--terminal-dim)]"># nightly database backup</div>
-          <div class="whitespace-nowrap">
+          <!-- One crontab line, soft-wrapped like a terminal would: where it
+               doesn't fit, the curl part drops below with a hanging indent
+               rather than being cut off. A backslash would be wrong here —
+               crontab has no line continuation. -->
+          <div class="pl-[2ch] -indent-[2ch] [overflow-wrap:anywhere]">
             0 3 * * * /opt/backup.sh
             <span class="text-[var(--terminal-accent)]"
               >&amp;&amp; curl -fsS checkmeup.net/ping/k7f2c9</span
@@ -119,7 +133,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- checkmeup.net's own status, live; the example job until it loads. -->
+    <!-- checkmeup.net's own status, live; the example job until it loads.
+         Phones show the last 30 days: 90 ticks in ~360px are hairlines. -->
     <div class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6">
       <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
         <span v-if="live && summary">
@@ -128,18 +143,32 @@ onMounted(async () => {
             class="font-semibold text-[var(--text-strong)] hover:underline"
             >{{ summary.title }}</a
           >
-          <span class="text-[var(--text-dim)]"> · monitored by Checkmeup · live, last 90 days</span>
+          <span class="text-[var(--text-dim)]">
+            · monitored by Checkmeup · live, last
+            <span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days</span
+          >
         </span>
         <span v-else>
           <span class="font-semibold text-[var(--text-strong)]">nightly-backup</span>
-          <span class="text-[var(--text-dim)]"> · Cron · example, last 90 days</span>
+          <span class="text-[var(--text-dim)]">
+            · Cron · example, last <span class="sm:hidden">30</span
+            ><span class="max-sm:hidden">90</span> days</span
+          >
         </span>
         <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
         <StatusLabel v-else tone="up" label="Up" />
       </div>
-      <CheckStrip :checks="live ? live.checks : example" />
+      <a
+        v-if="live"
+        :href="`/status/${ownStatusSlug}`"
+        :aria-label="`${summary?.title} status page`"
+        class="block rounded-[4px] transition-opacity hover:opacity-85"
+      >
+        <CheckStrip :checks="live.checks" :narrow-last="30" />
+      </a>
+      <CheckStrip v-else :checks="example" :narrow-last="30" />
       <div class="flex justify-between text-xs text-[var(--text-muted)]">
-        <span>90 days ago</span>
+        <span><span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days ago</span>
         <span>Today</span>
       </div>
     </div>

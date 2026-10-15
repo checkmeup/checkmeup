@@ -1,7 +1,9 @@
+// The status page mockup: the kind of monitors a freelancer puts on a
+// client's page.
 export const statusRows = [
-  { name: 'Hourly Cron Monitor', pct: '98%' },
-  { name: 'Hourly Cron Monitor Ping', pct: '100%' },
-  { name: 'checkmeup.net', pct: '99%' },
+  { name: 'acme-shop.com', pct: '100%' },
+  { name: 'api.client.io', pct: '98%' },
+  { name: 'backup: nightly', pct: '99%' },
 ]
 
 export interface PricingPlan {
@@ -10,85 +12,61 @@ export interface PricingPlan {
   description: string
   highlight: boolean
   cta: string
-  stats: { value: string; label: string }[]
-  extras: string[]
 }
 
 export const plans: PricingPlan[] = [
   {
     name: 'Hobby',
     price: 0,
-    description: 'For personal projects',
+    description: 'Your own side projects',
     highlight: false,
-    cta: 'Get started free',
-    stats: [
-      { value: '10', label: 'monitors' },
-      { value: '5 min', label: 'check interval' },
-      { value: '1', label: 'status page' },
-      { value: '5', label: 'notification channels' },
-    ],
-    extras: ['Cron, uptime, SSL, domain, port & DNS monitors', 'Telegram, Slack & email alerts'],
+    cta: 'Start free',
   },
   {
     name: 'Solo',
     price: 9,
-    description: 'For solo builders',
+    description: 'A freelancer with a few clients',
     highlight: false,
     cta: 'Start Solo',
-    stats: [
-      { value: '30', label: 'monitors' },
-      { value: '1 min', label: 'check interval' },
-      { value: '3', label: 'status pages' },
-      { value: '20', label: 'notification channels' },
-      { value: '10', label: 'SMS credits / month' },
-    ],
-    extras: [
-      'Cron, uptime, SSL, domain, port & DNS monitors',
-      'Telegram, Slack, email & SMS alerts',
-    ],
   },
   {
     name: 'Startup',
     price: 29,
-    description: 'For small agencies',
+    description: 'A small agency',
     highlight: true,
     cta: 'Start Startup',
-    stats: [
-      { value: '100', label: 'monitors' },
-      { value: '1 min', label: 'check interval' },
-      { value: '10', label: 'status pages' },
-      { value: '50', label: 'notification channels' },
-      { value: '30', label: 'SMS credits / month' },
-    ],
-    extras: [
-      'Cron, uptime, SSL, domain, port & DNS monitors',
-      'Telegram, Slack, email & SMS alerts',
-    ],
   },
   {
     name: 'Enterprise',
     price: 99,
-    description: 'For growing agencies',
+    description: 'An agency with a page per client',
     highlight: false,
     cta: 'Start Enterprise',
-    stats: [
-      { value: '1000', label: 'monitors' },
-      { value: '1 min', label: 'check interval' },
-      { value: '100', label: 'status pages' },
-      { value: '100', label: 'notification channels' },
-      { value: '100', label: 'SMS credits / month' },
-    ],
-    extras: [
-      'Cron, uptime, SSL, domain, port & DNS monitors',
-      'Telegram, Slack, email & SMS alerts',
-    ],
   },
 ]
 
+// The landing page's plan comparison: only what differs between plans, one
+// value per plan in `plans` order. Values match PricingView's featureRows —
+// keep the two in sync.
+export const planRows = [
+  { label: 'Monitors', values: ['10', '30', '100', '1000'] },
+  { label: 'Fastest check', values: ['5 min', '1 min', '1 min', '1 min'] },
+  { label: 'Status pages', values: ['1', '3', '10', '100'] },
+  { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
+  { label: 'Notification channels', values: ['5', '20', '50', '100'] },
+  { label: 'SMS credits / month', values: ['—', '10', '30', '100'] },
+]
+
+// What every plan gets, so the comparison above doesn't repeat it per column.
+export const everyPlan =
+  'Every plan: all six monitor types, execution logs, incidents, maintenance windows, and Telegram, email, Slack and webhook alerts.'
+
 // The landing page's spec sheet of monitor types. Intervals and thresholds
-// match DocsView — keep the two in sync.
+// match DocsView — keep the two in sync. `id` is the row's anchor, which the
+// hero's eyebrow links to.
 export const monitorTypes = [
   {
+    id: 'cron',
     name: 'Cron job monitoring',
     watches: 'A ping your job sends when it finishes',
     often: 'your schedule',
@@ -96,6 +74,7 @@ export const monitorTypes = [
     alerts: 'A ping is later than the grace period you chose, or a started run never finishes',
   },
   {
+    id: 'uptime',
     name: 'Uptime monitoring',
     watches: 'A URL: its status code, a keyword, or JSON fields',
     often: '1 min',
@@ -103,6 +82,7 @@ export const monitorTypes = [
     alerts: 'The response is an error, too slow, or missing what you expect',
   },
   {
+    id: 'ssl',
     name: 'SSL expiry monitoring',
     watches: 'The certificate on port 443',
     often: 'daily',
@@ -110,6 +90,7 @@ export const monitorTypes = [
     alerts: 'It expires in 30, 14 or 7 days, or is already invalid',
   },
   {
+    id: 'domain',
     name: 'Domain expiry monitoring',
     watches: "The domain's registration",
     often: 'daily',
@@ -117,6 +98,7 @@ export const monitorTypes = [
     alerts: 'It expires in 30, 14 or 7 days, or already has',
   },
   {
+    id: 'port',
     name: 'Port (TCP) monitoring',
     watches: 'A raw TCP connect to host:port',
     often: '1 min',
@@ -124,6 +106,7 @@ export const monitorTypes = [
     alerts: 'The port stops answering — or, for one that should stay closed, starts',
   },
   {
+    id: 'dns',
     name: 'DNS record monitoring',
     watches: 'An A, AAAA, CNAME, MX, TXT or NS record',
     often: '1 min',
@@ -132,29 +115,28 @@ export const monitorTypes = [
   },
 ]
 
-export const testimonials = [
-  {
-    name: 'Sarah K.',
-    role: 'Backend Engineer',
-    avatar: 'img/avatar1.png',
-    quote:
-      'My nightly backup job silently failed for two weeks before I set up Checkmeup. Now I get a Telegram ping within minutes if anything misses its window.',
-  },
-  {
-    name: 'Marcus T.',
-    role: 'Freelance Web Developer',
-    avatar: 'img/avatar2.png',
-    quote:
-      "I maintain 25+ client sites solo. Having a branded status page for each one changed how my clients perceive me. They feel taken care of, and I don't get 3am calls.",
-  },
-  {
-    name: 'Gracy R.',
-    role: 'Indie Developer',
-    avatar: 'img/avatar3.png',
-    quote:
-      "Woke up to a Slack alert that my SSL cert was expiring in 7 days. I'd completely forgotten about it. Renewed it in 10 minutes. Crisis averted.",
-  },
-]
+// What a missed ping actually sends, as the landing page shows it under the
+// spec table. The text mirrors buildOverdueAlert and buildAlert in
+// apps/api/internal/worker — keep them in sync. The expected time already
+// includes the grace period, so a 03:00 job with 5 minutes' grace is
+// expected at 03:05.
+export const sampleTelegram = `🔴 nightly-backup missed its ping
+
+Schedule: 0 3 * * *
+Expected at: 03:05:00 UTC
+Missed by: 18s`
+
+export const sampleWebhook = `POST /hooks/checkmeup HTTP/1.1
+Content-Type: application/json
+X-Checkmeup-Signature: 7c1e9a…f03b
+
+{
+  "eventType": "down",
+  "monitorName": "nightly-backup",
+  "monitorType": "cron",
+  "reason": "missed its ping — expected at 03:05:00 UTC, missed by 18s",
+  "timestamp": "2026-10-15T03:05:18Z"
+}`
 
 // The production status page of checkmeup.net itself; the landing hero shows
 // its live 90-day strip.
