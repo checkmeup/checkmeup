@@ -331,7 +331,13 @@ useHead({
         </div>
 
         <div class="overflow-x-auto rounded-[14px] border border-[var(--border)]">
-          <table class="w-full border-collapse text-left text-[13px] sm:text-sm">
+          <!-- Fixed layout so the four plan columns are equal, whatever their
+               descriptions' lengths; the label column takes a set share. -->
+          <table class="w-full table-fixed border-collapse text-left text-[13px] sm:text-sm">
+            <colgroup>
+              <col class="w-[28%] sm:w-[24%]" />
+              <col v-for="plan in plans" :key="plan.name" />
+            </colgroup>
             <thead>
               <tr class="align-bottom">
                 <th scope="col" class="px-2 py-4 sm:px-5">
