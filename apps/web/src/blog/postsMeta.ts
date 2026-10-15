@@ -22,7 +22,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     date: 'October 15, 2026',
     readTime: '4 min read',
     excerpt:
-      "An outside review of the landing page found its second half generic. The testimonials, which weren't from real users, are gone; the page now shows the real Telegram message and webhook payload a missed cron job sends, and checkmeup.net's own live 90-day status with per-day uptime and response times.",
+      "An outside review of the landing page found its second half generic. The testimonials section is gone; the page now shows the real Telegram message and webhook payload a missed cron job sends, and checkmeup.net's own live 90-day status with per-day uptime and response times.",
   },
   {
     file: 'v1-48-redesign',

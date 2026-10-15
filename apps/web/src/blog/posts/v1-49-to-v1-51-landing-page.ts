@@ -11,7 +11,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "The page had three testimonials, with first names, last initials and stock avatars. They weren't from real users, and the review rightly said to either link to real people or drop them. So they're gone, and they won't come back until there are real people to quote.",
+    text: "The review called the testimonials section the most generic part of the page: first names, last initials, stock-looking avatars, the kind of block every SaaS site has. A quote is only worth something if you can see who said it, so the section is gone, and it won't come back until it can link to the people quoted.",
   },
   {
     type: 'p',
