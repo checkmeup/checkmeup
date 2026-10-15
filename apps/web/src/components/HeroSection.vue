@@ -14,6 +14,10 @@ const example = Array.from({ length: 90 }, (_, i) => ({ ok: i !== 89 }))
 const summary = ref<StatusSummary | null>(null)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
 
+function scrollToRow(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+}
+
 onMounted(async () => {
   try {
     const res = await fetch(`/status/${ownStatusSlug}/summary.json`)
@@ -31,14 +35,17 @@ onMounted(async () => {
     <div class="grid items-center gap-14 lg:grid-cols-2">
       <div class="flex min-w-0 flex-col gap-6">
         <div class="flex flex-col gap-3">
-          <!-- Each monitor type links to its row in the spec table below. -->
+          <!-- Each monitor type links to its row in the spec table below. A
+               click scrolls there without putting the hash in the URL, so a
+               reload starts back at the top rather than at that row. -->
           <p class="font-mono text-[13px] text-[var(--text-dim)]">
             <template v-for="(m, i) in monitorTypes" :key="m.id"
               ><span v-if="i > 0" aria-hidden="true"> · </span
-              ><RouterLink
-                :to="{ hash: `#${m.id}` }"
+              ><a
+                :href="`#${m.id}`"
                 class="underline decoration-[var(--border-strong)] decoration-dotted underline-offset-4 transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
-                >{{ m.id }}</RouterLink
+                @click.prevent="scrollToRow(m.id)"
+                >{{ m.id }}</a
               ></template
             >
           </p>

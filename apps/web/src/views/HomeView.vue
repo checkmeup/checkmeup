@@ -369,15 +369,18 @@ useHead({
 
         <div class="overflow-x-auto rounded-[14px] border border-[var(--border)]">
           <!-- Fixed layout so the four plan columns are equal, whatever their
-               descriptions' lengths; the label column takes a set share. -->
+               descriptions' lengths; the label column takes a set share. On
+               phones the label column collapses and each label gets its own
+               full-width line above its values, so the plan columns get the
+               whole width ("Enterprise" overflows a quarter of what's left). -->
           <table class="w-full table-fixed border-collapse text-left text-[13px] sm:text-sm">
             <colgroup>
-              <col class="w-[28%] sm:w-[24%]" />
+              <col class="w-0 sm:w-[24%]" />
               <col v-for="plan in plans" :key="plan.name" />
             </colgroup>
             <thead>
               <tr class="align-bottom">
-                <th scope="col" class="px-2 py-4 sm:px-5">
+                <th scope="col" class="px-2 py-4 max-sm:hidden sm:px-5">
                   <span class="sr-only">Plan</span>
                 </th>
                 <th
@@ -394,7 +397,9 @@ useHead({
                     class="mb-1 block text-xs font-semibold text-[var(--accent)]"
                     >Most popular</span
                   >
-                  <span class="block font-semibold text-[var(--text-strong)]">{{ plan.name }}</span>
+                  <span class="block text-xs font-semibold text-[var(--text-strong)] sm:text-sm">{{
+                    plan.name
+                  }}</span>
                   <span
                     class="block text-[18px] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[28px]"
                   >
@@ -412,8 +417,17 @@ useHead({
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in planRows" :key="row.label" class="border-t border-[var(--border)]">
-                <th scope="row" class="px-2 py-3 font-normal text-[var(--text-dim)] sm:px-5">
+              <template v-for="row in planRows" :key="row.label">
+              <tr class="border-t border-[var(--border)] sm:hidden">
+                <td colspan="5" class="px-2 pt-3 text-xs text-[var(--text-dim)]">
+                  {{ row.label }}
+                </td>
+              </tr>
+              <tr class="sm:border-t sm:border-[var(--border)]">
+                <th
+                  scope="row"
+                  class="px-2 py-3 font-normal text-[var(--text-dim)] max-sm:hidden sm:px-5"
+                >
                   {{ row.label }}
                 </th>
                 <td
@@ -429,6 +443,7 @@ useHead({
                   {{ value }}
                 </td>
               </tr>
+              </template>
               <tr class="border-t border-[var(--border)] max-sm:hidden">
                 <td class="px-5 py-4"></td>
                 <td

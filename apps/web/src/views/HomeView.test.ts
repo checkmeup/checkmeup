@@ -12,8 +12,9 @@ const RouterLinkStub = {
   template: '<a><slot /></a>',
 }
 
-function mountHome() {
+function mountHome(options: { attachTo?: Element } = {}) {
   return mount(HomeView, {
+    ...options,
     global: {
       stubs: { RouterLink: RouterLinkStub },
     },
@@ -75,6 +76,16 @@ describe('HomeView', () => {
     const cta = links.find((c) => c.text().includes('Create a status page'))
     expect(cta).toBeTruthy()
     expect(cta!.props('to')).toBe('/sign-up')
+  })
+
+  it('gives each plan row a full-width label for phones and a row header for wider screens', () => {
+    const wrapper = mountHome()
+
+    const phoneLabels = wrapper.findAll('td[colspan="5"]').map((td) => td.text())
+    expect(phoneLabels).toContain('Monitors')
+    expect(phoneLabels).toContain('SMS credits / month')
+    const rowHeaders = wrapper.findAll('th[scope="row"]').map((th) => th.text())
+    expect(rowHeaders).toContain('Monitors')
   })
 
   it('renders all four pricing plans with correct prices', () => {
@@ -161,16 +172,22 @@ describe('HomeView', () => {
     expect(wrapper.text()).not.toContain('Loved by')
   })
 
-  it('links each monitor type in the hero eyebrow to its row in the spec table', () => {
-    const wrapper = mountHome()
+  it('links each monitor type in the hero eyebrow to its row, without a hash in the URL', async () => {
+    const wrapper = mountHome({ attachTo: document.body })
 
     for (const id of ['cron', 'uptime', 'ssl', 'domain', 'port', 'dns']) {
-      expect(wrapper.find(`tr#${id}`).exists()).toBe(true)
-      const link = wrapper
-        .findAllComponents({ name: 'RouterLink' })
-        .find((c) => c.text() === id)
-      expect(link!.props('to')).toEqual({ hash: `#${id}` })
+      const row = wrapper.find(`tr#${id}`)
+      expect(row.exists()).toBe(true)
+      const scrollIntoView = vi.fn()
+      row.element.scrollIntoView = scrollIntoView
+
+      const link = wrapper.findAll('a').find((a) => a.text() === id)!
+      expect(link.attributes('href')).toBe(`#${id}`)
+      await link.trigger('click')
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
     }
+    expect(window.location.hash).toBe('')
+    wrapper.unmount()
   })
 
   it('shows the real Telegram message and webhook payload of a missed ping', () => {
