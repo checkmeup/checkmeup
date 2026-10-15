@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import HomeView from './HomeView.vue'
 
 vi.mock('@/layouts/LandingLayout.vue', () => ({
@@ -131,6 +131,18 @@ describe('HomeView', () => {
     expect(example.text()).toContain('curl -fsS checkmeup.net/ping/')
     expect(example.text()).toContain('nightly-backup missed its ping')
     expect(example.text()).toContain('03:00 + 5 min grace, no ping')
+  })
+
+  it("ends the example strip on tonight's miss, matching the alert above it", async () => {
+    const wrapper = mountHome()
+    await flushPromises()
+
+    const strip = wrapper.find('[aria-label="1 of the last 90 checks failed"]')
+    const ticks = strip.findAll('span')
+    expect(ticks[89].attributes('style')).toContain('var(--status-down)')
+    expect(ticks[88].attributes('style')).not.toContain('var(--status-down)')
+    expect(wrapper.text()).toContain('Down')
+    expect(wrapper.text()).toContain('via Telegram')
   })
 
   it('renders the status page live mockup', () => {

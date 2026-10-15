@@ -8,9 +8,8 @@ import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
 
 // Until checkmeup.net's own status page answers (and wherever it can't, like
 // a local dev database without that page), the strip shows the example job
-// from the alert above: ninety nights, one missed.
-const missedNight = 61
-const example = Array.from({ length: 90 }, (_, i) => ({ ok: i !== missedNight }))
+// from the alert above: eighty-nine good nights, then tonight's miss.
+const example = Array.from({ length: 90 }, (_, i) => ({ ok: i !== 89 }))
 
 const summary = ref<StatusSummary | null>(null)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
@@ -121,9 +120,15 @@ onMounted(async () => {
         >
           <img src="/favicon.svg" alt="" class="h-9 w-9 flex-shrink-0" />
           <div class="flex min-w-0 flex-1 flex-col gap-1">
-            <div class="flex justify-between gap-3 text-[13px] text-[var(--text-muted)]">
+            <div class="flex items-center justify-between gap-3 text-[13px] text-[var(--text-muted)]">
               <span class="font-semibold text-[var(--text-strong)]">Checkmeup</span>
-              <span class="font-mono">03:05</span>
+              <span class="flex items-center gap-2">
+                <span
+                  class="rounded-full border border-[var(--border-strong)] px-2 py-px text-xs text-[var(--text-dim)]"
+                  >via Telegram</span
+                >
+                <span class="font-mono">03:05</span>
+              </span>
             </div>
             <div
               class="flex items-center gap-2 text-[15px] font-semibold text-[var(--text-strong)]"
@@ -133,7 +138,7 @@ onMounted(async () => {
             </div>
             <!-- The same facts as the real Telegram alert further down. -->
             <div class="text-sm text-[var(--text-dim)]">
-              Expected at 03:05 UTC · missed by 18s · Telegram
+              Expected at 03:05 UTC · missed by 18s
             </div>
           </div>
         </div>
@@ -163,7 +168,7 @@ onMounted(async () => {
           >
         </span>
         <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
-        <StatusLabel v-else tone="up" label="Up" />
+        <StatusLabel v-else tone="down" label="Down" />
       </div>
       <a
         v-if="live"

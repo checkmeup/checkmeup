@@ -37,7 +37,7 @@ const plans: Plan[] = [
     name: 'Hobby',
     price: 0,
     annualPrice: 0,
-    description: 'Side projects and personal tools',
+    description: 'Your own side projects',
     highlight: false,
     cta: 'Get started free',
     monitors: '10',
@@ -50,7 +50,7 @@ const plans: Plan[] = [
     name: 'Solo',
     price: 9,
     annualPrice: 90,
-    description: 'Freelancers and solo builders',
+    description: 'A freelancer with a few clients',
     highlight: false,
     cta: 'Start Solo',
     monitors: '30',
@@ -63,7 +63,7 @@ const plans: Plan[] = [
     name: 'Startup',
     price: 29,
     annualPrice: 290,
-    description: 'Freelancers and small agencies',
+    description: 'A small agency',
     highlight: true,
     cta: 'Start Startup',
     monitors: '100',
@@ -76,7 +76,7 @@ const plans: Plan[] = [
     name: 'Enterprise',
     price: 99,
     annualPrice: 990,
-    description: 'Freelancers and agencies with many clients',
+    description: 'An agency with a page per client',
     highlight: false,
     cta: 'Start Enterprise',
     monitors: '1000',
@@ -126,10 +126,11 @@ const featureRows: TableRow[] = [
       <h1
         class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
       >
-        Simple, honest pricing
+        Priced by monitors, not seats.
       </h1>
       <p class="max-w-xl text-[17px] leading-relaxed text-[var(--text-dim)] sm:text-lg">
-        Start free. Pay only when you grow. No per-seat fees, no hidden costs.
+        Hobby is free for 10 monitors with 5-minute checks, no card. Paid plans check every
+        minute and add status pages, channels and SMS — billed monthly or yearly.
       </p>
 
       <div class="inline-flex gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
@@ -407,8 +408,8 @@ const featureRows: TableRow[] = [
     </section>
 
     <CtaBanner
-      title="Start monitoring in 60 seconds."
-      subtitle="Free plan included. No credit card required."
+      title="Ten monitors free. Pay when you need more."
+      subtitle="No credit card to start. Change plan any time from Billing."
     />
   </LandingLayout>
 </template>
