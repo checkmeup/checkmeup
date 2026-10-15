@@ -112,32 +112,37 @@ const featureRows: TableRow[] = [
   { label: 'Execution history & logs', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Alerts (Telegram, email, Slack, webhook)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Maintenance windows', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'Projects (group monitors by client)', values: ['✓', '✓', '✓', '✓'] },
   { label: 'Incident management', values: ['✓', '✓', '✓', '✓'] },
   { label: 'White-label status pages', values: ['—', '✓', '✓', '✓'] },
 ]
-
-
 </script>
 
 <template>
   <LandingLayout>
     <!-- Hero -->
-    <section class="mx-auto flex max-w-[1200px] flex-col items-start gap-6 px-4 pt-16 pb-12 sm:px-6 sm:pt-24">
+    <section
+      class="mx-auto flex max-w-[1200px] flex-col items-start gap-6 px-4 pt-16 pb-12 sm:px-6 sm:pt-24"
+    >
       <h1
         class="text-[44px] leading-[1.02] font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-[60px]"
       >
         Priced by monitors, not seats.
       </h1>
       <p class="max-w-xl text-[17px] leading-relaxed text-[var(--text-dim)] sm:text-lg">
-        Hobby is free for 10 monitors with 5-minute checks, no card. Paid plans check every
-        minute and add status pages, channels and SMS — billed monthly or yearly.
+        Hobby is free for 10 monitors with 5-minute checks, no card. Paid plans check every minute
+        and add status pages, channels and SMS — billed monthly or yearly.
       </p>
 
       <div class="inline-flex gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
         <button
           type="button"
           class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
-          :class="cycle === 'monthly' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
+          :class="
+            cycle === 'monthly'
+              ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]'
+              : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+          "
           @click="cycle = 'monthly'"
         >
           Monthly
@@ -145,7 +150,11 @@ const featureRows: TableRow[] = [
         <button
           type="button"
           class="min-h-[34px] rounded-lg px-4 text-sm font-medium transition-colors hover:cursor-pointer"
-          :class="cycle === 'annual' ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'"
+          :class="
+            cycle === 'annual'
+              ? 'bg-[var(--bg)] text-[var(--text-strong)] shadow-[0_1px_2px_rgb(0_0_0/12%)]'
+              : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+          "
           @click="cycle = 'annual'"
         >
           Annual
@@ -181,14 +190,20 @@ const featureRows: TableRow[] = [
 
           <div class="mb-6">
             <template v-if="plan.price === 0">
-              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">Free</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]"
+                >Free</span
+              >
             </template>
             <template v-else-if="cycle === 'monthly'">
-              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">${{ plan.price }}</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]"
+                >${{ plan.price }}</span
+              >
               <span class="text-sm ml-1 text-[var(--text-muted)]">/month</span>
             </template>
             <template v-else>
-              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]">${{ plan.annualPrice }}</span>
+              <span class="text-4xl font-semibold tracking-[-0.035em] text-[var(--text-strong)]"
+                >${{ plan.annualPrice }}</span
+              >
               <span class="text-sm ml-1 text-[var(--text-muted)]">/year</span>
               <p class="text-xs mt-1 text-[var(--text-muted)]">
                 (${{ effectiveMonthly(plan) }}/mo, billed annually)
@@ -330,8 +345,8 @@ const featureRows: TableRow[] = [
       </div>
 
       <p class="mt-6 text-[13px] text-[var(--text-dim)]">
-        All prices in USD. Billing handled by Paddle — taxes calculated at checkout based on
-        your location.
+        All prices in USD. Billing handled by Paddle — taxes calculated at checkout based on your
+        location.
       </p>
     </section>
 
@@ -343,9 +358,7 @@ const featureRows: TableRow[] = [
 
       <div class="overflow-x-auto rounded-[14px] border border-[var(--border)]">
         <!-- Table header -->
-        <div
-          class="grid min-w-[640px] grid-cols-5 bg-[var(--surface)]"
-        >
+        <div class="grid min-w-[640px] grid-cols-5 bg-[var(--surface)]">
           <div class="col-span-1 px-4 py-2.5 text-[12.5px] font-medium text-[var(--text-dim)]">
             Feature
           </div>

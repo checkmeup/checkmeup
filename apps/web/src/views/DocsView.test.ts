@@ -35,6 +35,7 @@ describe('DocsView', () => {
       '#domain',
       '#port',
       '#dns',
+      '#projects',
       '#telegram',
       '#email',
       '#webhook',
@@ -59,6 +60,7 @@ describe('DocsView', () => {
     expect(wrapper.text()).toContain('SSL expiry monitoring')
     expect(wrapper.text()).toContain('Domain expiry monitoring')
     expect(wrapper.text()).toContain('Port (TCP) monitoring')
+    expect(wrapper.find('#projects h2').text()).toBe('Projects')
     expect(wrapper.text()).toContain('Telegram alerts')
     expect(wrapper.text()).toContain('Email alerts')
     expect(wrapper.text()).toContain('Slack alerts')
@@ -85,6 +87,13 @@ describe('DocsView', () => {
       'https://checkmeup.net/api/v1/public/monitors/cron/<monitor-id>/status',
     )
     expect(wrapper.text()).toContain('lastPingMetadata')
+  })
+
+  it('documents projects: grouping, the alert prefix and webhook fields', () => {
+    const text = mount(DocsView).find('#projects').text()
+    expect(text).toContain('[Acme] nightly-backup missed its ping')
+    expect(text).toContain('projectId')
+    expect(text).toContain('/monitors?project=')
   })
 
   it('renders the plans and limits table with all four tiers', () => {

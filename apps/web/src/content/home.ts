@@ -59,7 +59,7 @@ export const planRows = [
 
 // What every plan gets, so the comparison above doesn't repeat it per column.
 export const everyPlan =
-  'Every plan: all six monitor types, execution logs, incidents, maintenance windows, and Telegram, email, Slack and webhook alerts.'
+  'Every plan: all six monitor types, projects, execution logs, incidents, maintenance windows, and Telegram, email, Slack and webhook alerts.'
 
 // The landing page's spec sheet of monitor types. Intervals and thresholds
 // match DocsView — keep the two in sync. `id` is the row's anchor, which the

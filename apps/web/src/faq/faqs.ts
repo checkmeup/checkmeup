@@ -87,6 +87,14 @@ export const faqCategories: FaqCategory[] = [
         a: "Yes — uptime monitors support JSON field assertions (e.g. $.status equals ok, with equals/not equals/contains/greater-than/less-than comparators), and the request timeout (1-30 seconds, 10 by default) doubles as your slow-response cutoff: a response that doesn't arrive in time counts as down. All configured checks — accepted status codes, keyword, JSON assertions — must pass for the monitor to be considered up.",
       },
       {
+        q: 'Can I group monitors by client?',
+        a: "Yes — with projects. Put each monitor in a project (one per client is typical) from the Projects page or the monitor's form. The Monitors page then shows each project as its own section with what needs attention, and every alert for a project's monitor starts with its name, like \"[Acme] nightly-backup missed its ping\", on every channel. Projects don't count against your plan.",
+      },
+      {
+        q: 'Which domains can a domain monitor check?',
+        a: "Most of them. Registration data comes over RDAP, which covers .com, .net, .org and most other TLDs; for .il, .io, .co, .me, .us, .it, .ru, .jp, .cn and .se, whose registries don't run RDAP, it's read from WHOIS instead. Domains under .de, .eu and .at can't be monitored because those registries don't publish expiry dates, and .ch, .li and .es only answer WHOIS for allow-listed clients.",
+      },
+      {
         q: 'Can I mute alerts for a noisy monitor?',
         a: 'Yes — each monitor has its own alert toggle. Muted monitors keep tracking status and history; only notifications are suppressed.',
       },

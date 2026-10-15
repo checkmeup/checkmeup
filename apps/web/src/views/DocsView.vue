@@ -7,6 +7,7 @@ import DocsSsl from '@/components/docs/DocsSsl.vue'
 import DocsDomain from '@/components/docs/DocsDomain.vue'
 import DocsPort from '@/components/docs/DocsPort.vue'
 import DocsDns from '@/components/docs/DocsDns.vue'
+import DocsProjects from '@/components/docs/DocsProjects.vue'
 import DocsTelegram from '@/components/docs/DocsTelegram.vue'
 import DocsEmail from '@/components/docs/DocsEmail.vue'
 import DocsWebhook from '@/components/docs/DocsWebhook.vue'
@@ -36,6 +37,7 @@ const sections = [
   { id: 'domain', label: 'Domain expiry monitoring' },
   { id: 'port', label: 'Port (TCP) monitoring' },
   { id: 'dns', label: 'DNS record monitoring' },
+  { id: 'projects', label: 'Projects' },
   { id: 'telegram', label: 'Telegram alerts' },
   { id: 'email', label: 'Email alerts' },
   { id: 'webhook', label: 'Webhook alerts' },
@@ -98,6 +100,8 @@ const sections = [
         <DocsPort />
 
         <DocsDns />
+
+        <DocsProjects />
 
         <DocsTelegram />
 
