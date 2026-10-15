@@ -38,7 +38,7 @@ onMounted(async () => {
               ><span v-if="i > 0" aria-hidden="true"> · </span
               ><RouterLink
                 :to="{ hash: `#${m.id}` }"
-                class="transition-colors hover:text-[var(--accent)] hover:underline"
+                class="underline decoration-[var(--border-strong)] decoration-dotted underline-offset-4 transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
                 >{{ m.id }}</RouterLink
               ></template
             >
@@ -74,19 +74,25 @@ onMounted(async () => {
         role="img"
         class="flex min-w-0 flex-col gap-3.5"
       >
+        <!-- From sm up the type scales with the card's own width (cqi), so the
+             64-character crontab line always fits on one line: Geist Mono is
+             0.6em a character, so 64 of them need 38.4em, and 2.5cqi keeps
+             that under the card's content width with room to spare. -->
         <div
-          class="rounded-[14px] bg-[var(--terminal-bg)] px-5 py-5 font-mono text-[12.5px] leading-[1.75] text-[var(--terminal-text)] sm:text-[13.5px]"
+          class="@container rounded-[14px] bg-[var(--terminal-bg)] px-5 py-5 font-mono text-[12.5px] leading-[1.75] text-[var(--terminal-text)] sm:text-[length:clamp(11px,2.5cqi,13.5px)]"
         >
           <div class="mb-2.5 flex justify-between text-xs text-[var(--terminal-dim)]">
             <span>crontab -e</span>
             <span>server-01</span>
           </div>
           <div class="text-[var(--terminal-dim)]"># nightly database backup</div>
-          <!-- One crontab line, soft-wrapped like a terminal would: where it
-               doesn't fit, the curl part drops below with a hanging indent
-               rather than being cut off. A backslash would be wrong here —
-               crontab has no line continuation. -->
-          <div class="pl-[2ch] -indent-[2ch] [overflow-wrap:anywhere]">
+          <!-- One crontab line. Only on phones, where it can't fit, it
+               soft-wraps like a terminal would, with a hanging indent rather
+               than being cut off. A backslash would be wrong here — crontab
+               has no line continuation. -->
+          <div
+            class="max-sm:pl-[2ch] max-sm:-indent-[2ch] max-sm:[overflow-wrap:anywhere] sm:whitespace-nowrap"
+          >
             0 3 * * * /opt/backup.sh
             <span class="text-[var(--terminal-accent)]"
               >&amp;&amp; curl -fsS checkmeup.net/ping/k7f2c9</span
@@ -107,7 +113,7 @@ onMounted(async () => {
             <line x1="12" y1="4" x2="12" y2="20" />
             <polyline points="6 14 12 20 18 14" />
           </svg>
-          03:00 passes, no ping arrives
+          03:00 + 5 min grace, no ping
         </div>
 
         <div
@@ -123,10 +129,11 @@ onMounted(async () => {
               class="flex items-center gap-2 text-[15px] font-semibold text-[var(--text-strong)]"
             >
               <span class="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--status-down)]"></span>
-              nightly-backup missed its 03:00 ping
+              nightly-backup missed its ping
             </div>
+            <!-- The same facts as the real Telegram alert further down. -->
             <div class="text-sm text-[var(--text-dim)]">
-              Last ping yesterday at 03:00 · grace period 5 min · Telegram
+              Expected at 03:05 UTC · missed by 18s · Telegram
             </div>
           </div>
         </div>

@@ -129,7 +129,8 @@ describe('HomeView', () => {
 
     const example = wrapper.find('[aria-label="Example: a cron job and its missed-ping alert"]')
     expect(example.text()).toContain('curl -fsS checkmeup.net/ping/')
-    expect(example.text()).toContain('nightly-backup missed its 03:00 ping')
+    expect(example.text()).toContain('nightly-backup missed its ping')
+    expect(example.text()).toContain('03:00 + 5 min grace, no ping')
   })
 
   it('renders the status page live mockup', () => {
