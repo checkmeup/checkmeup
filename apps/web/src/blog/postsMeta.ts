@@ -15,6 +15,16 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-53-domain-whois',
+    slug: 'v1-53-domain-whois',
+    kind: 'release',
+    title: 'v1.53: Domain Monitoring Beyond RDAP',
+    date: 'October 15, 2026',
+    readTime: '3 min read',
+    excerpt:
+      "Domains under .il, .io, .co, .me, .us, .it, .ru, .jp, .cn and .se used to sit in Error because their registries don't run RDAP. They're now read over WHOIS, with a parser per registry; TLDs whose registries publish no expiry date at all are refused with the reason.",
+  },
+  {
     file: 'v1-52-projects',
     slug: 'v1-52-projects',
     kind: 'release',
