@@ -139,8 +139,11 @@ describe('CronMonitorDetailView', () => {
   })
 
   it('shows a run duration for a completion ping with a matching start ping (PRD zombie-job-detection)', () => {
-    const receivedAt = new Date(Date.now() - 5 * 60000).toISOString()
-    const runStartedAt = new Date(Date.now() - 15 * 60000).toISOString()
+    // One `now` for both: with a Date.now() each, a millisecond ticking
+    // between the calls made the run 9m 59.999s, which renders as "9m".
+    const now = Date.now()
+    const receivedAt = new Date(now - 5 * 60000).toISOString()
+    const runStartedAt = new Date(now - 15 * 60000).toISOString()
     detailData.value = {
       ...detail,
       monitor: { ...monitor },
