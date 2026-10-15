@@ -265,7 +265,7 @@ useHead({
               Every page has a live badge for a README or a client's footer. This one is ours:
             </p>
             <a :href="statusUrl" class="self-start">
-              <img :src="badgeUrl" alt="checkmeup.net status" class="h-7 w-auto" />
+              <img :src="badgeUrl" alt="checkmeup.net status" />
             </a>
             <div class="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--border)]">
               <div
