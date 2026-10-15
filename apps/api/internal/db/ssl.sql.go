@@ -15,7 +15,7 @@ import (
 const createSSLMonitor = `-- name: CreateSSLMonitor :one
 INSERT INTO ssl_monitors (org_id, name, hostname)
 VALUES ($1, $2, $3)
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type CreateSSLMonitorParams struct {
@@ -48,6 +48,7 @@ func (q *Queries) CreateSSLMonitor(ctx context.Context, arg CreateSSLMonitorPara
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -67,7 +68,7 @@ func (q *Queries) DeleteSSLMonitor(ctx context.Context, arg DeleteSSLMonitorPara
 }
 
 const getSSLMonitor = `-- name: GetSSLMonitor :one
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM ssl_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetSSLMonitorParams struct {
@@ -99,12 +100,13 @@ func (q *Queries) GetSSLMonitor(ctx context.Context, arg GetSSLMonitorParams) (S
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
 
 const listDueSSLMonitors = `-- name: ListDueSSLMonitors :many
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM ssl_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -144,6 +146,7 @@ func (q *Queries) ListDueSSLMonitors(ctx context.Context) ([]SslMonitor, error) 
 			&i.ConsecutiveFailures,
 			&i.MaxAlertsPerIncident,
 			&i.AlertCount,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -156,7 +159,7 @@ func (q *Queries) ListDueSSLMonitors(ctx context.Context) ([]SslMonitor, error) 
 }
 
 const listSSLMonitors = `-- name: ListSSLMonitors :many
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM ssl_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMonitor, error) {
@@ -189,6 +192,7 @@ func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMo
 			&i.ConsecutiveFailures,
 			&i.MaxAlertsPerIncident,
 			&i.AlertCount,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -203,7 +207,7 @@ func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMo
 const pauseSSLMonitor = `-- name: PauseSSLMonitor :one
 UPDATE ssl_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type PauseSSLMonitorParams struct {
@@ -235,6 +239,7 @@ func (q *Queries) PauseSSLMonitor(ctx context.Context, arg PauseSSLMonitorParams
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -242,7 +247,7 @@ func (q *Queries) PauseSSLMonitor(ctx context.Context, arg PauseSSLMonitorParams
 const resumeSSLMonitor = `-- name: ResumeSSLMonitor :one
 UPDATE ssl_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type ResumeSSLMonitorParams struct {
@@ -274,6 +279,7 @@ func (q *Queries) ResumeSSLMonitor(ctx context.Context, arg ResumeSSLMonitorPara
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -282,7 +288,7 @@ const updateSSLMonitor = `-- name: UpdateSSLMonitor :one
 UPDATE ssl_monitors
 SET name = $3, hostname = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type UpdateSSLMonitorParams struct {
@@ -327,6 +333,7 @@ func (q *Queries) UpdateSSLMonitor(ctx context.Context, arg UpdateSSLMonitorPara
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -346,7 +353,7 @@ SET status               = $2,
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type UpdateSSLMonitorCheckParams struct {
@@ -397,6 +404,7 @@ func (q *Queries) UpdateSSLMonitorCheck(ctx context.Context, arg UpdateSSLMonito
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }

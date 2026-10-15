@@ -15,7 +15,7 @@ import (
 const createDomainMonitor = `-- name: CreateDomainMonitor :one
 INSERT INTO domain_monitors (org_id, name, domain)
 VALUES ($1, $2, $3)
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type CreateDomainMonitorParams struct {
@@ -48,6 +48,7 @@ func (q *Queries) CreateDomainMonitor(ctx context.Context, arg CreateDomainMonit
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -67,7 +68,7 @@ func (q *Queries) DeleteDomainMonitor(ctx context.Context, arg DeleteDomainMonit
 }
 
 const getDomainMonitor = `-- name: GetDomainMonitor :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM domain_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetDomainMonitorParams struct {
@@ -99,12 +100,13 @@ func (q *Queries) GetDomainMonitor(ctx context.Context, arg GetDomainMonitorPara
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
 
 const listDomainMonitors = `-- name: ListDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]DomainMonitor, error) {
@@ -137,6 +139,7 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 			&i.ConsecutiveFailures,
 			&i.MaxAlertsPerIncident,
 			&i.AlertCount,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -149,7 +152,7 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 }
 
 const listDueDomainMonitors = `-- name: ListDueDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM domain_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -189,6 +192,7 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 			&i.ConsecutiveFailures,
 			&i.MaxAlertsPerIncident,
 			&i.AlertCount,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -203,7 +207,7 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 const pauseDomainMonitor = `-- name: PauseDomainMonitor :one
 UPDATE domain_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type PauseDomainMonitorParams struct {
@@ -235,6 +239,7 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -242,7 +247,7 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 const resumeDomainMonitor = `-- name: ResumeDomainMonitor :one
 UPDATE domain_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type ResumeDomainMonitorParams struct {
@@ -274,6 +279,7 @@ func (q *Queries) ResumeDomainMonitor(ctx context.Context, arg ResumeDomainMonit
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -282,7 +288,7 @@ const updateDomainMonitor = `-- name: UpdateDomainMonitor :one
 UPDATE domain_monitors
 SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, max_alerts_per_incident = $7, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type UpdateDomainMonitorParams struct {
@@ -327,6 +333,7 @@ func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonit
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -346,7 +353,7 @@ SET status               = $2,
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id
 `
 
 type UpdateDomainMonitorCheckParams struct {
@@ -397,6 +404,7 @@ func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomain
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }

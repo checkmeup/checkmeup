@@ -33,6 +33,7 @@ type domainMonitorResponse struct {
 	DaysUntilExpiry      *int     `json:"daysUntilExpiry"`
 	LastCheckedAt        *string  `json:"lastCheckedAt"`
 	CreatedAt            string   `json:"createdAt"`
+	ProjectID            *string  `json:"projectId"`
 	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
@@ -48,6 +49,7 @@ func domainMonitorToResponse(m db.DomainMonitor) domainMonitorResponse {
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		ProjectID:            projectIDString(m.ProjectID),
 	}
 	if m.ExpiresAt.Valid {
 		t := m.ExpiresAt.Time.UTC().Format("2006-01-02T15:04:05Z")
@@ -106,9 +108,10 @@ func (h *MonitorHandler) ListDomainMonitors(w http.ResponseWriter, r *http.Reque
 }
 
 type createDomainMonitorRequest struct {
-	Name       string   `json:"name"`
-	Domain     string   `json:"domain"`
-	ChannelIDs []string `json:"channelIds"`
+	Name       string            `json:"name"`
+	Domain     string            `json:"domain"`
+	ChannelIDs []string          `json:"channelIds"`
+	ProjectID  optionalProjectID `json:"projectId,omitzero"`
 }
 
 // CreateDomainMonitor POST /api/v1/monitors/domain
@@ -143,6 +146,10 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.CreateDomainMonitor(r.Context(), db.CreateDomainMonitorParams{
 		OrgID:  orgID,
 		Name:   req.Name,
@@ -153,6 +160,10 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "domain", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "domain", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -209,12 +220,13 @@ func (h *MonitorHandler) GetDomainMonitor(w http.ResponseWriter, r *http.Request
 }
 
 type updateDomainMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Domain               string   `json:"domain"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Domain               string            `json:"domain"`
+	AlertsEnabled        bool              `json:"alertsEnabled"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // UpdateDomainMonitor PATCH /api/v1/monitors/domain/{id}
@@ -241,6 +253,10 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.UpdateDomainMonitor(r.Context(), db.UpdateDomainMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -259,6 +275,10 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "domain", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "domain", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

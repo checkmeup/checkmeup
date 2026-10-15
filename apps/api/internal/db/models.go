@@ -533,6 +533,7 @@ type CronMonitor struct {
 	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
 	ConsecutiveFailures  int32              `json:"consecutive_failures"`
 	MaxDurationMins      pgtype.Int4        `json:"max_duration_mins"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
 }
 
 type CronPing struct {
@@ -590,6 +591,7 @@ type DnsMonitor struct {
 	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
 }
 
 type DomainMonitor struct {
@@ -613,6 +615,7 @@ type DomainMonitor struct {
 	ConsecutiveFailures  int32               `json:"consecutive_failures"`
 	MaxAlertsPerIncident int32               `json:"max_alerts_per_incident"`
 	AlertCount           int32               `json:"alert_count"`
+	ProjectID            pgtype.UUID         `json:"project_id"`
 }
 
 type FeatureSuggestion struct {
@@ -719,6 +722,15 @@ type PortMonitor struct {
 	NextCheckAt          pgtype.Timestamptz `json:"next_check_at"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
+}
+
+type Project struct {
+	ID        uuid.UUID          `json:"id"`
+	OrgID     uuid.UUID          `json:"org_id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RefreshToken struct {
@@ -759,6 +771,7 @@ type SslMonitor struct {
 	ConsecutiveFailures  int32              `json:"consecutive_failures"`
 	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
 	AlertCount           int32              `json:"alert_count"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
 }
 
 type StatusPage struct {
@@ -849,6 +862,7 @@ type UptimeMonitor struct {
 	AlertAfterNFailures  int32              `json:"alert_after_n_failures"`
 	HttpMethod           HttpMethod         `json:"http_method"`
 	AcceptedStatusCodes  []int32            `json:"accepted_status_codes"`
+	ProjectID            pgtype.UUID        `json:"project_id"`
 }
 
 type User struct {

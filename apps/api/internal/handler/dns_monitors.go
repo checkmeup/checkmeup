@@ -35,6 +35,7 @@ type dnsMonitorResponse struct {
 	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
 	LastCheckedAt        *string  `json:"lastCheckedAt"`
 	CreatedAt            string   `json:"createdAt"`
+	ProjectID            *string  `json:"projectId"`
 	Uptime24h            *float64 `json:"uptime24h"`
 	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
@@ -75,6 +76,7 @@ func (h *MonitorHandler) dnsMonitorToResponse(m db.DnsMonitor) dnsMonitorRespons
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		ProjectID:            projectIDString(m.ProjectID),
 	}
 	if m.ExpectedValue.Valid {
 		r.ExpectedValue = &m.ExpectedValue.String
@@ -279,14 +281,15 @@ func (h *MonitorHandler) ListDNSMonitors(w http.ResponseWriter, r *http.Request)
 }
 
 type createDNSMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Hostname             string   `json:"hostname"`
-	RecordType           string   `json:"recordType"`
-	ExpectedValue        string   `json:"expectedValue"`
-	IntervalMins         int32    `json:"intervalMins"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Hostname             string            `json:"hostname"`
+	RecordType           string            `json:"recordType"`
+	ExpectedValue        string            `json:"expectedValue"`
+	IntervalMins         int32             `json:"intervalMins"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // CreateDNSMonitor POST /api/v1/monitors/dns
@@ -320,6 +323,10 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeDNSMaxAlerts(req.MaxAlertsPerIncident)
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.CreateDNSMonitor(r.Context(), db.CreateDNSMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -335,6 +342,10 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.attachDNSMonitorChannels(r, orgID, monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "dns", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -444,15 +455,16 @@ func dnsIncidentsToResponse(incidents []db.DnsIncident) []dnsIncidentResponse {
 }
 
 type updateDNSMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Hostname             string   `json:"hostname"`
-	RecordType           string   `json:"recordType"`
-	ExpectedValue        string   `json:"expectedValue"`
-	IntervalMins         int32    `json:"intervalMins"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Hostname             string            `json:"hostname"`
+	RecordType           string            `json:"recordType"`
+	ExpectedValue        string            `json:"expectedValue"`
+	IntervalMins         int32             `json:"intervalMins"`
+	AlertsEnabled        bool              `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // UpdateDNSMonitor PATCH /api/v1/monitors/dns/{id}
@@ -481,6 +493,10 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizeDNSMaxAlerts(req.MaxAlertsPerIncident)
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.UpdateDNSMonitor(r.Context(), db.UpdateDNSMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -498,6 +514,10 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "dns", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "dns", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

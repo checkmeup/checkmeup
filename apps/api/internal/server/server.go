@@ -99,6 +99,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	statusPublic := handler.NewStatusPublicHandler(s.db)
 	billing := handler.NewBillingHandler(s.cfg, s.db)
 	maintenance := handler.NewMaintenanceHandler(s.db)
+	projects := handler.NewProjectHandler(s.db)
 	incidents := handler.NewIncidentHandler(s.db)
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 	apiKeys := handler.NewAPIKeyHandler(s.db)
@@ -290,6 +291,16 @@ func (s *Server) buildRouter() *chi.Mux {
 					r.Patch("/", maintenance.UpdateMaintenanceWindow)
 					r.Delete("/", maintenance.DeleteMaintenanceWindow)
 					r.Post("/end", maintenance.EndMaintenanceWindowNow)
+				})
+			})
+
+			r.Route("/projects", func(r chi.Router) {
+				r.Get("/", projects.ListProjects)
+				r.Post("/", projects.CreateProject)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Patch("/", projects.RenameProject)
+					r.Delete("/", projects.DeleteProject)
+					r.Put("/monitors", projects.SetProjectMonitors)
 				})
 			})
 

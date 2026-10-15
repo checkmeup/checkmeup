@@ -32,6 +32,7 @@ type portMonitorResponse struct {
 	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
 	LastCheckedAt        *string  `json:"lastCheckedAt"`
 	CreatedAt            string   `json:"createdAt"`
+	ProjectID            *string  `json:"projectId"`
 	Uptime24h            *float64 `json:"uptime24h"`
 	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
@@ -71,6 +72,7 @@ func (h *MonitorHandler) portMonitorToResponse(m db.PortMonitor) portMonitorResp
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		ProjectID:            projectIDString(m.ProjectID),
 	}
 	if m.LastCheckedAt.Valid {
 		t := m.LastCheckedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
@@ -259,14 +261,15 @@ func (h *MonitorHandler) ListPortMonitors(w http.ResponseWriter, r *http.Request
 }
 
 type createPortMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Host                 string   `json:"host"`
-	Port                 int32    `json:"port"`
-	ExpectedState        string   `json:"expectedState"`
-	IntervalMins         int32    `json:"intervalMins"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Host                 string            `json:"host"`
+	Port                 int32             `json:"port"`
+	ExpectedState        string            `json:"expectedState"`
+	IntervalMins         int32             `json:"intervalMins"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // CreatePortMonitor POST /api/v1/monitors/port
@@ -300,6 +303,10 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.CreatePortMonitor(r.Context(), db.CreatePortMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -315,6 +322,10 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := h.attachPortMonitorChannels(r, orgID, monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "port", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -424,15 +435,16 @@ func portIncidentsToResponse(incidents []db.PortIncident) []portIncidentResponse
 }
 
 type updatePortMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Host                 string   `json:"host"`
-	Port                 int32    `json:"port"`
-	ExpectedState        string   `json:"expectedState"`
-	IntervalMins         int32    `json:"intervalMins"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Host                 string            `json:"host"`
+	Port                 int32             `json:"port"`
+	ExpectedState        string            `json:"expectedState"`
+	IntervalMins         int32             `json:"intervalMins"`
+	AlertsEnabled        bool              `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // UpdatePortMonitor PATCH /api/v1/monitors/port/{id}
@@ -461,6 +473,10 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 	req.IntervalMins = clampedInterval
 	req.MaxAlertsPerIncident = normalizePortMaxAlerts(req.MaxAlertsPerIncident)
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.UpdatePortMonitor(r.Context(), db.UpdatePortMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -478,6 +494,10 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "port", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

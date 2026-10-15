@@ -67,7 +67,7 @@ func (q *Queries) CreateDNSIncident(ctx context.Context, monitorID uuid.UUID) (D
 const createDNSMonitor = `-- name: CreateDNSMonitor :one
 INSERT INTO dns_monitors (org_id, name, hostname, record_type, expected_value, interval_mins, max_alerts_per_incident, alert_after_n_failures)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type CreateDNSMonitorParams struct {
@@ -112,6 +112,7 @@ func (q *Queries) CreateDNSMonitor(ctx context.Context, arg CreateDNSMonitorPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -176,7 +177,7 @@ func (q *Queries) GetDNSDailyStatus90d(ctx context.Context, monitorID uuid.UUID)
 }
 
 const getDNSMonitor = `-- name: GetDNSMonitor :one
-SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM dns_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM dns_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetDNSMonitorParams struct {
@@ -206,12 +207,13 @@ func (q *Queries) GetDNSMonitor(ctx context.Context, arg GetDNSMonitorParams) (D
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
 
 const getDNSMonitorPublic = `-- name: GetDNSMonitorPublic :one
-SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM dns_monitors WHERE id = $1
+SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM dns_monitors WHERE id = $1
 `
 
 func (q *Queries) GetDNSMonitorPublic(ctx context.Context, id uuid.UUID) (DnsMonitor, error) {
@@ -236,6 +238,7 @@ func (q *Queries) GetDNSMonitorPublic(ctx context.Context, id uuid.UUID) (DnsMon
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -395,7 +398,7 @@ func (q *Queries) ListDNSIncidents(ctx context.Context, monitorID uuid.UUID) ([]
 }
 
 const listDNSMonitors = `-- name: ListDNSMonitors :many
-SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM dns_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM dns_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListDNSMonitors(ctx context.Context, orgID uuid.UUID) ([]DnsMonitor, error) {
@@ -426,6 +429,7 @@ func (q *Queries) ListDNSMonitors(ctx context.Context, orgID uuid.UUID) ([]DnsMo
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -438,7 +442,7 @@ func (q *Queries) ListDNSMonitors(ctx context.Context, orgID uuid.UUID) ([]DnsMo
 }
 
 const listDueDNSMonitors = `-- name: ListDueDNSMonitors :many
-SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM dns_monitors
+SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM dns_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -476,6 +480,7 @@ func (q *Queries) ListDueDNSMonitors(ctx context.Context) ([]DnsMonitor, error) 
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -499,7 +504,7 @@ func (q *Queries) MarkDNSMonitorDown(ctx context.Context, id uuid.UUID) error {
 const pauseDNSMonitor = `-- name: PauseDNSMonitor :one
 UPDATE dns_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type PauseDNSMonitorParams struct {
@@ -529,6 +534,7 @@ func (q *Queries) PauseDNSMonitor(ctx context.Context, arg PauseDNSMonitorParams
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -541,7 +547,7 @@ SET consecutive_failures = consecutive_failures + 1,
     last_resolved_value = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type RecordDNSCheckFailureParams struct {
@@ -571,6 +577,7 @@ func (q *Queries) RecordDNSCheckFailure(ctx context.Context, arg RecordDNSCheckF
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -586,7 +593,7 @@ SET status = 'up',
     baseline_captured = (expected_value IS NULL),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type RecordDNSCheckUpParams struct {
@@ -619,6 +626,7 @@ func (q *Queries) RecordDNSCheckUp(ctx context.Context, arg RecordDNSCheckUpPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -651,7 +659,7 @@ func (q *Queries) ResolveLatestDNSIncident(ctx context.Context, monitorID uuid.U
 const resumeDNSMonitor = `-- name: ResumeDNSMonitor :one
 UPDATE dns_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type ResumeDNSMonitorParams struct {
@@ -681,6 +689,7 @@ func (q *Queries) ResumeDNSMonitor(ctx context.Context, arg ResumeDNSMonitorPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -692,7 +701,7 @@ SET name = $3, hostname = $4, record_type = $5, expected_value = $6, baseline_ca
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type UpdateDNSMonitorParams struct {
@@ -747,6 +756,7 @@ func (q *Queries) UpdateDNSMonitor(ctx context.Context, arg UpdateDNSMonitorPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }

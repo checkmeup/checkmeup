@@ -160,7 +160,7 @@ func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (GetCr
 }
 
 const getDomainMonitorPublic = `-- name: GetDomainMonitorPublic :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM domain_monitors WHERE id = $1
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM domain_monitors WHERE id = $1
 `
 
 func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (DomainMonitor, error) {
@@ -187,6 +187,7 @@ func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (Dom
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -229,7 +230,7 @@ func (q *Queries) GetPortDailyStatus90d(ctx context.Context, monitorID uuid.UUID
 }
 
 const getPortMonitorPublic = `-- name: GetPortMonitorPublic :one
-SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM port_monitors WHERE id = $1
+SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors WHERE id = $1
 `
 
 func (q *Queries) GetPortMonitorPublic(ctx context.Context, id uuid.UUID) (PortMonitor, error) {
@@ -252,12 +253,13 @@ func (q *Queries) GetPortMonitorPublic(ctx context.Context, id uuid.UUID) (PortM
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
 
 const getSSLMonitorPublic = `-- name: GetSSLMonitorPublic :one
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count FROM ssl_monitors WHERE id = $1
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id FROM ssl_monitors WHERE id = $1
 `
 
 func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMonitor, error) {
@@ -284,6 +286,7 @@ func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMon
 		&i.ConsecutiveFailures,
 		&i.MaxAlertsPerIncident,
 		&i.AlertCount,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -409,7 +412,7 @@ func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UU
 }
 
 const getUptimeMonitorPublic = `-- name: GetUptimeMonitorPublic :one
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes FROM uptime_monitors WHERE id = $1
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id FROM uptime_monitors WHERE id = $1
 `
 
 func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -437,6 +440,7 @@ func (q *Queries) GetUptimeMonitorPublic(ctx context.Context, id uuid.UUID) (Upt
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }

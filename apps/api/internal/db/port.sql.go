@@ -64,7 +64,7 @@ func (q *Queries) CreatePortIncident(ctx context.Context, monitorID uuid.UUID) (
 const createPortMonitor = `-- name: CreatePortMonitor :one
 INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type CreatePortMonitorParams struct {
@@ -107,6 +107,7 @@ func (q *Queries) CreatePortMonitor(ctx context.Context, arg CreatePortMonitorPa
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -135,7 +136,7 @@ func (q *Queries) DeletePortMonitor(ctx context.Context, arg DeletePortMonitorPa
 }
 
 const getPortMonitor = `-- name: GetPortMonitor :one
-SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM port_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetPortMonitorParams struct {
@@ -163,6 +164,7 @@ func (q *Queries) GetPortMonitor(ctx context.Context, arg GetPortMonitorParams) 
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -220,7 +222,7 @@ func (q *Queries) IncrementPortIncidentAlertCount(ctx context.Context, id uuid.U
 }
 
 const listDuePortMonitors = `-- name: ListDuePortMonitors :many
-SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM port_monitors
+SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -256,6 +258,7 @@ func (q *Queries) ListDuePortMonitors(ctx context.Context) ([]PortMonitor, error
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -368,7 +371,7 @@ func (q *Queries) ListPortIncidents(ctx context.Context, monitorID uuid.UUID) ([
 }
 
 const listPortMonitors = `-- name: ListPortMonitors :many
-SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at FROM port_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPortMonitors(ctx context.Context, orgID uuid.UUID) ([]PortMonitor, error) {
@@ -397,6 +400,7 @@ func (q *Queries) ListPortMonitors(ctx context.Context, orgID uuid.UUID) ([]Port
 			&i.NextCheckAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -420,7 +424,7 @@ func (q *Queries) MarkPortMonitorDown(ctx context.Context, id uuid.UUID) error {
 const pausePortMonitor = `-- name: PausePortMonitor :one
 UPDATE port_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type PausePortMonitorParams struct {
@@ -448,6 +452,7 @@ func (q *Queries) PausePortMonitor(ctx context.Context, arg PausePortMonitorPara
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -459,7 +464,7 @@ SET consecutive_failures = consecutive_failures + 1,
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 func (q *Queries) RecordPortCheckFailure(ctx context.Context, id uuid.UUID) (PortMonitor, error) {
@@ -482,6 +487,7 @@ func (q *Queries) RecordPortCheckFailure(ctx context.Context, id uuid.UUID) (Por
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -494,7 +500,7 @@ SET status = 'up',
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 func (q *Queries) RecordPortCheckUp(ctx context.Context, id uuid.UUID) (PortMonitor, error) {
@@ -517,6 +523,7 @@ func (q *Queries) RecordPortCheckUp(ctx context.Context, id uuid.UUID) (PortMoni
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -549,7 +556,7 @@ func (q *Queries) ResolveLatestPortIncident(ctx context.Context, monitorID uuid.
 const resumePortMonitor = `-- name: ResumePortMonitor :one
 UPDATE port_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type ResumePortMonitorParams struct {
@@ -577,6 +584,7 @@ func (q *Queries) ResumePortMonitor(ctx context.Context, arg ResumePortMonitorPa
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -588,7 +596,7 @@ SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, al
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $7)),
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at
+RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
 type UpdatePortMonitorParams struct {
@@ -636,6 +644,7 @@ func (q *Queries) UpdatePortMonitor(ctx context.Context, arg UpdatePortMonitorPa
 		&i.NextCheckAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
 	)
 	return i, err
 }

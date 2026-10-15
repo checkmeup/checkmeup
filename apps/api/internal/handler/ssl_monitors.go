@@ -33,6 +33,7 @@ type sslMonitorResponse struct {
 	DaysUntilExpiry      *int     `json:"daysUntilExpiry"`
 	LastCheckedAt        *string  `json:"lastCheckedAt"`
 	CreatedAt            string   `json:"createdAt"`
+	ProjectID            *string  `json:"projectId"`
 	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
@@ -48,6 +49,7 @@ func sslMonitorToResponse(m db.SslMonitor) sslMonitorResponse {
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		ProjectID:            projectIDString(m.ProjectID),
 	}
 	if m.ExpiresAt.Valid {
 		t := m.ExpiresAt.Time.UTC().Format("2006-01-02T15:04:05Z")
@@ -122,9 +124,10 @@ func (h *MonitorHandler) ListSSLMonitors(w http.ResponseWriter, r *http.Request)
 }
 
 type createSSLMonitorRequest struct {
-	Name       string   `json:"name"`
-	Hostname   string   `json:"hostname"`
-	ChannelIDs []string `json:"channelIds"`
+	Name       string            `json:"name"`
+	Hostname   string            `json:"hostname"`
+	ChannelIDs []string          `json:"channelIds"`
+	ProjectID  optionalProjectID `json:"projectId,omitzero"`
 }
 
 // checkSSLMonitorLimit checks whether orgID can create another SSL monitor
@@ -178,6 +181,10 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.CreateSSLMonitor(r.Context(), db.CreateSSLMonitorParams{
 		OrgID:    orgID,
 		Name:     req.Name,
@@ -188,6 +195,10 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "ssl", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "ssl", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -222,12 +233,13 @@ func (h *MonitorHandler) GetSSLMonitor(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSSLMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Hostname             string   `json:"hostname"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Hostname             string            `json:"hostname"`
+	AlertsEnabled        bool              `json:"alertsEnabled"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // UpdateSSLMonitor PATCH /api/v1/monitors/ssl/{id}
@@ -254,6 +266,10 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.UpdateSSLMonitor(r.Context(), db.UpdateSSLMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -272,6 +288,10 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "ssl", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

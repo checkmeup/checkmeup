@@ -2,7 +2,7 @@
 
 Date: 2026-10-15
 
-A project groups monitors, typically one per client of a freelancer or agency (ADR product). It belongs to an org and has a name unique within it. Each monitor belongs to at most one project, recorded as a nullable `project_id` column on each of the six monitor tables, referencing `projects` with `ON DELETE SET NULL`: deleting a project leaves its monitors running, ungrouped. Assigning a monitor checks that the project is in the monitor's org, like every other tenant-scoped write (ADR database).
+A project groups monitors, typically one per client of a freelancer or agency (ADR product). It belongs to an org and has a name unique within it. Each monitor belongs to at most one project, recorded as a nullable `project_id` column on each of the six monitor tables, referencing `projects` with `ON DELETE SET NULL`: deleting a project leaves its monitors running, ungrouped. Assigning a monitor checks that the project is in the monitor's org, like every other tenant-scoped write (ADR database), and the database enforces it too: the foreign key is on `(project_id, org_id)`, and deleting a project nulls only `project_id`.
 
 One project per monitor, not tags: the list groups unambiguously, and a project can later carry settings for its monitors (default channels, maintenance windows, a status page) without asking which of a monitor's several groups wins. The UI calls it "Project": "Client" fits agencies but not developers grouping their own work.
 

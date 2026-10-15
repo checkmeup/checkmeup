@@ -50,6 +50,7 @@ type cronMonitorResponse struct {
 	LastPingAt           *string  `json:"lastPingAt"`
 	NextPingAt           *string  `json:"nextPingAt"`
 	CreatedAt            string   `json:"createdAt"`
+	ProjectID            *string  `json:"projectId"`
 	ChannelIDs           []string `json:"channelIds,omitempty"`
 }
 
@@ -99,6 +100,7 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		MaxAlertsPerIncident: m.MaxAlertsPerIncident,
 		AlertAfterNFailures:  m.AlertAfterNFailures,
 		CreatedAt:            m.CreatedAt.Time.UTC().Format("2006-01-02T15:04:05Z"),
+		ProjectID:            projectIDString(m.ProjectID),
 	}
 	if m.MaxDurationMins.Valid {
 		v := m.MaxDurationMins.Int32
@@ -274,13 +276,14 @@ func (h *MonitorHandler) ListCronMonitors(w http.ResponseWriter, r *http.Request
 }
 
 type createCronMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Schedule             string   `json:"schedule"`
-	GracePeriodMins      int32    `json:"gracePeriodMins"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	MaxDurationMins      *int32   `json:"maxDurationMins"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Schedule             string            `json:"schedule"`
+	GracePeriodMins      int32             `json:"gracePeriodMins"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	MaxDurationMins      *int32            `json:"maxDurationMins"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // CreateCronMonitor POST /api/v1/monitors/cron
@@ -311,6 +314,10 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	}
 	token := hex.EncodeToString(tokenBytes)
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.CreateCronMonitor(r.Context(), db.CreateCronMonitorParams{
 		OrgID:                orgID,
 		Name:                 req.Name,
@@ -326,6 +333,10 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := h.applyMonitorNotificationChannels(r.Context(), orgID, "cron", monitor.ID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "cron", monitor.ID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}
@@ -435,14 +446,15 @@ func (h *MonitorHandler) GetCronPings(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCronMonitorRequest struct {
-	Name                 string   `json:"name"`
-	Schedule             string   `json:"schedule"`
-	GracePeriodMins      int32    `json:"gracePeriodMins"`
-	AlertsEnabled        bool     `json:"alertsEnabled"`
-	MaxAlertsPerIncident int32    `json:"maxAlertsPerIncident"`
-	AlertAfterNFailures  int32    `json:"alertAfterNFailures"`
-	MaxDurationMins      *int32   `json:"maxDurationMins"`
-	ChannelIDs           []string `json:"channelIds"`
+	Name                 string            `json:"name"`
+	Schedule             string            `json:"schedule"`
+	GracePeriodMins      int32             `json:"gracePeriodMins"`
+	AlertsEnabled        bool              `json:"alertsEnabled"`
+	MaxAlertsPerIncident int32             `json:"maxAlertsPerIncident"`
+	AlertAfterNFailures  int32             `json:"alertAfterNFailures"`
+	MaxDurationMins      *int32            `json:"maxDurationMins"`
+	ChannelIDs           []string          `json:"channelIds"`
+	ProjectID            optionalProjectID `json:"projectId,omitzero"`
 }
 
 // UpdateCronMonitor PATCH /api/v1/monitors/cron/{id}
@@ -462,6 +474,10 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	projectID, ok := h.resolveProjectID(w, r, orgID, req.ProjectID)
+	if !ok {
+		return
+	}
 	monitor, err := h.queries.UpdateCronMonitor(r.Context(), db.UpdateCronMonitorParams{
 		ID:                   monitorID,
 		OrgID:                orgID,
@@ -478,6 +494,10 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "cron", monitorID, req.ChannelIDs); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+		return
+	}
+	if err := h.applyMonitorProject(r.Context(), orgID, "cron", monitorID, req.ProjectID, projectID, &monitor.ProjectID); err != nil {
 		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 		return
 	}

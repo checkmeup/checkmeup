@@ -32,11 +32,30 @@ A user with monitors for several clients can see each client's monitors as one g
 ## Acceptance criteria
 
 - A project needs a name; a second project with the same name in the org is refused.
+  → test: apps/api/internal/handler/projects_test.go "TestCreateProject/a name is required and at most 100 characters"
+  → test: apps/api/internal/handler/projects_test.go "TestCreateProject/a second project with the same name, in any case, is refused"
+  → test: apps/api/internal/handler/projects_test.go "TestRenameProject/renaming onto another project's name is refused"
 - Another org's project can't be read, renamed, deleted or assigned, and another org's monitor can't be put into a project.
+  → test: apps/api/internal/handler/projects_test.go "TestListProjects/lists only the org's projects, by name, with monitor counts"
+  → test: apps/api/internal/handler/projects_test.go "TestRenameProject/another org's project can't be renamed"
+  → test: apps/api/internal/handler/projects_test.go "TestDeleteProject/another org's project can't be deleted"
+  → test: apps/api/internal/handler/projects_test.go "TestMonitorProjectField/cron monitor can't be created in another org's project"
+  → test: apps/api/internal/handler/projects_test.go "TestSetProjectMonitors/monitors can't be put into another org's project"
+  → test: apps/api/internal/handler/projects_test.go "TestSetProjectMonitors/another org's monitor can't be put into a project, and nothing changes"
+  → test: apps/api/internal/handler/projects_test.go "TestProjectForeignKeyIsOrgScoped"
 - A monitor of each type can be put into a project and taken out of it; the change shows in the list.
+  → test: apps/api/internal/handler/projects_test.go "TestMonitorProjectField/cron monitor is created without a project by default"
+  → test: apps/api/internal/handler/projects_test.go "TestMonitorProjectField/cron monitor can be created in a project"
+  → test: apps/api/internal/handler/projects_test.go "TestMonitorProjectField/an update with projectId null takes the monitor out of its project"
+  → test: apps/api/internal/handler/projects_test.go "TestMonitorProjectField/an update without projectId keeps the project"
+  → test: apps/api/internal/handler/projects_test.go "TestSetProjectMonitors/assigns monitors of every type in one request, and takes them out again"
 - Several monitors of different types can be assigned to a project in one action.
+  → test: apps/api/internal/handler/projects_test.go "TestSetProjectMonitors/assigns monitors of every type in one request, and takes them out again"
+  → test: apps/api/internal/handler/projects_test.go "TestSetProjectMonitors/replaces the project's monitors and moves a monitor out of its old project"
 - Deleting a project leaves its monitors in place, without a project, still checked.
+  → test: apps/api/internal/handler/projects_test.go "TestDeleteProject/deleting a project leaves its monitors in place, without a project"
 - The `/monitors` list shows one group per project plus "No project", each with how many of its monitors need attention; `?project=` shows one project's monitors.
 - An alert for a monitor in project "Acme" reads `[Acme]` before the monitor name on Telegram, email (body and subject), Slack and SMS, and its webhook event carries `projectId` and `projectName`.
 - An alert for a monitor without a project is byte for byte what it was before projects.
 - A 1001st project in one org is refused with `409 too_many_projects` (ADR limits).
+  → test: apps/api/internal/handler/projects_test.go "TestCreateProject/the 1001st project is refused"

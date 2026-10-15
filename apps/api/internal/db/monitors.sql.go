@@ -71,7 +71,7 @@ func (q *Queries) CreateCronIncident(ctx context.Context, monitorID uuid.UUID) (
 const createCronMonitor = `-- name: CreateCronMonitor :one
 INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident, alert_after_n_failures, max_duration_mins)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type CreateCronMonitorParams struct {
@@ -114,6 +114,7 @@ func (q *Queries) CreateCronMonitor(ctx context.Context, arg CreateCronMonitorPa
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -203,7 +204,7 @@ func (q *Queries) DeleteOldCronRuns(ctx context.Context) error {
 }
 
 const getCronMonitor = `-- name: GetCronMonitor :one
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins FROM cron_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id FROM cron_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetCronMonitorParams struct {
@@ -231,12 +232,13 @@ func (q *Queries) GetCronMonitor(ctx context.Context, arg GetCronMonitorParams) 
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
 
 const getCronMonitorByToken = `-- name: GetCronMonitorByToken :one
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins FROM cron_monitors WHERE ping_token = $1
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id FROM cron_monitors WHERE ping_token = $1
 `
 
 func (q *Queries) GetCronMonitorByToken(ctx context.Context, pingToken string) (CronMonitor, error) {
@@ -259,6 +261,7 @@ func (q *Queries) GetCronMonitorByToken(ctx context.Context, pingToken string) (
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -303,7 +306,7 @@ const incrementCronConsecutiveFailures = `-- name: IncrementCronConsecutiveFailu
 UPDATE cron_monitors
 SET consecutive_failures = consecutive_failures + 1, updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 func (q *Queries) IncrementCronConsecutiveFailures(ctx context.Context, id uuid.UUID) (CronMonitor, error) {
@@ -326,6 +329,7 @@ func (q *Queries) IncrementCronConsecutiveFailures(ctx context.Context, id uuid.
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -378,7 +382,7 @@ func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([
 }
 
 const listCronMonitors = `-- name: ListCronMonitors :many
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id FROM cron_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListCronMonitors(ctx context.Context, orgID uuid.UUID) ([]CronMonitor, error) {
@@ -407,6 +411,7 @@ func (q *Queries) ListCronMonitors(ctx context.Context, orgID uuid.UUID) ([]Cron
 			&i.AlertAfterNFailures,
 			&i.ConsecutiveFailures,
 			&i.MaxDurationMins,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -456,7 +461,7 @@ func (q *Queries) ListCronPings(ctx context.Context, arg ListCronPingsParams) ([
 }
 
 const listOverdueCronMonitors = `-- name: ListOverdueCronMonitors :many
-SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins FROM cron_monitors
+SELECT id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id FROM cron_monitors
 WHERE status = 'up' AND next_ping_at < NOW()
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -492,6 +497,7 @@ func (q *Queries) ListOverdueCronMonitors(ctx context.Context) ([]CronMonitor, e
 			&i.AlertAfterNFailures,
 			&i.ConsecutiveFailures,
 			&i.MaxDurationMins,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -584,7 +590,7 @@ func (q *Queries) MarkCronRunAlerted(ctx context.Context, id uuid.UUID) (CronRun
 const pauseCronMonitor = `-- name: PauseCronMonitor :one
 UPDATE cron_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type PauseCronMonitorParams struct {
@@ -612,6 +618,7 @@ func (q *Queries) PauseCronMonitor(ctx context.Context, arg PauseCronMonitorPara
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -644,7 +651,7 @@ func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.
 const resumeCronMonitor = `-- name: ResumeCronMonitor :one
 UPDATE cron_monitors SET status = 'waiting', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type ResumeCronMonitorParams struct {
@@ -672,6 +679,7 @@ func (q *Queries) ResumeCronMonitor(ctx context.Context, arg ResumeCronMonitorPa
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -686,7 +694,7 @@ SET name = $3, schedule = $4, grace_period_mins = $5, alerts_enabled = $6, max_a
     END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type UpdateCronMonitorParams struct {
@@ -736,6 +744,7 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -755,7 +764,7 @@ const updateCronMonitorPing = `-- name: UpdateCronMonitorPing :one
 UPDATE cron_monitors
 SET status = 'up', last_ping_at = $3, next_ping_at = $4, consecutive_failures = 0, updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type UpdateCronMonitorPingParams struct {
@@ -790,6 +799,7 @@ func (q *Queries) UpdateCronMonitorPing(ctx context.Context, arg UpdateCronMonit
 		&i.AlertAfterNFailures,
 		&i.ConsecutiveFailures,
 		&i.MaxDurationMins,
+		&i.ProjectID,
 	)
 	return i, err
 }

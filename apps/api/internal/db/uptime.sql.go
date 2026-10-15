@@ -78,7 +78,7 @@ func (q *Queries) CreateUptimeIncident(ctx context.Context, monitorID uuid.UUID)
 const createUptimeMonitor = `-- name: CreateUptimeMonitor :one
 INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, alert_after_n_failures, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, http_method, accepted_status_codes)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 type CreateUptimeMonitorParams struct {
@@ -136,6 +136,7 @@ func (q *Queries) CreateUptimeMonitor(ctx context.Context, arg CreateUptimeMonit
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -164,7 +165,7 @@ func (q *Queries) DeleteUptimeMonitor(ctx context.Context, arg DeleteUptimeMonit
 }
 
 const getUptimeMonitor = `-- name: GetUptimeMonitor :one
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes FROM uptime_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id FROM uptime_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetUptimeMonitorParams struct {
@@ -197,6 +198,7 @@ func (q *Queries) GetUptimeMonitor(ctx context.Context, arg GetUptimeMonitorPara
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -254,7 +256,7 @@ func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid
 }
 
 const listDueUptimeMonitors = `-- name: ListDueUptimeMonitors :many
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes FROM uptime_monitors
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id FROM uptime_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -295,6 +297,7 @@ func (q *Queries) ListDueUptimeMonitors(ctx context.Context) ([]UptimeMonitor, e
 			&i.AlertAfterNFailures,
 			&i.HttpMethod,
 			&i.AcceptedStatusCodes,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -409,7 +412,7 @@ func (q *Queries) ListUptimeIncidents(ctx context.Context, monitorID uuid.UUID) 
 }
 
 const listUptimeMonitors = `-- name: ListUptimeMonitors :many
-SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id FROM uptime_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]UptimeMonitor, error) {
@@ -443,6 +446,7 @@ func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]Up
 			&i.AlertAfterNFailures,
 			&i.HttpMethod,
 			&i.AcceptedStatusCodes,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -466,7 +470,7 @@ func (q *Queries) MarkUptimeMonitorDown(ctx context.Context, id uuid.UUID) error
 const pauseUptimeMonitor = `-- name: PauseUptimeMonitor :one
 UPDATE uptime_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 type PauseUptimeMonitorParams struct {
@@ -499,6 +503,7 @@ func (q *Queries) PauseUptimeMonitor(ctx context.Context, arg PauseUptimeMonitor
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -510,7 +515,7 @@ SET consecutive_failures = consecutive_failures + 1,
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 func (q *Queries) RecordUptimeCheckFailure(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -538,6 +543,7 @@ func (q *Queries) RecordUptimeCheckFailure(ctx context.Context, id uuid.UUID) (U
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -550,7 +556,7 @@ SET status = 'up',
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
@@ -578,6 +584,7 @@ func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (Uptime
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -610,7 +617,7 @@ func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uui
 const resumeUptimeMonitor = `-- name: ResumeUptimeMonitor :one
 UPDATE uptime_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 type ResumeUptimeMonitorParams struct {
@@ -643,6 +650,7 @@ func (q *Queries) ResumeUptimeMonitor(ctx context.Context, arg ResumeUptimeMonit
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
@@ -655,7 +663,7 @@ SET name = $3, url = $4, interval_mins = $5, alerts_enabled = $6, max_alerts_per
     next_check_at = LEAST(next_check_at, last_checked_at + make_interval(mins => $5)),
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes
+RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
 type UpdateUptimeMonitorParams struct {
@@ -720,6 +728,7 @@ func (q *Queries) UpdateUptimeMonitor(ctx context.Context, arg UpdateUptimeMonit
 		&i.AlertAfterNFailures,
 		&i.HttpMethod,
 		&i.AcceptedStatusCodes,
+		&i.ProjectID,
 	)
 	return i, err
 }
