@@ -15,6 +15,36 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-49-to-v1-51-landing-page',
+    slug: 'v1-49-to-v1-51-landing-page',
+    kind: 'release',
+    title: 'v1.49–v1.51: A Landing Page That Shows Its Work',
+    date: 'October 15, 2026',
+    readTime: '4 min read',
+    excerpt:
+      "An outside review of the landing page found its second half generic. The testimonials, which weren't from real users, are gone; the page now shows the real Telegram message and webhook payload a missed cron job sends, and checkmeup.net's own live 90-day status with per-day uptime and response times.",
+  },
+  {
+    file: 'v1-48-redesign',
+    slug: 'v1-48-redesign',
+    kind: 'release',
+    title: 'v1.48: A Calmer Checkmeup, Light and Dark',
+    date: 'October 15, 2026',
+    readTime: '3 min read',
+    excerpt:
+      'A redesign of every screen in both themes: a top navigation bar, one list for all six monitor types, a dashboard that opens with a plain sentence about what needs you, 48-hour check strips in every list, and a rebuilt public status page.',
+  },
+  {
+    file: 'v1-46-to-v1-47-alert-channels',
+    slug: 'v1-46-to-v1-47-alert-channels',
+    kind: 'release',
+    title: 'v1.46–v1.47: SMS Failures You Can Actually See',
+    date: 'October 14, 2026',
+    readTime: '4 min read',
+    excerpt:
+      "Alert SMS that a carrier dropped after Twilio accepted them used to vanish silently. Now each failure is recorded on the channel, and if SMS was the alert's only delivery, a fallback email goes out. Also: masked Slack and webhook URLs, real 404s for missing pages, and interval changes that take effect right away.",
+  },
+  {
     file: 'v1-42-to-v1-45-monitor-forms',
     slug: 'v1-42-to-v1-45-monitor-forms',
     kind: 'release',
