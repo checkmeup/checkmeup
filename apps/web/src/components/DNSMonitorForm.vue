@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
+import ProjectField from '@/components/ProjectField.vue'
 import {
   alertFilterOptions,
   alertLimitOptions,
@@ -117,6 +118,8 @@ defineSlots<{ expectedValueHelp?: () => unknown }>()
       <input id="alerts" v-model="form.alertsEnabled" type="checkbox" class="rounded" />
       <Label for="alerts" class="cursor-pointer">Send alerts</Label>
     </div>
+
+    <ProjectField v-model="form.projectId" />
 
     <NotificationChannelPicker v-model="form.channelIds" />
   </div>

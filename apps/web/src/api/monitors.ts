@@ -16,6 +16,7 @@ export interface CronMonitor {
   nextPingAt: string | null
   createdAt: string
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface CronPing {
@@ -46,6 +47,8 @@ export interface CreateCronMonitorInput {
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdateCronMonitorInput {
@@ -57,6 +60,8 @@ export interface UpdateCronMonitorInput {
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export type KeywordMode = 'contains' | 'not_contains'
@@ -94,6 +99,7 @@ export interface UptimeMonitor {
   httpMethod: HttpMethod
   acceptedStatusCodes: number[]
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface UptimeCheck {
@@ -139,6 +145,8 @@ export interface CreateUptimeMonitorInput {
   httpMethod: HttpMethod
   acceptedStatusCodes: number[]
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdateUptimeMonitorInput {
@@ -156,6 +164,8 @@ export interface UpdateUptimeMonitorInput {
   httpMethod: HttpMethod
   acceptedStatusCodes: number[]
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface SSLMonitor {
@@ -173,12 +183,15 @@ export interface SSLMonitor {
   lastCheckedAt: string | null
   createdAt: string
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface CreateSSLMonitorInput {
   name: string
   hostname: string
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdateSSLMonitorInput {
@@ -188,6 +201,8 @@ export interface UpdateSSLMonitorInput {
   alertAfterNFailures: number
   maxAlertsPerIncident: number
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface DomainMonitor {
@@ -205,12 +220,15 @@ export interface DomainMonitor {
   lastCheckedAt: string | null
   createdAt: string
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface CreateDomainMonitorInput {
   name: string
   domain: string
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdateDomainMonitorInput {
@@ -220,6 +238,8 @@ export interface UpdateDomainMonitorInput {
   alertAfterNFailures: number
   maxAlertsPerIncident: number
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export type ExpectedState = 'open' | 'closed'
@@ -239,6 +259,7 @@ export interface PortMonitor {
   createdAt: string
   uptime24h: number | null
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface PortCheck {
@@ -278,6 +299,8 @@ export interface CreatePortMonitorInput {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdatePortMonitorInput {
@@ -290,6 +313,8 @@ export interface UpdatePortMonitorInput {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export type DNSRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS'
@@ -311,6 +336,7 @@ export interface DNSMonitor {
   createdAt: string
   uptime24h: number | null
   channelIds?: string[]
+  projectId?: string | null
 }
 
 export interface DNSCheck {
@@ -351,6 +377,8 @@ export interface CreateDNSMonitorInput {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds?: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 export interface UpdateDNSMonitorInput {
@@ -363,6 +391,8 @@ export interface UpdateDNSMonitorInput {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
+  // Left out: unchanged; null: no project.
+  projectId?: string | null
 }
 
 // One tick per hour over the last `hours`, oldest first: 'up' when every

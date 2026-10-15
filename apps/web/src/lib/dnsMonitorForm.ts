@@ -12,6 +12,7 @@ export interface DNSMonitorFormState {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
+  projectId: string | null
 }
 
 export function createDNSMonitorFormState(): DNSMonitorFormState {
@@ -25,6 +26,7 @@ export function createDNSMonitorFormState(): DNSMonitorFormState {
     maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     channelIds: [],
+    projectId: null,
   }
 }
 
@@ -39,6 +41,7 @@ export function dnsMonitorToFormState(m: DNSMonitor): DNSMonitorFormState {
     maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     channelIds: [...(m.channelIds ?? [])],
+    projectId: m.projectId ?? null,
   }
 }
 
@@ -55,6 +58,7 @@ export function dnsMonitorFormPayload(f: DNSMonitorFormState) {
     maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     channelIds: f.channelIds,
+    projectId: f.projectId,
   }
 }
 

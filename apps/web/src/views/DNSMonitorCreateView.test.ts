@@ -15,6 +15,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const { createDnsMock } = vi.hoisted(() => ({
   createDnsMock: vi.fn(),
 }))
@@ -112,6 +120,7 @@ describe('DNSMonitorCreateView', () => {
       maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       channelIds: [],
+      projectId: null,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'dns-monitor-detail',

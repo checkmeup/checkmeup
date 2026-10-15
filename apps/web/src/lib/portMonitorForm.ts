@@ -12,6 +12,7 @@ export interface PortMonitorFormState {
   maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
+  projectId: string | null
 }
 
 export function createPortMonitorFormState(): PortMonitorFormState {
@@ -25,6 +26,7 @@ export function createPortMonitorFormState(): PortMonitorFormState {
     maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     channelIds: [],
+    projectId: null,
   }
 }
 
@@ -39,6 +41,7 @@ export function portMonitorToFormState(m: PortMonitor): PortMonitorFormState {
     maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     channelIds: [...(m.channelIds ?? [])],
+    projectId: m.projectId ?? null,
   }
 }
 
@@ -52,6 +55,7 @@ export function portMonitorFormPayload(f: PortMonitorFormState) {
     maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     channelIds: f.channelIds,
+    projectId: f.projectId,
   }
 }
 

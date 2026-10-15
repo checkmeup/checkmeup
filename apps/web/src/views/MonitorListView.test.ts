@@ -16,6 +16,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const cronData = ref<unknown[] | null>(null)
 const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
@@ -205,5 +213,79 @@ describe('MonitorListView', () => {
       .find((b) => b.text() === 'Try again')!
       .trigger('click')
     expect(refetchMock).toHaveBeenCalled()
+  })
+
+  describe('projects (PRD projects)', () => {
+    beforeEach(() => {
+      projectsData.value = [
+        { id: 'p1', name: 'Acme', monitorCount: 2, createdAt: '' },
+        { id: 'p2', name: 'Globex', monitorCount: 0, createdAt: '' },
+      ]
+      cronData.value = [{ ...cron, status: 'down', projectId: 'p1' }]
+      uptimeData.value = [{ ...uptime, projectId: 'p1' }]
+      sslData.value = [{ ...ssl, projectId: null }]
+    })
+    afterEach(() => {
+      projectsData.value = []
+    })
+
+    // The desktop table's group header rows, in order.
+    function groupHeaders(wrapper: ReturnType<typeof mountView>) {
+      return wrapper.findAll('tbody button[aria-expanded]').map((b) => b.text())
+    }
+
+    it('groups monitors by project with "No project" last and a summary of what needs attention', () => {
+      const wrapper = mountView()
+      const headers = groupHeaders(wrapper)
+      expect(headers).toHaveLength(2)
+      expect(headers[0]).toContain('Acme')
+      expect(headers[0]).toContain('2 monitors')
+      expect(headers[0]).toContain('1 need attention')
+      expect(headers[1]).toContain('No project')
+      expect(headers[1]).not.toContain('need attention')
+    })
+
+    it('collapses and expands a project group', async () => {
+      const wrapper = mountView()
+      const acme = wrapper.find('tbody button[aria-expanded]')
+      expect(wrapper.find('table').text()).toContain('Nightly backup')
+      await acme.trigger('click')
+      expect(acme.attributes('aria-expanded')).toBe('false')
+      expect(wrapper.find('table').text()).not.toContain('Nightly backup')
+      expect(wrapper.find('table').text()).toContain('Production API')
+      await acme.trigger('click')
+      expect(wrapper.find('table').text()).toContain('Nightly backup')
+    })
+
+    it('shows only one project\'s monitors, ungrouped, for ?project=', () => {
+      routeMock.query = { project: 'p1' }
+      const wrapper = mountView()
+      const table = wrapper.find('table').text()
+      expect(groupHeaders(wrapper)).toHaveLength(0)
+      expect(table).toContain('Nightly backup')
+      expect(table).toContain('Marketing site')
+      expect(table).not.toContain('Production API')
+    })
+
+    it('shows the monitors without a project for ?project=none', () => {
+      routeMock.query = { project: 'none' }
+      const table = mountView().find('table').text()
+      expect(table).toContain('Production API')
+      expect(table).not.toContain('Nightly backup')
+    })
+
+    it('writes the chosen project into ?project=, keeping ?type=', async () => {
+      routeMock.query = { type: 'cron' }
+      const wrapper = mountView()
+      await wrapper.find('select').setValue('p2')
+      expect(replaceMock).toHaveBeenCalledExactlyOnceWith({ query: { type: 'cron', project: 'p2' } })
+    })
+
+    it('stays a flat list with no project filter when the org has no projects', () => {
+      projectsData.value = []
+      const wrapper = mountView()
+      expect(groupHeaders(wrapper)).toHaveLength(0)
+      expect(wrapper.find('select').exists()).toBe(false)
+    })
   })
 })

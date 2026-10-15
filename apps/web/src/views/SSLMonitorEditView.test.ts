@@ -15,6 +15,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const { updateSSLMock } = vi.hoisted(() => ({
   updateSSLMock: vi.fn(),
 }))
@@ -131,6 +139,7 @@ describe('SSLMonitorEditView', () => {
       hostname: 'api.example.com',
       alertsEnabled: true,
       channelIds: [],
+      projectId: null,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'ssl-monitor-detail',

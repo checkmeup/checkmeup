@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import CheckStrip from '@/components/CheckStrip.vue'
-import {
-  type MonitorRow,
-  attentionSentence,
-  detailRouteName,
-  toneColor,
-} from '@/lib/monitorRows'
+import { type MonitorRow, attentionSentence, detailRouteName, toneColor } from '@/lib/monitorRows'
 
-defineProps<{
-  rows: MonitorRow[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    rows: MonitorRow[]
+    // Names each problem's project (PRD projects), so it's clear whose it is.
+    projects?: { id: string; name: string }[]
+  }>(),
+  { projects: () => [] },
+)
+
+const projectName = computed(() => new Map(props.projects.map((p) => [p.id, p.name])))
 
 function actionLabel(row: MonitorRow) {
   return row.status === 'expired' || row.status === 'expiring_soon' ? 'Renew' : 'Open'
@@ -35,6 +38,12 @@ function actionLabel(row: MonitorRow) {
         }"
       ></span>
       <span class="flex min-w-0 flex-[1_1_280px] flex-col gap-0.5">
+        <span
+          v-if="row.projectId && projectName.has(row.projectId)"
+          class="text-[13px] font-medium text-[var(--text-dim)]"
+        >
+          {{ projectName.get(row.projectId) }}
+        </span>
         <span
           class="text-[19px] font-semibold tracking-[-0.015em] text-[var(--text-strong)] group-hover:underline group-focus-visible:underline"
         >

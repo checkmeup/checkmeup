@@ -7,6 +7,7 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
+import ProjectField from '@/components/ProjectField.vue'
 import { useSSLMonitor } from '@/composables/useSSLMonitors'
 
 const router = useRouter()
@@ -19,6 +20,7 @@ const alertsEnabled = ref(true)
 const alertAfterNFailures = ref(0)
 const maxAlertsPerIncident = ref(3)
 const channelIds = ref<string[]>([])
+const projectId = ref<string | null>(null)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -50,6 +52,7 @@ watch(
     alertAfterNFailures.value = m.alertAfterNFailures
     maxAlertsPerIncident.value = m.maxAlertsPerIncident
     channelIds.value = m.channelIds ?? []
+    projectId.value = m.projectId ?? null
   },
   { immediate: true },
 )
@@ -74,6 +77,7 @@ async function submit() {
       alertAfterNFailures: alertAfterNFailures.value,
       maxAlertsPerIncident: maxAlertsPerIncident.value,
       channelIds: channelIds.value,
+      projectId: projectId.value,
     })
     router.push({ name: 'ssl-monitor-detail', params: { id } })
   } catch (e: unknown) {
@@ -150,6 +154,8 @@ async function submit() {
         Suppress alerts until N consecutive check cycles detect the issue. Resets on renewal.
       </p>
     </div>
+
+    <ProjectField v-model="projectId" />
 
     <NotificationChannelPicker v-model="channelIds" />
   </MonitorFormPage>

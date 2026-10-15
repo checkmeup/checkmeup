@@ -6,11 +6,22 @@ import Button from '@/components/ui/Button.vue'
 import AddMonitorMenu from '@/components/AddMonitorMenu.vue'
 import MonitorsTable, { type MonitorFilter } from '@/components/MonitorsTable.vue'
 import { useMonitorRows } from '@/composables/useMonitorRows'
+import { useProjects } from '@/composables/useProjects'
 import { monitorTypes } from '@/lib/monitorRows'
 
 const route = useRoute()
 const router = useRouter()
 const { rows, isPending, error, refetch } = useMonitorRows()
+const { data: projectsData } = useProjects()
+const projects = computed(() => projectsData.value ?? [])
+
+// Replaces one query parameter, keeping the other filter's.
+function setQuery(key: 'type' | 'project', value: string | null) {
+  const query = { ...route.query }
+  if (value === null) delete query[key]
+  else query[key] = value
+  router.replace({ query })
+}
 
 // The filter lives in ?type= so the old per-type list URLs (redirected here)
 // and shared links land on the right tab.
@@ -23,7 +34,19 @@ const filter = computed<MonitorFilter>({
       : 'all'
   },
   set(value) {
-    router.replace({ query: value === 'all' ? {} : { type: value } })
+    setQuery('type', value === 'all' ? null : value)
+  },
+})
+
+// ?project= holds a project's id, or "none" for monitors without one
+// (PRD projects), so a project's monitors have a link of their own.
+const project = computed<string | null>({
+  get() {
+    const p = route.query.project
+    return typeof p === 'string' && p ? p : null
+  },
+  set(value) {
+    setQuery('project', value)
   },
 })
 </script>
@@ -32,7 +55,9 @@ const filter = computed<MonitorFilter>({
   <AppLayout>
     <div class="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 pt-10 pb-20 md:px-6">
       <div class="flex flex-wrap items-end justify-between gap-4">
-        <h1 class="text-[34px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)]">
+        <h1
+          class="text-[34px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)]"
+        >
           Monitors
         </h1>
         <AddMonitorMenu />
@@ -58,7 +83,13 @@ const filter = computed<MonitorFilter>({
         <AddMonitorMenu />
       </div>
 
-      <MonitorsTable v-else v-model:filter="filter" :rows="rows" />
+      <MonitorsTable
+        v-else
+        v-model:filter="filter"
+        v-model:project="project"
+        :rows="rows"
+        :projects="projects"
+      />
     </div>
   </AppLayout>
 </template>

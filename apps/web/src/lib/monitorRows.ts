@@ -35,6 +35,8 @@ export interface MonitorRow {
   daysUntilExpiry: number | null
   // Uptime over the last 24h for monitors that track it (uptime, port, DNS).
   uptime24h: number | null
+  // The project the monitor is in (PRD projects), null when none.
+  projectId: string | null
   // Hourly check results for the check strip, oldest first; absent for
   // monitors that keep no check history (SSL, domain) or have none yet.
   history?: { ok: boolean | null }[]
@@ -138,12 +140,17 @@ function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n) + '…' : s
 }
 
-function base(type: MonitorType, id: string, name: string, status: string) {
+function base(
+  type: MonitorType,
+  m: { id: string; name: string; status: string; projectId?: string | null },
+) {
+  const { id, name, status } = m
   return {
     key: `${type}:${id}`,
     type,
     id,
     name,
+    projectId: m.projectId ?? null,
     status,
     statusLabel: statusLabel(type, status),
     tone: toneOf(status),
@@ -152,7 +159,7 @@ function base(type: MonitorType, id: string, name: string, status: string) {
 
 export function cronRow(m: CronMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('cron', m.id, m.name, m.status),
+    ...base('cron', m),
     target: m.schedule,
     note: null,
     metric: relativeTime(m.lastPingAt, now),
@@ -171,7 +178,7 @@ export function keywordRule(m: Pick<UptimeMonitor, 'keyword' | 'keywordMode'>): 
 
 export function uptimeRow(m: UptimeMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('uptime', m.id, m.name, m.status),
+    ...base('uptime', m),
     target: m.url,
     note: keywordRule(m),
     metric: fmtPct(m.uptime24h),
@@ -184,7 +191,7 @@ export function uptimeRow(m: UptimeMonitor, now = Date.now()): MonitorRow {
 
 export function sslRow(m: SSLMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('ssl', m.id, m.name, m.status),
+    ...base('ssl', m),
     target: m.hostname,
     note: m.status === 'error' ? m.errorMsg : null,
     metric: fmtDaysLeft(m.daysUntilExpiry),
@@ -197,7 +204,7 @@ export function sslRow(m: SSLMonitor, now = Date.now()): MonitorRow {
 
 export function domainRow(m: DomainMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('domain', m.id, m.name, m.status),
+    ...base('domain', m),
     target: m.domain,
     note: m.status === 'error' ? m.errorMsg : null,
     metric: fmtDaysLeft(m.daysUntilExpiry),
@@ -210,7 +217,7 @@ export function domainRow(m: DomainMonitor, now = Date.now()): MonitorRow {
 
 export function portRow(m: PortMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('port', m.id, m.name, m.status),
+    ...base('port', m),
     target: `${m.host}:${m.port}`,
     note: m.expectedState === 'closed' ? 'expects the port closed' : null,
     metric: fmtPct(m.uptime24h),
@@ -223,7 +230,7 @@ export function portRow(m: PortMonitor, now = Date.now()): MonitorRow {
 
 export function dnsRow(m: DNSMonitor, now = Date.now()): MonitorRow {
   return {
-    ...base('dns', m.id, m.name, m.status),
+    ...base('dns', m),
     target: `${m.hostname} ${m.recordType}`,
     note: null,
     metric: m.lastResolvedValue ? truncate(m.lastResolvedValue, 28) : '—',
@@ -240,6 +247,52 @@ export function sortRows(rows: MonitorRow[]): MonitorRow[] {
   return [...rows].sort(
     (a, b) => toneOrder[a.tone] - toneOrder[b.tone] || a.name.localeCompare(b.name),
   )
+}
+
+// Down or warning — what the dashboard lists and a group's summary counts.
+export function needsAttention(row: MonitorRow): boolean {
+  return row.tone === 'down' || row.tone === 'warn'
+}
+
+export interface MonitorGroup {
+  // The project's id, or "none" for monitors without a project.
+  key: string
+  name: string
+  rows: MonitorRow[]
+  attention: number
+}
+
+// The /monitors list's sections (PRD projects): one per project that has a
+// row, by name, then "No project" last. A row whose project isn't in
+// projects (deleted since the rows loaded) counts as without one.
+export function groupByProject(
+  rows: MonitorRow[],
+  projects: { id: string; name: string }[],
+): MonitorGroup[] {
+  const known = new Set(projects.map((p) => p.id))
+  const group = (key: string, name: string, groupRows: MonitorRow[]): MonitorGroup => ({
+    key,
+    name,
+    rows: groupRows,
+    attention: groupRows.filter(needsAttention).length,
+  })
+  const groups = [...projects]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) =>
+      group(
+        p.id,
+        p.name,
+        rows.filter((r) => r.projectId === p.id),
+      ),
+    )
+  groups.push(
+    group(
+      'none',
+      'No project',
+      rows.filter((r) => !r.projectId || !known.has(r.projectId)),
+    ),
+  )
+  return groups.filter((g) => g.rows.length > 0)
 }
 
 export function matchesSearch(row: MonitorRow, query: string): boolean {

@@ -2,6 +2,7 @@
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
+import ProjectField from '@/components/ProjectField.vue'
 import {
   alertFilterOptions,
   alertLimitOptions,
@@ -116,6 +117,8 @@ defineSlots<{
       </select>
       <slot name="maxDurationHelp" />
     </div>
+
+    <ProjectField v-model="form.projectId" />
 
     <NotificationChannelPicker v-model="form.channelIds" />
   </div>

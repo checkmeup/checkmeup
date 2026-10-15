@@ -15,6 +15,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const { updateCronMock } = vi.hoisted(() => ({
   updateCronMock: vi.fn(),
 }))
@@ -171,11 +179,30 @@ describe('CronMonitorEditView', () => {
       maxAlertsPerIncident: 3,
       maxDurationMins: 30,
       channelIds: ['ch1'],
+      projectId: null,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'cron-monitor-detail',
       params: { id: 'c1' },
     })
+  })
+
+  it("keeps the monitor's project, and saves a new one picked on the form (PRD projects)", async () => {
+    projectsData.value = [
+      { id: 'p1', name: 'Acme', monitorCount: 1, createdAt: '' },
+      { id: 'p2', name: 'Globex', monitorCount: 0, createdAt: '' },
+    ]
+    detailData.value = { ...detail, monitor: { ...monitor, projectId: 'p1' } }
+    updateCronMock.mockResolvedValue({ ...monitor })
+    const wrapper = mountView()
+
+    expect((wrapper.find('#project').element as HTMLSelectElement).value).toBe('p1')
+    await wrapper.find('#project').setValue('p2')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(updateCronMock.mock.calls[0]![1].projectId).toBe('p2')
+    projectsData.value = []
   })
 
   it('shows an upgrade prompt when the plan limit is reached', async () => {

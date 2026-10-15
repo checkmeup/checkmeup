@@ -11,6 +11,7 @@ export interface CronMonitorFormState {
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds: string[]
+  projectId: string | null
 }
 
 export function createCronMonitorFormState(): CronMonitorFormState {
@@ -23,6 +24,7 @@ export function createCronMonitorFormState(): CronMonitorFormState {
     alertAfterNFailures: 0,
     maxDurationMins: null,
     channelIds: [],
+    projectId: null,
   }
 }
 
@@ -36,6 +38,7 @@ export function cronMonitorToFormState(m: CronMonitor): CronMonitorFormState {
     alertAfterNFailures: m.alertAfterNFailures,
     maxDurationMins: m.maxDurationMins,
     channelIds: [...(m.channelIds ?? [])],
+    projectId: m.projectId ?? null,
   }
 }
 
@@ -48,6 +51,7 @@ export function cronMonitorFormPayload(f: CronMonitorFormState) {
     alertAfterNFailures: f.alertAfterNFailures,
     maxDurationMins: f.maxDurationMins,
     channelIds: f.channelIds,
+    projectId: f.projectId,
   }
 }
 

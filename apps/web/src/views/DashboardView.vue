@@ -6,12 +6,16 @@ import AttentionPanel from '@/components/AttentionPanel.vue'
 import MonitorsTable, { type MonitorFilter } from '@/components/MonitorsTable.vue'
 import UpcomingExpirationsCard from '@/components/UpcomingExpirationsCard.vue'
 import { useMonitorRows } from '@/composables/useMonitorRows'
+import { useProjects } from '@/composables/useProjects'
 import { useBilling } from '@/composables/useBilling'
 
 const { rows, isPending } = useMonitorRows()
 const { data: billingInfo } = useBilling()
 
 const filter = ref<MonitorFilter>('all')
+const project = ref<string | null>(null)
+const { data: projectsData } = useProjects()
+const projects = computed(() => projectsData.value ?? [])
 
 // Paused monitors are neither fine nor a problem: they're left out of the
 // headline's counts and the uptime average, and counted on their own.
@@ -101,7 +105,7 @@ const facts = computed(() => {
           <AddMonitorMenu />
         </section>
 
-        <AttentionPanel :rows="problems" />
+        <AttentionPanel :rows="problems" :projects="projects" />
 
         <section aria-labelledby="all-monitors-heading" class="flex flex-col gap-3.5">
           <h2
@@ -110,7 +114,12 @@ const facts = computed(() => {
           >
             All monitors
           </h2>
-          <MonitorsTable v-model:filter="filter" :rows="rows" />
+          <MonitorsTable
+            v-model:filter="filter"
+            v-model:project="project"
+            :rows="rows"
+            :projects="projects"
+          />
         </section>
 
         <UpcomingExpirationsCard :rows="rows" />

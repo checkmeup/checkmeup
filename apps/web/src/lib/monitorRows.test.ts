@@ -11,6 +11,7 @@ import {
   attentionSentence,
   dnsRow,
   fmtDaysLeft,
+  groupByProject,
   matchesSearch,
   portRow,
   relativeTime,
@@ -200,5 +201,51 @@ describe('attentionSentence', () => {
     expect(
       attentionSentence(sslRow(ssl({ status: 'error', errorMsg: 'no route to host' }), now)),
     ).toBe('Check failed: no route to host')
+  })
+})
+
+describe('groupByProject (PRD projects)', () => {
+  const projects = [
+    { id: 'p2', name: 'Globex' },
+    { id: 'p1', name: 'Acme' },
+    { id: 'p3', name: 'Empty' },
+  ]
+
+  it('carries each monitor\'s project on its row, null without one', () => {
+    expect(uptimeRow(uptime({ projectId: 'p1' }), now).projectId).toBe('p1')
+    expect(uptimeRow(uptime(), now).projectId).toBeNull()
+  })
+
+  it('groups rows by project name, "No project" last, leaving out empty projects', () => {
+    const rows = [
+      uptimeRow(uptime({ id: '1', name: 'a', projectId: 'p2' }), now),
+      uptimeRow(uptime({ id: '2', name: 'b', projectId: 'p1' }), now),
+      uptimeRow(uptime({ id: '3', name: 'c' }), now),
+      uptimeRow(uptime({ id: '4', name: 'd', projectId: 'p1' }), now),
+    ]
+    const groups = groupByProject(rows, projects)
+    expect(groups.map((g) => [g.name, g.rows.map((r) => r.name)])).toEqual([
+      ['Acme', ['b', 'd']],
+      ['Globex', ['a']],
+      ['No project', ['c']],
+    ])
+    expect(groups.map((g) => g.key)).toEqual(['p1', 'p2', 'none'])
+  })
+
+  it('counts the monitors that need attention in each group', () => {
+    const rows = [
+      uptimeRow(uptime({ id: '1', status: 'down', projectId: 'p1' }), now),
+      sslRow(ssl({ id: '2', status: 'expiring_soon', projectId: 'p1' }), now),
+      uptimeRow(uptime({ id: '3', status: 'paused', projectId: 'p1' }), now),
+      uptimeRow(uptime({ id: '4' }), now),
+    ]
+    const [acme, none] = groupByProject(rows, projects)
+    expect(acme!.attention).toBe(2)
+    expect(none!.attention).toBe(0)
+  })
+
+  it('puts a row whose project is gone under "No project"', () => {
+    const groups = groupByProject([uptimeRow(uptime({ projectId: 'deleted' }), now)], projects)
+    expect(groups.map((g) => g.name)).toEqual(['No project'])
   })
 })

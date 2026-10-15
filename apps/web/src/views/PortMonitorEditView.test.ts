@@ -15,6 +15,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const { updatePortMock } = vi.hoisted(() => ({
   updatePortMock: vi.fn(),
 }))
@@ -184,6 +192,7 @@ describe('PortMonitorEditView', () => {
       maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       channelIds: [],
+      projectId: null,
     })
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({
       name: 'port-monitor-detail',

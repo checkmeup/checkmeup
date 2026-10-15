@@ -28,6 +28,7 @@ watch(
 const sections = [
   { label: 'Overview', to: '/dashboard', prefix: '/dashboard' },
   { label: 'Monitors', to: '/monitors', prefix: '/monitors' },
+  { label: 'Projects', to: '/projects', prefix: '/projects' },
   { label: 'Status pages', to: '/status-pages', prefix: '/status-pages' },
   { label: 'Incidents', to: '/incidents', prefix: '/incidents' },
   { label: 'Maintenance', to: '/maintenance', prefix: '/maintenance' },
@@ -54,7 +55,9 @@ async function signOut() {
     <header
       class="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--nav-bg)] backdrop-blur-md"
     >
-      <div class="mx-auto flex min-h-16 max-w-[1200px] items-center justify-between gap-4 px-4 md:px-6">
+      <div
+        class="mx-auto flex min-h-16 max-w-[1200px] items-center justify-between gap-4 px-4 md:px-6"
+      >
         <div class="flex items-center gap-8">
           <RouterLink to="/dashboard" class="flex-shrink-0" aria-label="Checkmeup — overview">
             <img :src="logo" alt="" class="block h-6 w-auto" />
@@ -99,8 +102,12 @@ async function signOut() {
                 class="absolute top-[calc(100%+8px)] right-0 z-50 w-60 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg)] py-1.5 shadow-[0_16px_40px_rgb(0_0_0/18%)]"
               >
                 <div class="border-b border-[var(--border)] px-4 pt-1.5 pb-3">
-                  <div class="truncate text-sm text-[var(--text-strong)]">{{ auth.user?.email }}</div>
-                  <div class="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{{ appVersion }}</div>
+                  <div class="truncate text-sm text-[var(--text-strong)]">
+                    {{ auth.user?.email }}
+                  </div>
+                  <div class="mt-0.5 font-mono text-xs text-[var(--text-muted)]">
+                    {{ appVersion }}
+                  </div>
                 </div>
                 <RouterLink
                   to="/settings"

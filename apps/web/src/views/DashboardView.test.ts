@@ -13,6 +13,14 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const addProjectMock = vi.fn()
+
+vi.mock('@/composables/useProjects', () => ({
+  useProjects: () => ({ data: projectsData }),
+  useAddProject: () => addProjectMock,
+}))
+
 const cronData = ref<unknown[] | null>(null)
 const uptimeData = ref<unknown[] | null>(null)
 const sslData = ref<unknown[] | null>(null)
@@ -231,6 +239,17 @@ describe('DashboardView', () => {
     const panel = wrapper.find('section[aria-labelledby="attention-heading"]')
     expect(panel.text()).toContain('api.acmecorp.com')
     expect(panel.text()).toContain('Down — the last check of https://checkmeup.net failed.')
+  })
+
+  it("names a problem monitor's project under needs attention (PRD projects)", () => {
+    projectsData.value = [{ id: 'p1', name: 'Acme', monitorCount: 1, createdAt: '' }]
+    uptimeData.value = [uptimeMonitor({ status: 'down', name: 'api.acmecorp.com', projectId: 'p1' })]
+    const wrapper = mountView()
+
+    const attention = wrapper.find('section[aria-labelledby="attention-heading"]')
+    expect(attention.text()).toContain('Acme')
+    expect(attention.text()).toContain('api.acmecorp.com')
+    projectsData.value = []
   })
 
   it('surfaces an expiring-soon SSL monitor with a renew action', () => {

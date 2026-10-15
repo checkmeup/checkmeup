@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
+import ProjectField from '@/components/ProjectField.vue'
 import UptimeAdvancedSettings from '@/components/UptimeAdvancedSettings.vue'
 import UptimeJsonAssertionsField from '@/components/UptimeJsonAssertionsField.vue'
 import {
@@ -58,10 +59,7 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
       </p>
     </div>
 
-    <div
-      v-if="form.keyword.trim()"
-      class="space-y-4 pl-4 border-l-2 border-[var(--border)]"
-    >
+    <div v-if="form.keyword.trim()" class="space-y-4 pl-4 border-l-2 border-[var(--border)]">
       <div>
         <Label for="keywordMode">Mode</Label>
         <select
@@ -143,6 +141,8 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
       <input id="alerts" v-model="form.alertsEnabled" type="checkbox" class="rounded" />
       <Label for="alerts" class="cursor-pointer">Send alerts</Label>
     </div>
+
+    <ProjectField v-model="form.projectId" />
 
     <NotificationChannelPicker v-model="form.channelIds" />
   </div>

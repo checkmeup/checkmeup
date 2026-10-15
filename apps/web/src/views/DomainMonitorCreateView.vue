@@ -7,12 +7,14 @@ import Label from '@/components/ui/Label.vue'
 import { monitorsApi } from '@/api/monitors'
 import { ApiError } from '@/api/client'
 import NotificationChannelPicker from '@/components/NotificationChannelPicker.vue'
+import ProjectField from '@/components/ProjectField.vue'
 
 const router = useRouter()
 
 const name = ref('')
 const domain = ref('')
 const channelIds = ref<string[]>([])
+const projectId = ref<string | null>(null)
 const submitting = ref(false)
 const error = ref('')
 const limitReached = ref(false)
@@ -35,6 +37,7 @@ async function submit() {
       name: name.value.trim(),
       domain: domain.value.trim(),
       channelIds: channelIds.value,
+      projectId: projectId.value,
     })
     router.push({ name: 'domain-monitor-detail', params: { id: monitor.id } })
   } catch (e: unknown) {
@@ -63,27 +66,18 @@ async function submit() {
   >
     <div>
       <Label for="name">Name</Label>
-      <Input
-        id="name"
-        v-model="name"
-        placeholder="Production domain"
-        class="mt-1"
-        required
-      />
+      <Input id="name" v-model="name" placeholder="Production domain" class="mt-1" required />
     </div>
 
     <div>
       <Label for="domain">Domain</Label>
-      <Input
-        id="domain"
-        v-model="domain"
-        placeholder="example.com"
-        class="mt-1"
-      />
+      <Input id="domain" v-model="domain" placeholder="example.com" class="mt-1" />
       <p class="text-xs mt-1 text-[var(--text-muted)]">
         Apex domain only — no https:// or path. Registration expiry checked daily.
       </p>
     </div>
+
+    <ProjectField v-model="projectId" />
 
     <NotificationChannelPicker v-model="channelIds" />
   </MonitorFormPage>

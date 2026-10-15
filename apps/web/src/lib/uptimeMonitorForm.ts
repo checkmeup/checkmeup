@@ -25,6 +25,7 @@ export interface UptimeMonitorFormState {
   acceptedStatusCodes: number[]
   maxResponseTimeMs: number
   channelIds: string[]
+  projectId: string | null
 }
 
 export const DEFAULT_MAX_RESPONSE_TIME_MS = 10000
@@ -45,6 +46,7 @@ export function createUptimeMonitorFormState(): UptimeMonitorFormState {
     acceptedStatusCodes: [200],
     maxResponseTimeMs: DEFAULT_MAX_RESPONSE_TIME_MS,
     channelIds: [],
+    projectId: null,
   }
 }
 
@@ -69,6 +71,7 @@ export function uptimeMonitorToFormState(m: UptimeMonitor): UptimeMonitorFormSta
     acceptedStatusCodes: [...m.acceptedStatusCodes],
     maxResponseTimeMs: m.maxResponseTimeMs,
     channelIds: [...(m.channelIds ?? [])],
+    projectId: m.projectId ?? null,
   }
 }
 
@@ -89,6 +92,7 @@ export function uptimeMonitorFormPayload(f: UptimeMonitorFormState) {
     httpMethod: f.httpMethod,
     acceptedStatusCodes: f.acceptedStatusCodes,
     channelIds: f.channelIds,
+    projectId: f.projectId,
   }
 }
 
