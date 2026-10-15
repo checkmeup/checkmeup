@@ -32,6 +32,7 @@ The concrete, file/line-cited claims below are now re-checked mechanically by th
 - API keys capped at 100 active per org (`maxAPIKeys`, `api_keys.go`'s `CreateAPIKey`; `ListAPIKeys` also `LIMIT 200`) ✓ — added 2026-07-12. `409 too_many_api_keys` on the 101st; revoking one frees a slot.
 - `loadActiveIncidents` (`status_public.go`) fetches every active incident's update timeline in one batched query (`ListStatusPageIncidentUpdatesForIncidents`, `WHERE incident_id = ANY(...)`), not one query per incident ✓ — fixed 2026-07-12. The per-resource caps above bound each piece individually, but a page with many active incidents was still issuing that many separate DB round-trips on every unauthenticated page load before this; now it's always 2 queries regardless of how many active incidents apply to the page.
 - Public status page rate-limited at 300/min by IP, same as its badge and `summary.json` endpoints (`server.go`) ✓
+- Landing page's platform totals (`GET /api/v1/stats`, no auth) rate-limited at 60/min by IP (`server.go`) and cached in memory for an hour (`stats.go`'s `StatsHandler.load`), so its 30-day counts over the check tables run at most hourly however often the page is loaded ✓ — added 2026-10-15
 - Every authenticated route carries a blanket 300 req/min-per-org limit on top of any tighter per-route limit (`server.go`) ✓
 - Monitor creation is plan-limited (10–1000 per plan) ✓
 - Cron pings and uptime check reads are paginated ✓

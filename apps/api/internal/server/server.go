@@ -102,6 +102,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	incidents := handler.NewIncidentHandler(s.db)
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 	apiKeys := handler.NewAPIKeyHandler(s.db)
+	stats := handler.NewStatsHandler(s.db)
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -136,6 +137,10 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
+
+		// Platform-wide totals for the landing page, no auth: counts only,
+		// cached an hour in the handler.
+		r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Get("/stats", stats.ServeStats)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.With(httprate.LimitBy(5, time.Hour, clientIPKey)).Post("/sign-up", auth.SignUp)
