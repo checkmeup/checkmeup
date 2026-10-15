@@ -149,3 +149,6 @@ export const sampleWebhook = {
 // The production status page of checkmeup.net itself; the landing hero shows
 // its live 90-day strip.
 export const ownStatusSlug = 'checkmeup-net'
+// Its title, shown before the page's summary (which carries the title too)
+// has loaded.
+export const ownStatusTitle = 'checkmeup.net'

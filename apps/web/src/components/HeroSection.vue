@@ -3,15 +3,20 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import CheckStrip from '@/components/CheckStrip.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
-import { monitorTypes, ownStatusSlug } from '@/content/home'
+import { monitorTypes, ownStatusSlug, ownStatusTitle } from '@/content/home'
 import { liveStrip, type StatusSummary } from '@/lib/statusSummary'
 
-// Until checkmeup.net's own status page answers (and wherever it can't, like
-// a local dev database without that page), the strip shows the example job
-// from the alert above: eighty-nine good nights, then tonight's miss.
+// The strip shows checkmeup.net's own status page, live. While it loads
+// (and in the prerendered HTML, which has no backend) it's a skeleton of the
+// same size, so nothing jumps and no made-up status flashes before the real
+// one. Only if the request fails (like a local dev database without that
+// page) does it fall back to the example job from the alert above:
+// eighty-nine good nights, then tonight's miss.
 const example = Array.from({ length: 90 }, (_, i) => ({ ok: i !== 89 }))
+const skeleton = Array.from({ length: 90 }, () => ({ ok: null }))
 
 const summary = ref<StatusSummary | null>(null)
+const failed = ref(false)
 const live = computed(() => (summary.value ? liveStrip(summary.value) : null))
 
 function scrollToRow(id: string) {
@@ -22,8 +27,9 @@ onMounted(async () => {
   try {
     const res = await fetch(`/status/${ownStatusSlug}/summary.json`)
     if (res.ok) summary.value = (await res.json()) as StatusSummary
+    else failed.value = true
   } catch {
-    // Network error: keep the example.
+    failed.value = true
   }
 })
 </script>
@@ -152,15 +158,19 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- checkmeup.net's own status, live; the example job until it loads.
-         Phones show the last 30 days: 90 ticks in ~360px are hairlines. -->
-    <div class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6">
+    <!-- checkmeup.net's own status: a skeleton while it loads, then live;
+         the example job only if it can't load. Phones show the last 30
+         days: 90 ticks in ~360px are hairlines. -->
+    <div
+      class="mt-16 flex flex-col gap-3 border-t border-[var(--border)] pt-6"
+      :aria-busy="!live && !failed"
+    >
       <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span v-if="live && summary">
+        <span v-if="!failed">
           <a
             :href="`/status/${ownStatusSlug}`"
             class="font-semibold text-[var(--text-strong)] hover:underline"
-            >{{ summary.title }}</a
+            >{{ summary?.title ?? ownStatusTitle }}</a
           >
           <span class="text-[var(--text-dim)]">
             · monitored by Checkmeup · live, last
@@ -175,7 +185,12 @@ onMounted(async () => {
           >
         </span>
         <StatusLabel v-if="live" :tone="live.tone" :label="live.label" />
-        <StatusLabel v-else tone="down" label="Down" />
+        <StatusLabel v-else-if="failed" tone="down" label="Down" />
+        <span
+          v-else
+          class="h-[18px] w-40 rounded-full bg-[var(--tick-empty)] motion-safe:animate-pulse"
+          ><span class="sr-only">Loading status</span></span
+        >
       </div>
       <a
         v-if="live"
@@ -185,7 +200,14 @@ onMounted(async () => {
       >
         <CheckStrip :checks="live.checks" :narrow-last="30" />
       </a>
-      <CheckStrip v-else :checks="example" :narrow-last="30" />
+      <CheckStrip v-else-if="failed" :checks="example" :narrow-last="30" />
+      <CheckStrip
+        v-else
+        aria-hidden="true"
+        class="motion-safe:animate-pulse"
+        :checks="skeleton"
+        :narrow-last="30"
+      />
       <div class="flex justify-between text-xs text-[var(--text-muted)]">
         <span><span class="sm:hidden">30</span><span class="max-sm:hidden">90</span> days ago</span>
         <span>Today</span>
