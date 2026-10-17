@@ -136,7 +136,7 @@ test does not imply a bug.
 
 ## Environment problems this works around
 
-All four cost real time; `run.sh` handles them, but they resurface if anyone
+All three cost real time; `run.sh` handles them, but they resurface if anyone
 runs Stryker by hand.
 
 - **`npx stryker` installs the wrong package.** An abandoned 2019 `stryker`

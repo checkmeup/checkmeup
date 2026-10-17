@@ -2,7 +2,7 @@
 title: Activating SMS Alerts (Twilio)
 type: reference
 status: active
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [sms, twilio, ops, billing]
 ---
 
@@ -19,13 +19,13 @@ SMS alerts ([PRD sms-alerts](../../.about/prd/sms-alerts.md), [ADR alerting](../
 
    Leave the Messaging Service's own status callback empty: each alert SMS sets its own `StatusCallback` (`BASE_URL` + `/webhook/twilio/sms-status/` + a token derived from `JWT_SECRET`), so a message the carrier fails after Twilio accepted it is recorded as failed ([ADR alerting](../../.about/adr/alerting.md)). It's only set when `BASE_URL` is `https://`, so local dev sends without one.
 
-   Note: opt-out compliance does **not** depend on this — checkmeup relies on its own in-app notification-channel toggle for that (see ADR alerting), since alphanumeric senders can't receive STOP replies at all. If a two-way sender happens to receive one anyway, Twilio's Advanced Opt-Out still honors it automatically at the carrier level, and the message's status callback reports it as failed (below).
-4. **Register a sender and attach it to the Messaging Service** — this step has real lead time, unlike everything else here. checkmeup registers **two sender types on the same Messaging Service**, since alphanumeric sender IDs are not available in the US or Canada at all — Twilio routes each send to whichever sender fits the destination automatically:
+   Note: opt-out compliance does **not** depend on this — Checkmeup relies on its own in-app notification-channel toggle for that (see ADR alerting), since alphanumeric senders can't receive STOP replies at all. If a two-way sender happens to receive one anyway, Twilio's Advanced Opt-Out still honors it automatically at the carrier level, and the message's status callback reports it as failed (below).
+4. **Register a sender and attach it to the Messaging Service** — this step has real lead time, unlike everything else here. Checkmeup registers **two sender types on the same Messaging Service**, since alphanumeric sender IDs are not available in the US or Canada at all — Twilio routes each send to whichever sender fits the destination automatically:
 
    **US/Canada — Toll-Free Verification:**
    - Buy a toll-free number (Phone Numbers > Buy a number, filter Toll-Free) if you don't already have one.
    - On that number, go to **Regulatory Information** > **Verify this toll free number**.
-   - Fill out the three-step form: business/contact info + address; messaging use case (describe transactional monitoring alerts), estimated monthly volume, and a sample message using actual alert copy (e.g. `"checkmeup: monitor 'api-prod' is DOWN since 14:32 UTC"`); and **Privacy Policy** (`https://checkmeup.net/privacy`) + **Terms & Conditions** (`https://checkmeup.net/terms`) URLs — mandatory fields as of Sept 15, 2026, so include them now to avoid a later rejection/resubmission.
+   - Fill out the three-step form: business/contact info + address; messaging use case (describe transactional monitoring alerts), estimated monthly volume, and a sample message using actual alert copy (e.g. `"Checkmeup: monitor 'api-prod' is DOWN since 14:32 UTC"`); and **Privacy Policy** (`https://checkmeup.net/privacy`) + **Terms & Conditions** (`https://checkmeup.net/terms`) URLs — mandatory fields as of Sept 15, 2026, so include them now to avoid a later rejection/resubmission.
    - Submit; Twilio emails approval/rejection, usually within days.
    - Once approved, add the toll-free number to the Messaging Service's Sender Pool.
    - Fall back to full **A2P 10DLC registration** (brand + campaign registration, Console > Messaging > Regulatory Compliance, "Low-Volume Standard" campaign type fits our volume) only if toll-free is rejected or a higher-throughput number is needed — reviews there run 10–15 days, notably slower than toll-free.
@@ -41,7 +41,7 @@ SMS alerts ([PRD sms-alerts](../../.about/prd/sms-alerts.md), [ADR alerting](../
 ## Outside the Twilio account
 
 - **Destination cost bands** — agreed but not built ([ADR billing](../../.about/adr/billing.md)). When built, the table comes by hand from Twilio's per-country pricing ([twilio.com/en-us/sms/pricing](https://www.twilio.com/en-us/sms/pricing)) and needs review as prices change.
-- **TCPA-style consent copy** for the opt-in checkbox (PRD sms-alerts) — exact wording should be reviewed against applicable regulation in the markets checkmeup actually has users in before launch; this is a legal-text question, not a Twilio account setting.
+- **TCPA-style consent copy** for the opt-in checkbox (PRD sms-alerts) — exact wording should be reviewed against applicable regulation in the markets Checkmeup actually has users in before launch; this is a legal-text question, not a Twilio account setting.
 
 ## Sandbox / test numbers
 

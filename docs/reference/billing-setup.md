@@ -2,7 +2,7 @@
 title: Activating Billing (Paddle)
 type: reference
 status: active
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [billing, paddle, ops]
 ---
 
@@ -12,7 +12,7 @@ All the code is ready (PRD billing, PRD annual-billing, [ADR billing](../../.abo
 
 ## Checklist
 
-1. **Create a Paddle account** — business type: Individual/sole trader (matches עוסק פטור, no registered company). Confirm checkmeup fits Paddle's accepted categories (it does — B2B SaaS is explicitly listed; see ADR billing).
+1. **Create a Paddle account** — business type: Individual/sole trader (matches עוסק פטור, no registered company). Confirm Checkmeup fits Paddle's accepted categories (it does — B2B SaaS is explicitly listed; see ADR billing).
 2. **Create 3 products** (Solo, Startup, Enterprise) — tax category: SaaS. Product icon: `https://checkmeup.net/favicon.svg`.
 3. **Create 6 prices** — one per plan × billing cycle:
 

@@ -14,7 +14,7 @@ disallowed so `main`'s log stays a straight line. See CLAUDE.md's
 Never commit or merge directly onto a local `main` that hasn't been
 pushed — always end by pushing the fast-forwarded `main` to `origin`.
 
-Three `PreToolUse` hooks now enforce parts of this deterministically:
+Two `PreToolUse` hooks enforce parts of this deterministically:
 `block_main_commit.py` blocks any `git commit` while on local `main`,
 and `pre_push_guard.py` blocks a bare `--force` (use `--force-with-lease`,
 per step 3 below) and any force-push targeting `main`; baloo's Git hooks

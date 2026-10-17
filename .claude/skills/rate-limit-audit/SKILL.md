@@ -22,7 +22,7 @@ python3 .claude/skills/rate-limit-audit/audit.py apps/api/internal/server/server
 
 Exit code `0` and "All routes covered" means clean. Exit code `1` lists
 every route with zero rate-limit coverage, plus a separate "Known
-exceptions" section for the two routes that are deliberately unlimited
+exceptions" section for the three routes that are deliberately unlimited
 (see below) — those are reported for visibility, not flagged as failures.
 
 **2. For each real finding**, add rate limiting following the existing
@@ -48,6 +48,8 @@ routes covered."
 
 - `GET /api/v1/health` — load-balancer/monitoring health check, not
   user-reachable data
+- `GET /up` — kamal-proxy's deploy health check (same handler as
+  `/api/v1/health`)
 - `GET /*` (SPA catch-all, `handleSPA`) — static file serving, no
   per-request cost
 

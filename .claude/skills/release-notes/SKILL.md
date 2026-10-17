@@ -76,7 +76,7 @@ silently as a missing post rather than a type error.
 `noindex, follow` in its prerendered HTML, is left out of `sitemap.xml`,
 and is listed on `/changelog` instead of `/blog` (see `BlogPostMeta.kind` in
 `types.ts`). The post is still readable at `/blog/<slug>`. Keep `kind`
-between `slug` and `date` — `scripts/generate-sitemap.mjs` parses entries in
+between `slug` and `date` — `apps/web/scripts/generate-sitemap.mjs` parses entries in
 that order and fails the build otherwise.
 
 Keep `title` at **52 characters or fewer**. `BlogPostView.vue` renders the
@@ -87,7 +87,7 @@ SEO checkers flag anything over ~70 total as truncated in search results.
 
 - First person, present tense, conversational — explains *why* a design
   choice was made, not just *what* shipped (e.g. "The answer is the same
-  one checkmeup already uses for monitors and status pages: a flat quota
+  one Checkmeup already uses for monitors and status pages: a flat quota
   bundled into the plan price, not metered pass-through billing.")
 - Calls out what was deliberately **not** built and why (a scoped-down
   feature is framed as an honest trade-off, not hidden)
@@ -107,10 +107,9 @@ Then start the dev server and visually check the new post renders — see
 Playwright MCP server, where it's connected, can open the page for this;
 without it, ask a human to look.
 
-## Also update per this project's Jul 1 precedent
+## When the release adds a monitor type or major feature
 
-Shipping a new monitor type or major feature (not every release) also
-touched: FAQ, pricing table, homepage hero/feature grid, docs page,
+Also update: FAQ, pricing table, homepage hero/feature grid, docs page,
 Terms of Service, site footer tagline, `CLAUDE.md`, `README.md`. Only do
 this broader pass if the release actually changes user-facing capability,
 not for every release-notes post.

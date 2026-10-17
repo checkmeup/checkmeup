@@ -1,8 +1,8 @@
 # Domain lookups: RDAP, then WHOIS for registries without it
 
-Date: 2026-10-15
+Date: 2026-10-17
 
-A domain monitor reads its domain's registrar and expiry date once a day (PRD domain-expiry-monitoring). RDAP is the source wherever a registry runs it: structured JSON, one format, reached through rdap.org's bootstrap redirector. Several ccTLD registries don't run RDAP, among them .il, .io, .co, .me, .it, .ru, .jp, .cn and .se, and rdap.org answers 404 for their domains just as for an unregistered one; monitors under them could only ever show an error.
+A domain monitor reads its domain's registrar and expiry date once a day (PRD domain-expiry-monitoring). RDAP is the source wherever a registry runs it: structured JSON, one format, reached through rdap.org's bootstrap redirector. Several ccTLD registries don't run RDAP, among them .il, .io, .co, .me, .us, .it, .ru, .jp, .cn and .se, and rdap.org answers 404 for their domains just as for an unregistered one; monitors under them could only ever show an error.
 
 For those, the domain monitor asks the registry's WHOIS server over port 43 instead (internal/whois). WHOIS is free text in a different shape per registry, so each supported TLD has a fixed server and its own parser, written against that registry's real answers, which are kept as test fixtures. A TLD gets added only that way: there is no generic parsing of answers nobody has looked at, since a parser that guesses wrong could report a live domain as expiring or an expiring one as fine.
 

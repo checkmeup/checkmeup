@@ -2,7 +2,7 @@
 title: Deployment Guide
 type: reference
 status: active
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [ops, deployment, kamal, hetzner]
 ---
 
@@ -30,19 +30,16 @@ semantic-release version and runs `kamal deploy` with secrets held in GitHub.
 Check it with `gh run list --workflow=release.yml`.
 
 Everything below is the **manual/break-glass path** — first-ever setup, a
-rollback, or deploying when CI can't. It is also the only path this doc
-described before auto-deploy existed, so treat any "you must run this to ship"
-framing below as historical.
+rollback, or deploying when CI can't.
 
 The break-glass path runs on the host Mac (there is no devcontainer anymore),
 so it needs a Docker daemon with buildx and the Kamal gem
 (`gem install kamal`) — neither is in `mise.toml`, since only the operator
 ever runs them.
 
-### Every deploy (after `kamal setup` is done)
+### Break-glass deploy (after `kamal setup` is done)
 
 ```bash
-git push                              # get commits on main
 set -a; source .env; set +a          # load prod secrets into shell
 kamal deploy                          # build → push to GHCR → roll out on server
 ```
@@ -59,7 +56,7 @@ Kamal will:
 2. Build the Docker image locally (arm64 native, cross-compiles Go to amd64)
 3. Push the image to GHCR tagged with the git SHA
 4. SSH to the server, pull the image, start a new container
-5. Wait for the health check (`/api/v1/health`) to pass
+5. Wait for the health check (`GET /up`) to pass
 6. Register the container with kamal-proxy (zero-downtime swap)
 7. Stop the old container
 
@@ -196,7 +193,7 @@ checkmeup-db  (Postgres 17 Alpine, :5432)
 - App and db share the `kamal` Docker bridge — app connects to `checkmeup-db:5432`
 - PostgreSQL binds to `127.0.0.1:5432` on the host (not reachable from internet; UFW blocks 5432)
 - The Go binary runs `goose` migrations on every startup before accepting traffic
-- kamal-proxy health-checks `/api/v1/health` before cutting traffic to a new container
+- kamal-proxy health-checks `GET /up` (same handler as `/api/v1/health`) before cutting traffic to a new container
 
 ---
 

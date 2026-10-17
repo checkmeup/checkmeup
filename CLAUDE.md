@@ -2,7 +2,6 @@
 
 Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execution logs, alerts (Telegram, email, Slack, webhook, SMS), and public status pages that freelancers and agencies give their clients.
 
-**MVP order:** Cron monitor → Uptime monitor → SSL expiry monitor → Status page  
 **Pricing:** Hobby $0 / Solo $9 / Startup $29 / Enterprise $99
 
 ---
@@ -31,7 +30,7 @@ make migrate-create name=foo  # create a new goose migration file
 **Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
 **Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest · Stryker (mutation testing on `apps/web/src/lib/`, ad hoc via the `mutation-testing` skill — never in CI)
 
-> **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual. Auto-deploy landed 2026-07-18 (`5bb3292`); docs written before then can still say deploys are manual and are simply stale.
+> **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual.
 
 > **Local setup:** no devcontainer — tools run on the host, pinned in [`mise.toml`](mise.toml) (Go, Bun, Node, golangci-lint, sqlc, goose, air, gcov2lcov, and the Codacy-matching Python linters). `make setup` once (`mise install` + `bun install` + a starter `apps/api/.env`), then `make db` to start Postgres from [`docker-compose.yml`](docker-compose.yml) on `localhost:5432` — same image, creds, and port as CI, so one `DATABASE_URL` works in both. When bumping a tool version, change `mise.toml` and `.github/workflows/ci.yml` together. See [ADR dev-environment](.about/adr/dev-environment.md).
 
@@ -60,7 +59,7 @@ make migrate-create name=foo  # create a new goose migration file
 | `PADDLE_SOLO_ANNUAL_PRICE_ID` | billing | price ID for Solo plan (annual, [PRD annual-billing](.about/prd/annual-billing.md)) |
 | `PADDLE_STARTUP_ANNUAL_PRICE_ID` | billing | price ID for Startup plan (annual) |
 | `PADDLE_ENTERPRISE_ANNUAL_PRICE_ID` | billing | price ID for Enterprise plan (annual) |
-| `CODACY_API_TOKEN` | CI only | account-level Codacy token |
+| `CODACY_API_TOKEN` | optional | account-level Codacy token the `codacy-triage` skill fetches issues with |
 
 > All `PADDLE_*` vars are unset by default — see [`docs/reference/billing-setup.md`](docs/reference/billing-setup.md) for the Paddle dashboard checklist to activate billing. The frontend also needs `VITE_PADDLE_CLIENT_TOKEN` (public, safe to expose) in `apps/web/.env` for Paddle.js — see [`apps/web/.env.example`](apps/web/.env.example).
 
@@ -87,13 +86,13 @@ Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR 
 
 ## Code quality (Codacy)
 
-CI uploads coverage to Codacy after every push (`CODACY_API_TOKEN`, account-level, in `apps/api/.env`). Use the `codacy-triage` skill to fetch and triage the current issue backlog — don't hand-roll the fetch/triage steps inline, the skill already encodes this repo's known-noise rules and keeps them current.
+CI uploads coverage to Codacy after every push (its `CODACY_PROJECT_TOKEN` secret). Use the `codacy-triage` skill to fetch and triage the current issue backlog — don't hand-roll the fetch/triage steps inline, the skill already encodes this repo's known-noise rules and keeps them current.
 
 ---
 
 ## Don't
 
-- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. `-n` (dry run) once triggered a real deploy through `make deploy` — see [the incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md); the recipe no longer uses `$(MAKE)`, but don't run it with `-n` either. A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) now blocks all of these for Claude at the tool-call level, dry-run flags included.
+- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR workers](.about/adr/workers.md))
 - Use an ORM — sqlc only ([ADR database](.about/adr/database.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants
@@ -101,7 +100,7 @@ CI uploads coverage to Codacy after every push (`CODACY_API_TOKEN`, account-leve
 - Use `Authorization` header for **browser session** auth — the `access_token` httpOnly cookie is the only mechanism there ([ADR auth](.about/adr/auth.md)). The public API (PRD public-api) is a separate, non-browser mechanism and authenticates via `X-API-Key` instead — never `Authorization`, to keep the two visibly distinct ([ADR auth](.about/adr/auth.md))
 - Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
 - Switch payment providers — Paddle is the MoR (handles global tax); see [ADR billing](.about/adr/billing.md), which also records why LemonSqueezy was dropped
-- Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`. Found broken across `Button.vue`/`Input.vue`/`Label.vue`/`LandingLayout.vue` during [PRD theme](.about/prd/theme.md) — e.g. the sign-in button had no background in *either* theme until fixed
+- Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`; the `design-token-check` skill finds any that slip in
 - Expect a module to be both eagerly imported (even just one named export) *and* code-split into its own lazy chunk — Rollup bundles the whole module (every export) into the eager chunk regardless, logged as `[INEFFECTIVE_DYNAMIC_IMPORT]`. To get a real lazy chunk for something (e.g. a blog post's heavy content), its cheap metadata needs to live in a genuinely separate file that nothing lazy-loaded ever gets eagerly imported from — see `apps/web/src/blog/postsMeta.ts` vs `posts/*.ts` for the pattern
 - Build a public feature-request board, voting system, or ticketing queue — feedback goes straight to the founder via the in-app form (Settings, PRD feedback-form), email, and GitHub Issues; that's a deliberate choice, not a gap (see `DocsView.vue`'s "Need help?" section)
 - Commit directly onto local `main` — always create/switch to a feature branch first, even for doc-only or copy-only changes. A `PreToolUse` hook (`.claude/hooks/block_main_commit.py`) blocks this for Claude, so it should fail fast rather than needing a recovery — but if it ever happens anyway: create the branch at the existing commits, then `git reset --hard origin/main` to move `main` back before pushing the branch and opening the PR

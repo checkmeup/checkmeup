@@ -2,7 +2,7 @@
 
 <!-- AI LOAD ORDER: INDEX.md → ../.about/ (adr, prd, glossary, inbox) → reference/ → proposals/ -->
 
-Navigation cache for `docs/`. Always load this file first. Decisions, feature requirements, domain terms and open questions live outside `docs/`, in [`.about/`](../.about/) — see below. Every other doc carries its own
+Navigation cache for `docs/`. Always load this file first. Decisions, feature requirements, domain terms and open questions live outside `docs/`, in [`.about/`](../.about/) — see below. Every doc in `reference/`, `knowledge/` and `proposals/` carries its own
 frontmatter (`type`, `status`, `updated`, `tags`).
 
 **Folder roles:**
@@ -39,7 +39,7 @@ Kept by the baloo plugin's skills ([ADR docs](../.about/adr/docs.md)).
 
 | Where | What | Kept by |
 | --- | --- | --- |
-| [.about/adr/](../.about/adr/) | Decisions as they stand now, one file per subject (workers, limits, billing, alerting, auth, database, api, status-pages, infrastructure, testing, product, frontend, seo, dev-environment, docs) | `baloo:adr` |
+| [.about/adr/](../.about/adr/) | Decisions as they stand now, one file per subject (workers, limits, billing, alerting, auth, database, api, status-pages, infrastructure, testing, product, frontend, seo, dev-environment, docs, domain-lookups, projects) | `baloo:adr` |
 | [.about/prd/](../.about/prd/) | One PRD per feature; acceptance criteria link the tests that check them | `baloo:prd` |
 | [.about/glossary.md](../.about/glossary.md) | Domain terms | `baloo:glossary` |
 | [.about/inbox.md](../.about/inbox.md) | Open questions and findings left for later | `baloo:inbox` |

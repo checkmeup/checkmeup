@@ -1,6 +1,6 @@
 ---
 name: overload-audit
-description: Re-verify the concrete, greppable claims in docs/reference/limits.md (bounded check-loop concurrency, incident/maintenance-window/API-key list-query caps, flat creation caps on incidents/incident updates/maintenance windows/API keys, old-data pruning, rate limits, request body cap, plan-limited monitor creation) so the DoS/overload audit doc can't silently drift stale again. Use when asked to "check for DoS/overload regressions", "audit unbounded operations", "verify limits.md", or periodically as a health check independent of any single PR.
+description: Re-verify the mechanically checkable claims in docs/reference/limits.md (concurrency bounds, query and creation caps, pruning, rate limits, body-size and plan limits) so the DoS/overload audit doc can't drift stale. Use when asked to "check for DoS/overload regressions", "audit unbounded operations", "verify limits.md", or periodically as a health check independent of any single PR.
 ---
 
 # Overload audit

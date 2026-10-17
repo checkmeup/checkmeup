@@ -21,10 +21,9 @@ If more than one gap exists, ask the user which one — don't guess.
 
 **2. Verify the feature's actual behavior in code before writing a word.**
 Marketing copy for a feature that doesn't work the way you assume is worse
-than no copy — this project's own guidance (verify feature claims by reading
-code, not docs or memory) applies doubly to a post that will sit on the
-public site indefinitely. Find the check's implementation (e.g.
-`apps/api/internal/worker/worker_<type>.go`), and confirm: what the check
+than no copy, and this post sits on the public site indefinitely — take
+every feature claim from the code, not from docs or memory. Find the check's
+implementation (e.g. `apps/api/internal/worker/worker_<type>.go`), and confirm: what the check
 actually does (protocol-aware or transport-only?), what config fields exist,
 what counts as failure, what the available check intervals are, and the
 current free-tier monitor limit (`internal/billing/plans.go`, ADR billing). Note anything the feature does *not* do —
