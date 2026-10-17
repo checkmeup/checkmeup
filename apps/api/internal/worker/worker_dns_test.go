@@ -199,6 +199,30 @@ func TestCheckDNSMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger,
+			DNSResolver: fakeDNSResolver(t, []net.IP{net.ParseIP("9.9.9.9")})}
+
+		org := testOrg(t, queries, pool)
+		mon := testDNSMonitor(t, queries, org.ID, "example.com", "1.2.3.4")
+		disableAlerts(t, pool, "dns_monitors", mon.ID)
+		sent := webhookRecorder(t, queries, org.ID, "dns", mon.ID)
+
+		checkDNSMonitors(context.Background(), n)
+		if status, _, _, _ := getDNSRow(t, pool, mon.ID); status != "down" {
+			t.Fatalf("want down after a mismatch, got %q", status)
+		}
+		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("1.2.3.4")})
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
+		checkDNSMonitors(context.Background(), n)
+		if status, _, _, _ := getDNSRow(t, pool, mon.ID); status != "up" {
+			t.Fatalf("want up after recovery, got %q", status)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alerts with alerts disabled, got %d", got)
+		}
+	})
+
 	t.Run("NXDOMAIN is recorded as a lookup error, distinct from a mismatch", func(t *testing.T) {
 		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger,
 			DNSResolver: fakeDNSResolver(t, nil)} // nil ips == NXDOMAIN

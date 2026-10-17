@@ -33,6 +33,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -301,6 +302,35 @@ func forceDueNow(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) {
 	}
 	if _, err := pool.Exec(context.Background(), "UPDATE "+table+" SET "+col+" = NOW() WHERE id = $1", id); err != nil {
 		t.Fatalf("force due: %v", err)
+	}
+}
+
+func disableAlerts(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), "UPDATE "+table+" SET alerts_enabled = false WHERE id = $1", id); err != nil {
+		t.Fatalf("disable alerts: %v", err)
+	}
+}
+
+// webhookRecorder starts a server that counts the webhook events it receives,
+// and attaches it to the monitor as a webhook channel.
+func webhookRecorder(t *testing.T, queries *db.Queries, orgID uuid.UUID, monitorType string, monitorID uuid.UUID) func() int {
+	t.Helper()
+	var mu sync.Mutex
+	count := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		count++
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	channel := testNotificationChannel(t, queries, orgID, db.NotificationChannelTypeWebhook, map[string]string{"url": srv.URL, "secret": "shh"})
+	attachNotificationChannel(t, queries, channel.ID, monitorType, monitorID)
+	return func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return count
 	}
 }
 
@@ -1709,6 +1739,37 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
+		var up atomic.Bool
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if up.Load() {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}))
+		defer target.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		disableAlerts(t, pool, "uptime_monitors", mon.ID)
+		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(context.Background(), n)
+		if status, _ := getUptimeRow(t, pool, mon.ID); status != "down" {
+			t.Fatalf("want down after a failed check, got %q", status)
+		}
+		up.Store(true)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
+		if status, _ := getUptimeRow(t, pool, mon.ID); status != "up" {
+			t.Fatalf("want up after recovery, got %q", status)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alerts with alerts disabled, got %d", got)
+		}
+	})
+
 	t.Run("delivers a recovery webhook event with a non-zero downtime duration", func(t *testing.T) {
 		var up atomic.Bool
 		up.Store(false)
@@ -2509,6 +2570,30 @@ func TestCheckPortMonitors(t *testing.T) {
 		}
 		if !resolvedAt.Valid {
 			t.Fatal("want the incident resolved after recovery")
+		}
+	})
+
+	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
+		host, port := freeTCPPort(t) // nothing listening yet — the first check fails
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
+		disableAlerts(t, pool, "port_monitors", mon.ID)
+		sent := webhookRecorder(t, queries, org.ID, "port", mon.ID)
+
+		checkPortMonitors(context.Background(), n)
+		if status, _ := getPortRow(t, pool, mon.ID); status != "down" {
+			t.Fatalf("want down after a failed check, got %q", status)
+		}
+		_, _, closeFn := listenOnPort(t, host, port)
+		defer closeFn()
+		forceDueNow(t, pool, "port_monitors", mon.ID)
+		checkPortMonitors(context.Background(), n)
+		if status, _ := getPortRow(t, pool, mon.ID); status != "up" {
+			t.Fatalf("want up after recovery, got %q", status)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alerts with alerts disabled, got %d", got)
 		}
 	})
 
