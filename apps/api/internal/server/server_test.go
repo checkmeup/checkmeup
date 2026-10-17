@@ -213,6 +213,24 @@ func TestRoutes_SPAResponseIsCompressedWhenAccepted(t *testing.T) {
 	}
 }
 
+// Link checkers, SEO crawlers and uptime monitors often send HEAD; a 405
+// reads to them as a broken page.
+func TestRoutes_HEADOnAPageAnswersLikeGET(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>app</html>"), 0o600); err != nil {
+		t.Fatalf("write index.html: %v", err)
+	}
+	srv, _ := testServer(t, &config.Config{StaticDir: dir})
+
+	req := httptest.NewRequest(http.MethodHead, "/", http.NoBody)
+	w := httptest.NewRecorder()
+	srv.router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
 // ─── redirectWWW ─────────────────────────────────────────────────────────────
 
 func TestRedirectWWW(t *testing.T) {

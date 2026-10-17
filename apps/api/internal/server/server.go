@@ -69,6 +69,9 @@ func (s *Server) buildRouter() *chi.Mux {
 		MaxAge:           300,
 	}))
 	r.Use(s.securityHeaders())
+	// Answers HEAD on any GET route instead of a 405: link checkers, SEO
+	// crawlers and uptime monitors send HEAD and read a 405 as a broken page.
+	r.Use(middleware.GetHead)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(s.requestLogger())
