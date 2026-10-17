@@ -55,6 +55,16 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/RefundPolicyView.vue'),
   },
   {
+    path: '/tools/ssl-checker',
+    name: 'ssl-checker',
+    component: () => import('@/views/SSLCheckerView.vue'),
+  },
+  {
+    path: '/tools/domain-expiry-checker',
+    name: 'domain-expiry-checker',
+    component: () => import('@/views/DomainExpiryCheckerView.vue'),
+  },
+  {
     path: '/blog',
     name: 'blog',
     component: () => import('@/views/BlogView.vue'),

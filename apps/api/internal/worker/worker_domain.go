@@ -45,7 +45,7 @@ func checkDomainMonitors(ctx context.Context, n Notifiers) {
 }
 
 func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor) {
-	lookup, lookupErr := lookupDomain(n, m.Domain)
+	lookup, lookupErr := LookupDomain(n.RDAP, n.WHOIS, m.Domain)
 	var daysLeft int
 	if lookupErr == nil {
 		daysLeft = int(time.Until(lookup.ExpiresAt).Hours() / 24)
@@ -72,21 +72,22 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 	}
 }
 
-// lookupDomain reads a domain's registrar and expiry over RDAP, or over WHOIS
+// LookupDomain reads a domain's registrar and expiry over RDAP, or over WHOIS
 // for the TLDs whose registries have no RDAP service (ADR domain-lookups).
-// A TLD whose registry publishes no expiry date fails with the reason.
-func lookupDomain(n Notifiers, domain string) (rdap.Result, error) {
+// A TLD whose registry publishes no expiry date fails with the reason. Also
+// behind the public domain expiry checker (PRD free-tools).
+func LookupDomain(rd *rdap.Client, wi *whois.Client, domain string) (rdap.Result, error) {
 	if msg := whois.Unsupported(domain); msg != "" {
 		return rdap.Result{}, errors.New(msg)
 	}
-	if whois.Supports(domain) && n.WHOIS != nil {
-		res, err := n.WHOIS.Lookup(domain)
+	if whois.Supports(domain) && wi != nil {
+		res, err := wi.Lookup(domain)
 		if errors.Is(err, whois.ErrNotRegistered) {
 			return rdap.Result{}, errors.New("domain not found in registry (whois)")
 		}
 		return rdap.Result{Registrar: res.Registrar, ExpiresAt: res.ExpiresAt}, err
 	}
-	return n.RDAP.Lookup(domain)
+	return rd.Lookup(domain)
 }
 
 // domainCheckResult is the outcome of one RDAP lookup: the fields to persist

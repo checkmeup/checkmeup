@@ -11,7 +11,7 @@ const publicDir = join(__dirname, '../public')
 const SITE_URL = 'https://checkmeup.net'
 
 // Keep in sync with the indexable (non auth-gated) routes in src/router/index.ts.
-const staticPaths = ['/', '/pricing', '/docs', '/faq', '/about', '/blog', '/changelog', '/terms', '/privacy', '/refund']
+const staticPaths = ['/', '/pricing', '/docs', '/faq', '/about', '/blog', '/changelog', '/terms', '/privacy', '/refund', '/tools/ssl-checker', '/tools/domain-expiry-checker']
 
 // postsMeta.ts (not posts/*.ts, which only holds each post's `content` now —
 // see its own file comment) is the single source of truth for slug/date, the

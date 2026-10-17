@@ -41,7 +41,7 @@ func checkSSLMonitors(ctx context.Context, n Notifiers) {
 }
 
 func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
-	expiresAt, issuer, daysLeft, err := performTLSCheck(m.Hostname)
+	expiresAt, issuer, daysLeft, err := CheckTLS(m.Hostname)
 	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
 	if result.alert != nil {
@@ -64,7 +64,7 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	}
 }
 
-// sslCheckResult is the outcome of one performTLSCheck poll: the fields to
+// sslCheckResult is the outcome of one CheckTLS poll: the fields to
 // persist on the monitor row, plus an alert to send when a threshold was
 // freshly crossed (nil otherwise).
 type sslCheckResult struct {
@@ -194,7 +194,10 @@ func sslExpiringSoonMessages(m db.SslMonitor, daysLeft int, expiresStr string) (
 // loopback/private/link-local/cloud-metadata targets (SSRF).
 var sharedSSLDialer = httpsafe.Dialer(deliver.Timeout)
 
-func performTLSCheck(hostname string) (expiresAt time.Time, issuer string, daysLeft int, err error) {
+// CheckTLS reads the certificate hostname serves on port 443: its expiry,
+// issuer and whole days left. Also behind the public SSL checker (PRD
+// free-tools).
+func CheckTLS(hostname string) (expiresAt time.Time, issuer string, daysLeft int, err error) {
 	conn, err := tls.DialWithDialer(sharedSSLDialer, "tcp", hostname+":443", &tls.Config{
 		ServerName: hostname,
 		MinVersion: tls.VersionTLS12,

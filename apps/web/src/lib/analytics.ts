@@ -38,3 +38,10 @@ export function trackSignUp() {
   if (!loaded) return
   window.dataLayer?.push({ event: 'sign_up', method: 'email' })
 }
+
+// A run of a free checker (PRD free-tools), so GA4 can count tool use beside
+// the sign-ups that follow it.
+export function trackToolCheck(tool: string, ok: boolean) {
+  if (!loaded) return
+  window.dataLayer?.push({ event: 'tool_check', tool, outcome: ok ? 'ok' : 'error' })
+}

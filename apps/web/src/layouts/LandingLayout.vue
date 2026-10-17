@@ -194,6 +194,14 @@ const onBlogPost = computed(() => route.path.startsWith('/blog/'))
               <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors"
                 >About</RouterLink
               >
+              <RouterLink to="/tools/ssl-checker" class="hover:text-[var(--text-strong)] transition-colors"
+                >SSL checker</RouterLink
+              >
+              <RouterLink
+                to="/tools/domain-expiry-checker"
+                class="hover:text-[var(--text-strong)] transition-colors"
+                >Domain expiry checker</RouterLink
+              >
             </nav>
             <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
               <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors"

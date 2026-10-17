@@ -14,7 +14,7 @@ package worker
 // exploit that asymmetry deliberately — it's the only way to exercise a
 // real "alert delivered" code path without live credentials.
 //
-// performTLSCheck's success path (a real, currently-valid certificate) isn't
+// CheckTLS's success path (a real, currently-valid certificate) isn't
 // covered — it hardcodes the system trust store with no way to inject a
 // custom root, so only the connection-error path is testable without a live
 // network dependency on a real public host. Same boundary as billing.go's
@@ -739,7 +739,7 @@ func TestPerformTLSCheck(t *testing.T) {
 	t.Run("connection error", func(t *testing.T) {
 		// .invalid is reserved (RFC 2606) to never resolve — a hermetic way
 		// to force a DNS failure without depending on a live host being down.
-		_, _, _, err := performTLSCheck("this-host-does-not-exist.invalid")
+		_, _, _, err := CheckTLS("this-host-does-not-exist.invalid")
 		if err == nil {
 			t.Fatal("want an error for an unresolvable host")
 		}
@@ -2170,7 +2170,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 
 // ─── checkDomainMonitors / checkOneDomainMonitor ──────────────────────────
 //
-// Unlike performTLSCheck, the RDAP lookup goes through an injectable
+// Unlike CheckTLS, the RDAP lookup goes through an injectable
 // *rdap.Client (rdap.NewClientWithHTTPClient), so both the success and
 // error paths are testable against a local httptest server — no live
 // network dependency.

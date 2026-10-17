@@ -23,11 +23,13 @@ import (
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/handler"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
+	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/slack"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
 type Server struct {
@@ -105,6 +107,7 @@ func (s *Server) buildRouter() *chi.Mux {
 	suggestions := handler.NewSuggestionHandler(s.cfg, s.db)
 	apiKeys := handler.NewAPIKeyHandler(s.db)
 	stats := handler.NewStatsHandler(s.db)
+	tools := handler.NewToolsHandler(rdap.NewClient(), whois.NewClient())
 
 	// Public status page — registered before SPA catch-all so Go handles it
 	r.With(httprate.LimitBy(300, time.Minute, clientIPKey)).Get("/status/{slug}", statusPublic.ServeHTTP)
@@ -143,6 +146,17 @@ func (s *Server) buildRouter() *chi.Mux {
 		// Platform-wide totals for the landing page, no auth: counts only,
 		// cached an hour in the handler.
 		r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Get("/stats", stats.ServeStats)
+
+		// Free SSL and domain expiry checkers (PRD free-tools), no auth: each
+		// request is a live check against a host the visitor names. The
+		// domain one also has a ceiling across all visitors, since its WHOIS
+		// queries go to the same registry servers paying monitors depend on,
+		// and a registry that bans our IP breaks them (ADR domain-lookups).
+		r.With(httprate.LimitBy(5, time.Minute, clientIPKey)).Get("/tools/ssl", tools.CheckSSL)
+		r.With(
+			httprate.LimitBy(5, time.Minute, clientIPKey),
+			httprate.LimitBy(30, time.Minute, httprate.Key("*")),
+		).Get("/tools/domain", tools.CheckDomain)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.With(httprate.LimitBy(5, time.Hour, clientIPKey)).Post("/sign-up", auth.SignUp)

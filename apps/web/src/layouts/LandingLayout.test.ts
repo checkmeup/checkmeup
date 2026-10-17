@@ -50,6 +50,12 @@ describe('LandingLayout', () => {
     expect(columns[1]).toEqual(['Sign in', 'Sign up'])
   })
 
+  it('links the free checkers from the footer', async () => {
+    const hrefs = (await mountAt('/')).findAll('footer nav a').map((a) => a.attributes('href'))
+    expect(hrefs).toContain('/tools/ssl-checker')
+    expect(hrefs).toContain('/tools/domain-expiry-checker')
+  })
+
   it("links the footer's bottom row to Checkmeup's own status page and GitHub", async () => {
     const hrefs = (await mountAt('/'))
       .findAll('footer > div > div:last-child a')

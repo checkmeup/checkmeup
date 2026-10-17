@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -128,6 +129,44 @@ func TestRoutes_ProtectedEndpointRequiresAuth(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
+}
+
+func TestRoutes_FreeToolsAreRateLimited(t *testing.T) {
+	srv, _ := testServer(t, nil)
+	// A non-hostname is refused before any lookup, so no check goes out; the
+	// limiter counts it all the same.
+	get := func(path, ip string) int {
+		req := httptest.NewRequest(http.MethodGet, path+"exa%20mple", http.NoBody)
+		req.RemoteAddr = ip + ":40000"
+		w := httptest.NewRecorder()
+		srv.router.ServeHTTP(w, req)
+		return w.Code
+	}
+
+	t.Run("five checks a minute per IP", func(t *testing.T) {
+		for i := 1; i <= 5; i++ {
+			if code := get("/api/v1/tools/ssl?host=", "203.0.113.10"); code != http.StatusBadRequest {
+				t.Fatalf("check %d: status = %d, want %d", i, code, http.StatusBadRequest)
+			}
+		}
+		if code := get("/api/v1/tools/ssl?host=", "203.0.113.10"); code != http.StatusTooManyRequests {
+			t.Fatalf("6th check: status = %d, want %d", code, http.StatusTooManyRequests)
+		}
+		if code := get("/api/v1/tools/ssl?host=", "203.0.113.11"); code != http.StatusBadRequest {
+			t.Fatalf("another IP: status = %d, want %d", code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("thirty domain lookups a minute across all visitors", func(t *testing.T) {
+		for i := 1; i <= 30; i++ {
+			if code := get("/api/v1/tools/domain?domain=", fmt.Sprintf("198.51.100.%d", i)); code != http.StatusBadRequest {
+				t.Fatalf("lookup %d: status = %d, want %d", i, code, http.StatusBadRequest)
+			}
+		}
+		if code := get("/api/v1/tools/domain?domain=", "198.51.100.31"); code != http.StatusTooManyRequests {
+			t.Fatalf("31st lookup: status = %d, want %d", code, http.StatusTooManyRequests)
+		}
+	})
 }
 
 func TestRoutes_PublicHealthDoesNotRequireAuth(t *testing.T) {

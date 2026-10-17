@@ -30,7 +30,7 @@ func NewClient() *Client {
 // NewClientWithHTTPClient builds a Client around a caller-provided
 // *http.Client and base URL — used by tests to point Lookup at a local
 // httptest server instead of the live rdap.org service, so domain checks
-// (including the success path, unlike SSL's performTLSCheck) are testable
+// (including the success path, unlike SSL's CheckTLS) are testable
 // without a live network dependency.
 func NewClientWithHTTPClient(hc *http.Client, baseURL string) *Client {
 	return &Client{httpClient: hc, baseURL: baseURL}
