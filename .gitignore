@@ -56,3 +56,6 @@ __pycache__/
 # them as real tests if left behind) and generated reports
 apps/web/.stryker-tmp/
 apps/web/reports/
+
+# Playwright MCP server: page snapshots, console logs and screenshots of browser sessions
+.playwright-mcp/
