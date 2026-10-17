@@ -16,7 +16,6 @@ All logo files live in `apps/web/src/assets/`, except the two theme wordmarks, w
 |---|---|
 | `public/img/logo-light.svg` | On light backgrounds (wordmark `#333333`) |
 | `public/img/logo-dark.svg` | On dark backgrounds (wordmark `#DDDDDD`) |
-| `assets/logo-grey.svg` | Monochrome / watermark contexts |
 | `assets/logo-icon.svg` | Favicon, app icon, square placements |
 
 The icon is a stylized `C`/bracket that morphs into a checkmark. Two greens in the icon:
