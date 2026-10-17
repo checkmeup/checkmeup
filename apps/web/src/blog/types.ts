@@ -31,6 +31,11 @@ export interface BlogPostMeta {
   date: string
   readTime: string
   excerpt: string
+  // The meta description search results show, 155 characters or fewer —
+  // Google cuts it off past ~160, and an excerpt is written for the page,
+  // usually twice that. Every 'article' needs one (BlogPostView.test.ts
+  // checks); a release post, being noindex, falls back to its excerpt.
+  description?: string
 }
 
 export interface BlogPost extends BlogPostMeta {

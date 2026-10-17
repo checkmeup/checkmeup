@@ -80,6 +80,7 @@ export const content: ContentBlock[] = [
   date: 'Month D, YYYY',
   readTime: '5 min read',
   excerpt: '<2-3 sentences: the gap this monitor type fills, and the one caveat about what it doesn\'t prove>',
+  description: '<the search-result summary, 155 characters or fewer>',
 },
 ```
 

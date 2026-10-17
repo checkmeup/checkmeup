@@ -23,6 +23,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "Five or six checks per client turns into fifty monitors in one list by the tenth client, and an alert at 2 AM that doesn't say whose site it is. A practical setup for freelancers and agencies: one baseline per client, grouping by client instead of check type, and alerts that name the client on every channel.",
+    description:
+      'How freelancers and agencies keep fifty monitors manageable: one baseline per client, grouping by client, and alerts that name the client on every channel.',
   },
   {
     file: 'rdap-vs-whois-domain-expiry',
@@ -33,6 +35,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '6 min read',
     excerpt:
       'Look up when a .com expires and you get a date in a second; try an .io, .co.il or .de domain and you may get an error or a false "not found". Here\'s where expiry dates come from, why many country-code registries have no RDAP, how their WHOIS answers differ, and how to check your own domain from the command line.',
+    description:
+      'Why a .com expiry date shows up instantly but .io, .de or .co.il lookups fail: where expiry data comes from, RDAP vs WHOIS, and how to check it yourself.',
   },
   {
     file: 'v1-53-domain-whois',
@@ -103,6 +107,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "A hijacked DNS record can serve a convincing fake site while your uptime check stays green — it never looks at the record itself. Here's how DNS record monitoring works, why a single lookup isn't the whole internet's view, and the one habit that turns it back into noise.",
+    description:
+      'A hijacked DNS record can serve a fake site while uptime checks stay green. How DNS record monitoring works, and how to keep it from turning into noise.',
   },
   {
     file: 'why-monitoring-matters',
@@ -113,6 +119,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "Monitoring doesn't keep anything running — what it buys you is the interval between something breaking and you finding out, which is where almost all of an outage's cost lives. A look at the failure modes that produce no signal at all, and why a green dashboard proves less than most people assume.",
+    description:
+      "Monitoring doesn't keep anything running; it shortens the time between a failure and you knowing. The failures that make no noise, and what green proves.",
   },
   {
     file: 'v1-41-zombie-job-detection',
@@ -163,6 +171,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "A database or mail server has no URL to poll, so an outage there is invisible to an uptime check. Here's how port (TCP) monitoring works, why a successful connection isn't proof the service behind it is healthy, and how to use it to catch a port that's exposed when it shouldn't be.",
+    description:
+      "Databases and mail servers have no URL to poll. How port (TCP) monitoring works, what an open port doesn't prove, and how to catch one exposed by mistake.",
   },
   {
     file: 'ssl-certificate-expired-story',
@@ -173,6 +183,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "A red NET::ERR_CERT_DATE_INVALID screen, six hours of bounced checkout traffic, and a client who found out from their own customers before we did. The renewal cron job had been silently failing for two months — here's why that failure is invisible until the exact second it isn't, and what actually catches it.",
+    description:
+      'A renewal cron failed silently for two months, then the cert expired at 3 AM and checkout broke for six hours. Why that failure hides, and what catches it.',
   },
   {
     file: 'v1-13-release-notes',
@@ -243,6 +255,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '3 min read',
     excerpt:
       "A small black cube sits next to my keyboard and ticks down in 25-minute blocks. Here's what the Pomodoro Technique is, and how it shaped the pace Checkmeup got built at.",
+    description:
+      'A small cube on my desk ticks down in 25-minute blocks. What the Pomodoro Technique is, and how it set the pace Checkmeup was built at.',
   },
   {
     file: 'v1-29-release-notes',
@@ -343,6 +357,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '3 min read',
     excerpt:
       "A cron monitor, uptime checks, SSL alerts, status pages, and billing — shipped in roughly 20 hours over three days. Here's what actually happened.",
+    description:
+      'A cron monitor, uptime checks, SSL alerts, status pages and billing, shipped in about 20 hours over three days. What actually happened.',
   },
   {
     file: 'v1-28-release-notes',
@@ -393,6 +409,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '5 min read',
     excerpt:
       "A lapsed domain is rarely negligence — it's usually a boring, invisible failure chain: an expired card, a reminder email nobody reads, a WHOIS contact that hasn't been checked in years. Here's why it happens, what it actually costs when it does, and how to catch it before a client does.",
+    description:
+      'Domains lapse through boring failures: an expired card, an unread reminder, a stale WHOIS contact. Why it happens, what it costs, and how to catch it.',
   },
   {
     file: 'checkmeup-vs-competitors',
@@ -403,6 +421,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '6 min read',
     excerpt:
       "Three tools get named in every 'what should I use to monitor my cron jobs' thread: Healthchecks.io, UptimeRobot, and Cronitor. Here's a feature-by-feature, dollar-by-dollar look at where Checkmeup fits — and where it honestly doesn't win yet.",
+    description:
+      "Checkmeup vs Healthchecks.io, UptimeRobot and Cronitor for cron and uptime monitoring: features and prices side by side, and where Checkmeup doesn't win.",
   },
   {
     file: 'v1-30-release-notes',
@@ -513,6 +533,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '6 min read',
     excerpt:
       "Cron jobs fail silently, not loudly. Here's how cron job monitoring — the dead man's switch — works, how to set it up in three steps, and what to check before trusting a tool with it.",
+    description:
+      "Cron jobs fail silently. How cron job monitoring (a dead man's switch) works, how to set it up in three steps, and what to check before trusting a tool.",
   },
   {
     file: 'uptime-monitoring-guide',
@@ -523,6 +545,8 @@ export const postsMeta: BlogPostMetaEntry[] = [
     readTime: '6 min read',
     excerpt:
       "A 200 response isn't proof a page actually works. Here's how uptime monitoring works, why content checks beat status codes alone, and what to look for in a tool before you trust it.",
+    description:
+      "A 200 response doesn't prove a page works. How uptime monitoring works, why content checks beat status codes alone, and what to look for in a tool.",
   },
   {
     file: 'v1-32-release-notes',

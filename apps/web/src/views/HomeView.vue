@@ -52,7 +52,7 @@ function ticksFor(pct: string) {
 useSeo({
   title: 'Checkmeup — monitoring for freelancers & client sites',
   description:
-    'Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execution logs, Telegram alerts, and branded status pages — built for freelancers and solo devs managing client sites.',
+    'Cron, uptime, SSL, domain, port and DNS monitors with alerts and branded status pages — built for freelancers and agencies managing client sites.',
   path: '/',
 })
 

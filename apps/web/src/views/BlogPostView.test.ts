@@ -139,6 +139,22 @@ describe('BlogPostView', () => {
     expect(canonical?.getAttribute('href')).toBe(`https://checkmeup.net/blog/${meta.slug}`)
   })
 
+  it('gives every article a search description of 155 characters or fewer', () => {
+    for (const meta of articlesMeta) {
+      expect(meta.description?.length ?? 0, meta.slug).toBeGreaterThan(0)
+      expect(meta.description!.length, meta.slug).toBeLessThanOrEqual(155)
+    }
+  })
+
+  it("uses the article's description, not its excerpt, as the meta description", async () => {
+    await mountLoaded(articlesMeta[0].slug)
+    await flushHead()
+
+    expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      articlesMeta[0].description,
+    )
+  })
+
   it('marks an article indexable', async () => {
     await mountLoaded(articlesMeta[0].slug)
     await flushHead()
