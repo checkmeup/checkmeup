@@ -1,10 +1,12 @@
 # Public status pages
 
-Date: 2026-10-13
+Date: 2026-10-17
 
 A status page lives at `checkmeup.net/status/<slug>`, not on a subdomain, and is rendered by Go's `html/template` in the API process, so it works without JavaScript (curl, feed readers, bots). Its route is registered before the SPA catch-all. Styling is inline CSS in the template, outside the Tailwind pipeline. Custom domains are deferred to Enterprise.
 
 Manual incidents, which a user declares to tell visitors something (degraded performance, say), live in their own tables, separate from the worker's automatic incidents: an incident with a title, severity and status, a join table linking it to monitors of any type, and an append-only list of timestamped updates. Declaring or resolving one never changes a monitor's status; the page's overall banner escalates on either source.
+
+A page also has a public JSON summary at `/status/<slug>/summary.json`: its title, overall status and one combined 90-day strip in which each day takes the worst tone any of the page's monitors had that day. Like the page and its badges, it needs no login and sits beside the page rather than under `/api/v1/`. It exists so a live strip can be shown elsewhere without an API key, which a browser can't hold; the landing hero reads checkmeup.net's own page (`ownStatusSlug` in `apps/web/src/content/home.ts`) and falls back to a static example when the summary doesn't load, as on local dev.
 
 Two settings are per page, since one org can run pages for different audiences: `hide_branding` removes the "Powered by Checkmeup" footer and its links, paid plans only (ADR billing); `layout` is `classic` (one column) or `grid` (two columns with incidents in a sidebar), on every plan, `classic` by default. Both layouts share the same `{{define}}` blocks for monitor and incident cards, so they can't drift apart on a field.
 

@@ -1,6 +1,6 @@
 # Alerting: notification channels, delivery providers and alert limits
 
-Date: 2026-10-14
+Date: 2026-10-17
 
 A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A Slack or webhook channel's URL is bearer-like, since whoever holds it can post to it, so after creation the API returns it masked (host plus the last few characters), and an update that leaves it empty keeps the stored one. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side. A Telegram chat ID, an email address and a phone number are returned as stored: none of them lets anyone send on its own.
 
@@ -35,5 +35,6 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 
 - Loading a monitor's channels is one more query per alert. Revisit if monitor counts make it matter.
 - SMS is the only channel that costs money per message; the per-incident cap is what bounds it.
+- Editing a Slack or webhook channel can't send a test until the URL is pasted again: the test needs the real URL, and the client only holds the masked one.
 - Rotating `JWT_SECRET` changes the callback token, so callbacks for SMS already sent get a 404 and those messages age out of `sms_messages` unresolved.
 - US SMS traffic needs a one-time 10DLC / toll-free registration in the Twilio console (`docs/reference/twilio-setup.md`).

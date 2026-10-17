@@ -15,12 +15,11 @@ The chosen theme applies everywhere instantly and is still there on the next vis
 ## Scope
 
 - A light palette for every neutral, accent and status design token, each status color readable as text (WCAG AA) on its theme's background; only the raw brand green scale is the same in both themes.
-- A switch in Settings, in the app shell and in the marketing header.
+- A switch in Settings, in the app shell, in the marketing header and on the public status page.
 - The choice kept per browser; first-time visitors follow the OS setting.
 
 ## Non-goals
 
-- A dark public status page: it has its own fixed light design.
 - Syncing the preference across devices.
 
 ## Acceptance criteria

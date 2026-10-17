@@ -1,6 +1,6 @@
 # Local development: toolchain in mise, services in Docker
 
-Date: 2026-10-14
+Date: 2026-10-17
 
 Development runs on the host; there is no devcontainer. Languages and command-line tools (Go, Bun, Node, golangci-lint, sqlc, air, goose, gcov2lcov, the Codacy linters) are pinned in `mise.toml` at the versions CI pins, so local tools can't quietly drift from CI's. `make setup` installs them.
 
@@ -13,6 +13,7 @@ Kamal stays out of `mise.toml`: only the operator runs it, on the break-glass de
 ## Considered options
 
 - husky and commitlint (until 2026-10-13): replaced by baloo's hooks, which also cover secrets and AI attribution.
+- A push-time secrets scan in `.claude/hooks/pre_push_guard.py` and the `secrets-scan` skill (until 2026-10-13): replaced by baloo's commit-time secrets check; `pre_push_guard.py` keeps only the guard against force-pushing `main`.
 - Devcontainer (until 2026-10-13): dropped for a plain host environment. Its Dockerfile installed several tools at `@latest`, so local versions could differ from CI's.
 - Native Postgres from mise's `postgres` tool: rejected. Docker runs the exact image CI uses and keeps the data in a disposable volume.
 - Homebrew `postgresql@17`: rejected. It is one machine-wide server outside the repo's version pinning.

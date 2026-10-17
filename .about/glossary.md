@@ -16,3 +16,7 @@ The single public page that lists every Release note, newest first, each under i
 **Project**:
 A named group of monitors in an org, usually one per client. A monitor belongs to at most one project; deleting a project leaves its monitors ungrouped. Not a workspace: channels, status pages and API keys stay org-wide.
 _In code_: `projects`, `project_id`
+
+**Fallback email**:
+The alert email sent to every user in the org when a monitor has no enabled channel attached, or none of its channels delivered the alert. For an SMS that was the only delivery, it goes out when Twilio's status callback reports a failure.
+_In code_: `dispatchFallbackEmail`
