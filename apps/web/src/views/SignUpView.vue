@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import { api, ApiError } from '@/api/client'
+import { trackSignUp } from '@/lib/analytics'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/stores/auth'
 
@@ -36,6 +37,7 @@ async function submit() {
       acceptedTerms: acceptedTerms.value,
     })
     auth.setUser(user)
+    trackSignUp()
     router.push({ name: 'dashboard' })
   } catch (err) {
     if (err instanceof ApiError && err.status === 409) {

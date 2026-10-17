@@ -42,6 +42,9 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: () => authStoreMock,
 }))
 
+const { trackSignUpMock } = vi.hoisted(() => ({ trackSignUpMock: vi.fn() }))
+vi.mock('@/lib/analytics', () => ({ trackSignUp: trackSignUpMock }))
+
 async function fillForm(
   wrapper: ReturnType<typeof mount>,
   email: string,
@@ -137,6 +140,7 @@ describe('SignUpView', () => {
     })
     expect(authStoreMock.setUser).toHaveBeenCalledExactlyOnceWith(user)
     expect(pushMock).toHaveBeenCalledExactlyOnceWith({ name: 'dashboard' })
+    expect(trackSignUpMock).toHaveBeenCalledOnce()
   })
 
   it('shows an account-exists message on a 409 error', async () => {
@@ -152,6 +156,7 @@ describe('SignUpView', () => {
     expect(wrapper.text()).toContain('An account with this email already exists.')
     expect(authStoreMock.setUser).not.toHaveBeenCalled()
     expect(pushMock).not.toHaveBeenCalled()
+    expect(trackSignUpMock).not.toHaveBeenCalled()
   })
 
   it('shows a generic error message on a non-409 failure', async () => {

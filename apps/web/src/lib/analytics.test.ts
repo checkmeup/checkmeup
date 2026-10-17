@@ -56,4 +56,19 @@ describe('analytics', () => {
     trackPageview('/pricing')
     expect(window.dataLayer?.at(-1)).toEqual({ event: 'page_view', page_path: '/pricing' })
   })
+
+  it('trackSignUp() is a no-op before GTM has loaded', async () => {
+    vi.stubEnv('VITE_GTM_ID', 'GTM-TEST123')
+    const { trackSignUp } = await loadAnalytics()
+    trackSignUp()
+    expect(window.dataLayer).toBeUndefined()
+  })
+
+  it('trackSignUp() pushes a sign_up event once GTM has loaded', async () => {
+    vi.stubEnv('VITE_GTM_ID', 'GTM-TEST123')
+    const { loadGtm, trackSignUp } = await loadAnalytics()
+    loadGtm()
+    trackSignUp()
+    expect(window.dataLayer?.at(-1)).toEqual({ event: 'sign_up', method: 'email' })
+  })
 })

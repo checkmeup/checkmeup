@@ -30,3 +30,11 @@ export function trackPageview(path: string) {
   if (!loaded) return
   window.dataLayer?.push({ event: 'page_view', page_path: path })
 }
+
+// A completed sign-up, so GA4 can count it as a key event. GTM forwards it to
+// GA4 through a tag on the `sign_up` custom event. Email is the only sign-up
+// method there is.
+export function trackSignUp() {
+  if (!loaded) return
+  window.dataLayer?.push({ event: 'sign_up', method: 'email' })
+}
