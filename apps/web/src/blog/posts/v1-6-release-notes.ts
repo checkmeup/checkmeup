@@ -42,7 +42,7 @@ export const content: ContentBlock[] = [
     items: [
       "The channel picker now warns you if every channel you've selected for a monitor is individually disabled — previously it let you save a monitor that looked configured but couldn't actually alert anyone.",
       'The Docker image now runs as a dedicated non-root user instead of root.',
-      "The SSL monitor's own TLS check now enforces TLS 1.2 as a floor when connecting to the certificate it's checking — closing the kind of gap a tool watching for *your* SSL hygiene shouldn't have in its own.",
+      "The SSL monitor's own TLS check now enforces TLS 1.2 as a floor when connecting to the certificate it's checking — closing the kind of gap a tool watching for your SSL hygiene shouldn't have in its own.",
     ],
   },
   {

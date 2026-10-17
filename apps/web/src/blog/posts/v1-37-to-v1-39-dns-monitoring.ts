@@ -3,7 +3,7 @@ import type { ContentBlock } from '../types'
 export const content: ContentBlock[] = [
   {
     type: 'p',
-    text: "Three versions since the last release notes, and the headline one is the real story: a sixth monitor type. Every other monitor in Checkmeup watches whether something is reachable. DNS monitoring watches whether it's still the *right thing* being reached — a record that quietly changes (a hijack, a migration gone sideways, a typo in a DNS provider's dashboard) doesn't fail the way a downed server does. Nothing goes offline. Traffic just starts going somewhere else, and the first sign is usually a client noticing before you do. DNS monitors close that gap: watch a hostname's resolved record and alert the moment it's not what it should be.",
+    text: "Three versions since the last release notes, and the headline one is the real story: a sixth monitor type. Every other monitor in Checkmeup watches whether something is reachable. DNS monitoring watches whether it's still the right thing being reached — a record that quietly changes (a hijack, a migration gone sideways, a typo in a DNS provider's dashboard) doesn't fail the way a downed server does. Nothing goes offline. Traffic just starts going somewhere else, and the first sign is usually a client noticing before you do. DNS monitors close that gap: watch a hostname's resolved record and alert the moment it's not what it should be.",
   },
   {
     type: 'h3',

@@ -3,7 +3,7 @@ import type { ContentBlock } from '../types'
 export const content: ContentBlock[] = [
   {
     type: 'p',
-    text: "An attacker who hijacks your DNS and points your domain at their own server doesn't need to take your site down — they can serve a convincing fake login page that returns a perfectly healthy 200. Your uptime monitor stays green the whole time, because it's checking whether *something* answers at the resolved address, not whether that address is still the one you set. The DNS record itself — the thing an uptime check never looks at — is where that kind of hijack actually shows up first.",
+    text: "An attacker who hijacks your DNS and points your domain at their own server doesn't need to take your site down — they can serve a convincing fake login page that returns a perfectly healthy 200. Your uptime monitor stays green the whole time, because it's checking whether something answers at the resolved address, not whether that address is still the one you set. The DNS record itself — the thing an uptime check never looks at — is where that kind of hijack actually shows up first.",
   },
   {
     type: 'h2',
