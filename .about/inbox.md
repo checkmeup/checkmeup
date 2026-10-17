@@ -112,4 +112,10 @@ Every client status page links "Powered by Checkmeup" (`apps/api/internal/handle
 
 2026-10-17 · traffic review
 
-Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers, AlternativeTo, SaaSHub, awesome lists on GitHub; build-in-public posts such as "Three Days to MVP" cross-posted to dev.to with a canonical link back. The outside signals "Almost no organic search traffic" calls for. Settled when the channels are chosen and tried.
+Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers, AlternativeTo, SaaSHub, awesome lists on GitHub; build-in-public posts such as "Three Days to MVP" cross-posted to dev.to with a canonical link back. The outside signals "Almost no organic search traffic" calls for. Tried so far: awesome-monitoring, [PR #121](https://github.com/Enapiuz/awesome-monitoring/pull/121) opened 2026-10-17 (the maintainer last merged on 2026-08-04, 26 PRs open). Settled when the channels are chosen and tried.
+
+## Main-commit hook checks the wrong repo
+
+2026-10-17 · session review
+
+`.claude/hooks/block_main_commit.py` reads the branch with `git rev-parse` in the hook's own working directory, the checkmeup checkout, not the repo the command commits in. So a commit in another repo (hit with an awesome-monitoring fork in the scratchpad) is blocked while checkmeup sits on `main`, and `git -C <path>` slips past its regex altogether. Its regex also matches the words inside heredocs and quoted text, so a command that only writes about committing is blocked too. Settled when the hook resolves the target repo from the command's `cd` or `-C` and ignores quoted text, or the cases are judged rare enough to leave.
