@@ -97,6 +97,9 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 		if !strings.Contains(body, "Powered by") {
 			t.Fatal("want the branding footer by default (hide_branding defaults false)")
 		}
+		if !strings.Contains(body, `<a href="https://checkmeup.net/?utm_source=status_page&utm_medium=referral&utm_campaign=powered_by">Get a free status page like this</a>`) {
+			t.Fatal("want the branding footer to offer a free status page, tagged for GA4")
+		}
 	})
 
 	t.Run("ADR status-pages: grid layout renders the sidebar/content-grid wrapper with monitors and incidents", func(t *testing.T) {

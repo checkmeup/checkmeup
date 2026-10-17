@@ -102,12 +102,6 @@ Cron, uptime, SSL, domain, port and DNS monitoring each have only a blog guide; 
 
 Long-tail guides: monitoring a Kubernetes CronJob, a GitHub Actions schedule, Laravel's scheduler, systemd timers, Celery beat. Pairs with the CLI wrapper in `docs/proposals/bucket-list.md`. Settled when the stacks to cover are picked and written, or the idea is dropped.
 
-## Status page footer as a sign-up source
-
-2026-10-17 · traffic review
-
-Every client status page links "Powered by Checkmeup" (`apps/api/internal/handler/status_public.go`) as a bare link: no UTM, no call to action. A "Get a free status page like this" link with `?ref=status` (or UTM) would show in GA4 how many sign-ups it brings. Settled when the link changes, or it's judged fine as is.
-
 ## Launch and directory listings
 
 2026-10-17 · traffic review

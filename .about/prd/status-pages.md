@@ -50,6 +50,8 @@ A user publishes a page with their monitors in a few minutes and can send client
 - The grid layout puts monitors in a grid with incidents in a sidebar; it can be picked in the edit form.
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR status-pages: grid layout renders the sidebar/content-grid wrapper with monitors and incidents"
   → test: apps/web/src/views/StatusPageEditView.test.ts "switches to the grid layout and submits it"
+- Unless branding is hidden, the footer reads "Powered by Checkmeup" and links "Get a free status page like this" to checkmeup.net, UTM-tagged (`utm_source=status_page`) so GA4 counts the visits and sign-ups it brings.
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/a page with no monitors renders the empty state"
 - On a paid plan, hiding branding removes the "Powered by Checkmeup" footer and its links; on Hobby the option is disabled with an upgrade hint and the API refuses it.
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/ADR status-pages: hide_branding suppresses the footer's branding and FAQ/Terms/Privacy links"
   → test: apps/api/internal/handler/status_pages_test.go "TestUpdateStatusPage/ADR status-pages: hideBranding requires a paid plan"

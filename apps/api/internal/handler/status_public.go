@@ -605,7 +605,7 @@ body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
     <span>Last updated {{.UpdatedAt}}</span>
     {{if not .HideBranding}}
     <span class="footer-links">
-      <span>Powered by <a href="https://checkmeup.net">Checkmeup</a></span>
+      <span>Powered by Checkmeup · <a href="https://checkmeup.net/?utm_source=status_page&utm_medium=referral&utm_campaign=powered_by">Get a free status page like this</a></span>
       <a href="https://checkmeup.net/faq">FAQ</a>
       <a href="https://checkmeup.net/terms">Terms</a>
       <a href="https://checkmeup.net/privacy">Privacy</a>
