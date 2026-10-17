@@ -90,6 +90,14 @@ describe('PricingView', () => {
     expect(wrapper.text()).toContain('White-label status pages')
   })
 
+  it('marks an included feature in the comparison table with an icon labelled Included', () => {
+    const wrapper = mount(PricingView)
+
+    // White-label status pages: not on Hobby, included on the three paid plans.
+    expect(wrapper.findAll('[aria-label="Included"]')).toHaveLength(12 * 4 + 3)
+    expect(wrapper.text()).not.toContain('✓')
+  })
+
   it('renders the billing FAQ entries from findFaqCategory', () => {
     const wrapper = mount(PricingView)
 
