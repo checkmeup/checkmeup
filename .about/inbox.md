@@ -54,65 +54,17 @@ The review recommended the worker first, as alerting is the core of the product,
 
 `CODACY_API_TOKEN` in `apps/api/.env` gets "Bad credentials" from the Codacy API, so the codacy-triage skill can't list issues; when a PR's Codacy check fails, the GitHub check run shows only the count, not the issues. Settled when a new account-level token is in `apps/api/.env` (and the CI secret, if it's the same one) and the skill's fetch returns issues.
 
-## Small checkmarks in the Pricing comparison table
-
-2026-10-15 · session review
-
-The checkmarks in the plan comparison table on `/pricing` are too small to scan after the redesign. Settled when they're resized to read at a glance in both themes.
-
-## Blog isn't highlighted in the nav on a post
-
-2026-10-15 · session review
-
-The marketing nav highlights the current page, but on a blog post (`/blog/<slug>`) "Blog" isn't highlighted. Settled when the Blog link is active on every `/blog/…` route, with a test.
-
-## Literal asterisks in the DNS guide post
-
-2026-10-15 · session review
-
-`apps/web/src/blog/posts/dns-record-monitoring-guide.ts` renders literal asterisks around a word ("\*something\*"): the post's content blocks don't render Markdown emphasis. Settled when the text drops the asterisks or uses the content format's own emphasis.
-
-## Unused logo-grey.svg
-
-2026-10-15 · session review
-
-`apps/web/src/assets/logo-grey.svg` is referenced nowhere since the footer switched to the regular logo files. Claude left it because the logo assets aren't to be touched without the owner. Settled by deleting it or naming where it's still needed.
-
-## One failing SSL or domain monitor turns the whole summary strip red
-
-2026-10-15 · session review
-
-SSL and domain monitors store no daily history, so a status page colors all 90 of their days by their current status. The combined strip in `/status/<slug>/summary.json` takes each day's worst tone, so one such monitor in error turns every day red, including in the landing hero's live strip of checkmeup.net. Settled by deciding how those monitors count in the combined strip (today only, or left out of past days) and a test for it.
-
-## OG image can't be regenerated from the repo
-
-2026-10-15 · session review
-
-`apps/web/public/img/checkmeup-og.png` (2400×1260, redrawn in PR 156 to match the landing hero: headline, crontab line, missed-ping alert, 90-day strip) was made by screenshotting a 1200×630 HTML page in the light theme's tokens with Chrome's `--headless --screenshot` at 2×. That HTML page isn't in the repo, so the next redraw starts from scratch, and the image can drift from the tokens unnoticed. Settled by committing the source page and the render command (e.g. under `apps/web/scripts/`), or deciding the PNG alone is enough.
-
-## Agreed footer rework was lost
-
-2026-10-15 · session review
-
-On `feat/footer-labels` the user agreed a reworked marketing footer in `apps/web/src/layouts/LandingLayout.vue`: About moved into the first column with Docs and Pricing, Sign in and Sign up alone in the middle column, no column headings, Status (`/status/checkmeup-net`, a plain `<a>` since the backend serves it) and GitHub at the right of the bottom row, and the inner line above the copyright row kept. It was never committed and is gone from the working tree, and `main` still has the old footer. Settled by redoing it as a PR, or dropping it if the discard was deliberate.
-
 ## CLAUDE.md restructure not started
 
 2026-10-15 · session review
 
-The user asked to restructure `CLAUDE.md`: drop instructions that change nothing, and disclose detail only when it's needed. Three subagents should each go further than the last, ending in one PR, and with no `CODING_STANDARDS.md` (the user ruled that out). Work stopped before any pass. A worktree at `../checkmeup-claude-md` on branch `docs/claude-md-restructure` still exists with no changes. Settled when the PR is open, or the worktree and branch are removed if it's dropped.
+The user asked to restructure `CLAUDE.md`: drop instructions that change nothing, and disclose detail only when it's needed. Three subagents should each go further than the last, ending in one PR, and with no `CODING_STANDARDS.md` (the user ruled that out). Work stopped before any pass. Its empty worktree and branch were removed on 2026-10-17. Settled when the PR is open, or the item is deleted if the restructure is dropped.
 
-## Alert cap and alerts-enabled untested for port and DNS
+## Per-incident alert cap can't trigger for uptime, port and DNS
 
-2026-10-14 · session review
+2026-10-17 · session review
 
-Uptime, port and DNS monitors each have their own copy of the down/recover/incident/alert steps (`worker_uptime.go`, `worker_port.go`, `worker_dns.go`). `TestCheckUptimeMonitors` now checks that `alerts_enabled = false` sends nothing and that `max_alerts_per_incident` stops further alerts, but `TestCheckPortMonitors` and `TestCheckDNSMonitors` still don't (ADR alerting). A copy can drift without a test failing. Settled when port and DNS have those tests, or when the steps move into one tested module (Inbox: Architecture deepening candidates).
-
-## Billing usage bars turn red from 90%
-
-2026-10-15 · session review
-
-On Billing, a usage bar at 90% or more of its plan limit (say 9 of 10 monitors on Hobby) is filled with the down-status red (`BillingView.vue`, `>= 90 ? 'var(--status-down)'`), which reads as an error rather than "nearly full" or "plan full". Settled by deciding what a nearly full and a full plan should look like (red, amber, or neutral with an upgrade hint) and styling the bars to match.
+`alertUptimeIncident`, `alertPortIncident` and `alertDNSIncident` check `max_alerts_per_incident` against the incident's `alert_count`, but each is called only once, right after the incident is created, when the count is still 0, so the cap never stops anything (ADR alerting says the cap is what bounds SMS cost). Harmless today, since these types send one down alert per incident anyway; `alerts_enabled` is now tested for all three. Settled by dropping the dead check from the three workers, or keeping it on purpose for a future re-alert while still down, written into ADR alerting.
 
 ## Landing hero's author line
 
