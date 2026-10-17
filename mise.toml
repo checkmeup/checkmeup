@@ -1,6 +1,6 @@
-# Local toolchain for checkmeup — `mise install` from the repo root installs
-# everything `make dev` / `make test` / the .claude skills need. Postgres runs
-# separately via `make db` (docker-compose.yml).
+# Local toolchain and tasks for Checkmeup. `mise install` from the repo root
+# installs everything the tasks below and the .claude skills need; `mise tasks`
+# lists the tasks. Postgres runs separately via `mise run db` (docker-compose.yml).
 #
 # Versions match .github/workflows/ci.yml where CI pins them (go, bun,
 # golangci-lint, goose, gcov2lcov) — bump both together, never @latest: a
@@ -24,3 +24,89 @@ air = "1.67.4"
 
 [env]
 TURBO_TELEMETRY_DISABLED = "1"
+
+[tasks.setup]
+description = "One-time setup: toolchain, JS deps, and a starter apps/api/.env (never overwrites one)"
+run = [
+  "mise install",
+  "bun install",
+  "test -f apps/api/.env || cp apps/api/.env.example apps/api/.env",
+]
+
+[tasks.db]
+description = "Start local Postgres (docker-compose.yml) and wait until it accepts connections"
+run = "docker compose up -d --wait db"
+
+[tasks.install]
+description = "Install JS dependencies"
+run = "bun install"
+
+[tasks.update]
+description = "Upgrade bun and update JS dependencies"
+run = ["bun upgrade", "bun update -g", "bun update"]
+
+[tasks.lint]
+description = "Lint code, Markdown and Markdown links"
+depends = ["install"]
+run = [
+  "bunx turbo run lint",
+  'bunx markdownlint-cli2 "**/*.md" "#node_modules" "#.about/proposals" "#apps/web/node_modules" "#apps/web/dist" "#apps/web/coverage" "#LICENSE.md"',
+  'find . -name "*.md" -not -path "./node_modules/*" -not -path "./.about/proposals/*" -not -path "./apps/web/node_modules/*" -not -path "./apps/web/dist/*" -not -path "./apps/web/coverage/*" -print0 | xargs -0 -n1 bunx markdown-link-check -q -c .markdown-link-check.json',
+]
+
+[tasks.test]
+description = "Lint, test and merge coverage (needs `mise run db`)"
+depends = ["lint"]
+run = ["rm -rf coverage", "bunx turbo run test", "bun tools/merge-coverage.mjs"]
+
+[tasks.dev]
+description = "Start all apps with hot reload (API :8080, web :5173)"
+depends = ["install"]
+run = "bunx turbo run dev"
+
+[tasks.build]
+description = "Production build"
+depends = ["install"]
+run = ["rm -rf dist", "bunx turbo run build"]
+
+[tasks.clean]
+description = "Wipe node_modules, dist and coverage"
+run = "rm -rf node_modules dist coverage apps/web/node_modules apps/web/dist apps/web/coverage"
+
+[tasks.migrate]
+description = "Run goose migrations against DATABASE_URL from apps/api/.env"
+run = '''goose -dir apps/api/migrations postgres "$(grep '^DATABASE_URL=' apps/api/.env 2>/dev/null | cut -d= -f2-)" up'''
+
+[tasks.migrate-create]
+description = "Create the next numbered goose migration file (NNN_<name>.sql)"
+usage = 'arg "<name>" help="snake_case description, e.g. add_projects"'
+# goose -s numbers with five digits (00040_); the repo's migrations use three.
+run = '''
+goose -dir apps/api/migrations create -s "$usage_name" sql
+cd apps/api/migrations && for f in 00[0-9][0-9][0-9]_*.sql; do mv "$f" "${f#00}"; done
+'''
+
+# deploy and ghcr-clean touch the real production server and registry: only the
+# human operator runs them (CLAUDE.md's Don't section), as the break-glass path,
+# since CI deploys every merge to main. .env holds the production secrets.
+[tasks.deploy]
+description = "Break-glass: run a kamal command (deploy by default) with .env, then prune GHCR after deploy or setup"
+usage = '''
+arg "[cmd]" default="deploy" help="kamal command, e.g. setup or rollback"
+flag "--keep <n>" default="5" help="GHCR image versions to keep"
+'''
+shell = "bash -c"
+run = '''
+set -a && source .env && set +a || exit 1
+kamal "$usage_cmd"; code=$?
+if [ $code -eq 0 ] && { [ "$usage_cmd" = deploy ] || [ "$usage_cmd" = setup ]; }; then
+  bash scripts/ghcr-clean.sh "$usage_keep"
+fi
+exit $code
+'''
+
+[tasks.ghcr-clean]
+description = "Prune old ghcr.io/checkmeup/checkmeup image versions"
+usage = 'flag "--keep <n>" default="5" help="image versions to keep"'
+shell = "bash -c"
+run = 'set -a && source .env && set +a && bash scripts/ghcr-clean.sh "$usage_keep"'

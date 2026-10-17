@@ -1,4 +1,4 @@
-# Local Postgres for development and `make test` — start with `make db`.
+# Local Postgres for development and `mise run test` — start with `mise run db`.
 # Matches the service CI runs in .github/workflows/ci.yml (same image, creds,
 # and host port), so one DATABASE_URL works in both places:
 #   postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable

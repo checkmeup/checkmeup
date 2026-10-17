@@ -14,7 +14,7 @@ the Go query layer from `apps/api/queries/*.sql` against that schema
 **1. Create the migration file.**
 
 ```bash
-make migrate-create name=<snake_case_description>
+mise run migrate-create <snake_case_description>
 ```
 
 Creates `apps/api/migrations/NNN_<name>.sql` with `+goose Up`/`+goose
@@ -40,11 +40,11 @@ ALTER TABLE orgs DROP COLUMN ...;
 **3. Run the migration locally.**
 
 ```bash
-make migrate
+mise run migrate
 ```
 
 Reads `DATABASE_URL` from `apps/api/.env` — requires Postgres running
-(`make db`).
+(`mise run db`).
 
 **4. Write/update the SQL queries** in `apps/api/queries/*.sql`, then
 regenerate:

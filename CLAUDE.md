@@ -9,15 +9,15 @@ Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execu
 ## Commands
 
 ```bash
-make setup           # one-time: mise install + bun install + starter apps/api/.env
-make db              # start local Postgres (docker compose) on localhost:5432
-make dev             # start all apps (hot reload)
-make test            # lint + test + merge coverage
-make lint            # lint only
-make build           # production build
-make clean           # wipe node_modules, dist, coverage
-make migrate         # run goose migrations (reads DATABASE_URL from apps/api/.env)
-make migrate-create name=foo  # create a new goose migration file
+mise run setup           # one-time: mise install + bun install + starter apps/api/.env
+mise run db              # start local Postgres (docker compose) on localhost:5432
+mise run dev             # start all apps (hot reload)
+mise run test            # lint + test + merge coverage
+mise run lint            # lint only
+mise run build           # production build
+mise run clean           # wipe node_modules, dist, coverage
+mise run migrate         # run goose migrations (reads DATABASE_URL from apps/api/.env)
+mise run migrate-create foo  # create a new goose migration file
 ```
 
 ---
@@ -32,9 +32,9 @@ make migrate-create name=foo  # create a new goose migration file
 
 > **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual.
 
-> **Local setup:** no devcontainer — tools run on the host, pinned in [`mise.toml`](mise.toml) (Go, Bun, Node, golangci-lint, sqlc, goose, air, gcov2lcov, and the Codacy-matching Python linters). `make setup` once (`mise install` + `bun install` + a starter `apps/api/.env`), then `make db` to start Postgres from [`docker-compose.yml`](docker-compose.yml) on `localhost:5432` — same image, creds, and port as CI, so one `DATABASE_URL` works in both. When bumping a tool version, change `mise.toml` and `.github/workflows/ci.yml` together. See [ADR dev-environment](.about/adr/dev-environment.md).
+> **Local setup:** no devcontainer — tools run on the host, pinned in [`mise.toml`](mise.toml) (Go, Bun, Node, golangci-lint, sqlc, goose, air, gcov2lcov, and the Codacy-matching Python linters). Tasks live in `mise.toml` too (`mise tasks` lists them). `mise run setup` once (`mise install` + `bun install` + a starter `apps/api/.env`), then `mise run db` to start Postgres from [`docker-compose.yml`](docker-compose.yml) on `localhost:5432` — same image, creds, and port as CI, so one `DATABASE_URL` works in both. When bumping a tool version, change `mise.toml` and `.github/workflows/ci.yml` together. See [ADR dev-environment](.about/adr/dev-environment.md).
 
-> `make test` requires PostgreSQL running (`make db`).
+> `mise run test` requires PostgreSQL running (`mise run db`).
 
 **Key env vars (`apps/api/.env`):**
 
@@ -92,7 +92,7 @@ CI uploads coverage to Codacy after every push (its `CODACY_PROJECT_TOKEN` secre
 
 ## Don't
 
-- Run `make deploy`, `make ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
+- Run `mise run deploy`, `mise run ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR workers](.about/adr/workers.md))
 - Use an ORM — sqlc only ([ADR database](.about/adr/database.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants

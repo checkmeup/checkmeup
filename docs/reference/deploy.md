@@ -16,7 +16,7 @@ Kamal 2 on Hetzner CX23 · kamal-proxy SSL · GHCR image registry
 
 The two `.env` files are intentionally separate:
 
-- **`apps/api/.env`** — local dev only; `DATABASE_URL` points to `localhost:5432` (`make db`, repo-root `docker-compose.yml`); committed as `.env.example` template, real file gitignored
+- **`apps/api/.env`** — local dev only; `DATABASE_URL` points to `localhost:5432` (`mise run db`, repo-root `docker-compose.yml`); committed as `.env.example` template, real file gitignored
 - **`.env`** (repo root) — prod secrets for a break-glass deploy from the Mac; never touches the running dev server; always gitignored. CI deploys read the same secrets from GitHub Actions secrets instead (`release.yml`)
 
 ---
@@ -44,10 +44,10 @@ set -a; source .env; set +a          # load prod secrets into shell
 kamal deploy                          # build → push to GHCR → roll out on server
 ```
 
-Or via Make (sources `.env` automatically):
+Or via the mise task (sources `.env` itself, then prunes GHCR):
 
 ```bash
-make deploy cmd=deploy
+mise run deploy
 ```
 
 Kamal will:
@@ -108,7 +108,7 @@ GitHub Container Registry charges for private packages only:
 
 Our image is ~150–250 MB compressed. Each deploy creates a new tagged image, and
 Kamal never prunes GHCR itself: after every deploy, `release.yml` runs
-`scripts/ghcr-clean.sh 5`, keeping the five newest versions (`make ghcr-clean`
+`scripts/ghcr-clean.sh 5`, keeping the five newest versions (`mise run ghcr-clean`
 is the manual equivalent).
 
 Old images on the server itself are pruned by hand:

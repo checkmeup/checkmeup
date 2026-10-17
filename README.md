@@ -17,11 +17,11 @@ Cron, uptime, SSL, domain expiry, port (TCP) and DNS record monitors, with Teleg
 ## Development
 
 ```bash
-make setup  # once: tools from mise.toml, bun install, apps/api/.env
-make db     # PostgreSQL in Docker on localhost:5432
-make dev    # API on :8080 · Web on :5173
-make test   # lint + test + coverage
-make build  # production build
+mise run setup  # once: tools from mise.toml, bun install, apps/api/.env
+mise run db     # PostgreSQL in Docker on localhost:5432
+mise run dev    # API on :8080 · Web on :5173
+mise run test   # lint + test + coverage
+mise run build  # production build
 ```
 
 ## Documentation

@@ -33,7 +33,7 @@ wait_for() {
 
 start() {
   echo "== migrating db =="
-  (cd "$ROOT" && make migrate)
+  (cd "$ROOT" && mise run migrate)
 
   echo "== building api =="
   (cd "$ROOT/apps/api" && go build -o "$API_BIN" ./cmd/api)

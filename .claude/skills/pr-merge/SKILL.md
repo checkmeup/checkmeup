@@ -132,7 +132,7 @@ gh run list --workflow=release.yml --limit 1   # release + "Deploy to production
 ```
 
 Never tell the user a merged change "still needs a deploy". The
-`make deploy`/`kamal` prohibition in CLAUDE.md scopes *who runs the
+`mise run deploy`/`kamal` prohibition in CLAUDE.md scopes *who runs the
 command locally* (never Claude); it is not a claim that deploys are
 manual.
 

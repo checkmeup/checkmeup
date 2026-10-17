@@ -14,8 +14,8 @@ to check in a real browser.
 
 ## Prerequisites
 
-`make setup` once (installs `go`, `bun`, `goose`, … from `mise.toml` and
-creates `apps/api/.env` from its example), then `make db` to start
+`mise run setup` once (installs `go`, `bun`, `goose`, … from `mise.toml` and
+creates `apps/api/.env` from its example), then `mise run db` to start
 Postgres on `localhost:5432` (`docker-compose.yml`). `apps/web/.env` must
 also exist (copy from `apps/web/.env.example` if missing).
 
@@ -40,14 +40,14 @@ isolation — the full `smoke.sh` flow is for confirming the whole stack
 still wires together, not the first thing to reach for on every PR.
 
 ```bash
-cd apps/api && go test -count=1 ./...      # Go backend — needs `make db`
+cd apps/api && go test -count=1 ./...      # Go backend — needs `mise run db`
 cd apps/web && bun run test                # Vue frontend (Vitest)
 ```
 
 ## Run (human path)
 
 ```bash
-make dev
+mise run dev
 ```
 
 Runs `turbo run dev` — both apps with hot reload (air for Go, Vite for

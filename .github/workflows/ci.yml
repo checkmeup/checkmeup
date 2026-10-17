@@ -57,11 +57,23 @@ jobs:
           go install github.com/pressly/goose/v3/cmd/goose@v3.27.2
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 
+      # mise only runs the tasks in mise.toml here: install: false and
+      # MISE_AUTO_INSTALL off keep the tools from the steps above.
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+        with:
+          version: 2026.10.10
+          install: false
+          cache: false
+          add_shims_to_path: false
+
       - name: Run migrations
         run: goose -dir apps/api/migrations postgres "$DATABASE_URL" up
 
       - name: Lint & test
-        run: make test
+        run: mise run test
+        env:
+          MISE_AUTO_INSTALL: false
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
 
       - name: Upload coverage to Codacy
         if: ${{ !cancelled() }}
