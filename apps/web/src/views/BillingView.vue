@@ -283,7 +283,7 @@ function limitLabel(used: number, limit: number) {
                   class="h-full rounded-full transition-all"
                   :style="{
                     width: info.monitorLimit === -1 ? '0%' : `${monitorPct}%`,
-                    backgroundColor: monitorPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                    backgroundColor: monitorPct >= 90 ? 'var(--status-degraded)' : 'var(--accent)',
                   }"
                 />
               </div>
@@ -298,7 +298,7 @@ function limitLabel(used: number, limit: number) {
                   class="h-full rounded-full transition-all"
                   :style="{
                     width: info.statusPageLimit === -1 ? '0%' : `${statusPagePct}%`,
-                    backgroundColor: statusPagePct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                    backgroundColor: statusPagePct >= 90 ? 'var(--status-degraded)' : 'var(--accent)',
                   }"
                 />
               </div>
@@ -313,7 +313,7 @@ function limitLabel(used: number, limit: number) {
                   class="h-full rounded-full transition-all"
                   :style="{
                     width: info.notificationChannelLimit === -1 ? '0%' : `${notificationChannelPct}%`,
-                    backgroundColor: notificationChannelPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                    backgroundColor: notificationChannelPct >= 90 ? 'var(--status-degraded)' : 'var(--accent)',
                   }"
                 />
               </div>
@@ -329,7 +329,7 @@ function limitLabel(used: number, limit: number) {
                   class="h-full rounded-full transition-all"
                   :style="{
                     width: `${smsCreditsPct}%`,
-                    backgroundColor: smsCreditsPct >= 90 ? 'var(--status-down)' : 'var(--accent)',
+                    backgroundColor: smsCreditsPct >= 90 ? 'var(--status-degraded)' : 'var(--accent)',
                   }"
                 />
               </div>

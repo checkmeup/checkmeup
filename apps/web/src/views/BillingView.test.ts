@@ -154,6 +154,14 @@ describe('BillingView', () => {
     expect(findButtonByText(wrapper, 'Upgrade to Enterprise')).toBeTruthy()
   })
 
+  it('fills a usage bar at its plan limit with the warning color, not the down red', () => {
+    infoData.value = { ...hobbyInfo, monitorCount: 5 }
+    const wrapper = mount(BillingView)
+
+    expect(wrapper.html()).toContain('background-color: var(--status-degraded)')
+    expect(wrapper.html()).not.toContain('var(--status-down)')
+  })
+
   it('does not show the manage subscription link for the hobby plan', () => {
     infoData.value = { ...hobbyInfo }
     const wrapper = mount(BillingView)
