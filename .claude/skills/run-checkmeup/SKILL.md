@@ -7,11 +7,10 @@ description: Build, launch, and drive checkmeup (apps/api Go backend + apps/web 
 
 Paths below are relative to the repo root. The driver is
 `.claude/skills/run-checkmeup/smoke.sh` — a `curl`-only smoke test, not a
-browser. **This project's CLAUDE.md explicitly disallows Playwright/
-`npx playwright` for UI verification** — there is deliberately no
-browser driver here. If a change needs actual visual verification, say so
-explicitly and ask a human to check in a real browser, rather than
-reaching for Playwright.
+browser. If a change needs actual visual verification, open the page with
+the Playwright MCP server where it's connected (`claude mcp add playwright
+-- npx -y @playwright/mcp@latest`, local scope); without it, ask a human
+to check in a real browser.
 
 ## Prerequisites
 
@@ -67,11 +66,10 @@ normal local dev loop, not agent-drivable without a browser.
   matches the wrapper too, and killing it kills the tool call itself
   (exit 144, silent). Use `smoke.sh stop`, which tracks real PIDs from
   launch time and never greps.
-- **No screenshot / browser step.** The run-skill authoring process
-  normally wants a screenshot as proof of a working GUI; this project's
-  explicit "don't use Playwright" rule means that step is replaced by the
-  curl-based `check` flow above (session cookie + real resource creation)
-  as the closest available proof of an end-to-end working app.
+- **No screenshot / browser step in `smoke.sh`.** Its proof of an
+  end-to-end working app is the curl-based `check` flow above (session
+  cookie + real resource creation); a screenshot, where one is wanted,
+  comes from the Playwright MCP server.
 - The Vite proxy only forwards `/api` and `/status/` (trailing slash
   matters — see the comment in `apps/web/vite.config.ts`) to `:8080`;
   everything else is served by Vite itself.

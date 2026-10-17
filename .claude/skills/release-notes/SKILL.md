@@ -103,9 +103,9 @@ cd apps/web && bun run test -- BlogView BlogPostView ChangelogView
 ```
 
 Then start the dev server and visually check the new post renders — see
-`docs/reference/design.md` for tokens if any custom styling is needed. Don't
-use Playwright for this per this repo's convention; if no run-skill exists
-yet, say so explicitly rather than reaching for it.
+`docs/reference/design.md` for tokens if any custom styling is needed. The
+Playwright MCP server, where it's connected, can open the page for this;
+without it, ask a human to look.
 
 ## Also update per this project's Jul 1 precedent
 
