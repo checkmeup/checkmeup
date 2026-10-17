@@ -28,3 +28,8 @@ Every public page's raw HTML has its own title, description, Open Graph tags and
 - Fetching any blog post's URL without running JavaScript returns its title, description and `og:title`, `og:description`, `og:image`.
 - Fetching `/`, `/pricing`, `/docs`, `/faq`, `/about`, `/terms`, `/privacy`, `/refund`, `/blog` and `/changelog` without JavaScript returns a page with an `<h1>` and its own title and Open Graph tags.
 - `sitemap.xml` and the `noindex` tags keep working on the prerendered pages.
+- Every Article's meta description is its own `description` of 155 characters or fewer, so search results don't cut it off, not the longer excerpt shown on the page.
+  → test: apps/web/src/views/BlogPostView.test.ts "gives every article a search description of 155 characters or fewer"
+  → test: apps/web/src/views/BlogPostView.test.ts "uses the article's description, not its excerpt, as the meta description"
+- A `HEAD` request to a public page answers like `GET`, not with a `405`.
+  → test: apps/api/internal/server/server_test.go "TestRoutes_HEADOnAPageAnswersLikeGET"
