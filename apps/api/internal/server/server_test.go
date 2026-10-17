@@ -502,6 +502,34 @@ func TestClientIPKey(t *testing.T) {
 	}
 }
 
+func TestClientIPFromProxy_KeysByTheVisitorBehindKamalProxy(t *testing.T) {
+	cases := []struct {
+		name, remoteAddr, xff, want string
+	}{
+		{"kamal-proxy's appended entry is the visitor", "172.18.0.2:40000", "198.51.100.9", "198.51.100.9"},
+		{"a forged entry left of kamal-proxy's is ignored", "172.18.0.2:40000", "1.2.3.4, 198.51.100.9", "198.51.100.9"},
+		{"a private peer with no header keeps its own address", "127.0.0.1:40000", "", "127.0.0.1"},
+		{"a public peer's header is ignored", "203.0.113.7:54321", "198.51.100.9", "203.0.113.7"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got string
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				got, _ = clientIPKey(r)
+			})
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+			req.RemoteAddr = tc.remoteAddr
+			if tc.xff != "" {
+				req.Header.Set("X-Forwarded-For", tc.xff)
+			}
+			middleware.ClientIPFromRemoteAddr(clientIPFromProxy(next)).ServeHTTP(httptest.NewRecorder(), req)
+			if got != tc.want {
+				t.Fatalf("key = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestPingTokenKey(t *testing.T) {
 	r := chi.NewRouter()
 	var gotKey string

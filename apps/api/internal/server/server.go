@@ -55,12 +55,10 @@ func (s *Server) buildRouter() *chi.Mux {
 	// every OG/canonical/sitemap URL already assumes, first thing, before
 	// any other middleware does real work.
 	r.Use(s.redirectWWW())
-	// Populates the context clientIPKey reads from. Explicitly the "directly
-	// exposed to clients" trust model (chi's own recommended equivalent of
-	// the RemoteAddr-based keying every rate limiter here already used) —
-	// see clientIPKey's comment for the caveat that isn't quite true in
-	// production, sitting behind kamal-proxy.
+	// Populates the context clientIPKey reads from: the TCP peer, replaced
+	// by the visitor's address when the peer is kamal-proxy.
 	r.Use(middleware.ClientIPFromRemoteAddr)
+	r.Use(clientIPFromProxy)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -355,17 +353,29 @@ func (s *Server) Start() error {
 	return srv.ListenAndServe()
 }
 
-// clientIPKey preserves httprate's now-deprecated LimitByIP/KeyByIP behavior
-// (key by the TCP peer's address) through the non-deprecated
-// ClientIPFromRemoteAddr + GetClientIP instead. Bug-for-bug identical to what
-// every IP-keyed limiter here already did — NOT a fix for the caveat
-// go-chi/httprate's deprecation notice calls out: behind a reverse proxy
-// (kamal-proxy, per config/deploy.yml, in production), r.RemoteAddr is the
-// proxy's own address, so every client sharing it lands in one bucket. Worth
-// a deliberate look at trusting kamal-proxy's forwarded-for header via
-// ClientIPFromXFF instead — not folded into this dependency-bump change.
+// clientIPKey keys a rate limit by the visitor's IP, as clientIPFromProxy
+// resolved it (IPv6 by /64).
 func clientIPKey(r *http.Request) (string, error) {
 	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
+}
+
+// clientIPFromProxy replaces the TCP peer with the rightmost X-Forwarded-For
+// entry when the peer is a private or loopback address. In production that
+// peer is kamal-proxy (config/deploy.yml), which always appends the address
+// it accepted the connection from, so the rightmost entry is the visitor's
+// and can't be forged; without this, every visitor shares kamal-proxy's
+// address and one rate-limit bucket. A peer on a public address connected
+// directly, so whatever X-Forwarded-For it sends is ignored.
+func clientIPFromProxy(next http.Handler) http.Handler {
+	fromXFF := middleware.ClientIPFromXFF()(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		peer := middleware.GetClientIPAddr(r.Context())
+		if peer.IsPrivate() || peer.IsLoopback() {
+			fromXFF.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // pingTokenKey rate-limits cron pings per token rather than per IP — a

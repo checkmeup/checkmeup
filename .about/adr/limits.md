@@ -2,7 +2,7 @@
 
 Date: 2026-10-17
 
-Rate limits are in-process `go-chi/httprate` middleware, per route, keyed by the narrowest thing that fits: IP for auth, sign-up, webhooks, public status pages, their badges and their JSON summary, the ping token for pings, the org (plus IP) for feature suggestions, the API key for the public API. A limited request gets `429` with `Retry-After`; counters reset when the process restarts. The current routes and numbers are in `apps/api/internal/server/server.go`. Badges are keyed by IP, not slug: a badge URL is public, and keying by slug would let one page's many embedders exhaust everyone's limit.
+Rate limits are in-process `go-chi/httprate` middleware, per route, keyed by the narrowest thing that fits: IP for auth, sign-up, webhooks, public status pages, their badges and their JSON summary, the ping token for pings, the org (plus IP) for feature suggestions, the API key for the public API. A limited request gets `429` with `Retry-After`; counters reset when the process restarts. The IP is the visitor's: behind kamal-proxy the TCP peer is the proxy, so a request from a private or loopback peer is keyed by the rightmost `X-Forwarded-For` entry, which kamal-proxy always appends and a client can't forge; a public peer's header is ignored. Until 2026-10-17 the peer was used, which put every visitor in one bucket. The current routes and numbers are in `apps/api/internal/server/server.go`. Badges are keyed by IP, not slug: a badge URL is public, and keying by slug would let one page's many embedders exhaust everyone's limit.
 
 Resources that grow by human action rather than by plan get a flat cap, the same on every plan, with a `LIMIT 200` on their list query: 100 updates per incident, 100 maintenance windows per org, 100 active API keys per org, 100 active manual incidents per org. Projects are capped at 1000 per org, as many as the largest plan's monitors, and their list query at `LIMIT 1000`, since the `/monitors` list groups by every project (ADR projects). Hitting one returns `409` with its own code (`too_many_incident_updates`, `too_many_maintenance_windows`, `too_many_api_keys`, `too_many_active_incidents`, `too_many_projects`), never `plan_limit_reached`, because upgrading doesn't lift it; only resolving, deleting or revoking does.
 
@@ -18,5 +18,6 @@ Check history is pruned daily by the worker: `cron_pings` and `cron_runs` after 
 ## Consequences
 
 - Per-IP limits can be dodged from many IPs; they raise the cost of abuse rather than prevent it.
+- A CDN or another proxy in front of kamal-proxy would make its address the rightmost `X-Forwarded-For` entry, back to one bucket for everyone; adding one means trusting its ranges too.
 - Maintenance windows have a cap but no expiry: an org at 100 deletes old ones by hand. Revisit if anyone reaches it.
 - Caps that are each bounded can still multiply into one unbounded page render; the public status page loads all active incidents' updates in one batched query for that reason.
