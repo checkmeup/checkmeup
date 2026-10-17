@@ -4,7 +4,7 @@
 
 2026-10-13 · session review · kept 2026-10-14
 
-Release notes `noindex`, `/changelog`, the trailing-slash 301 and the path-only canonical shipped on 2026-10-13. Google drops pages only after a recrawl, which can take weeks. The "Page with redirect" count should grow as trailing-slash variants become 301s. The guess that today's 4 redirect pages are the `http://` and `www.` variants was never checked. Settled when Search Console shows the release notes excluded by `noindex`, no trailing-slash duplicates indexed, and the redirect pages accounted for.
+Release notes `noindex`, `/changelog`, the trailing-slash 301 and the path-only canonical shipped on 2026-10-13. Google drops pages only after a recrawl, which can take weeks. The "Page with redirect" count should grow as trailing-slash variants become 301s. The guess that today's 4 redirect pages are the `http://` and `www.` variants was never checked. On 2026-10-17 the report (data as of 2026-10-12) still listed three release notes and a trailing-slash URL as indexed, and the sitemap as last read with 54 pages; the sitemap was resubmitted, and indexing requested for `/about` and `/blog`, both crawled but not indexed. Settled when Search Console shows the release notes excluded by `noindex`, no trailing-slash duplicates indexed, and the redirect pages accounted for.
 
 ## WhatsApp provider
 
@@ -71,3 +71,45 @@ The redesigned hero (variant A) was meant to sit next to a first-person line fro
 2026-10-17 · session review
 
 The SEO check fixed long descriptions and `HEAD` 405s but left smaller findings: every post shares one OG image, so shared links all look alike; `http://www.checkmeup.net` takes two redirects instead of one (kamal-proxy's doing). Core Web Vitals were never checked (PageSpeed Insights or a browser). Settled when each is fixed or judged not worth it, and Core Web Vitals have been looked at once.
+
+## Almost no organic search traffic
+
+2026-10-17 · session review
+
+Search Console showed 0 clicks and 127 impressions from 2026-07-15 to 2026-10-14, almost all for the brand name or typos of it, with nothing for topics like cron job monitoring. On 2026-10-12, 41 pages weren't indexed (26 discovered and 9 crawled but not indexed). GA4 counted 3 users in the 28 days to 2026-10-16, none from search. Technically the site is in order (the SEO check of 2026-10-17); a young domain usually needs outside signals, such as links from tool directories, Product Hunt, Show HN or the GitHub README. Settled by choosing which channels to try, or by Search Console showing clicks on non-brand queries.
+
+## Free tools without sign-up
+
+2026-10-17 · traffic review
+
+Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry are being built first. Settled when the tools chosen are live, or the rest are dropped.
+
+## "Alternative to X" pages
+
+2026-10-17 · traffic review
+
+Only one combined comparison post exists (`checkmeup-vs-healthchecks-uptimerobot-cronitor`). Separate pages for "Healthchecks.io alternative", "UptimeRobot alternative" and "Cronitor alternative" catch people already choosing a tool. Settled when the pages ship, or the idea is dropped.
+
+## Product pages per monitor type
+
+2026-10-17 · traffic review
+
+Cron, uptime, SSL, domain, port and DNS monitoring each have only a blog guide; there's no product page such as `/cron-monitoring` with the plan and a sign-up CTA. Settled when the pages ship or the guides are judged enough.
+
+## Stack-specific cron guides
+
+2026-10-17 · traffic review
+
+Long-tail guides: monitoring a Kubernetes CronJob, a GitHub Actions schedule, Laravel's scheduler, systemd timers, Celery beat. Pairs with the CLI wrapper in `docs/proposals/bucket-list.md`. Settled when the stacks to cover are picked and written, or the idea is dropped.
+
+## Status page footer as a sign-up source
+
+2026-10-17 · traffic review
+
+Every client status page links "Powered by Checkmeup" (`apps/api/internal/handler/status_public.go`) as a bare link: no UTM, no call to action. A "Get a free status page like this" link with `?ref=status` (or UTM) would show in GA4 how many sign-ups it brings. Settled when the link changes, or it's judged fine as is.
+
+## Launch and directory listings
+
+2026-10-17 · traffic review
+
+Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers, AlternativeTo, SaaSHub, awesome lists on GitHub; build-in-public posts such as "Three Days to MVP" cross-posted to dev.to with a canonical link back. The outside signals "Almost no organic search traffic" calls for. Settled when the channels are chosen and tried.
