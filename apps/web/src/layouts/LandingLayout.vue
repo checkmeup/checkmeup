@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useTheme } from '@/lib/theme'
 import { appVersion } from '@/lib/version'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const { logo } = useTheme()
 const mobileMenuOpen = ref(false)
+// A post's route is a sibling of /blog, not nested under it, so RouterLink's
+// active-class alone leaves Blog unhighlighted on /blog/<slug>.
+const route = useRoute()
+const onBlogPost = computed(() => route.path.startsWith('/blog/'))
 </script>
 
 <template>
@@ -43,6 +47,7 @@ const mobileMenuOpen = ref(false)
             to="/blog"
             class="px-3 py-2 rounded-lg hover:text-[var(--text-strong)] transition-colors"
             active-class="!text-[var(--text-strong)] font-medium"
+            :class="{ '!text-[var(--text-strong)] font-medium': onBlogPost }"
             >Blog</RouterLink
           >
           <RouterLink
@@ -128,6 +133,7 @@ const mobileMenuOpen = ref(false)
           to="/blog"
           class="block text-sm py-1 text-[var(--text-dim)]"
           active-class="!text-[var(--text-strong)] font-medium"
+          :class="{ '!text-[var(--text-strong)] font-medium': onBlogPost }"
           >Blog</RouterLink
         >
         <RouterLink
@@ -185,11 +191,11 @@ const mobileMenuOpen = ref(false)
               <RouterLink to="/changelog" class="hover:text-[var(--text-strong)] transition-colors"
                 >Changelog</RouterLink
               >
-            </nav>
-            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
               <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors"
                 >About</RouterLink
               >
+            </nav>
+            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
               <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors"
                 >Sign in</RouterLink
               >
@@ -210,13 +216,18 @@ const mobileMenuOpen = ref(false)
             </nav>
           </div>
         </div>
-        <div class="pt-5 border-t border-[var(--border)]">
+        <div class="flex items-center justify-between gap-4 pt-5 border-t border-[var(--border)]">
           <span class="text-xs text-[var(--text-muted)]"
             >© 2026 checkmeup.net ·
             <RouterLink to="/changelog" class="transition-colors hover:text-[var(--text-strong)]">{{
               appVersion
             }}</RouterLink></span
           >
+          <div class="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+            <!-- A plain link, not a RouterLink: the Go server renders status pages. -->
+            <a href="/status/checkmeup-net" class="transition-colors hover:text-[var(--text-strong)]">Status</a>
+            <a href="https://github.com/checkmeup/checkmeup" class="transition-colors hover:text-[var(--text-strong)]">GitHub</a>
+          </div>
         </div>
       </div>
     </footer>
