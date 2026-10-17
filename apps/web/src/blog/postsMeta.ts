@@ -15,6 +15,16 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-54-to-v1-56-free-tools',
+    slug: 'v1-54-to-v1-56-free-tools',
+    kind: 'release',
+    title: 'v1.54–v1.56: Free SSL and Domain Expiry Checkers',
+    date: 'October 17, 2026',
+    readTime: '4 min read',
+    excerpt:
+      "Check when a certificate or a domain expires without an account, using the same checks a monitor runs. Also: per-IP rate limits that were shared by every visitor now apply per visitor, and one failing certificate no longer turns a status page's whole 90-day strip red.",
+  },
+  {
     file: 'monitoring-many-clients',
     slug: 'monitoring-many-clients',
     kind: 'article',
