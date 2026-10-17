@@ -670,6 +670,34 @@ func TestSummarizeDays_TakesEachDaysWorstTone(t *testing.T) {
 	}
 }
 
+// SSL and domain monitors keep no daily history, so their bar repeats today's
+// status on every day; only today is real.
+func TestSummarizeDays_CountsSSLAndDomainMonitorsOnlyToday(t *testing.T) {
+	bar := func(color string) []publicBar {
+		b := make([]publicBar, 90)
+		for i := range b {
+			b[i] = publicBar{Color: color, Label: "day"}
+		}
+		return b
+	}
+	rows := []publicMonitorRow{
+		{Type: "uptime", Bar: bar(statusColorGreen)},
+		{Type: "ssl", Bar: bar(statusColorRed)},
+		{Type: "domain", Bar: bar(statusColorAmber)},
+	}
+
+	days := summarizeDays(rows)
+	if days[0].Tone != "up" || days[88].Tone != "up" {
+		t.Fatalf("past days: want up from the uptime monitor alone, got %q / %q", days[0].Tone, days[88].Tone)
+	}
+	if days[89].Tone != "down" {
+		t.Fatalf("today: want down from the failing SSL monitor, got %q", days[89].Tone)
+	}
+	if got := summarizeDays(rows[1:2]); got[0].Tone != "none" || got[0].Date != "day" {
+		t.Fatalf("a page with only an SSL monitor: want past days dated but without data, got %+v", got[0])
+	}
+}
+
 func TestSummarizeDay_UptimeAndLatency(t *testing.T) {
 	seg := func(checks, down int64, avgMs int32) []publicBar {
 		return []publicBar{{Color: statusColorGreen, Label: "Oct 14", Checks: checks, Down: down, AvgMs: avgMs}}

@@ -45,7 +45,9 @@ func summarizeDays(rows []publicMonitorRow) []summaryDay {
 
 // summarizeDay folds day i of every monitor's bar: the worst tone, plus the
 // share of checks that passed and the response time averaged over every
-// uptime check that day.
+// uptime check that day. SSL and domain monitors count only on the last day,
+// today: they keep no daily history, so their bar repeats today's status on
+// every past day, and one failing certificate would turn all 90 days red.
 func summarizeDay(rows []publicMonitorRow, i int) summaryDay {
 	day := summaryDay{Tone: "none"}
 	var checks, down, timedChecks, totalMs int64
@@ -56,6 +58,9 @@ func summarizeDay(rows []publicMonitorRow, i int) summaryDay {
 		seg := row.Bar[i]
 		if day.Date == "" {
 			day.Date = seg.Label
+		}
+		if (row.Type == "ssl" || row.Type == "domain") && i != len(row.Bar)-1 {
+			continue
 		}
 		if tone := statusTone(seg.Color); toneRank[tone] > toneRank[day.Tone] {
 			day.Tone = tone
