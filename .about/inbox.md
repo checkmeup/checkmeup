@@ -48,12 +48,6 @@ An architecture review found three places where each monitor type repeats logic 
 
 The review recommended the worker first, as alerting is the core of the product, or the plan checks as a cheaper first step. Settled by picking one and agreeing a plan, or by dropping the candidates.
 
-## Codacy API token rejected
-
-2026-10-15 · session review
-
-`CODACY_API_TOKEN` in `apps/api/.env` gets "Bad credentials" from the Codacy API, so the codacy-triage skill can't list issues; when a PR's Codacy check fails, the GitHub check run shows only the count, not the issues. Settled when a new account-level token is in `apps/api/.env` (and the CI secret, if it's the same one) and the skill's fetch returns issues.
-
 ## CLAUDE.md restructure not started
 
 2026-10-15 · session review
