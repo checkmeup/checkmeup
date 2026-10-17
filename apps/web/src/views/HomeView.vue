@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
+import IncludedIcon from '@/components/IncludedIcon.vue'
 import HeroSection from '@/components/HeroSection.vue'
 import CheckStrip from '@/components/CheckStrip.vue'
 import { useSeo } from '@/composables/useSeo'
@@ -439,7 +440,8 @@ useHead({
                       : ''
                   "
                 >
-                  {{ value }}
+                  <IncludedIcon v-if="value === '✓'" class="align-middle" />
+                  <template v-else>{{ value }}</template>
                 </td>
               </tr>
               </template>

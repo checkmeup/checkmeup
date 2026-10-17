@@ -165,6 +165,14 @@ describe('HomeView', () => {
     expect(wrapper.text()).not.toContain('Hourly Cron Monitor')
   })
 
+  it('marks an included feature in the plan comparison with an icon labelled Included', () => {
+    const wrapper = mountHome()
+
+    // White-label status pages: not on Hobby, included on the three paid plans.
+    expect(wrapper.findAll('table [aria-label="Included"]')).toHaveLength(3)
+    expect(wrapper.find('table').text()).not.toContain('✓')
+  })
+
   it('has no testimonials', () => {
     const wrapper = mountHome()
 
@@ -217,7 +225,10 @@ describe('HomeView', () => {
     )
     expect(copy.text()).toBe('Copied!')
 
-    await wrapper.findAll('button').find((b) => b.text() === 'HTML')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'HTML')!
+      .trigger('click')
     await copy.trigger('click')
     expect(writeText).toHaveBeenLastCalledWith(
       '<a href="https://checkmeup.net/status/checkmeup-net"><img src="https://checkmeup.net/status/checkmeup-net/badge.svg" alt="status"></a>',

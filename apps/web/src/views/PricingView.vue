@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
+import IncludedIcon from '@/components/IncludedIcon.vue'
 import { findFaqCategory } from '@/faq/faqs'
 import { useSeo } from '@/composables/useSeo'
 
@@ -387,21 +388,7 @@ const featureRows: TableRow[] = [
             class="px-4 py-3 text-center font-mono text-[13px]"
             :style="{ color: val === '—' ? 'var(--text-muted)' : 'var(--text-strong)' }"
           >
-            <!-- An icon, not the ✓ glyph: at 13px the glyph was too small to scan. -->
-            <svg
-              v-if="val === '✓'"
-              role="img"
-              aria-label="Included"
-              class="mx-auto text-[var(--accent)]"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="3"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <IncludedIcon v-if="val === '✓'" class="align-middle" />
             <template v-else>{{ val }}</template>
           </div>
         </div>
