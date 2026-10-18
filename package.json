@@ -6,7 +6,6 @@
     "packages/*"
   ],
   "type": "module",
-  "module": "index.ts",
   "dependencies": {
     "turbo": "^2.9.18"
   },
@@ -18,9 +17,6 @@
     "oxfmt": "^0.54.0",
     "oxlint": "^1.69.0",
     "semantic-release": "^25.0.5"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
   },
   "packageManager": "bun@1.3.14"
 }
