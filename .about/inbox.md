@@ -72,18 +72,6 @@ Search Console showed 0 clicks and 127 impressions from 2026-07-15 to 2026-10-14
 
 Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools); DNS lookup, TCP port and the cron explainer remain, waiting on the first two tools' 2026-12-15 success signal. Settled when the rest are built or dropped.
 
-## "Alternative to X" pages
-
-2026-10-17 · traffic review
-
-Only one combined comparison post exists (`checkmeup-vs-healthchecks-uptimerobot-cronitor`). Separate pages for "Healthchecks.io alternative", "UptimeRobot alternative" and "Cronitor alternative" catch people already choosing a tool. Settled when the pages ship, or the idea is dropped.
-
-## Product pages per monitor type
-
-2026-10-17 · traffic review
-
-Cron, uptime, SSL, domain, port and DNS monitoring each have only a blog guide; there's no product page such as `/cron-monitoring` with the plan and a sign-up CTA. Settled when the pages ship or the guides are judged enough.
-
 ## Stack-specific cron guides
 
 2026-10-17 · traffic review · kept 2026-10-18

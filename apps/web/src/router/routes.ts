@@ -64,6 +64,36 @@ export const routes: RouteRecordRaw[] = [
     name: 'domain-expiry-checker',
     component: () => import('@/views/DomainExpiryCheckerView.vue'),
   },
+  // One product page per monitor type (PRD marketing-pages). The type list is
+  // written out here rather than read from content/monitorPages.ts, so the
+  // page content stays in the view's lazy chunk.
+  ...(
+    [
+      ['cron', '/cron-monitoring'],
+      ['uptime', '/uptime-monitoring'],
+      ['ssl', '/ssl-monitoring'],
+      ['domain', '/domain-expiry-monitoring'],
+      ['port', '/port-monitoring'],
+      ['dns', '/dns-monitoring'],
+    ] as const
+  ).map(
+    ([type, path]): RouteRecordRaw => ({
+      path,
+      name: `${type}-monitoring`,
+      component: () => import('@/views/MonitorTypeView.vue'),
+      props: { type },
+    }),
+  ),
+  // "<tool> alternative" pages (PRD marketing-pages), slugs written out for the
+  // same reason as above.
+  ...(['healthchecks-io', 'uptimerobot', 'cronitor'] as const).map(
+    (slug): RouteRecordRaw => ({
+      path: `/alternatives/${slug}`,
+      name: `${slug}-alternative`,
+      component: () => import('@/views/AlternativeView.vue'),
+      props: { slug },
+    }),
+  ),
   {
     path: '/blog',
     name: 'blog',

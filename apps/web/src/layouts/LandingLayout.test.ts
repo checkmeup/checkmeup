@@ -56,6 +56,29 @@ describe('LandingLayout', () => {
     expect(hrefs).toContain('/tools/domain-expiry-checker')
   })
 
+  it('links every monitor type page from the footer', async () => {
+    const hrefs = (await mountAt('/')).findAll('footer nav a').map((a) => a.attributes('href'))
+    for (const path of [
+      '/cron-monitoring',
+      '/uptime-monitoring',
+      '/ssl-monitoring',
+      '/domain-expiry-monitoring',
+      '/port-monitoring',
+      '/dns-monitoring',
+    ])
+      expect(hrefs).toContain(path)
+  })
+
+  it('links each alternative page from the footer', async () => {
+    const hrefs = (await mountAt('/')).findAll('footer nav a').map((a) => a.attributes('href'))
+    for (const path of [
+      '/alternatives/healthchecks-io',
+      '/alternatives/uptimerobot',
+      '/alternatives/cronitor',
+    ])
+      expect(hrefs).toContain(path)
+  })
+
   it("links the footer's bottom row to Checkmeup's own status page and GitHub", async () => {
     const hrefs = (await mountAt('/'))
       .findAll('footer > div > div:last-child a')

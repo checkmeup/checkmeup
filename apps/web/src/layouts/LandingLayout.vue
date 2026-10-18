@@ -174,7 +174,7 @@ const onBlogPost = computed(() => route.path.startsWith('/blog/'))
               Cron, uptime, SSL, domain, port, and DNS monitoring for freelancers and solo devs.
             </p>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-10 sm:gap-x-14 gap-y-6 sm:ml-auto">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-10 sm:gap-x-14 gap-y-6 sm:ml-auto">
             <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
               <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors"
                 >Docs</RouterLink
@@ -209,6 +209,35 @@ const onBlogPost = computed(() => route.path.startsWith('/blog/'))
               >
               <RouterLink to="/sign-up" class="hover:text-[var(--text-strong)] transition-colors"
                 >Sign up</RouterLink
+              >
+            </nav>
+            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
+              <RouterLink to="/cron-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >Cron job monitoring</RouterLink
+              >
+              <RouterLink to="/uptime-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >Uptime monitoring</RouterLink
+              >
+              <RouterLink to="/ssl-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >SSL monitoring</RouterLink
+              >
+              <RouterLink to="/domain-expiry-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >Domain expiry monitoring</RouterLink
+              >
+              <RouterLink to="/port-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >Port monitoring</RouterLink
+              >
+              <RouterLink to="/dns-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
+                >DNS monitoring</RouterLink
+              >
+              <RouterLink to="/alternatives/healthchecks-io" class="hover:text-[var(--text-strong)] transition-colors"
+                >Healthchecks.io alternative</RouterLink
+              >
+              <RouterLink to="/alternatives/uptimerobot" class="hover:text-[var(--text-strong)] transition-colors"
+                >UptimeRobot alternative</RouterLink
+              >
+              <RouterLink to="/alternatives/cronitor" class="hover:text-[var(--text-strong)] transition-colors"
+                >Cronitor alternative</RouterLink
               >
             </nav>
             <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
