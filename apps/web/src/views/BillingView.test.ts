@@ -100,9 +100,9 @@ const enterpriseInfo = {
   subscriptionStatus: 'active',
   planRenewsAt: '2027-01-01',
   monitorCount: 50,
-  monitorLimit: -1,
+  monitorLimit: 1000,
   statusPageCount: 2,
-  statusPageLimit: -1,
+  statusPageLimit: 100,
   smsCreditsUsed: 12,
   smsCreditsLimit: 100,
   minIntervalMins: 1,
@@ -215,12 +215,12 @@ describe('BillingView', () => {
     expect(wrapper.text()).not.toContain('Cancellation scheduled')
   })
 
-  it('shows unlimited usage labels and hides upgrade options for the top enterprise plan', () => {
+  it("shows the enterprise plan's limits and hides upgrade options for the top plan", () => {
     infoData.value = { ...enterpriseInfo }
     const wrapper = mount(BillingView)
 
-    expect(wrapper.text()).toContain('50 / unlimited')
-    expect(wrapper.text()).toContain('2 / unlimited')
+    expect(wrapper.text()).toContain('50 / 1000')
+    expect(wrapper.text()).toContain('2 / 100')
     expect(wrapper.text()).toContain('12 / 100')
     expect(wrapper.text()).not.toContain('Upgrade')
   })
