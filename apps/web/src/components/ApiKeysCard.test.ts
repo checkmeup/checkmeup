@@ -76,6 +76,33 @@ describe('ApiKeysCard', () => {
     expect(wrapper.text()).toContain('Never used')
   })
 
+  it("shows each key's label, created date and last-used time", () => {
+    keysData.value = [
+      {
+        ...key1,
+        createdAt: '2026-03-15T12:00:00Z',
+        lastUsedAt: new Date(Date.now() - 3 * 3600000).toISOString(),
+      },
+      {
+        ...key1,
+        id: 'key2',
+        label: 'Staging deploys',
+        createdAt: '2026-05-02T12:00:00Z',
+        lastUsedAt: null,
+      },
+    ]
+    const wrapper = mountCard()
+
+    const rows = wrapper.findAll('li')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].text()).toContain('CI integration')
+    expect(rows[0].text()).toContain('created Mar 15, 2026')
+    expect(rows[0].text()).toContain('used 3h ago')
+    expect(rows[1].text()).toContain('Staging deploys')
+    expect(rows[1].text()).toContain('created May 2, 2026')
+    expect(rows[1].text()).toContain('Never used')
+  })
+
   it('opens the generate-key form', async () => {
     const wrapper = mountCard()
 

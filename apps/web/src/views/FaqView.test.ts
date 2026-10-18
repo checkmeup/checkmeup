@@ -46,4 +46,11 @@ describe('FaqView', () => {
       }
     }
   })
+  it('gives the billing category the #billing anchor its section opens at', () => {
+    const wrapper = mount(FaqView)
+
+    const section = wrapper.find('section#billing')
+    expect(section.exists()).toBe(true)
+    expect(section.find('h2').text()).toContain('Billing')
+  })
 })

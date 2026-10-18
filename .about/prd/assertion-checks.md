@@ -44,3 +44,4 @@ A JSON health endpoint reporting itself unhealthy is marked down, with the faile
 - With several assertions, the check fails when any one fails.
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/with several JSON assertions, one failing is enough to be down"
 - The detail page lists the configured assertions and the response-time limit.
+  → test: apps/web/src/views/UptimeMonitorDetailView.test.ts "lists the configured JSON assertions and the response-time limit"

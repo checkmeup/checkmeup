@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -215,6 +217,24 @@ describe('UptimeMonitorCreateView', () => {
 
     await toggle.trigger('click')
     expect(wrapper.find('#httpMethod').exists()).toBe(false)
+  })
+
+  it('keeps the method, max response time and accepted status codes in a collapsed advanced section', async () => {
+    const wrapper = mount(UptimeMonitorCreateView)
+
+    expect(wrapper.find('#httpMethod').exists()).toBe(false)
+    expect(wrapper.find('#maxResponseTimeMs').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Accepted status codes')
+
+    const toggle = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Advanced check settings'))!
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    await toggle.trigger('click')
+
+    expect(wrapper.find('#httpMethod').exists()).toBe(true)
+    expect(wrapper.find('#maxResponseTimeMs').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Accepted status codes')
   })
 
   it('toggles accepted status codes as chip buttons', async () => {

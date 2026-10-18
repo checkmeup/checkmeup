@@ -30,11 +30,20 @@ PRD multi-region-checks needs compute in more than one region, against one VPS a
 
 Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-route rate limits (ADR limits) only bound one IP or account, and API, database and worker share one box (ADR infrastructure). Options: a CDN/WAF such as Cloudflare, or nothing for now; a proxy must keep real client IPs for the per-IP limits. Settled by that choice, recorded in ADR infrastructure. Not something to test live.
 
-## Shipped PRD criteria with no test
+## Shipped PRD criteria the code doesn't meet
 
-2026-10-14 · session review
+2026-10-14 · session review · updated 2026-10-18
 
-Writing the PRDs found about 20 acceptance criteria of shipped features with no `→ test`, among them the rate limits on auth endpoints and pings, the 64 KB request body cap, the daily SSL and domain check frequency, the channel-creation cap and the cross-channel alert cap, the prerendered HTML, and the badges' `Cache-Control`. Nothing would notice if one of them broke. Settled when each has a test linked from its PRD, or is reworded or dropped as not worth testing.
+A test pass on 2026-10-18 linked tests to every other shipped criterion. These are left, because the code doesn't do what they say or nothing on the web side can check them:
+
+- annual-billing: the renewal date a year after purchase comes from Paddle's `next_billed_at` (`resolveRenewsAt`); only a Go test can check it.
+- dns-monitoring: the detail page's change log (from what, to what) isn't built; there is only the per-lookup check log.
+- telegram-alerts: a muted monitor isn't marked as muted in the monitor list.
+- notification-channels: a new monitor's form starts with no channel selected; the API attaches every enabled channel when none is sent, so the outcome matches but the form says alerts fall back to email.
+- webhook-alerts: Settings explains signature checking in one sentence, with no code snippet.
+- The body cap and the slow webhook have items of their own below; the read-only key scope too.
+
+Settled when each is built, tested, or reworded in its PRD.
 
 ## Architecture deepening candidates
 
@@ -101,4 +110,3 @@ PRD security-hardening says a request body over 64 KB is refused with `413` befo
 2026-10-18 · PRD test pass
 
 PRD webhook-alerts says a slow endpoint is cut off after 10 seconds and never delays the check loop. The 10-second cut-off is real (`deliver.Timeout`), but `DispatchAlert` runs inside each check's goroutine, and `checkUptimeMonitors` waits for all of them (`wg.Wait`) before the tick moves on, so one slow endpoint can hold a 30-second tick for up to 10 seconds. The timeout also can't be shortened in a test without a real 10-second wait. Settled by dispatching alerts outside the check's wait group (and making the timeout injectable) with a test, or by rewording the criterion.
-

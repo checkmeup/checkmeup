@@ -43,3 +43,5 @@ Every account has a recorded acceptance of the current terms version.
 - Settings shows the accepted version and date, read-only.
   → test: apps/web/src/views/SettingsView.test.ts "shows the formatted terms acceptance date when accepted"
 - Terms and Privacy are linked from the footer of the landing pages, the blog and status pages.
+  → test: apps/web/scripts/prerender.test.ts "links Terms and Privacy from the footer of the landing pages and the blog"
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/PRD legal-pages: the footer links to Terms and Privacy"

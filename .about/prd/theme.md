@@ -28,4 +28,8 @@ The chosen theme applies everywhere instantly and is still there on the next vis
   → test: apps/web/src/views/SettingsView.test.ts "renders the appearance section with the current theme highlighted"
   → test: apps/web/src/views/SettingsView.test.ts "switches the theme when a theme button is clicked"
 - A returning visitor gets their saved theme before the first paint.
+  → test: apps/web/scripts/theme-init.test.ts "runs as a blocking script in <head>, before the body is painted"
+  → test: apps/web/scripts/theme-init.test.ts "gives a returning visitor their saved theme, whatever the OS's preference"
 - A first-time visitor gets the theme matching their OS's `prefers-color-scheme`.
+  → test: apps/web/scripts/theme-init.test.ts "runs as a blocking script in <head>, before the body is painted"
+  → test: apps/web/scripts/theme-init.test.ts "gives a first-time visitor the theme matching the OS's prefers-color-scheme"

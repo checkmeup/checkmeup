@@ -40,3 +40,5 @@ A healthy endpoint answering `204` (or needing a 20-second timeout) stays green 
 - The accepted status codes are checked against the final response after redirects.
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/accepted status codes are checked against the final response after redirects"
 - The three fields sit in a collapsed "advanced" section of the create and edit forms.
+  → test: apps/web/src/views/UptimeMonitorCreateView.test.ts "keeps the method, max response time and accepted status codes in a collapsed advanced section"
+  → test: apps/web/src/views/UptimeMonitorEditView.test.ts "keeps the method, max response time and accepted status codes in a collapsed advanced section"

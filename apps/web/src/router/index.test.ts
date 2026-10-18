@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RouteLocationNormalized } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore, type User } from '@/stores/auth'
 
@@ -116,5 +117,16 @@ describe('router guards', () => {
     await router.push('/sign-in')
 
     expect(trackPageviewMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('router scrolling', () => {
+  it('opens a URL with a hash, such as /faq#billing, at the element with that id', async () => {
+    const scrollBehavior = router.options.scrollBehavior!
+    const to = router.resolve('/faq#billing') as RouteLocationNormalized
+
+    const position = await scrollBehavior(to, router.currentRoute.value, null)
+
+    expect(position).toEqual({ el: '#billing', behavior: 'smooth' })
   })
 })

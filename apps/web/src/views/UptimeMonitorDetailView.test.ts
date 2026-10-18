@@ -170,6 +170,25 @@ describe('UptimeMonitorDetailView', () => {
     expect(wrapper.text()).toContain('(case-sensitive)')
   })
 
+  it('lists the configured JSON assertions and the response-time limit', () => {
+    detailData.value = {
+      ...detail,
+      monitor: {
+        ...monitor,
+        maxResponseTimeMs: 2500,
+        jsonAssertions: [
+          { path: 'status', comparator: 'equals', expected: 'ok' },
+          { path: 'data.queue.depth', comparator: 'less_than', expected: '100' },
+        ],
+      },
+    }
+    const wrapper = mount(UptimeMonitorDetailView)
+
+    expect(wrapper.text()).toContain('JSON status equals ok')
+    expect(wrapper.text()).toContain('JSON data.queue.depth less than 100')
+    expect(wrapper.text()).toContain('Timeout 2500 ms')
+  })
+
   it('pauses an active monitor and refetches', async () => {
     detailData.value = { ...detail, monitor: { ...monitor, status: 'up' } }
     pauseUptimeMock.mockResolvedValueOnce(undefined)

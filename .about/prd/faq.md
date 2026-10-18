@@ -30,4 +30,7 @@ Common questions are answered on one page that other pages can link into by sect
 - The pricing page shows the billing questions from the same entries as `/faq`, not a copy.
   → test: apps/web/src/views/PricingView.test.ts "renders the billing FAQ entries from findFaqCategory"
 - Each category has an anchor (such as `/faq#billing`) that opens the page at that section.
+  → test: apps/web/src/views/FaqView.test.ts "gives the billing category the #billing anchor its section opens at"
+  → test: apps/web/src/router/index.test.ts "opens a URL with a hash, such as /faq#billing, at the element with that id"
 - The sign-up page links to the "Getting started" section.
+  → test: apps/web/src/views/SignUpView.test.ts "links to the Getting started section of the FAQ"

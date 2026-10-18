@@ -28,6 +28,7 @@ Search Console shows the release notes excluded by `noindex` and no trailing-sla
 - A release note's page sets `noindex, follow`; an Article's sets `index, follow`.
   → test: apps/web/src/views/BlogPostView.test.ts "marks a release-notes post noindex but still followed"
 - The `noindex, follow` tag is in each release note's prerendered HTML, as fetched without running JavaScript.
+  → test: apps/web/scripts/prerender.test.ts "puts noindex, follow in every release note and index, follow in every article"
 - `/blog` lists no release notes and links to `/changelog`.
   → test: apps/web/src/views/BlogView.test.ts "does not list release-notes posts"
   → test: apps/web/src/views/BlogView.test.ts "links to the changelog"
@@ -38,7 +39,9 @@ Search Console shows the release notes excluded by `noindex` and no trailing-sla
 - A release note links back to `/changelog`, not `/blog`.
   → test: apps/web/src/views/BlogPostView.test.ts "links a release-notes post back to the changelog"
 - `sitemap.xml` has `/changelog` and every Article, and no release note.
+  → test: apps/web/scripts/generate-sitemap.test.ts "lists /changelog and every article, and no release note"
 - `robots.txt` doesn't disallow release notes.
+  → test: apps/web/scripts/robots.test.ts "doesn't disallow release notes"
 - A trailing-slash URL other than `/` answers 301 to the bare form, keeping the query, and never to another host.
   → test: apps/api/internal/server/server_test.go "TestHandleSPA/trailing slash 301s to the slash-less form, keeping the query"
   → test: apps/api/internal/server/server_test.go "TestHandleSPA/root path is served, not redirected"

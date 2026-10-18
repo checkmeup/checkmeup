@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import SignUpView from './SignUpView.vue'
+import { findFaqCategory } from '@/faq/faqs'
 
 const pushMock = vi.fn()
 
@@ -198,5 +199,16 @@ describe('SignUpView', () => {
       needsTermsAcceptance: false,
     })
     await flushPromises()
+  })
+  it('links to the Getting started section of the FAQ', () => {
+    const wrapper = mount(SignUpView, {
+      global: {
+        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
+      },
+    })
+
+    const link = wrapper.find('a[href="/faq#getting-started"]')
+    expect(link.exists()).toBe(true)
+    expect(findFaqCategory('getting-started')?.label).toBe('Getting started')
   })
 })

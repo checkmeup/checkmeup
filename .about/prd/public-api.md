@@ -48,4 +48,6 @@ A user creates a key and reads a monitor's status with one `curl` from the docs.
 - A 61st request in a minute on one key gets `429` with `Retry-After`.
   → test: apps/api/internal/server/server_test.go "TestRoutes_PublicAPIIsRateLimitedPerKey/a 61st request in a minute on one key gets 429 with Retry-After"
 - The key list shows each key's label, created and last-used dates; recording last use never slows the request.
+  → test: apps/web/src/components/ApiKeysCard.test.ts "shows each key's label, created date and last-used time"
+  → test: apps/api/internal/middleware/apikey_test.go "TestRequireAPIKey_RecordingLastUseNeverSlowsTheRequest"
 - A key is created read-only or read-write; a read-only key's non-`GET` request gets `403`.

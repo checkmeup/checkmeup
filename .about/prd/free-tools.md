@@ -48,6 +48,8 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - Each result shows a sign-up link offering to monitor it.
   → test: apps/web/src/components/ToolChecker.test.ts "shows the expiry, days left and registrar, with an offer to monitor it"
 - Fetching either page without JavaScript returns its `<h1>`, title, description and Open Graph tags; both are in `sitemap.xml`.
+  → test: apps/web/scripts/prerender.test.ts "serves both free checkers with their <h1>, title, description and Open Graph tags"
+  → test: apps/web/scripts/generate-sitemap.test.ts "lists both free checkers"
 - Both pages are linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
 
