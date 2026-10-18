@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -125,5 +126,59 @@ func TestRequireAPIKey_RevokedKey(t *testing.T) {
 	middleware.RequireAPIKey(queries)(http.HandlerFunc(apiKeyOKHandler)).ServeHTTP(w, r)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", w.Code)
+	}
+}
+
+func TestRequireAPIKey_RecordingLastUseNeverSlowsTheRequest(t *testing.T) {
+	pool := testAPIKeyPool(t)
+	queries := db.New(pool)
+	orgID, rawKey := seedAPIKey(t, pool, false)
+	ctx := context.Background()
+
+	// Hold the key's row lock so the last-use UPDATE has to wait for it; the
+	// key lookup is a plain read and isn't blocked by the lock.
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM api_keys WHERE org_id = $1 FOR UPDATE`, orgID); err != nil {
+		t.Fatalf("lock key row: %v", err)
+	}
+
+	done := make(chan int, 1)
+	go func() {
+		r := httptest.NewRequest("GET", "/", nil)
+		r.Header.Set("X-API-Key", rawKey)
+		w := httptest.NewRecorder()
+		middleware.RequireAPIKey(queries)(http.HandlerFunc(apiKeyOKHandler)).ServeHTTP(w, r)
+		done <- w.Code
+	}()
+	select {
+	case code := <-done:
+		if code != http.StatusOK {
+			t.Fatalf("want 200, got %d", code)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("request waited on recording the key's last use")
+	}
+
+	// Once the lock is gone, the last use is still recorded.
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("rollback: %v", err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var recorded bool
+		if err := pool.QueryRow(ctx, `SELECT last_used_at IS NOT NULL FROM api_keys WHERE org_id = $1`, orgID).Scan(&recorded); err != nil {
+			t.Fatalf("read last_used_at: %v", err)
+		}
+		if recorded {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("last_used_at was never recorded")
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }

@@ -13,6 +13,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -325,6 +326,139 @@ func TestStatusPublicServeHTTP(t *testing.T) {
 			t.Fatal("want the real Down status hidden behind the maintenance override")
 		}
 	})
+	t.Run("PRD legal-pages: the footer links to Terms and Privacy", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Footer Co"})
+		if createW.Code != http.StatusCreated {
+			t.Fatalf("setup: want 201, got %d", createW.Code)
+		}
+
+		body := doPublicStatusPage(publicH, slug).Body.String()
+		footer := between(body, `<footer class="footer">`, "</footer>")
+		if !strings.Contains(footer, `<a href="https://checkmeup.net/terms">Terms</a>`) {
+			t.Fatal("want a Terms link in the footer")
+		}
+		if !strings.Contains(footer, `<a href="https://checkmeup.net/privacy">Privacy</a>`) {
+			t.Fatal("want a Privacy link in the footer")
+		}
+	})
+
+	t.Run("resolved incidents appear in a paginated history", func(t *testing.T) {
+		incidentH := NewIncidentHandler(pool)
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "API")
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "History Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "uptime", MonitorID: mon.ID, DisplayName: "API", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+
+		// Eleven resolved incidents, "Past incident 01" resolved most recently.
+		const total = 11
+		for i := 1; i <= total; i++ {
+			created := createIncident(t, incidentH, u.access, createIncidentRequest{
+				Title: fmt.Sprintf("Past incident %02d", i), Message: "Looking into it", Severity: "minor",
+				Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+			})
+			resolveW := doIncidentRequest(t, http.MethodPost, incidentH.PostIncidentUpdate, u.access, "/api/v1/incidents/"+created.ID+"/updates", map[string]string{"id": created.ID}, postUpdateRequest{
+				Message: fmt.Sprintf("Fixed %02d", i), Status: "resolved",
+			})
+			if resolveW.Code != http.StatusCreated {
+				t.Fatalf("setup: want 201, got %d: %s", resolveW.Code, resolveW.Body.String())
+			}
+			mustExec(t, pool, "UPDATE status_page_incidents SET resolved_at = NOW() - make_interval(mins => $2) WHERE id = $1", created.ID, i)
+		}
+
+		pageBody := func(query string) string {
+			req := httptest.NewRequest(http.MethodGet, "/status/"+slug+query, nil)
+			req = withURLParam(req, "slug", slug)
+			w := httptest.NewRecorder()
+			publicH.ServeHTTP(w, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s: want 200, got %d", query, w.Code)
+			}
+			return w.Body.String()
+		}
+
+		first := pageBody("")
+		if !strings.Contains(first, "Past incidents") || !strings.Contains(first, "Past incident 01") || !strings.Contains(first, "Fixed 01") {
+			t.Fatal("want the most recently resolved incident in the history on the first page")
+		}
+		if strings.Contains(first, "Past incident 11") {
+			t.Fatal("want the oldest incident pushed off the first page")
+		}
+		if !strings.Contains(first, `href="?incidents_page=2"`) || strings.Contains(first, "Newer") {
+			t.Fatal("want the first page to link to older incidents only")
+		}
+
+		second := pageBody("?incidents_page=2")
+		if !strings.Contains(second, "Past incident 11") {
+			t.Fatal("want the oldest incident on the second page")
+		}
+		if strings.Contains(second, "Past incident 01") {
+			t.Fatal("want the newest incident left on the first page")
+		}
+		if !strings.Contains(second, `href="?incidents_page=1"`) {
+			t.Fatal("want the second page to link back to newer incidents")
+		}
+	})
+
+	t.Run("maintenance and an incident on the same monitor show as distinct states", func(t *testing.T) {
+		incidentH := NewIncidentHandler(pool)
+		u := signUpTestUser(t, authH, pool)
+		mon := createUptimeMonitor(t, monitorH, u.access, "API")
+		slug := uniqueSlug(t)
+		createW := doAuthed(t, http.MethodPost, statusH.CreateStatusPage, u.access, createStatusPageRequest{Slug: slug, Title: "Both Co"})
+		page := decodeBody[statusPageResponse](t, createW)
+		setW := doStatusPageRequest(t, http.MethodPut, statusH.SetStatusPageMonitors, u.access, page.ID, setMonitorsRequest{
+			Monitors: []setMonitorItem{{MonitorType: "uptime", MonitorID: mon.ID, DisplayName: "API", DisplayOrder: 0}},
+		})
+		if setW.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", setW.Code, setW.Body.String())
+		}
+		windowW := doAuthed(t, http.MethodPost, maintH.CreateMaintenanceWindow, u.access, maintenanceWindowRequest{
+			Title:    "Database upgrade",
+			StartsAt: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+			Monitors: []maintenanceMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		})
+		if windowW.Code != http.StatusCreated {
+			t.Fatalf("setup: want 201, got %d: %s", windowW.Code, windowW.Body.String())
+		}
+		createIncident(t, incidentH, u.access, createIncidentRequest{
+			Title: "Login errors", Message: "Users cannot sign in", Severity: "major", ConfirmOverlap: true,
+			Monitors: []incidentMonitorInput{{MonitorType: "uptime", MonitorID: mon.ID}},
+		})
+
+		body := doPublicStatusPage(publicH, slug).Body.String()
+		if !strings.Contains(between(body, `<span class="monitor-name">API</span>`, `class="bar"`), "Under maintenance") {
+			t.Fatal("want the monitor shown as Under maintenance")
+		}
+		incidentCard := between(body, `<section class="incident `, "</section>")
+		for _, want := range []string{"Login errors", "Investigating", "Users cannot sign in", "Affecting: API"} {
+			if !strings.Contains(incidentCard, want) {
+				t.Fatalf("want the incident card to show %q", want)
+			}
+		}
+	})
+}
+
+// between returns the part of s from the first start up to the next end, or
+// "" when either is missing.
+func between(s, start, end string) string {
+	i := strings.Index(s, start)
+	if i < 0 {
+		return ""
+	}
+	j := strings.Index(s[i:], end)
+	if j < 0 {
+		return ""
+	}
+	return s[i : i+j]
 }
 
 func TestMonitorStatusDisplay(t *testing.T) {

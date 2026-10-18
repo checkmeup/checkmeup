@@ -40,4 +40,6 @@ A user copies a badge snippet into a README and it shows the live status, linkin
   → test: apps/web/src/views/StatusPageDetailView.test.ts "copies the Markdown snippet for a badge"
   → test: apps/web/src/views/StatusPageDetailView.test.ts "copies the HTML snippet for a monitor badge"
 - Badge responses carry `Cache-Control: max-age=60`.
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServePageBadge/all-green page renders an operational badge"
 - A 301st badge request in a minute from one IP gets `429`.
+  → test: apps/api/internal/server/server_test.go "TestRoutes_BadgesAreRateLimitedPerIP/a 301st badge request in a minute from one IP gets 429"

@@ -46,5 +46,7 @@ A user routes a client's monitors to that client's Slack and their own Telegram 
 - After the cap is reached, further down alerts for the incident are suppressed.
   → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/the per-incident alert cap suppresses further alerts"
 - Creating a channel past the plan's limit gets `402 plan_limit_reached`.
+  → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creating a channel past the plan's limit gets 402 plan_limit_reached"
 - Each monitor's form has a channel picker; a new monitor starts with all the org's enabled channels selected.
 - One alert sent to several channels counts once against `max_alerts_per_incident`.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/one alert sent to several channels counts once against the per-incident cap"

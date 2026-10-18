@@ -42,4 +42,5 @@ A JSON health endpoint reporting itself unhealthy is marked down, with the faile
 - A maximum response time outside 1,000–30,000 ms is refused.
   → test: apps/api/internal/handler/uptime_monitors_test.go "TestCreateUptimeMonitor/validation"
 - With several assertions, the check fails when any one fails.
+  → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/with several JSON assertions, one failing is enough to be down"
 - The detail page lists the configured assertions and the response-time limit.

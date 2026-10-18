@@ -60,3 +60,6 @@ A new user goes from the sign-up form to the dashboard in one step and stays sig
 - An expired or used reset link shows an "expired link" message.
   → test: apps/web/src/views/ResetPasswordView.test.ts "shows an expired-link message on a 400 error"
 - A sixth sign-up from one IP within an hour, an eleventh sign-in within 10 minutes, or a fourth reset request within 10 minutes gets `429` with `Retry-After`.
+  → test: apps/api/internal/server/server_test.go "TestRoutes_AuthEndpointsAreRateLimitedPerIP/a sixth sign-up within an hour gets 429"
+  → test: apps/api/internal/server/server_test.go "TestRoutes_AuthEndpointsAreRateLimitedPerIP/an eleventh sign-in within 10 minutes gets 429"
+  → test: apps/api/internal/server/server_test.go "TestRoutes_AuthEndpointsAreRateLimitedPerIP/a fourth reset request within 10 minutes gets 429"

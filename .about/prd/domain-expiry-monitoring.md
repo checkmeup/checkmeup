@@ -56,3 +56,4 @@ Every monitored domain is renewed before it expires, with warnings at 30, 14 and
   → test: apps/api/internal/handler/domain_monitors_test.go "TestDeleteDomainMonitor/cross-tenant delete is a no-op, owner delete succeeds"
   → test: apps/api/internal/handler/domain_monitors_test.go "TestGetDomainMonitor/cross-tenant monitor is not found (tenant isolation)"
 - Each domain is checked once a day.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a checked domain is not looked up again until a day later"

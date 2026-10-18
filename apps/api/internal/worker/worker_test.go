@@ -580,6 +580,96 @@ func TestPerformHTTPCheck(t *testing.T) {
 			t.Fatalf("want down/timeout, got isUp=%v reason=%q", isUp, reason)
 		}
 	})
+	t.Run("with several JSON assertions, one failing is enough to be down", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = fmt.Fprint(w, `{"status":"ok","version":2,"db":{"healthy":true}}`)
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.JsonAssertions = []byte(`[
+			{"path":"$.status","comparator":"equals","expected":"ok"},
+			{"path":"$.version","comparator":"greater_than","expected":"5"},
+			{"path":"$.db.healthy","comparator":"equals","expected":"true"}
+		]`)
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+		if isUp || !strings.Contains(reason, "$.version") {
+			t.Fatalf("want down on the failing $.version assertion, got isUp=%v reason=%q", isUp, reason)
+		}
+	})
+
+	t.Run("accepted status codes are checked against the final response after redirects", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			finalCode  int
+			accepted   []int32
+			wantUp     bool
+			wantReason string
+		}{
+			{"a redirect to an accepted code is up", http.StatusCreated, []int32{201}, true, ""},
+			{"a redirect to a refused code is down, even with the redirect's code accepted", http.StatusInternalServerError, []int32{200, 302}, false, "HTTP 500"},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+					http.Redirect(w, r, "/final", http.StatusFound)
+				})
+				mux.HandleFunc("/final", func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(tc.finalCode)
+				})
+				srv := httptest.NewServer(mux)
+				defer srv.Close()
+
+				// The real checks' client, with a transport that may reach
+				// the local test server.
+				client := *uptimeCheckClient()
+				client.Transport = srv.Client().Transport
+
+				m := baseUptimeCheckMonitor(srv.URL + "/start")
+				m.AcceptedStatusCodes = tc.accepted
+				code, _, isUp, reason := performHTTPCheck(m, &client)
+				if code != tc.finalCode || isUp != tc.wantUp || reason != tc.wantReason {
+					t.Fatalf("want (%d, up=%v, %q), got (%d, up=%v, %q)", tc.finalCode, tc.wantUp, tc.wantReason, code, isUp, reason)
+				}
+			})
+		}
+	})
+
+	t.Run("only the first 512 KB of the body is searched for the keyword, whatever its Content-Length", func(t *testing.T) {
+		const limit = 512 * 1024
+		cases := []struct {
+			name          string
+			body          string
+			contentLength bool
+			wantUp        bool
+		}{
+			{"keyword ending at 512 KB, with Content-Length", strings.Repeat("a", limit-len("NEEDLE")) + "NEEDLE", true, true},
+			{"keyword just past 512 KB, with Content-Length", strings.Repeat("a", limit) + "NEEDLE", true, false},
+			{"keyword just past 512 KB, chunked without Content-Length", strings.Repeat("a", limit) + "NEEDLE", false, false},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if tc.contentLength {
+						w.Header().Set("Content-Length", fmt.Sprint(len(tc.body)))
+					} else {
+						w.(http.Flusher).Flush() // sends the headers now, so the body goes out chunked
+					}
+					_, _ = io.WriteString(w, tc.body)
+				}))
+				defer srv.Close()
+
+				m := baseUptimeCheckMonitor(srv.URL)
+				m.Keyword = pgtype.Text{String: "NEEDLE", Valid: true}
+				m.KeywordMode = db.KeywordModeContains
+				_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+				if isUp != tc.wantUp {
+					t.Fatalf("want up=%v, got up=%v reason=%q", tc.wantUp, isUp, reason)
+				}
+			})
+		}
+	})
 }
 
 // ─── JSON assertions (pure functions) ─────────────────────────────────────
@@ -1470,6 +1560,29 @@ func TestCheckOverdue(t *testing.T) {
 			t.Fatalf("want status unchanged (waiting), got %q", status)
 		}
 	})
+	t.Run("one alert sent to several channels counts once against the per-incident cap", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		emailChannel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
+		attachNotificationChannel(t, queries, emailChannel.ID, "cron", mon.ID)
+		webhookEvents := webhookRecorder(t, queries, org.ID, "cron", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
+
+		local := n
+		local.Webhook = webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+		checkOverdue(context.Background(), local)
+
+		if got := webhookEvents(); got != 1 {
+			t.Fatalf("want the alert delivered to the webhook channel too, got %d events", got)
+		}
+		var alertCount int32
+		if err := pool.QueryRow(context.Background(), "SELECT alert_count FROM cron_incidents WHERE monitor_id = $1", mon.ID).Scan(&alertCount); err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		if alertCount != 1 {
+			t.Fatalf("want alert_count 1 for one alert on two channels, got %d", alertCount)
+		}
+	})
 }
 
 // ─── checkStuckCronRuns (PRD zombie-job-detection) ───────────────────────────────────
@@ -2166,6 +2279,33 @@ func TestCheckSSLMonitors(t *testing.T) {
 			t.Fatalf("want status unchanged (waiting) under maintenance, got %q", status)
 		}
 	})
+	t.Run("a checked certificate is not checked again until a day later", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
+
+		checkSSLMonitors(context.Background(), n)
+		var firstCheck, nextCheck pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT last_checked_at, next_check_at FROM ssl_monitors WHERE id = $1", mon.ID,
+		).Scan(&firstCheck, &nextCheck); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if !firstCheck.Valid {
+			t.Fatal("want the monitor checked")
+		}
+		if gap := nextCheck.Time.Sub(firstCheck.Time); gap != 24*time.Hour {
+			t.Fatalf("want the next check a day after this one, got %v later", gap)
+		}
+
+		checkSSLMonitors(context.Background(), n)
+		var secondCheck pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(), "SELECT last_checked_at FROM ssl_monitors WHERE id = $1", mon.ID).Scan(&secondCheck); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if !secondCheck.Time.Equal(firstCheck.Time) {
+			t.Fatal("want no second check within the day")
+		}
+	})
 }
 
 // ─── checkDomainMonitors / checkOneDomainMonitor ──────────────────────────
@@ -2388,6 +2528,40 @@ func TestCheckDomainMonitors(t *testing.T) {
 		}
 		if !alerted30d || alerted14d || alerted7d {
 			t.Fatalf("want only alerted_30d set, got 30d=%v 14d=%v 7d=%v", alerted30d, alerted14d, alerted7d)
+		}
+	})
+	t.Run("a checked domain is not looked up again until a day later", func(t *testing.T) {
+		domain := "once-a-day-" + uuid.NewString()[:8] + ".com"
+		var lookups atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/"+domain) {
+				lookups.Add(1)
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, domain)
+
+		checkDomainMonitors(context.Background(), n)
+		var lastCheck, nextCheck pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT last_checked_at, next_check_at FROM domain_monitors WHERE id = $1", mon.ID,
+		).Scan(&lastCheck, &nextCheck); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if !lastCheck.Valid {
+			t.Fatal("want the domain checked")
+		}
+		if gap := nextCheck.Time.Sub(lastCheck.Time); gap != 24*time.Hour {
+			t.Fatalf("want the next check a day after this one, got %v later", gap)
+		}
+
+		checkDomainMonitors(context.Background(), n)
+		if got := lookups.Load(); got != 1 {
+			t.Fatalf("want one lookup within the day, got %d", got)
 		}
 	})
 }

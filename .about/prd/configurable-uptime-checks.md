@@ -38,4 +38,5 @@ A healthy endpoint answering `204` (or needing a 20-second timeout) stays green 
 - A monitor created without these fields gets `GET`, 10 seconds and `200`.
   → test: apps/api/internal/handler/uptime_monitors_test.go "TestCreateUptimeMonitor/success at the plan minimum interval, with defaults applied"
 - The accepted status codes are checked against the final response after redirects.
+  → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/accepted status codes are checked against the final response after redirects"
 - The three fields sit in a collapsed "advanced" section of the create and edit forms.

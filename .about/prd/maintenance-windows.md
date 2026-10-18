@@ -49,3 +49,4 @@ During a window nobody is paged, uptime stats stay untouched, and the status pag
 - A 101st window in one org is refused (ADR limits).
   → test: apps/api/internal/handler/maintenance_test.go "TestCreateMaintenanceWindow/rejects creating a 101st window"
 - The window's optional message is shown next to "Under maintenance" on the public page.
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/an active maintenance window overrides the monitor's real status"

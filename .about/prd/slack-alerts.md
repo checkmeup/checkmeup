@@ -38,3 +38,4 @@ A user pastes an Incoming Webhook URL and the next alert appears in the channel 
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/slack channel delivers and records success on the channel row"
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/slack channel records failure on a non-2xx response"
 - "Send test message" reports whether Slack accepted it.
+  → test: apps/api/internal/handler/notification_channels_test.go "TestTestNotificationChannel/slack test message reports whether Slack accepted it"

@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -325,6 +326,22 @@ func TestCreateNotificationChannel(t *testing.T) {
 		}, "Ops SMS")
 		if c.Config["consent_at"] == forged {
 			t.Fatal("want the client-supplied consent_at ignored, not persisted as-is")
+		}
+	})
+	t.Run("creating a channel past the plan's limit gets 402 plan_limit_reached", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		for i := range 5 { // Hobby's notification channel limit (ADR billing)
+			createChannel(t, channelsH, u.access, "telegram", map[string]any{"chatId": fmt.Sprintf("%d", i)}, fmt.Sprintf("chan-%d", i))
+		}
+
+		w := doAuthed(t, http.MethodPost, channelsH.CreateNotificationChannel, u.access, notificationChannelRequest{
+			Type: "telegram", Name: "one too many", Config: map[string]any{"chatId": "6"},
+		})
+		if w.Code != http.StatusPaymentRequired {
+			t.Fatalf("want 402, got %d: %s", w.Code, w.Body.String())
+		}
+		if body := decodeBody[map[string]string](t, w); body["code"] != "plan_limit_reached" {
+			t.Fatalf("want code plan_limit_reached, got %q", body["code"])
 		}
 	})
 }
@@ -732,6 +749,55 @@ func TestTestNotificationChannel(t *testing.T) {
 		body := decodeBody[map[string]string](t, w)
 		if body["code"] != "webhook_error" {
 			t.Fatalf("want code webhook_error, got %q", body["code"])
+		}
+	})
+
+	t.Run("slack test message reports whether Slack accepted it", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			slackCode  int
+			wantStatus int
+		}{
+			{"accepted", http.StatusOK, http.StatusNoContent},
+			{"rejected", http.StatusNotFound, http.StatusBadGateway},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				var gotText string
+				srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var msg map[string]any
+					_ = json.NewDecoder(r.Body).Decode(&msg)
+					gotText, _ = msg["text"].(string)
+					w.WriteHeader(tc.slackCode)
+				}))
+				defer srv.Close()
+
+				// Only a hooks.slack.com URL passes validation, so route that
+				// host to the test server, verifying its certificate by the
+				// name it was issued for.
+				tr := srv.Client().Transport.(*http.Transport).Clone()
+				tr.TLSClientConfig.ServerName = "example.com"
+				tr.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+					return (&net.Dialer{}).DialContext(ctx, network, srv.Listener.Addr().String())
+				}
+				slackH := NewNotificationChannelHandler(pool, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(),
+					slack.NewClientWithHTTPClient(&http.Client{Transport: tr, Timeout: 5 * time.Second}), twilio.NewClient("", "", "", "", ""))
+
+				w := doJSON(t, slackH.TestNotificationChannel, http.MethodPost, "/api/v1/notification-channels/test", testNotificationChannelRequest{
+					Type: "slack", Config: map[string]any{"url": "https://hooks.slack.com/services/T000/B000/XXXX"},
+				})
+				if w.Code != tc.wantStatus {
+					t.Fatalf("want %d, got %d: %s", tc.wantStatus, w.Code, w.Body.String())
+				}
+				if gotText == "" {
+					t.Fatal("want the test message posted to Slack")
+				}
+				if tc.wantStatus == http.StatusBadGateway {
+					if body := decodeBody[map[string]string](t, w); body["code"] != "slack_error" {
+						t.Fatalf("want code slack_error, got %q", body["code"])
+					}
+				}
+			})
 		}
 	})
 

@@ -51,3 +51,4 @@ Every certificate is renewed before it expires, with three warnings in hand: 30,
 - Deleting asks for confirmation, then removes the monitor and its history.
   → test: apps/web/src/views/SSLMonitorDetailView.test.ts "deletes the monitor and navigates back to the list on confirm"
 - Each certificate is checked once a day.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckSSLMonitors/a checked certificate is not checked again until a day later"

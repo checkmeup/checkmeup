@@ -16,19 +16,24 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
@@ -692,4 +697,155 @@ func TestHandleSPA_UnknownPathIsA404WhenTheRoutesAreKnown(t *testing.T) {
 			t.Errorf("%s: got %d %q, want %d %q", path, w.Code, w.Body.String(), want.code, want.body)
 		}
 	}
+}
+
+// ─── rate limits (PRD accounts, public-api, security-hardening, status-badges) ───
+
+// serve sends one request through the router from the given IP and returns
+// the response.
+func serve(srv *Server, method, path, ip string, body io.Reader, header http.Header) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, body)
+	req.RemoteAddr = ip + ":40000"
+	for k, v := range header {
+		req.Header[k] = v
+	}
+	w := httptest.NewRecorder()
+	srv.router.ServeHTTP(w, req)
+	return w
+}
+
+// assertLimitedAfter sends allowed requests, each of which must not be
+// rate limited, then one more, which must get 429 with Retry-After.
+func assertLimitedAfter(t *testing.T, allowed int, send func() *httptest.ResponseRecorder) {
+	t.Helper()
+	for i := 1; i <= allowed; i++ {
+		if w := send(); w.Code == http.StatusTooManyRequests {
+			t.Fatalf("request %d: got 429 before the limit", i)
+		}
+	}
+	w := send()
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("request %d: status = %d, want %d", allowed+1, w.Code, http.StatusTooManyRequests)
+	}
+	if w.Header().Get("Retry-After") == "" {
+		t.Fatalf("request %d: 429 has no Retry-After header", allowed+1)
+	}
+}
+
+func TestRoutes_AuthEndpointsAreRateLimitedPerIP(t *testing.T) {
+	cases := []struct {
+		name    string
+		path    string
+		allowed int
+	}{
+		{"a sixth sign-up within an hour gets 429", "/api/v1/auth/sign-up", 5},
+		{"an eleventh sign-in within 10 minutes gets 429", "/api/v1/auth/sign-in", 10},
+		{"a fourth reset request within 10 minutes gets 429", "/api/v1/auth/forgot-password", 3},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, _ := testServer(t, nil)
+			// An empty body is refused before any account work; the
+			// limiter counts it all the same.
+			assertLimitedAfter(t, tc.allowed, func() *httptest.ResponseRecorder {
+				return serve(srv, http.MethodPost, tc.path, "203.0.113.20", strings.NewReader("{}"), nil)
+			})
+			if w := serve(srv, http.MethodPost, tc.path, "203.0.113.21", strings.NewReader("{}"), nil); w.Code == http.StatusTooManyRequests {
+				t.Fatal("another IP: got 429, want its own limit")
+			}
+		})
+	}
+}
+
+// seedServerAPIKey inserts an org and an active API key directly, returning
+// the raw key the public API expects in X-API-Key.
+func seedServerAPIKey(t *testing.T, pool *pgxpool.Pool) string {
+	t.Helper()
+	ctx := context.Background()
+	var orgID uuid.UUID
+	if err := pool.QueryRow(ctx, `INSERT INTO orgs (name) VALUES ($1) RETURNING id`,
+		"server-test-org-"+uuid.NewString()).Scan(&orgID); err != nil {
+		t.Fatalf("insert org: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DELETE FROM orgs WHERE id = $1", orgID)
+	})
+	raw := "cmu_live_" + uuid.NewString()
+	sum := sha256.Sum256([]byte(raw))
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO api_keys (org_id, key_hash, key_prefix, label) VALUES ($1, $2, $3, '')`,
+		orgID, hex.EncodeToString(sum[:]), raw[:16]); err != nil {
+		t.Fatalf("insert api key: %v", err)
+	}
+	return raw
+}
+
+func TestRoutes_PublicAPIIsRateLimitedPerKey(t *testing.T) {
+	srv, pool := testServer(t, nil)
+	path := "/api/v1/public/monitors/cron/" + uuid.NewString() + "/status"
+	keyA, keyB := seedServerAPIKey(t, pool), seedServerAPIKey(t, pool)
+
+	t.Run("a 61st request in a minute on one key gets 429 with Retry-After", func(t *testing.T) {
+		// Requests rotate IPs: the limit follows the key, not the address.
+		i := 0
+		assertLimitedAfter(t, 60, func() *httptest.ResponseRecorder {
+			i++
+			return serve(srv, http.MethodGet, path, fmt.Sprintf("198.51.100.%d", i), http.NoBody, http.Header{"X-Api-Key": {keyA}})
+		})
+	})
+	t.Run("another key has its own limit", func(t *testing.T) {
+		if w := serve(srv, http.MethodGet, path, "198.51.100.1", http.NoBody, http.Header{"X-Api-Key": {keyB}}); w.Code == http.StatusTooManyRequests {
+			t.Fatal("got 429 on a fresh key")
+		}
+	})
+}
+
+func TestRoutes_PingsAreRateLimitedPerToken(t *testing.T) {
+	srv, _ := testServer(t, nil)
+	token := uuid.NewString()
+
+	t.Run("a 61st ping in a minute on one token gets 429", func(t *testing.T) {
+		i := 0
+		assertLimitedAfter(t, 60, func() *httptest.ResponseRecorder {
+			i++
+			return serve(srv, http.MethodGet, "/ping/"+token, fmt.Sprintf("198.51.100.%d", i), http.NoBody, nil)
+		})
+	})
+	t.Run("another token has its own limit", func(t *testing.T) {
+		if w := serve(srv, http.MethodGet, "/ping/"+uuid.NewString(), "198.51.100.1", http.NoBody, nil); w.Code == http.StatusTooManyRequests {
+			t.Fatal("got 429 on a fresh token")
+		}
+	})
+}
+
+func TestRoutes_TelegramWebhookIsRateLimitedPerIP(t *testing.T) {
+	// A wrong secret is answered 200 without touching Telegram.
+	srv, _ := testServer(t, &config.Config{TelegramWebhookSecret: "the-real-secret"})
+
+	t.Run("more than 60 calls a minute from one IP get 429", func(t *testing.T) {
+		assertLimitedAfter(t, 60, func() *httptest.ResponseRecorder {
+			return serve(srv, http.MethodPost, "/webhook/telegram", "203.0.113.30", strings.NewReader("{}"), nil)
+		})
+	})
+	t.Run("another IP has its own limit", func(t *testing.T) {
+		if w := serve(srv, http.MethodPost, "/webhook/telegram", "203.0.113.31", strings.NewReader("{}"), nil); w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+		}
+	})
+}
+
+func TestRoutes_BadgesAreRateLimitedPerIP(t *testing.T) {
+	srv, _ := testServer(t, nil)
+	slug := "no-such-page-" + uuid.NewString()
+
+	t.Run("a 301st badge request in a minute from one IP gets 429", func(t *testing.T) {
+		assertLimitedAfter(t, 300, func() *httptest.ResponseRecorder {
+			return serve(srv, http.MethodGet, "/status/"+slug+"/badge.svg", "203.0.113.40", http.NoBody, nil)
+		})
+	})
+	t.Run("another IP has its own limit", func(t *testing.T) {
+		if w := serve(srv, http.MethodGet, "/status/"+slug+"/badge.svg", "203.0.113.41", http.NoBody, nil); w.Code == http.StatusTooManyRequests {
+			t.Fatal("got 429 on a fresh IP")
+		}
+	})
 }

@@ -46,3 +46,4 @@ A page that answers `200` but lost its expected content is reported as down.
   → test: apps/web/src/views/MonitorListView.test.ts "renders an uptime row with status, uptime, and keyword rule"
   → test: apps/web/src/views/UptimeMonitorDetailView.test.ts "renders the keyword line only when a keyword is configured"
 - Only the first 512 KB of the body is searched, whatever its `Content-Length`.
+  → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/only the first 512 KB of the body is searched for the keyword, whatever its Content-Length"

@@ -89,3 +89,16 @@ Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, 
 2026-10-18 · tidy · kept 2026-10-18
 
 `docs/reference/twilio-setup.md` asked for the SMS opt-in checkbox's consent wording (PRD sms-alerts) to be reviewed against TCPA-style rules in the markets Checkmeup has users in "before launch"; SMS shipped on 2026-07-04 with no record of that review. A legal-text question, not a Twilio setting. Settled when the wording is reviewed (and changed if needed), or judged fine as is.
+
+## Body cap answers 400, not 413
+
+2026-10-18 · PRD test pass
+
+PRD security-hardening says a request body over 64 KB is refused with `413` before any handler reads it. `http.MaxBytesReader` only fails once a handler reads the body, and the handler then answers `400 bad_request`: a 70 KB sign-up got that. The cap works, the status and timing differ. Settled by answering `413` (checking `Content-Length` up front, or mapping `*http.MaxBytesError` to `413`) with a test, or by rewording the criterion to what the code does.
+
+## A slow webhook can delay the check loop
+
+2026-10-18 · PRD test pass
+
+PRD webhook-alerts says a slow endpoint is cut off after 10 seconds and never delays the check loop. The 10-second cut-off is real (`deliver.Timeout`), but `DispatchAlert` runs inside each check's goroutine, and `checkUptimeMonitors` waits for all of them (`wg.Wait`) before the tick moves on, so one slow endpoint can hold a 30-second tick for up to 10 seconds. The timeout also can't be shortened in a test without a real 10-second wait. Settled by dispatching alerts outside the check's wait group (and making the timeout injectable) with a test, or by rewording the criterion.
+

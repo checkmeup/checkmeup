@@ -53,4 +53,6 @@ A user declares an incident and posts updates, and visitors see each update on t
 - Resolved incidents are deleted 90 days after they resolve; active ones never are.
   → test: apps/api/internal/worker/worker_test.go "TestPruneOldStatusPageIncidents"
 - Resolved incidents appear in a paginated history on the public page.
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/resolved incidents appear in a paginated history"
 - When maintenance and an incident cover the same monitor, the public page shows both as distinct states.
+  → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/maintenance and an incident on the same monitor show as distinct states"
