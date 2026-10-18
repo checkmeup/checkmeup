@@ -38,7 +38,7 @@ Writing the PRDs found about 20 acceptance criteria of shipped features with no 
 
 ## Architecture deepening candidates
 
-2026-10-14 · session review
+2026-10-14 · session review · kept 2026-10-18
 
 An architecture review found three places where each monitor type repeats logic that should exist once:
 
@@ -62,27 +62,27 @@ The user asked to restructure `CLAUDE.md`: drop instructions that change nothing
 
 ## Landing hero's author line
 
-2026-10-15 · session review
+2026-10-15 · session review · kept 2026-10-18
 
 The redesigned hero (variant A) was meant to sit next to a first-person line from the founder. It didn't ship: the only draft of the line was written by Claude. The live 90-day strip of checkmeup.net, planned with it, has since shipped. Settled when the founder writes the line or drops it.
 
 ## SEO leftovers from the 2026-10-17 check
 
-2026-10-17 · session review
+2026-10-17 · session review · kept 2026-10-18
 
 The SEO check fixed long descriptions and `HEAD` 405s but left smaller findings: every post shares one OG image, so shared links all look alike; `http://www.checkmeup.net` takes two redirects instead of one (kamal-proxy's doing). Core Web Vitals were never checked (PageSpeed Insights or a browser). Settled when each is fixed or judged not worth it, and Core Web Vitals have been looked at once.
 
 ## Almost no organic search traffic
 
-2026-10-17 · session review
+2026-10-17 · session review · kept 2026-10-18
 
-Search Console showed 0 clicks and 127 impressions from 2026-07-15 to 2026-10-14, almost all for the brand name or typos of it, with nothing for topics like cron job monitoring. On 2026-10-12, 41 pages weren't indexed (26 discovered and 9 crawled but not indexed). GA4 counted 3 users in the 28 days to 2026-10-16, none from search. Technically the site is in order (the SEO check of 2026-10-17); a young domain usually needs outside signals, such as links from tool directories, Product Hunt, Show HN or the GitHub README. Settled by choosing which channels to try, or by Search Console showing clicks on non-brand queries.
+Search Console showed 0 clicks and 127 impressions from 2026-07-15 to 2026-10-14, almost all for the brand name or typos of it, with nothing for topics like cron job monitoring. On 2026-10-12, 41 pages weren't indexed (26 discovered and 9 crawled but not indexed). GA4 counted 3 users in the 28 days to 2026-10-16, none from search. Technically the site is in order (the SEO check of 2026-10-17); a young domain usually needs outside signals, such as links from tool directories, Product Hunt, Show HN or the GitHub README. The free SSL and domain checkers shipped 2026-10-17 (PRD free-tools); their success signal is due 2026-12-15, and what they bring should inform the next channels. Settled by choosing which channels to try, or by Search Console showing clicks on non-brand queries.
 
 ## Free tools without sign-up
 
-2026-10-17 · traffic review
+2026-10-17 · traffic review · kept 2026-10-18
 
-Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools); DNS lookup, TCP port and the cron explainer remain. Settled when the rest are built or dropped.
+Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools); DNS lookup, TCP port and the cron explainer remain, waiting on the first two tools' 2026-12-15 success signal. Settled when the rest are built or dropped.
 
 ## "Alternative to X" pages
 
@@ -98,15 +98,15 @@ Cron, uptime, SSL, domain, port and DNS monitoring each have only a blog guide; 
 
 ## Stack-specific cron guides
 
-2026-10-17 · traffic review
+2026-10-17 · traffic review · kept 2026-10-18
 
 Long-tail guides: monitoring a Kubernetes CronJob, a GitHub Actions schedule, Laravel's scheduler, systemd timers, Celery beat. Pairs with the CLI wrapper in `docs/proposals/bucket-list.md`. Settled when the stacks to cover are picked and written, or the idea is dropped.
 
 ## Launch and directory listings
 
-2026-10-17 · traffic review
+2026-10-17 · traffic review · kept 2026-10-18
 
-Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers, AlternativeTo, SaaSHub, awesome lists on GitHub; build-in-public posts such as "Three Days to MVP" cross-posted to dev.to with a canonical link back. The outside signals "Almost no organic search traffic" calls for. Tried so far: awesome-monitoring, [PR #121](https://github.com/Enapiuz/awesome-monitoring/pull/121) opened 2026-10-17 (the maintainer last merged on 2026-08-04, 26 PRs open). Settled when the channels are chosen and tried.
+Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers, AlternativeTo, SaaSHub, awesome lists on GitHub; build-in-public posts such as "Three Days to MVP" cross-posted to dev.to with a canonical link back. The outside signals "Almost no organic search traffic" calls for. Tried so far: awesome-monitoring, [PR #121](https://github.com/Enapiuz/awesome-monitoring/pull/121) opened 2026-10-17 (the maintainer last merged on 2026-08-04, 26 PRs open); still open and unreviewed on 2026-10-18. Settled when the channels are chosen and tried.
 
 ## Main-commit hook checks the wrong repo
 
@@ -116,6 +116,6 @@ Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, 
 
 ## SMS consent wording never reviewed
 
-2026-10-18 · tidy
+2026-10-18 · tidy · kept 2026-10-18
 
 `docs/reference/twilio-setup.md` asked for the SMS opt-in checkbox's consent wording (PRD sms-alerts) to be reviewed against TCPA-style rules in the markets Checkmeup has users in "before launch"; SMS shipped on 2026-07-04 with no record of that review. A legal-text question, not a Twilio setting. Settled when the wording is reviewed (and changed if needed), or judged fine as is.
