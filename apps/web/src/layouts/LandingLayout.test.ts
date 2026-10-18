@@ -42,12 +42,14 @@ describe('LandingLayout', () => {
     expect(navLink(wrapper, 'Blog').classes()).toContain('font-medium')
   })
 
-  it('keeps Sign in and Sign up alone in the footer middle column, with About in the first', async () => {
-    const columns = (await mountAt('/'))
-      .findAll('footer nav')
-      .map((nav) => nav.findAll('a').map((a) => a.text()))
-    expect(columns[0]).toContain('About')
-    expect(columns[1]).toEqual(['Sign in', 'Sign up'])
+  it('groups the footer links under Product, Monitoring, Resources and Company', async () => {
+    const columns = (await mountAt('/')).findAll('footer nav').map((nav) => ({
+      title: nav.find('h2').text(),
+      links: nav.findAll('a').map((a) => a.text()),
+    }))
+    expect(columns.map((c) => c.title)).toEqual(['Product', 'Monitoring', 'Resources', 'Company'])
+    expect(columns[0].links).toEqual(['Pricing', 'Docs', 'FAQ', 'Changelog', 'Sign in', 'Sign up'])
+    expect(columns[3].links).toContain('About')
   })
 
   it('links the free checkers from the footer', async () => {

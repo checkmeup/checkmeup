@@ -11,6 +11,53 @@ const mobileMenuOpen = ref(false)
 // active-class alone leaves Blog unhighlighted on /blog/<slug>.
 const route = useRoute()
 const onBlogPost = computed(() => route.path.startsWith('/blog/'))
+
+// The footer's link columns. Labels stay short enough not to wrap: the
+// column's heading carries the context ("Monitoring", not "Cron job monitoring").
+const footerColumns = [
+  {
+    title: 'Product',
+    links: [
+      { to: '/pricing', label: 'Pricing' },
+      { to: '/docs', label: 'Docs' },
+      { to: '/faq', label: 'FAQ' },
+      { to: '/changelog', label: 'Changelog' },
+      { to: '/sign-in', label: 'Sign in' },
+      { to: '/sign-up', label: 'Sign up' },
+    ],
+  },
+  {
+    title: 'Monitoring',
+    links: [
+      { to: '/cron-monitoring', label: 'Cron jobs' },
+      { to: '/uptime-monitoring', label: 'Uptime' },
+      { to: '/ssl-monitoring', label: 'SSL certificates' },
+      { to: '/domain-expiry-monitoring', label: 'Domain expiry' },
+      { to: '/port-monitoring', label: 'TCP ports' },
+      { to: '/dns-monitoring', label: 'DNS records' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { to: '/blog', label: 'Blog' },
+      { to: '/tools/ssl-checker', label: 'SSL checker' },
+      { to: '/tools/domain-expiry-checker', label: 'Domain expiry checker' },
+      { to: '/alternatives/healthchecks-io', label: 'vs Healthchecks.io' },
+      { to: '/alternatives/uptimerobot', label: 'vs UptimeRobot' },
+      { to: '/alternatives/cronitor', label: 'vs Cronitor' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { to: '/about', label: 'About' },
+      { to: '/terms', label: 'Terms' },
+      { to: '/privacy', label: 'Privacy' },
+      { to: '/refund', label: 'Refund policy' },
+    ],
+  },
+]
 </script>
 
 <template>
@@ -167,88 +214,27 @@ const onBlogPost = computed(() => route.path.startsWith('/blog/'))
     <!-- Footer -->
     <footer class="border-t border-[var(--border)]">
       <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
-        <div class="flex flex-col sm:flex-row gap-10 sm:gap-12 items-start mb-9">
-          <div class="flex-shrink-0 sm:min-w-[190px]">
+        <div class="mb-9 flex flex-col items-start gap-10 lg:flex-row lg:justify-between">
+          <div class="max-w-[260px]">
             <img :src="logo" alt="Checkmeup" class="h-6 mb-2" />
             <p class="text-[13px] leading-relaxed text-[var(--text-dim)]">
               Cron, uptime, SSL, domain, port, and DNS monitoring for freelancers and solo devs.
             </p>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-10 sm:gap-x-14 gap-y-6 sm:ml-auto">
-            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
-              <RouterLink to="/docs" class="hover:text-[var(--text-strong)] transition-colors"
-                >Docs</RouterLink
-              >
-              <RouterLink to="/faq" class="hover:text-[var(--text-strong)] transition-colors"
-                >FAQ</RouterLink
-              >
-              <RouterLink to="/pricing" class="hover:text-[var(--text-strong)] transition-colors"
-                >Pricing</RouterLink
-              >
-              <RouterLink to="/blog" class="hover:text-[var(--text-strong)] transition-colors"
-                >Blog</RouterLink
-              >
-              <RouterLink to="/changelog" class="hover:text-[var(--text-strong)] transition-colors"
-                >Changelog</RouterLink
-              >
-              <RouterLink to="/about" class="hover:text-[var(--text-strong)] transition-colors"
-                >About</RouterLink
-              >
-              <RouterLink to="/tools/ssl-checker" class="hover:text-[var(--text-strong)] transition-colors"
-                >SSL checker</RouterLink
-              >
+          <div class="grid w-full grid-cols-2 gap-x-8 gap-y-8 sm:grid-cols-4 lg:w-auto lg:gap-x-14">
+            <nav
+              v-for="column in footerColumns"
+              :key="column.title"
+              :aria-label="column.title"
+              class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]"
+            >
+              <h2 class="mb-1 text-xs font-semibold text-[var(--text-strong)]">{{ column.title }}</h2>
               <RouterLink
-                to="/tools/domain-expiry-checker"
-                class="hover:text-[var(--text-strong)] transition-colors"
-                >Domain expiry checker</RouterLink
-              >
-            </nav>
-            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
-              <RouterLink to="/sign-in" class="hover:text-[var(--text-strong)] transition-colors"
-                >Sign in</RouterLink
-              >
-              <RouterLink to="/sign-up" class="hover:text-[var(--text-strong)] transition-colors"
-                >Sign up</RouterLink
-              >
-            </nav>
-            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
-              <RouterLink to="/cron-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >Cron job monitoring</RouterLink
-              >
-              <RouterLink to="/uptime-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >Uptime monitoring</RouterLink
-              >
-              <RouterLink to="/ssl-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >SSL monitoring</RouterLink
-              >
-              <RouterLink to="/domain-expiry-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >Domain expiry monitoring</RouterLink
-              >
-              <RouterLink to="/port-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >Port monitoring</RouterLink
-              >
-              <RouterLink to="/dns-monitoring" class="hover:text-[var(--text-strong)] transition-colors"
-                >DNS monitoring</RouterLink
-              >
-              <RouterLink to="/alternatives/healthchecks-io" class="hover:text-[var(--text-strong)] transition-colors"
-                >Healthchecks.io alternative</RouterLink
-              >
-              <RouterLink to="/alternatives/uptimerobot" class="hover:text-[var(--text-strong)] transition-colors"
-                >UptimeRobot alternative</RouterLink
-              >
-              <RouterLink to="/alternatives/cronitor" class="hover:text-[var(--text-strong)] transition-colors"
-                >Cronitor alternative</RouterLink
-              >
-            </nav>
-            <nav class="flex flex-col gap-2.5 text-[13px] text-[var(--text-dim)]">
-              <RouterLink to="/terms" class="hover:text-[var(--text-strong)] transition-colors"
-                >Terms</RouterLink
-              >
-              <RouterLink to="/privacy" class="hover:text-[var(--text-strong)] transition-colors"
-                >Privacy</RouterLink
-              >
-              <RouterLink to="/refund" class="hover:text-[var(--text-strong)] transition-colors"
-                >Refund Policy</RouterLink
+                v-for="link in column.links"
+                :key="link.to"
+                :to="link.to"
+                class="whitespace-nowrap transition-colors hover:text-[var(--text-strong)]"
+                >{{ link.label }}</RouterLink
               >
             </nav>
           </div>
