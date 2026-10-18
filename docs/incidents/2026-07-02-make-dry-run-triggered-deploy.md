@@ -34,3 +34,8 @@ command it was supposed to only preview.
   `kamal deploy` under `-n`, the new one runs nothing, and a real run still
   deploys and then prunes. The hooks stay: the rule is that only the human
   operator deploys, not that `-n` is unsafe.
+- 2026-10-17: the Makefile is gone; the commands are mise tasks
+  (`mise run deploy`, `mise run ghcr-clean`; ADR dev-environment), so the
+  `$(MAKE)`-under-`-n` trap no longer exists here. The hook, renamed `block_deploy_tasks.py`,
+  now blocks the mise tasks and still blocks `make deploy`/`make ghcr-clean`
+  for an old checkout.

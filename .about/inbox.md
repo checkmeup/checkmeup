@@ -113,3 +113,9 @@ Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, 
 2026-10-17 · session review
 
 `.claude/hooks/block_main_commit.py` reads the branch with `git rev-parse` in the hook's own working directory, the checkmeup checkout, not the repo the command commits in. So a commit in another repo (hit with an awesome-monitoring fork in the scratchpad) is blocked while checkmeup sits on `main`, and `git -C <path>` slips past its regex altogether. Its regex also matches the words inside heredocs and quoted text, so a command that only writes about committing is blocked too. Settled when the hook resolves the target repo from the command's `cd` or `-C` and ignores quoted text, or the cases are judged rare enough to leave.
+
+## SMS consent wording never reviewed
+
+2026-10-18 · tidy
+
+`docs/reference/twilio-setup.md` asked for the SMS opt-in checkbox's consent wording (PRD sms-alerts) to be reviewed against TCPA-style rules in the markets Checkmeup has users in "before launch"; SMS shipped on 2026-07-04 with no record of that review. A legal-text question, not a Twilio setting. Settled when the wording is reviewed (and changed if needed), or judged fine as is.

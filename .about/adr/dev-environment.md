@@ -1,6 +1,6 @@
 # Local development: toolchain and tasks in mise, services in Docker
 
-Date: 2026-10-17
+Date: 2026-10-18
 
 Development runs on the host; there is no devcontainer. Languages and command-line tools (Go, Bun, Node, golangci-lint, sqlc, air, goose, gcov2lcov, the Codacy linters) are pinned in `mise.toml` at the versions CI pins, so local tools can't quietly drift from CI's. The project's commands are mise tasks in the same file (`mise tasks` lists them); `mise run setup` installs the tools. CI runs `mise run test` too, with mise as the task runner only: its tools come from its own setup steps, and `MISE_AUTO_INSTALL` is off there.
 
@@ -21,5 +21,5 @@ Kamal stays out of `mise.toml`: only the operator runs it, on the break-glass de
 
 ## Consequences
 
-- Docker (OrbStack) must be running before the database is usable.
+- A Docker daemon (OrbStack on macOS, Docker Engine or Docker Desktop on Linux and WSL) must be running before the database is usable.
 - `mise run db` takes host port 5432, so a Postgres installed directly on the host conflicts with it.

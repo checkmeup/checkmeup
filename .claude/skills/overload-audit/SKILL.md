@@ -61,9 +61,9 @@ claims... still hold."
   (`incidents.go`), `maxMaintenanceWindows` (`maintenance.go`), `maxAPIKeys`
   (`api_keys.go`) — each a constant plus a call site, not a `billing.Check*Limit`
   (nothing to upgrade past any of these)
-- `pruneOldPings` (`worker.go`) still calls all five retention-cleanup
-  queries (`DeleteOldCronPings`/`DeleteOldUptimeChecks`/`DeleteOldPortChecks`/
-  `DeleteOldDNSChecks`/`DeleteOldStatusPageIncidents`)
+- `pruneOldPings` (`worker.go`) still calls all six retention-cleanup
+  queries (`DeleteOldCronPings`/`DeleteOldCronRuns`/`DeleteOldUptimeChecks`/
+  `DeleteOldPortChecks`/`DeleteOldDNSChecks`/`DeleteOldStatusPageIncidents`)
 - `loadActiveIncidents` (`status_public.go`) still fetches every active
   incident's updates in one batched query
   (`ListStatusPageIncidentUpdatesForIncidents`) rather than one query per

@@ -27,9 +27,9 @@ A user upgrades from the billing page in one checkout, and their new limits appl
 
 ## Acceptance criteria
 
-- The billing page shows the plan, its price, and usage against the monitor, status page and channel limits; Enterprise shows "unlimited" wording and no upgrade buttons.
+- The billing page shows the plan, its price, and usage against the monitor, status page and channel limits; Enterprise, the top plan, shows no upgrade buttons.
   → test: apps/web/src/views/BillingView.test.ts "renders the hobby plan as free with upgrade options for all paid plans"
-  → test: apps/web/src/views/BillingView.test.ts "shows unlimited usage labels and hides upgrade options for the top enterprise plan"
+  → test: apps/web/src/views/BillingView.test.ts "shows the enterprise plan's limits and hides upgrade options for the top plan"
 - A usage bar at 90% of its limit or more takes the warning color, not the red that means a monitor is down.
   → test: apps/web/src/views/BillingView.test.ts "fills a usage bar at its plan limit with the warning color, not the down red"
 - A paying org sees "Manage subscription"; a Hobby org doesn't.

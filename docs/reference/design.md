@@ -2,7 +2,7 @@
 title: Design System
 type: reference
 status: active
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [design, tokens, colors, logo]
 ---
 
@@ -99,10 +99,6 @@ separate CTA-only text tokens needed, since heading/body just use the normal
 | Token | Value (both themes) | Use |
 |---|---|---|
 | `--cta-border` | `rgba(29,158,117,0.25)` | Box border |
-
-This replaces the earlier dark-gradient-in-dark-mode / light-mint-in-light-mode treatment
-(a flat `--bg`/`--surface` fill didn't work
-there) — the flat wash reads fine in both themes without a per-theme gradient swap.
 
 ## App layout
 

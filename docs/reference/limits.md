@@ -2,7 +2,7 @@
 title: DoS / Overload Vulnerability Audit
 type: reference
 status: active
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [security, dos, audit]
 ---
 

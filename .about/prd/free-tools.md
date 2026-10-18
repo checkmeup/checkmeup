@@ -1,7 +1,5 @@
 # Free SSL and domain expiry checkers
 
-Status: proposed
-
 ## Problem
 
 Checkmeup's domain is young and gets almost no search traffic: Search Console showed 0 clicks from 2026-07-15 to 2026-10-14, nearly all impressions for the brand name. Developers do search for one-off checks ("ssl checker", "domain expiry check"), and nothing on the site answers them without an account.

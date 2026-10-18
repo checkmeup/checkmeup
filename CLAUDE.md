@@ -73,7 +73,7 @@ Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR 
 
 ## Conventions
 
-- **Commits:** conventional commits (`feat:`, `fix:`, `chore:`, etc., max line 140), enforced by the baloo plugin's `commit-msg` hook — Git hooks are baloo's, configured in [`.claude/baloo.yml`](.claude/baloo.yml); there is no husky/commitlint
+- **Commits:** conventional commits (`feat:`, `fix:`, `chore:`, etc., max line 140), enforced by baloo's `commit-msg` hook (no husky/commitlint)
 - **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line. Merge with plain git (`git merge --ff-only` after rebasing on `main`, then `git push origin main`), not `gh pr merge` — the GitHub PAT in use here lacks merge permissions on the repo
 - **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged, from baloo's `pre-commit` hook)
 - **Go lint:** golangci-lint
@@ -92,7 +92,7 @@ CI uploads coverage to Codacy after every push (its `CODACY_PROJECT_TOKEN` secre
 
 ## Don't
 
-- Run `mise run deploy`, `mise run ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_make_deploy.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
+- Run `mise run deploy`, `mise run ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_deploy_tasks.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
 - Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR workers](.about/adr/workers.md))
 - Use an ORM — sqlc only ([ADR database](.about/adr/database.md))
 - Skip `org_id` filters in DB queries — silent data leak across tenants

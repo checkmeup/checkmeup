@@ -42,11 +42,9 @@ grep -rnE "#[0-9a-fA-F]{3,8}\b" --include="*.vue" . | grep -v "style.css"
 
 - A hex value that matches a documented token (e.g. `#1D9E75` ==
   `--color-green-500`) should be replaced with the token.
-- A hex value with **no** token match may be a deliberate fixed color —
-  e.g. `HomeView.vue`'s macOS-traffic-light mockup dots
-  (`#ff5f57`/`#febc2e`/`#28c840`) are supposed to look like real macOS
-  chrome in both themes, not shift with `--status-*` tokens. Don't
-  "fix" those; note them as intentional.
+- A hex value with **no** token match may be a deliberate fixed color,
+  meant to look the same in both themes (such as a mockup of real OS
+  chrome). Don't "fix" those; note them as intentional.
 
 **3. For real hits**, replace with the matching token from
 `docs/reference/design.md` (brand greens, status colors, and per-theme
