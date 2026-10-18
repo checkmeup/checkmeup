@@ -30,15 +30,15 @@ afterEach(() => {
 
 describe('theme-init.js', () => {
   it('runs as a blocking script in <head>, before the body is painted', () => {
-    // Read as text: parsing it into a document would fetch its stylesheets.
-    const head = /<head>([\s\S]*)<\/head>/.exec(indexHtml)?.[1] ?? ''
-    const tag = /<script\b([^>]*)>\s*<\/script\s*>/gi
-    const attributes = [...head.matchAll(tag)]
-      .map((m) => m[1])
-      .find((attrs) => attrs.includes('src="/theme-init.js"'))
+    // Parsed into a <template>, whose content is inert: nothing in it loads
+    // or runs, so the page's stylesheets aren't fetched.
+    const head = document.createElement('template')
+    head.innerHTML = /<head>([\s\S]*)<\/head>/.exec(indexHtml)?.[1] ?? ''
+    const script = head.content.querySelector('script[src="/theme-init.js"]')
 
-    expect(attributes).toBeDefined()
-    expect(attributes).not.toMatch(/\b(async|defer|type)\b/)
+    expect(script).not.toBeNull()
+    for (const attribute of ['async', 'defer', 'type'])
+      expect(script!.hasAttribute(attribute)).toBe(false)
   })
 
   it("gives a returning visitor their saved theme, whatever the OS's preference", () => {
