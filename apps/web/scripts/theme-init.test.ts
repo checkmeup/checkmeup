@@ -32,7 +32,7 @@ describe('theme-init.js', () => {
   it('runs as a blocking script in <head>, before the body is painted', () => {
     // Read as text: parsing it into a document would fetch its stylesheets.
     const head = /<head>([\s\S]*)<\/head>/.exec(indexHtml)?.[1] ?? ''
-    const tag = /<script\b([^>]*)>\s*<\/script>/g
+    const tag = /<script\b([^>]*)>\s*<\/script\s*>/gi
     const attributes = [...head.matchAll(tag)]
       .map((m) => m[1])
       .find((attrs) => attrs.includes('src="/theme-init.js"'))

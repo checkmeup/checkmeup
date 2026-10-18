@@ -80,7 +80,7 @@ export const alternatives: Alternative[] = [
     ],
     switching: [
       'Create a free Checkmeup account.',
-      "For each check, create a cron monitor with the same schedule and grace period, then swap the hc-ping.com URL in your job for the monitor's ping URL. A /start ping maps to Checkmeup's /ping/<token>/start.",
+      "For each check, create a cron monitor with the same schedule and grace period, then swap the hc-ping.com URL in your job for the monitor's ping URL. A /start ping maps to Checkmeup's /ping/{token}/start.",
       'Leave both running for a day or two, then delete the old check.',
     ],
     sources: [
@@ -223,7 +223,7 @@ export const alternatives: Alternative[] = [
     ],
     switching: [
       'Create a free Checkmeup account.',
-      "For each job, create a cron monitor with the same schedule and grace period, and have the job call the monitor's ping URL with curl where it called Cronitor. A run's start maps to /ping/<token>/start.",
+      "For each job, create a cron monitor with the same schedule and grace period, and have the job call the monitor's ping URL with curl where it called Cronitor. A run's start maps to /ping/{token}/start.",
       'Recreate your HTTP checks as uptime monitors, run both for a day, then remove the Cronitor monitors.',
     ],
     sources: [

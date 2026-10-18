@@ -48,7 +48,7 @@ def strip_quotes(command: str) -> str:
 
 
 def segments(command: str) -> list[str]:
-    """Split into logical command segments on ; && || | and newlines outside quotes, returning each segment's text with heredoc bodies blanked but quotes kept."""
+    """Split on ; && || | and newlines outside quotes; heredoc bodies come back blanked, quotes kept."""
     command = strip_heredocs(command)
     marked = strip_quotes(command)
     parts: list[str] = []
