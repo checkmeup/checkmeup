@@ -54,12 +54,6 @@ The review recommended the worker first, as alerting is the core of the product,
 
 The user asked to restructure `CLAUDE.md`: drop instructions that change nothing, and disclose detail only when it's needed. Three subagents should each go further than the last, ending in one PR, and with no `CODING_STANDARDS.md` (the user ruled that out). Work stopped before any pass. Its empty worktree and branch were removed on 2026-10-17. Settled when the PR is open, or the item is deleted if the restructure is dropped.
 
-## Per-incident alert cap can't trigger for uptime, port and DNS
-
-2026-10-17 · session review
-
-`alertUptimeIncident`, `alertPortIncident` and `alertDNSIncident` check `max_alerts_per_incident` against the incident's `alert_count`, but each is called only once, right after the incident is created, when the count is still 0, so the cap never stops anything (ADR alerting says the cap is what bounds SMS cost). Harmless today, since these types send one down alert per incident anyway; `alerts_enabled` is now tested for all three. Settled by dropping the dead check from the three workers, or keeping it on purpose for a future re-alert while still down, written into ADR alerting.
-
 ## Landing hero's author line
 
 2026-10-15 · session review · kept 2026-10-18

@@ -116,12 +116,11 @@ func handlePortDown(ctx context.Context, n Notifiers, m db.PortMonitor, prevStat
 }
 
 // alertPortIncident dispatches the down alert for a freshly-recorded
-// incident, honoring the monitor's alerts-enabled flag and per-incident cap.
+// incident, honoring the monitor's alerts-enabled flag. It runs once per
+// incident, when its alert count is still 0, so max_alerts_per_incident
+// can't apply here (ADR alerting).
 func alertPortIncident(ctx context.Context, n Notifiers, m db.PortMonitor, inc db.PortIncident, failureReason string) {
 	if !m.AlertsEnabled {
-		return
-	}
-	if max := m.MaxAlertsPerIncident; max > 0 && inc.AlertCount >= max {
 		return
 	}
 	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortDownAlert(m, failureReason)) {

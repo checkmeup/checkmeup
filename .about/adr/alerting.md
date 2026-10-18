@@ -1,6 +1,6 @@
 # Alerting: notification channels, delivery providers and alert limits
 
-Date: 2026-10-17
+Date: 2026-10-18
 
 A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A Slack or webhook channel's URL is bearer-like, since whoever holds it can post to it, so after creation the API returns it masked (host plus the last few characters), and an update that leaves it empty keeps the stored one. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side. A Telegram chat ID, an email address and a phone number are returned as stored: none of them lets anyone send on its own.
 
@@ -12,7 +12,7 @@ An SMS Twilio accepts can still fail at the carrier (an unreachable number, a ST
 
 An alert for a monitor in a project starts its headline with the project name in brackets, `[Acme] nightly-backup missed its ping`, on Telegram, email (body and subject), Slack and SMS; the webhook event adds `projectId` and `projectName` and keeps every existing field, so receivers built before projects keep working (ADR projects). Without a project the alert is unchanged.
 
-Each monitor's `max_alerts_per_incident` caps alerts per incident (default 3; 0 means every failed check alerts); the count lives on the incident and starts at zero with the next one. A recovery alert is always sent. The cap is per monitor because urgency differs per monitor.
+Each monitor's `max_alerts_per_incident` caps alerts per incident (default 3; 0 means every failed check alerts); the count lives on the incident and starts at zero with the next one. Uptime, port and DNS monitors send one down alert per incident, so the cap only comes into play for cron, SSL and domain monitors. A recovery alert is always sent. The cap is per monitor because urgency differs per monitor.
 
 Email goes through Resend, from `noreply@checkmeup.net`; human mailboxes stay on Zoho. SMS goes through Twilio, authenticated with a scoped API key. A phone number is saved only with an explicit consent checkbox, recorded with its time; opting out is disabling the channel in the app. SMS templates stay plain ASCII and within one 160-character segment, since one Unicode character halves the limit and doubles the cost. A send the org's SMS credits can't cover skips that channel only; other channels still fire. A test SMS doesn't use credits; a separate per-org limit (10 a minute, 10 an hour, 20 a day) bounds its cost instead.
 

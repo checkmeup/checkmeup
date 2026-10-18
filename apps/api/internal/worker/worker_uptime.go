@@ -124,12 +124,11 @@ func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prev
 }
 
 // alertUptimeIncident dispatches the down alert for a freshly-recorded
-// incident, honoring the monitor's alerts-enabled flag and per-incident cap.
+// incident, honoring the monitor's alerts-enabled flag. It runs once per
+// incident, when its alert count is still 0, so max_alerts_per_incident
+// can't apply here (ADR alerting).
 func alertUptimeIncident(ctx context.Context, n Notifiers, m db.UptimeMonitor, inc db.UptimeIncident, failureReason string) {
 	if !m.AlertsEnabled {
-		return
-	}
-	if max := m.MaxAlertsPerIncident; max > 0 && inc.AlertCount >= max {
 		return
 	}
 	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeDownAlert(m, failureReason)) {
