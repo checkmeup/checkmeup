@@ -14,6 +14,25 @@ import re
 
 _DOUBLE_QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
 _SINGLE_QUOTED = re.compile(r"'[^']*'")
+_HEREDOC = re.compile(r"(?<!<)<<-?\s*(['\"]?)(\w+)\1")
+
+
+def strip_heredocs(command: str) -> str:
+    """Blank out heredoc bodies (newlines included), keeping length, so text written into a file never reads as a command."""
+    out = command
+    pos = 0
+    while m := _HEREDOC.search(out, pos):
+        start = out.find("\n", m.end())
+        if start == -1:
+            break
+        end = start
+        for line in out[start + 1 :].split("\n"):
+            end += len(line) + 1
+            if line.strip() == m.group(2):
+                break
+        out = out[: start + 1] + " " * (end - start - 1) + out[end:]
+        pos = end
+    return out
 
 
 def strip_quotes(command: str) -> str:
@@ -29,7 +48,8 @@ def strip_quotes(command: str) -> str:
 
 
 def segments(command: str) -> list[str]:
-    """Split into logical command segments on ; && || | and newlines outside quotes, returning each segment's original unstripped text."""
+    """Split into logical command segments on ; && || | and newlines outside quotes, returning each segment's text with heredoc bodies blanked but quotes kept."""
+    command = strip_heredocs(command)
     marked = strip_quotes(command)
     parts: list[str] = []
     last = 0
