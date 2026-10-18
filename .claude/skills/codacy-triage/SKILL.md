@@ -6,7 +6,7 @@ description: Fetch current Codacy issues for this repo via the Codacy API and tr
 # Codacy triage
 
 Fetches the account-level Codacy issue list and separates real problems from
-known noise. CLAUDE.md's "Code quality (Codacy)" section just points here.
+known noise.
 
 ## Steps
 

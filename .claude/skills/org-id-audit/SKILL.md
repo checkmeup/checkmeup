@@ -5,7 +5,7 @@ description: Audit apps/api/queries/*.sql for primary-key lookups on org-scoped 
 
 # org_id audit
 
-CLAUDE.md's Conventions section states this as a hard rule, not a
+CLAUDE.md's Don't section states this as a hard rule, not a
 preference: **every tenant-scoped query must filter by `org_id`** —
 skipping it is a silent cross-tenant data leak, not just a style issue.
 

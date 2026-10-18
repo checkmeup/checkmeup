@@ -48,12 +48,6 @@ An architecture review found three places where each monitor type repeats logic 
 
 The review recommended the worker first, as alerting is the core of the product, or the plan checks as a cheaper first step. Settled by picking one and agreeing a plan, or by dropping the candidates.
 
-## CLAUDE.md restructure not started
-
-2026-10-15 · session review
-
-The user asked to restructure `CLAUDE.md`: drop instructions that change nothing, and disclose detail only when it's needed. Three subagents should each go further than the last, ending in one PR, and with no `CODING_STANDARDS.md` (the user ruled that out). Work stopped before any pass. Its empty worktree and branch were removed on 2026-10-17. Settled when the PR is open, or the item is deleted if the restructure is dropped.
-
 ## Landing hero's author line
 
 2026-10-15 · session review · kept 2026-10-18

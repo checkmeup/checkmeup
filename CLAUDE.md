@@ -1,106 +1,24 @@
 # checkmeup.net — developer monitoring platform
 
-Cron, uptime, SSL, domain expiry, port (TCP), and DNS record monitors with execution logs, alerts (Telegram, email, Slack, webhook, SMS), and public status pages that freelancers and agencies give their clients.
+Cron, uptime, SSL expiry, domain expiry, port (TCP) and DNS record monitors, with alerts and public status pages.
 
-**Pricing:** Hobby $0 / Solo $9 / Startup $29 / Enterprise $99
-
----
-
-## Commands
-
-```bash
-mise run setup           # one-time: mise install + bun install + starter apps/api/.env
-mise run db              # start local Postgres (docker compose) on localhost:5432
-mise run dev             # start all apps (hot reload)
-mise run test            # lint + test + merge coverage
-mise run lint            # lint only
-mise run build           # production build
-mise run clean           # wipe node_modules, dist, coverage
-mise run migrate         # run goose migrations (reads DATABASE_URL from apps/api/.env)
-mise run migrate-create foo  # create a new goose migration file
-```
-
----
-
-## Stack
-
-**Backend (`apps/api`):** Go · Chi · sqlc · goose · PostgreSQL · JWT auth · Resend (email) · Telegram alerts · Paddle (billing) · go-chi/httprate (rate limiting) · air (hot reload)  
-**Frontend (`apps/web`):** Vue 3 · Vite · Pinia · TanStack Query · Radix Vue · Tailwind  
-> `typescript` is pinned to `^6.0.3`, not "latest" — TypeScript 7 is a restructured Go-based rewrite that `vue-tsc` can't bootstrap against yet (`ERR_PACKAGE_PATH_NOT_EXPORTED` on `typescript/lib/tsc`), despite `vue-tsc`'s own peerDeps claiming `>=5.0.0` support. A `bun update --latest` will try to float this to 7.x again — re-pin to the latest 6.x if that happens.  
-**Infra:** Hetzner CX23 · Kamal 2 · kamal-proxy  
-**Test tooling:** golangci-lint · gcov2lcov (Go coverage → lcov) · Vitest · Stryker (mutation testing on `apps/web/src/lib/`, ad hoc via the `mutation-testing` skill — never in CI)
-
-> **Merging to `main` deploys to production automatically — nobody runs a deploy command.** [`.github/workflows/release.yml`](.github/workflows/release.yml) triggers on a successful CI run on `main`, cuts a semantic-release version, then runs `kamal deploy` with production secrets from GitHub. So the answer to "does this need a deploy?" after a merge is **no** — it is already shipping; watch `gh run list --workflow=release.yml`. This coexists with the Don't rule below: *Claude* never runs deploy commands locally, but that is about who runs the command, **not** a claim that deploys are manual.
-
-> **Local setup:** no devcontainer — tools run on the host, pinned in [`mise.toml`](mise.toml) (Go, Bun, Node, golangci-lint, sqlc, goose, air, gcov2lcov, and the Codacy-matching Python linters). Tasks live in `mise.toml` too (`mise tasks` lists them). `mise run setup` once (`mise install` + `bun install` + a starter `apps/api/.env`), then `mise run db` to start Postgres from [`docker-compose.yml`](docker-compose.yml) on `localhost:5432` — same image, creds, and port as CI, so one `DATABASE_URL` works in both. When bumping a tool version, change `mise.toml` and `.github/workflows/ci.yml` together. See [ADR dev-environment](.about/adr/dev-environment.md).
-
-> `mise run test` requires PostgreSQL running (`mise run db`).
-
-**Key env vars (`apps/api/.env`):**
-
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `DATABASE_URL` | ✅ | postgres DSN |
-| `JWT_SECRET` | ✅ | random secret |
-| `RESEND_API_KEY` | optional | enables password-reset emails |
-| `APP_URL` | optional | frontend origin (default `http://localhost:5173`) |
-| `BASE_URL` | optional | backend origin (default `http://localhost:8080`) |
-| `TELEGRAM_BOT_TOKEN` | optional | enables Telegram alerts |
-| `TWILIO_ACCOUNT_SID` | optional | enables SMS alerts ([PRD sms-alerts](.about/prd/sms-alerts.md)) — see [`docs/reference/twilio-setup.md`](docs/reference/twilio-setup.md) |
-| `TWILIO_API_KEY_SID` | optional | scoped API Key SID (not the primary Account SID) |
-| `TWILIO_API_KEY_SECRET` | optional | scoped API Key secret — never the primary Account Auth Token |
-| `TWILIO_MESSAGING_SERVICE_SID` | optional | Messaging Service SID SMS is sent from |
-| `PADDLE_ENVIRONMENT` | optional | `production` (default) or `sandbox` — selects `api.paddle.com` vs `sandbox-api.paddle.com`; set to `sandbox` for local dev, leave unset in production |
-| `PADDLE_API_KEY` | billing | Paddle API key (server-side, secret) |
-| `PADDLE_WEBHOOK_SECRET` | billing | Paddle webhook signing secret |
-| `PADDLE_SOLO_PRICE_ID` | billing | price ID for Solo plan (monthly) |
-| `PADDLE_STARTUP_PRICE_ID` | billing | price ID for Startup plan (monthly) |
-| `PADDLE_ENTERPRISE_PRICE_ID` | billing | price ID for Enterprise plan (monthly) |
-| `PADDLE_SOLO_ANNUAL_PRICE_ID` | billing | price ID for Solo plan (annual, [PRD annual-billing](.about/prd/annual-billing.md)) |
-| `PADDLE_STARTUP_ANNUAL_PRICE_ID` | billing | price ID for Startup plan (annual) |
-| `PADDLE_ENTERPRISE_ANNUAL_PRICE_ID` | billing | price ID for Enterprise plan (annual) |
-| `CODACY_API_TOKEN` | optional | account-level Codacy token the `codacy-triage` skill fetches issues with |
-
-> All `PADDLE_*` vars are unset by default — see [`docs/reference/billing-setup.md`](docs/reference/billing-setup.md) for the Paddle dashboard checklist to activate billing. The frontend also needs `VITE_PADDLE_CLIENT_TOKEN` (public, safe to expose) in `apps/web/.env` for Paddle.js — see [`apps/web/.env.example`](apps/web/.env.example).
-
-> `TURBO_TELEMETRY_DISABLED=1` is set in CI via `.github/workflows/ci.yml` env block — do not add a `turbo telemetry disable` step.
-
-Project knowledge lives in [`.about/`](.about/), kept by the baloo plugin's skills ([ADR docs](.about/adr/docs.md)): decisions in [`.about/adr/`](.about/adr/) (one file per subject — use `baloo:adr`), feature requirements in [`.about/prd/`](.about/prd/) (one PRD per feature, criteria linked to tests — use `baloo:prd`), domain terms in [`.about/glossary.md`](.about/glossary.md), and anything open in [`.about/inbox.md`](.about/inbox.md). Post-MVP work is tracked as Now/Next/Later in [`docs/roadmap.md`](docs/roadmap.md), and self-incidents in [`docs/incidents/`](docs/incidents/). Docs navigation: [`docs/INDEX.md`](docs/INDEX.md) — living how-to in [`docs/reference/`](docs/reference/), the frozen MVP history in [`docs/knowledge/`](docs/knowledge/), feature gap analysis in [`docs/proposals/`](docs/proposals/).
-
-Reusable Claude Code skills live in [`.claude/skills/`](.claude/skills/) — PR merging, release notes, mutation testing, and Codacy/security/architecture audits, each self-documenting via its own `SKILL.md`. `.claude/hooks/` enforces the highest-stakes rules above deterministically rather than relying on Claude remembering an advisory instruction — never commit on local `main`, never run a deploy-adjacent command, never force-push `main`, never hand-edit sqlc-generated code — wired up in [`.claude/settings.json`](.claude/settings.json). Commit-time checks (conventional commits, no secrets, no AI co-author, no merge commits on push) are the baloo plugin's Git hooks, configured in [`.claude/baloo.yml`](.claude/baloo.yml).
-
----
+Read the relevant ADR in [`.about/adr/`](.about/adr/) before changing what it covers; [`docs/INDEX.md`](docs/INDEX.md) maps the rest of `.about/` and `docs/`. Commands are mise tasks (`mise tasks`): `mise run setup` once, `mise run db` before `dev` or `test`.
 
 ## Conventions
 
-- **Commits:** conventional commits (`feat:`, `fix:`, `chore:`, etc., max line 140), enforced by baloo's `commit-msg` hook (no husky/commitlint)
-- **Merging to `main`:** always via PR, never a direct push — and PRs merge via rebase only (no merge commits, no squash) to keep `main`'s log a straight line. Merge with plain git (`git merge --ff-only` after rebasing on `main`, then `git push origin main`), not `gh pr merge` — the GitHub PAT in use here lacks merge permissions on the repo
-- **JS/TS lint+format:** oxlint + oxfmt (run automatically on commit via lint-staged, from baloo's `pre-commit` hook)
-- **Go lint:** golangci-lint
-- **Multi-tenancy:** every tenant-scoped query **must** filter by `org_id`
-- **Colors/logo:** never hardcode hex values — use tokens from [`docs/reference/design.md`](docs/reference/design.md)
-- **Naming/capitalization:** in prose, capitalize the organization/product name — "Checkmeup", not "checkmeup" (e.g. "Checkmeup started as the tool I wished existed"). The domain `checkmeup.net` stays lowercase mid-sentence, and only capitalizes to `Checkmeup.net` when it opens a sentence. Never capitalize `checkmeup` where it's a code identifier rather than prose — GitHub org/repo slugs (`github.com/checkmeup/checkmeup`), the npm scope (`@checkmeup/web`), storage/cache keys (`'checkmeup:billingPendingPlan'`), and file/asset names (`checkmeup-og.png`) all stay lowercase
-- **Theme:** the app supports light/dark via `data-theme` on `<html>` — design tokens (`--bg`, `--text`, etc.) already flip per theme, so styling with tokens is theme-safe by default; hardcoding a token's current value isn't (see [PRD theme](.about/prd/theme.md))
-
----
-
-## Code quality (Codacy)
-
-CI uploads coverage to Codacy after every push (its `CODACY_PROJECT_TOKEN` secret). Use the `codacy-triage` skill to fetch and triage the current issue backlog — don't hand-roll the fetch/triage steps inline, the skill already encodes this repo's known-noise rules and keeps them current.
-
----
+- **Commits:** conventional commits, header up to 140 characters.
+- **Merging to `main`:** rebase-only with plain git (`git merge --ff-only`, `git push origin main`), never `gh pr merge` (the PAT here can't). Every merge deploys to production from CI ([ADR infrastructure](.about/adr/infrastructure.md)), so a merged change never "still needs a deploy"; watch `gh run list --workflow=release.yml`.
+- **Capitalization:** "Checkmeup" in prose; the domain `checkmeup.net` and code identifiers (`@checkmeup/web`) stay lowercase.
+- **TypeScript stays on 6.x** (`^6.0.3`): `vue-tsc` can't bootstrap against 7 yet, whatever its peerDeps say. If `bun update --latest` floats it to 7, re-pin the latest 6.x.
 
 ## Don't
 
-- Run `mise run deploy`, `mise run ghcr-clean`, `kamal <anything>`, or `docker build`/`buildx` against `config/deploy.yml` — these touch the real production server (`checkmeup.net`) and push to the real GHCR registry. Only the human operator runs these, deliberately, from their own machine — and in practice almost never, since CI already deploys every merge to `main` (see the auto-deploy note under Stack); these are the break-glass path, not the normal one. **Never tell the user a merged change "still needs a deploy"** — that inverts the rule from "Claude doesn't run this" into "deploys are manual", which is false. Dry-run flags such as `-n` are no exception ([incident](docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md)). A `PreToolUse` hook (`.claude/hooks/block_deploy_tasks.py`, `block_kamal.py`, `block_docker_deploy_build.py`) blocks all of these for Claude at the tool-call level, dry-run flags included.
-- Add Redis, a job queue, or any external broker — goroutine workers are intentional ([ADR workers](.about/adr/workers.md))
-- Use an ORM — sqlc only ([ADR database](.about/adr/database.md))
-- Skip `org_id` filters in DB queries — silent data leak across tenants
-- Add subdomains for status pages — `/status/:slug` path is intentional ([ADR status-pages](.about/adr/status-pages.md))
-- Use `Authorization` header for **browser session** auth — the `access_token` httpOnly cookie is the only mechanism there ([ADR auth](.about/adr/auth.md)). The public API (PRD public-api) is a separate, non-browser mechanism and authenticates via `X-API-Key` instead — never `Authorization`, to keep the two visibly distinct ([ADR auth](.about/adr/auth.md))
-- Use `api.get/post/…` in `auth.init()` — use plain `fetch` there to bypass the 401 interceptor; a 401 on `/me` during init means "not logged in", not a session error
-- Switch payment providers — Paddle is the MoR (handles global tax); see [ADR billing](.about/adr/billing.md), which also records why LemonSqueezy was dropped
-- Write Tailwind classes like `bg-[--token]` or `text-[--token]` for a CSS variable — this Tailwind v4 setup compiles that to invalid CSS (`background-color: --token`, missing `var()`), silently dropping the style. Always write `bg-[var(--token)]`; the `design-token-check` skill finds any that slip in
-- Expect a module to be both eagerly imported (even just one named export) *and* code-split into its own lazy chunk — Rollup bundles the whole module (every export) into the eager chunk regardless, logged as `[INEFFECTIVE_DYNAMIC_IMPORT]`. To get a real lazy chunk for something (e.g. a blog post's heavy content), its cheap metadata needs to live in a genuinely separate file that nothing lazy-loaded ever gets eagerly imported from — see `apps/web/src/blog/postsMeta.ts` vs `posts/*.ts` for the pattern
-- Build a public feature-request board, voting system, or ticketing queue — feedback goes straight to the founder via the in-app form (Settings, PRD feedback-form), email, and GitHub Issues; that's a deliberate choice, not a gap (see `DocsView.vue`'s "Need help?" section)
-- Commit directly onto local `main` — always create/switch to a feature branch first, even for doc-only or copy-only changes. A `PreToolUse` hook (`.claude/hooks/block_main_commit.py`) blocks this for Claude, so it should fail fast rather than needing a recovery — but if it ever happens anyway: create the branch at the existing commits, then `git reset --hard origin/main` to move `main` back before pushing the branch and opening the PR
+- Run deploy commands (`kamal`, `mise run deploy`, `mise run ghcr-clean`, `docker build` for `config/deploy.yml`), not even as a dry run; hooks block them.
+- Skip the `org_id` filter on a tenant-scoped query ([ADR database](.about/adr/database.md)).
+- Add Redis, a job queue or broker ([ADR workers](.about/adr/workers.md)), an ORM ([ADR database](.about/adr/database.md)), a payment provider besides Paddle ([ADR billing](.about/adr/billing.md)), or status-page subdomains ([ADR status-pages](.about/adr/status-pages.md)).
+- Authenticate requests to this app with the `Authorization` header: browser sessions authenticate only by the `access_token` cookie, the public API by `X-API-Key` ([ADR auth](.about/adr/auth.md)).
+- Use `api.get/post/…` in `auth.init()` — use plain `fetch`, past the 401 interceptor: a 401 on `/me` there means "not logged in".
+- Hardcode a hex color or a token's current value — use the tokens in [`docs/reference/design.md`](docs/reference/design.md), which flip with the theme. Write `bg-[var(--token)]`, never `bg-[--token]`, which this Tailwind v4 setup compiles to invalid CSS.
+- Expect an eagerly imported module (even one export) to also be its own lazy chunk — Rollup bundles all of it eagerly. Keep cheap metadata in a separate file nothing lazy imports from, as `apps/web/src/blog/postsMeta.ts` does for `posts/*.ts`.
+- Build a public feature-request board, voting or ticketing — feedback reaches the founder privately (in-app form, email, GitHub Issues) on purpose.
+- Commit directly onto local `main` — branch first (a hook blocks it). If it happens anyway: create the branch at those commits, `git reset --hard origin/main`, then push the branch and open the PR.
