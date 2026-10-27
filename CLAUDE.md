@@ -8,6 +8,7 @@ Read the relevant ADR in [`.about/adr/`](.about/adr/) before changing what it co
 
 - **Commits:** conventional commits, header up to 140 characters.
 - **Merging to `main`:** rebase-only with plain git (`git merge --ff-only`, `git push origin main`), never `gh pr merge` (the PAT here can't). Every merge deploys to production from CI ([ADR infrastructure](.about/adr/infrastructure.md)), so a merged change never "still needs a deploy"; watch `gh run list --workflow=release.yml`.
+- **PRs and issues in other people's repos** (awesome lists, directories): read their CONTRIBUTING and any AI policy before opening one, and leave the "Generated with Claude Code" line out of it. ivbeg/awesome-status-pages closed PR 252 on 2026-10-27 for that line and bans AI-generated PRs.
 - **Capitalization:** "Checkmeup" in prose; the domain `checkmeup.net` and code identifiers (`@checkmeup/web`) stay lowercase.
 - **TypeScript stays on 6.x** (`^6.0.3`): `vue-tsc` can't bootstrap against 7 yet, whatever its peerDeps say. If `bun update --latest` floats it to 7, re-pin the latest 6.x.
 
