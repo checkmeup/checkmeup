@@ -136,6 +136,22 @@ func TestRoutes_ProtectedEndpointRequiresAuth(t *testing.T) {
 	}
 }
 
+func TestRoutes_OversizedBodyIs413(t *testing.T) {
+	srv, _ := testServer(t, nil)
+
+	t.Run("a request body over 64 KB is refused with 413 before any handler reads it", func(t *testing.T) {
+		body := `{"email":"a@example.com","password":"` + strings.Repeat("x", 70*1024) + `"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-up", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusRequestEntityTooLarge {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusRequestEntityTooLarge)
+		}
+	})
+}
+
 func TestRoutes_FreeToolsAreRateLimited(t *testing.T) {
 	srv, _ := testServer(t, nil)
 	// A non-hostname is refused before any lookup, so no check goes out; the

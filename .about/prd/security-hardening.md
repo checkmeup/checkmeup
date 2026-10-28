@@ -31,5 +31,6 @@ No public endpoint can be flooded or spoofed by one client without hitting a lim
 - A 61st ping in a minute on one token gets `429`.
   → test: apps/api/internal/server/server_test.go "TestRoutes_PingsAreRateLimitedPerToken/a 61st ping in a minute on one token gets 429"
 - A request body over 64 KB is refused with `413` before any handler reads it.
+  → test: apps/api/internal/server/server_test.go "TestRoutes_OversizedBodyIs413/a request body over 64 KB is refused with 413 before any handler reads it"
 - More than 60 Telegram webhook calls a minute from one IP get `429`.
   → test: apps/api/internal/server/server_test.go "TestRoutes_TelegramWebhookIsRateLimitedPerIP/more than 60 calls a minute from one IP get 429"

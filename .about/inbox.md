@@ -42,7 +42,7 @@ A test pass on 2026-10-18 linked tests to every other shipped criterion. These a
 - notification-channels: a new monitor's form starts with no channel selected; the API attaches every enabled channel when none is sent, so the outcome matches but the form says alerts fall back to email.
 - webhook-alerts: Settings explains signature checking in one sentence, with no code snippet.
 - ssl-monitoring: its scope, the SSL docs section, the SSL product page and the home page's monitor grid promise an alert "at once" when a certificate is invalid or a check fails, but a check error only sets the status to Error and sends nothing (found 2026-10-28 while writing the v1.57–v1.60 notes). Either alert on a confirmed error or reword those four places.
-- The body cap and the slow webhook have items of their own below; the read-only key scope too.
+- The slow webhook has an item of its own below; the read-only key scope too.
 
 Settled when each is built, tested, or reworded in its PRD.
 
@@ -99,12 +99,6 @@ Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, 
 2026-10-18 · tidy · kept 2026-10-18
 
 `docs/reference/twilio-setup.md` asked for the SMS opt-in checkbox's consent wording (PRD sms-alerts) to be reviewed against TCPA-style rules in the markets Checkmeup has users in "before launch"; SMS shipped on 2026-07-04 with no record of that review. A legal-text question, not a Twilio setting. Settled when the wording is reviewed (and changed if needed), or judged fine as is.
-
-## Body cap answers 400, not 413
-
-2026-10-18 · PRD test pass
-
-PRD security-hardening says a request body over 64 KB is refused with `413` before any handler reads it. `http.MaxBytesReader` only fails once a handler reads the body, and the handler then answers `400 bad_request`: a 70 KB sign-up got that. The cap works, the status and timing differ. Settled by answering `413` (checking `Content-Length` up front, or mapping `*http.MaxBytesError` to `413`) with a test, or by rewording the criterion to what the code does.
 
 ## A slow webhook can delay the check loop
 

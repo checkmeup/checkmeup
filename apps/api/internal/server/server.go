@@ -81,7 +81,14 @@ func (s *Server) buildRouter() *chi.Mux {
 	))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Body = http.MaxBytesReader(w, r.Body, 64*1024) // 64 KB — no legitimate payload exceeds this
+			// A body that declares its size over the cap is refused before any
+			// handler runs; one that doesn't (chunked) fails when a handler
+			// reads past the cap.
+			if r.ContentLength > maxBodyBytes {
+				respond.Error(w, http.StatusRequestEntityTooLarge, "request body too large", "body_too_large")
+				return
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 			next.ServeHTTP(w, r)
 		})
 	})
@@ -501,6 +508,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // pages render an org-supplied LogoURL (see StatusPageCreateView.vue) that
 // can point at any external host, so a tight img-src would silently break
 // every custom-logo status page instead of failing loudly.
+// maxBodyBytes caps every request body: no legitimate payload exceeds 64 KB.
+const maxBodyBytes = 64 * 1024
+
 const contentSecurityPolicy = "default-src 'self'; " +
 	"script-src 'self' https://www.googletagmanager.com https://cdn.paddle.com; " +
 	"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
