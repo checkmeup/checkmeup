@@ -41,6 +41,7 @@ A test pass on 2026-10-18 linked tests to every other shipped criterion. These a
 - telegram-alerts: a muted monitor isn't marked as muted in the monitor list.
 - notification-channels: a new monitor's form starts with no channel selected; the API attaches every enabled channel when none is sent, so the outcome matches but the form says alerts fall back to email.
 - webhook-alerts: Settings explains signature checking in one sentence, with no code snippet.
+- ssl-monitoring: its scope, the SSL docs section, the SSL product page and the home page's monitor grid promise an alert "at once" when a certificate is invalid or a check fails, but a check error only sets the status to Error and sends nothing (found 2026-10-28 while writing the v1.57–v1.60 notes). Either alert on a confirmed error or reword those four places.
 - The body cap and the slow webhook have items of their own below; the read-only key scope too.
 
 Settled when each is built, tested, or reworded in its PRD.

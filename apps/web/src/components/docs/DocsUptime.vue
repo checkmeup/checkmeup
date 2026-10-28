@@ -8,7 +8,8 @@
       Hobby, plus 1 minute on paid plans. By default we send a GET request with a 10-second
       timeout and expect an HTTP 200 back, but all three are configurable per monitor under
       "Advanced check settings". Anything outside your configuration (an unaccepted status
-      code, a timeout, a connection error) opens an incident.
+      code, a timeout, a connection error) is checked again about 30 seconds later, and only a
+      failed recheck opens an incident, so a single dropped request doesn't alert you.
     </p>
     <ul class="space-y-2 text-sm text-[var(--text-dim)]">
       <li class="flex items-start gap-2">

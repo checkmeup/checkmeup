@@ -133,7 +133,8 @@ const intervalOptions = computed(() => intervalOptionsFor(props.minIntervalMins)
         </option>
       </select>
       <p class="text-xs mt-1 text-[var(--text-muted)]">
-        Suppress alerts until N consecutive failures are detected. Resets on success.
+        Suppress alerts until N consecutive failures are detected. Resets on success. A
+        failure always gets a recheck about 30 seconds later before it counts.
       </p>
     </div>
 

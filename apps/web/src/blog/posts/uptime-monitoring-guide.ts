@@ -84,7 +84,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "Checkmeup's uptime monitor covers all of this — configurable check intervals down to 1 minute, keyword and JSON-body assertions so a technically-200 page doesn't slip through, a two-strike failure threshold to avoid flapping, full incident and response-time history, and a public status page if clients need to see it too. The Hobby plan is free for up to 10 monitors, no credit card required.",
+    text: "Checkmeup's uptime monitor covers all of this — configurable check intervals down to 1 minute, keyword and JSON-body assertions so a technically-200 page doesn't slip through, a recheck 30 seconds after any failed check so one dropped request doesn't page you, full incident and response-time history, and a public status page if clients need to see it too. The Hobby plan is free for up to 10 monitors, no credit card required.",
   },
   {
     type: 'signature',

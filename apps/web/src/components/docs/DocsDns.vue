@@ -20,7 +20,8 @@
     <p class="text-sm leading-relaxed text-[var(--text-dim)]">
       A lookup failure (NXDOMAIN, SERVFAIL, timeout) alerts as a distinct "can't resolve" state,
       separate from a value mismatch's "changed from X to Y" — those are different problems with
-      different fixes. Editing a monitor to accept a new value (or clearing it back to blank) is
+      different fixes. Either one is checked again about 30 seconds later and alerts only if
+      the recheck agrees. Editing a monitor to accept a new value (or clearing it back to blank) is
       how you tell Checkmeup an intentional change is fine going forward.
     </p>
   </section>

@@ -15,6 +15,16 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'v1-57-to-v1-60-fewer-false-alarms',
+    slug: 'v1-57-to-v1-60-fewer-false-alarms',
+    kind: 'release',
+    title: 'v1.57–v1.60: Fewer False Alarms',
+    date: 'October 28, 2026',
+    readTime: '4 min read',
+    excerpt:
+      'A failed uptime, port or DNS check is now checked again about 30 seconds later, and only a failed recheck counts, so one lost request no longer sends a down alert. SSL and domain errors get the same recheck instead of showing Error for a day. Also: a page per monitor type and comparisons with Healthchecks.io, UptimeRobot and Cronitor.',
+  },
+  {
     file: 'v1-54-to-v1-56-free-tools',
     slug: 'v1-54-to-v1-56-free-tools',
     kind: 'release',

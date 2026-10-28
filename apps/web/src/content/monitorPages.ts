@@ -48,10 +48,10 @@ export const monitorPages: MonitorPage[] = [
     how: [
       'Each check is one request, GET by default, with redirects followed. With default settings a 200 within 10 seconds is up. You can change the method to HEAD or POST, the accepted status codes, and the maximum response time, from 1 to 30 seconds.',
       'A keyword check fails a page that answers 200 but lost its content: "contains" or "does not contain", searched in the first 512 KB. JSON assertions check a health endpoint\'s fields, such as $.status equals "ok", and all of them must pass.',
-      "Two failed checks in a row mark the monitor down, so one network blip doesn't page anyone. The next passing check sends a recovery alert with the downtime. The detail page shows response times, uptime over 24 hours, 7 and 30 days, and every incident.",
+      "A failed check is checked again about 30 seconds later, and only a failed recheck marks the monitor down, so one network blip doesn't page anyone. The next passing check sends a recovery alert with the downtime. The detail page shows response times, uptime over 24 hours, 7 and 30 days, and every incident.",
     ],
     limits:
-      'Every check runs from one server, so a problem on the network between that server and your site can look like your site going down. Two failures in a row filter out most blips, not all.',
+      'Every check runs from one server, so a problem on the network between that server and your site can look like your site going down. The 30-second recheck filters out most blips, not all.',
     related: [{ to: '/blog/uptime-monitoring-guide', label: 'Guide: uptime monitoring' }],
   },
   {
@@ -102,7 +102,7 @@ export const monitorPages: MonitorPage[] = [
     lead: "Watch the services an HTTP check can't reach, and the ports that should never be open. Checkmeup connects to host:port on a schedule and alerts you when the answer changes.",
     how: [
       'Each check is a plain TCP connect to the host and port, closed straight away, with the connect time recorded. Set the expected state to open, the default, or to closed for a port that must stay shut, such as a database that should never face the internet.',
-      "Two failed checks in a row mark the monitor down and alert you; a closed-state monitor's alert says the port is unexpectedly open. The next passing check sends a recovery alert with the downtime.",
+      "A failed check is checked again about 30 seconds later, and only a failed recheck marks the monitor down and alerts you; a closed-state monitor's alert says the port is unexpectedly open. The next passing check sends a recovery alert with the downtime.",
     ],
     limits:
       'An open port means something accepted the connection, not that the service behind it works: no handshake or data is sent. Pair it with an uptime check where the service speaks HTTP.',

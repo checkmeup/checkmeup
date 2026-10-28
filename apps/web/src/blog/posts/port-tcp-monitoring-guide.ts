@@ -84,7 +84,7 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'p',
-    text: "Checkmeup's port monitor covers both directions — open or closed expected state, configurable check intervals, a consecutive-failure threshold, a per-incident alert cap, and full incident history. The Hobby plan is free for up to 10 monitors of any type, no credit card required.",
+    text: "Checkmeup's port monitor covers both directions — open or closed expected state, configurable check intervals, a 30-second recheck before any failed connection counts, a consecutive-failure threshold, and full incident history. The Hobby plan is free for up to 10 monitors of any type, no credit card required.",
   },
   {
     type: 'signature',

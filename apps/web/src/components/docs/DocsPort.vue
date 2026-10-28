@@ -7,7 +7,8 @@
       For anything that doesn't speak HTTP — a mail server, a database, a custom daemon — give
       us a host and a port and we open a raw TCP connection on your chosen interval, no data
       sent or received. Host and port are editable after creation, unlike SSL and domain
-      monitors' hostname field.
+      monitors' hostname field. A failed connection is tried again about 30 seconds later,
+      and only a failed retry counts.
     </p>
     <p class="text-sm leading-relaxed text-[var(--text-dim)]">
       Each monitor has an expected state. The default,
