@@ -4,6 +4,7 @@ import { createHead } from '@unhead/vue/client'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import App from './App.vue'
 import { router } from './router'
+import { reloadOnStaleChunk } from './lib/staleChunk'
 import './style.css'
 
 // retry/refetchOnWindowFocus disabled to match the single-attempt,
@@ -14,6 +15,8 @@ const queryClient = new QueryClient({
     queries: { retry: false, refetchOnWindowFocus: false },
   },
 })
+
+reloadOnStaleChunk()
 
 createApp(App)
   .use(createPinia())
