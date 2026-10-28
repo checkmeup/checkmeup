@@ -616,6 +616,7 @@ type DomainMonitor struct {
 	MaxAlertsPerIncident int32               `json:"max_alerts_per_incident"`
 	AlertCount           int32               `json:"alert_count"`
 	ProjectID            pgtype.UUID         `json:"project_id"`
+	RecheckPending       bool                `json:"recheck_pending"`
 }
 
 type FeatureSuggestion struct {
@@ -772,6 +773,7 @@ type SslMonitor struct {
 	MaxAlertsPerIncident int32              `json:"max_alerts_per_incident"`
 	AlertCount           int32              `json:"alert_count"`
 	ProjectID            pgtype.UUID        `json:"project_id"`
+	RecheckPending       bool               `json:"recheck_pending"`
 }
 
 type StatusPage struct {

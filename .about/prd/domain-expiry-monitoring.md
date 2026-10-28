@@ -34,7 +34,8 @@ Every monitored domain is renewed before it expires, with warnings at 30, 14 and
 - A successful lookup records registrar and expiry; the detail page shows them with the days left.
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a successful lookup records registrar and expiry"
   → test: apps/api/internal/handler/domain_monitors_test.go "TestGetDomainMonitor/success reflects the latest check result"
-- A failed lookup (timeout, unsupported TLD, unreadable answer) is recorded as an error, never as expired.
+- A failed lookup (timeout, unsupported TLD, unreadable answer) is recorded as an error, never as expired, once a recheck about 30 seconds later fails too (ADR alerting).
+  → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/an error that passes its recheck never shows as Error"
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a lookup failure is recorded as an error status"
   → test: apps/api/internal/handler/domain_monitors_test.go "TestGetDomainMonitor/an error result is reflected without an expiry"
 - A domain under a TLD without RDAP is looked up over WHOIS, with its expiry and registrar read from that registry's real answer format; a domain the registry doesn't know is an error, not "expired".

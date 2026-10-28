@@ -46,6 +46,13 @@ func checkDomainMonitors(ctx context.Context, n Notifiers) {
 
 func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor) {
 	lookup, lookupErr := LookupDomain(n.RDAP, n.WHOIS, m.Domain)
+	// Rechecked about 30 seconds later before it shows, as SSL errors are (ADR alerting).
+	if lookupErr != nil && !m.RecheckPending && m.Status != db.DomainMonitorStatusError {
+		if err := n.Queries.ScheduleDomainRecheck(ctx, m.ID); err != nil {
+			n.Logger.Error("domain worker: schedule recheck", "monitor_id", m.ID, "err", err)
+		}
+		return
+	}
 	var daysLeft int
 	if lookupErr == nil {
 		daysLeft = int(time.Until(lookup.ExpiresAt).Hours() / 24)

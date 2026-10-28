@@ -32,7 +32,8 @@ Every certificate is renewed before it expires, with three warnings in hand: 30,
   → test: apps/web/src/views/SSLMonitorDetailView.test.ts "shows the first-check notice when the monitor has never been checked"
 - A check records issuer, expiry and days left; more than 30 days left is up.
   → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/more than 30 days left is up and resets alert state"
-- An unreachable host or an invalid certificate is recorded as an error, with its message shown on the detail page.
+- An unreachable host or an invalid certificate is recorded as an error, with its message shown on the detail page, once a recheck about 30 seconds later fails too (ADR alerting).
+  → test: apps/api/internal/worker/worker_test.go "TestCheckSSLMonitors/a first error is rechecked about 30 seconds later before the monitor shows Error"
   → test: apps/api/internal/worker/worker_test.go "TestCheckSSLMonitors/a connection failure is recorded as an error status"
   → test: apps/web/src/views/SSLMonitorDetailView.test.ts "shows the error message block when the monitor has an error"
 - Crossing 30, 14 or 7 days left sends one alert per threshold, never twice for the same one.

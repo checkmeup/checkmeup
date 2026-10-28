@@ -40,6 +40,16 @@ WHERE next_check_at <= NOW() AND status != 'paused'
       AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
   );
 
+-- name: ScheduleDomainRecheck :exec
+-- A check that errors right after a working one is checked again on the
+-- next tick, about 30 seconds later, before the monitor shows Error (ADR alerting).
+UPDATE domain_monitors
+SET recheck_pending = true,
+    last_checked_at = NOW(),
+    next_check_at   = NOW() + INTERVAL '30 seconds',
+    updated_at      = NOW()
+WHERE id = $1;
+
 -- name: UpdateDomainMonitorCheck :one
 UPDATE domain_monitors
 SET status               = $2,
@@ -51,6 +61,7 @@ SET status               = $2,
     alerted_7d           = $8,
     consecutive_failures = $9,
     alert_count          = $10,
+    recheck_pending      = false,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()

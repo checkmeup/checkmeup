@@ -2310,6 +2310,8 @@ func TestCheckSSLMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
+		checkSSLMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "ssl_monitors", mon.ID)
 		checkSSLMonitors(context.Background(), n)
 
 		var status, errorMsg string
@@ -2352,10 +2354,41 @@ func TestCheckSSLMonitors(t *testing.T) {
 			t.Fatalf("want status unchanged (waiting) under maintenance, got %q", status)
 		}
 	})
+	t.Run("a first error is rechecked about 30 seconds later before the monitor shows Error", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
+
+		checkSSLMonitors(context.Background(), n)
+		var status string
+		var pending bool
+		var recheckIn float64
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, recheck_pending, EXTRACT(EPOCH FROM next_check_at - last_checked_at) FROM ssl_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &pending, &recheckIn); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "waiting" || !pending || recheckIn < 29 || recheckIn > 31 {
+			t.Fatalf("want status unchanged with a recheck due in 30 s, got status=%q pending=%v in=%.0f s", status, pending, recheckIn)
+		}
+
+		forceDueNow(t, pool, "ssl_monitors", mon.ID)
+		checkSSLMonitors(context.Background(), n)
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, recheck_pending FROM ssl_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &pending); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "error" || pending {
+			t.Fatalf("want error with no recheck pending once the recheck fails too, got status=%q pending=%v", status, pending)
+		}
+	})
+
 	t.Run("a checked certificate is not checked again until a day later", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
+		checkSSLMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "ssl_monitors", mon.ID)
 		checkSSLMonitors(context.Background(), n)
 		var firstCheck, nextCheck pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(),
@@ -2406,6 +2439,8 @@ func TestCheckDomainMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDomainMonitor(t, queries, org.ID, "this-domain-does-not-exist.invalid")
 
+		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
 
 		var status, errorMsg string
@@ -2423,6 +2458,44 @@ func TestCheckDomainMonitors(t *testing.T) {
 		}
 		if !lastCheckedAt.Valid {
 			t.Fatal("want last_checked_at set")
+		}
+	})
+
+	t.Run("an error that passes its recheck never shows as Error", func(t *testing.T) {
+		var fail atomic.Bool
+		fail.Store(true)
+		expiresAt := time.Now().Add(90 * 24 * time.Hour).UTC().Truncate(time.Second)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if fail.Load() {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			_, _ = fmt.Fprintf(w, `{"events": [{"eventAction": "expiration", "eventDate": %q}]}`, expiresAt.Format(time.RFC3339))
+		}))
+		defer srv.Close()
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+
+		checkDomainMonitors(context.Background(), n)
+		var status string
+		if err := pool.QueryRow(context.Background(), "SELECT status FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status == "error" {
+			t.Fatal("want no Error before the recheck")
+		}
+
+		fail.Store(false)
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
+		checkDomainMonitors(context.Background(), n)
+		var pending bool
+		if err := pool.QueryRow(context.Background(), "SELECT status, recheck_pending FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status, &pending); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "up" || pending {
+			t.Fatalf("want up with no recheck pending after a passing recheck, got status=%q pending=%v", status, pending)
 		}
 	})
 
@@ -2525,6 +2598,8 @@ func TestCheckDomainMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDomainMonitor(t, queries, org.ID, "nobody-registered-this.co.il")
 
+		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
 
 		status, _, errorMsg, _ := domainRow(t, mon.ID)
@@ -2538,6 +2613,8 @@ func TestCheckDomainMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDomainMonitor(t, queries, org.ID, "example.de")
 
+		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
 
 		status, _, errorMsg, _ := domainRow(t, mon.ID)
@@ -2618,6 +2695,8 @@ func TestCheckDomainMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDomainMonitor(t, queries, org.ID, domain)
 
+		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
 		var lastCheck, nextCheck pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(),
@@ -2633,8 +2712,8 @@ func TestCheckDomainMonitors(t *testing.T) {
 		}
 
 		checkDomainMonitors(context.Background(), n)
-		if got := lookups.Load(); got != 1 {
-			t.Fatalf("want one lookup within the day, got %d", got)
+		if got := lookups.Load(); got != 2 {
+			t.Fatalf("want the lookup and its recheck, then none within the day, got %d", got)
 		}
 	})
 }

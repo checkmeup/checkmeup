@@ -42,6 +42,15 @@ func checkSSLMonitors(ctx context.Context, n Notifiers) {
 
 func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	expiresAt, issuer, daysLeft, err := CheckTLS(m.Hostname)
+	// An error right after a working check is checked again about 30 seconds
+	// later before the monitor shows Error and loses its expiry date for a day
+	// (ADR alerting).
+	if err != nil && !m.RecheckPending && m.Status != db.SslMonitorStatusError {
+		if err := n.Queries.ScheduleSSLRecheck(ctx, m.ID); err != nil {
+			n.Logger.Error("ssl worker: schedule recheck", "monitor_id", m.ID, "err", err)
+		}
+		return
+	}
 	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
 	if result.alert != nil {
