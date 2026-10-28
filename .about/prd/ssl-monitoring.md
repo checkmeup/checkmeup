@@ -15,7 +15,7 @@ Every certificate is renewed before it expires, with three warnings in hand: 30,
 ## Scope
 
 - An SSL monitor for a hostname, checking the certificate's issuer, expiry and validity.
-- One alert at each of 30, 14 and 7 days before expiry, and at once when it is expired or invalid.
+- One alert at each of 30, 14 and 7 days before expiry, and once the recheck confirms it when the certificate is expired or invalid or the check fails.
 - List, detail, edit, pause and resume, delete.
 
 ## Non-goals
@@ -39,9 +39,12 @@ Every certificate is renewed before it expires, with three warnings in hand: 30,
 - Crossing 30, 14 or 7 days left sends one alert per threshold, never twice for the same one.
   → test: apps/api/internal/worker/worker_test.go "TestSslCrossedThreshold/crosses the 30-day threshold without touching 14d or 7d"
   → test: apps/api/internal/worker/worker_test.go "TestSslCrossedThreshold/does not re-alert once every threshold up to daysLeft has already fired"
-- An expired certificate is marked expired and alerted on at once.
-  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/expired sets status expired"
-  → test: apps/api/internal/worker/worker_test.go "TestSslThresholdAlert/builds an expired-phrased alert for negative days left"
+- An expired or invalid certificate, or a host not answering on port 443, alerts once the recheck fails too, again at each daily check up to the per-incident cap, and a recovery follows when the check works again (ADR alerting). The handshake rejects an expired certificate, so it alerts as an error.
+  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/an error after an expiring certificate starts a new incident and alerts"
+  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/a check error waits for alert_after_n_failures and respects muting"
+  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/a check error sets status error and increments consecutive failures"
+  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/a working check after an alerted error sends a recovery and resets the incident"
+  → test: apps/api/internal/worker/worker_test.go "TestBuildSSLCheckResult/a working check after an error nobody was alerted about sends no recovery"
 - The list shows status, expiry date, days left and issuer; a negative day count shows "Expired".
   → test: apps/web/src/views/MonitorListView.test.ts "renders an SSL row with status, expiry, and issuer"
   → test: apps/web/src/views/MonitorListView.test.ts "shows \"Expired\" for a negative days-until-expiry even with an expiry date"

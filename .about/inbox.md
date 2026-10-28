@@ -32,7 +32,7 @@ Nothing between the internet and kamal-proxy absorbs a volumetric attack; per-ro
 
 ## Shipped PRD criteria the code doesn't meet
 
-2026-10-14 · session review · updated 2026-10-18
+2026-10-14 · session review · kept 2026-10-28
 
 A test pass on 2026-10-18 linked tests to every other shipped criterion. These are left, because the code doesn't do what they say or nothing on the web side can check them:
 
@@ -41,7 +41,6 @@ A test pass on 2026-10-18 linked tests to every other shipped criterion. These a
 - telegram-alerts: a muted monitor isn't marked as muted in the monitor list.
 - notification-channels: a new monitor's form starts with no channel selected; the API attaches every enabled channel when none is sent, so the outcome matches but the form says alerts fall back to email.
 - webhook-alerts: Settings explains signature checking in one sentence, with no code snippet.
-- ssl-monitoring: its scope, the SSL docs section, the SSL product page and the home page's monitor grid promise an alert "at once" when a certificate is invalid or a check fails, but a check error only sets the status to Error and sends nothing (found 2026-10-28 while writing the v1.57–v1.60 notes). Either alert on a confirmed error or reword those four places.
 - The slow webhook has an item of its own below; the read-only key scope too.
 
 Settled when each is built, tested, or reworded in its PRD.
@@ -102,6 +101,6 @@ Channels only the founder can post to: Show HN, Product Hunt, Reddit (r/webdev, 
 
 ## A slow webhook can delay the check loop
 
-2026-10-18 · PRD test pass
+2026-10-18 · PRD test pass · kept 2026-10-28
 
-PRD webhook-alerts says a slow endpoint is cut off after 10 seconds and never delays the check loop. The 10-second cut-off is real (`deliver.Timeout`), but `DispatchAlert` runs inside each check's goroutine, and `checkUptimeMonitors` waits for all of them (`wg.Wait`) before the tick moves on, so one slow endpoint can hold a 30-second tick for up to 10 seconds. The timeout also can't be shortened in a test without a real 10-second wait. Settled by dispatching alerts outside the check's wait group (and making the timeout injectable) with a test, or by rewording the criterion.
+PRD webhook-alerts says a slow endpoint is cut off after 10 seconds and never delays the check loop. The 10-second cut-off is real (`deliver.Timeout`), but `DispatchAlert` runs inside each check's goroutine, and `checkUptimeMonitors` waits for all of them (`wg.Wait`) before the tick moves on, so one slow endpoint can hold a 30-second tick for up to 10 seconds. The timeout also can't be shortened in a test without a real 10-second wait. Settled by dispatching alerts outside the check's wait group (and making the timeout injectable) with a test, or by rewording the criterion. `DispatchAlert`'s result decides whether the alert counts toward `alert_count`, so dispatching outside the wait group has to keep that count right; it touches the same steps as the worker incident-handling candidate under "Architecture deepening candidates", so do them together.

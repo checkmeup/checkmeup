@@ -2189,7 +2189,9 @@ func TestBuildSSLCheckResult(t *testing.T) {
 
 	t.Run("a check error sets status error and increments consecutive failures", func(t *testing.T) {
 		m := baseMonitor
+		m.Status = db.SslMonitorStatusError
 		m.ConsecutiveFailures = 2
+		m.AlertCount = 3 // at the cap
 		r := buildSSLCheckResult(m, time.Time{}, "", 0, fmt.Errorf("dial tcp: connection refused"))
 
 		if r.status != db.SslMonitorStatusError {
@@ -2202,7 +2204,70 @@ func TestBuildSSLCheckResult(t *testing.T) {
 			t.Fatalf("want consecutiveFailures 3, got %d", r.consecutiveFailures)
 		}
 		if r.alert != nil {
-			t.Fatal("want no alert on a check-error result")
+			t.Fatal("want no alert once the error has reached the per-incident cap")
+		}
+	})
+
+	t.Run("an error after an expiring certificate starts a new incident and alerts", func(t *testing.T) {
+		m := baseMonitor
+		m.Status = db.SslMonitorStatusExpiringSoon
+		m.ConsecutiveFailures, m.AlertCount = 30, 3 // the 30/14/7-day alerts used the cap
+		r := buildSSLCheckResult(m, time.Time{}, "", 0, fmt.Errorf("tls: failed to verify certificate: x509: certificate has expired or is not yet valid"))
+
+		if r.alert == nil {
+			t.Fatal("want an alert when the certificate fails to verify")
+		}
+		if r.alert.Webhook.EventType != "down" || !strings.Contains(r.alert.Webhook.Reason, "certificate has expired") {
+			t.Fatalf("want a down event carrying the error, got %q %q", r.alert.Webhook.EventType, r.alert.Webhook.Reason)
+		}
+		if r.consecutiveFailures != 1 || r.alertCount != 1 {
+			t.Fatalf("want consecutiveFailures 1 and alertCount 1, got %d and %d", r.consecutiveFailures, r.alertCount)
+		}
+	})
+
+	t.Run("an error message is escaped in the email and Telegram text", func(t *testing.T) {
+		r := buildSSLCheckResult(baseMonitor, time.Time{}, "", 0, fmt.Errorf("x509: certificate is valid for <b>evil</b>"))
+
+		if r.alert == nil || strings.Contains(r.alert.EmailHTML, "<b>evil</b>") || strings.Contains(r.alert.Telegram, "<b>evil</b>") {
+			t.Fatal("want the error message HTML-escaped in the alert")
+		}
+	})
+
+	t.Run("a check error waits for alert_after_n_failures and respects muting", func(t *testing.T) {
+		m := baseMonitor
+		m.AlertAfterNFailures = 1
+		if r := buildSSLCheckResult(m, time.Time{}, "", 0, fmt.Errorf("dial tcp: connection refused")); r.alert != nil {
+			t.Fatal("want no alert on the first failed day with alert_after_n_failures 1")
+		}
+		m = baseMonitor
+		m.AlertsEnabled = false
+		if r := buildSSLCheckResult(m, time.Time{}, "", 0, fmt.Errorf("dial tcp: connection refused")); r.alert != nil {
+			t.Fatal("want no alert when alerts are disabled")
+		}
+	})
+
+	t.Run("a working check after an alerted error sends a recovery and resets the incident", func(t *testing.T) {
+		m := baseMonitor
+		m.Status = db.SslMonitorStatusError
+		m.ConsecutiveFailures, m.AlertCount = 2, 2
+		r := buildSSLCheckResult(m, time.Now().Add(20*24*time.Hour), "Let's Encrypt", 20, nil)
+
+		if r.recovery == nil || r.recovery.Webhook.EventType != "recovery" || r.recovery.Webhook.DowntimeDuration != "about 2 days" {
+			t.Fatalf("want a recovery with about 2 days of downtime, got %+v", r.recovery)
+		}
+		if r.alert == nil || r.consecutiveFailures != 1 || r.alertCount != 1 {
+			t.Fatalf("want the 30-day alert counted from a fresh incident, got alert=%v failures=%d count=%d", r.alert != nil, r.consecutiveFailures, r.alertCount)
+		}
+	})
+
+	t.Run("a working check after an error nobody was alerted about sends no recovery", func(t *testing.T) {
+		m := baseMonitor
+		m.Status = db.SslMonitorStatusError
+		m.ConsecutiveFailures = 1
+		r := buildSSLCheckResult(m, time.Now().Add(60*24*time.Hour), "Let's Encrypt", 60, nil)
+
+		if r.recovery != nil {
+			t.Fatal("want no recovery for an error that never alerted")
 		}
 	})
 

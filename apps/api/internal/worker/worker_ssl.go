@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"html"
 	"sync"
 	"time"
 
@@ -53,6 +54,9 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	}
 	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
+	if result.recovery != nil {
+		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.recovery)
+	}
 	if result.alert != nil {
 		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.alert)
 	}
@@ -75,7 +79,8 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 
 // sslCheckResult is the outcome of one CheckTLS poll: the fields to
 // persist on the monitor row, plus an alert to send when a threshold was
-// freshly crossed (nil otherwise).
+// freshly crossed or a check failed (nil otherwise), and a recovery when a
+// check works again after an alerted error.
 type sslCheckResult struct {
 	status              db.SslMonitorStatus
 	expiresAtParam      pgtype.Timestamptz
@@ -87,16 +92,37 @@ type sslCheckResult struct {
 	consecutiveFailures int32
 	alertCount          int32
 	alert               *AlertMessage
+	recovery            *AlertMessage
 }
 
 func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, daysLeft int, checkErr error) sslCheckResult {
 	r := sslCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d, alertCount: m.AlertCount}
 
+	// An error starts a new incident and alerts at each daily check up to
+	// the cap: an expired or invalid certificate fails the handshake, so it
+	// never reaches the expiry thresholds below (ADR alerting).
 	if checkErr != nil {
 		r.status = db.SslMonitorStatusError
 		r.errorMsgParam = pgtype.Text{String: checkErr.Error(), Valid: true}
 		r.consecutiveFailures = m.ConsecutiveFailures + 1
+		if m.Status != db.SslMonitorStatusError {
+			r.consecutiveFailures, r.alertCount = 1, 0
+		}
+		if sslShouldAlert(m, r.consecutiveFailures, r.alertCount) {
+			a := buildSSLErrorAlert(m, checkErr.Error())
+			r.alert = &a
+			r.alertCount++
+		}
 		return r
+	}
+
+	failures := m.ConsecutiveFailures
+	if m.Status == db.SslMonitorStatusError {
+		if m.AlertsEnabled && m.AlertCount > 0 {
+			a := buildSSLRecoveryAlert(m, m.ConsecutiveFailures)
+			r.recovery = &a
+		}
+		failures, r.alertCount = 0, 0
 	}
 
 	r.expiresAtParam = pgtype.Timestamptz{Time: expiresAt, Valid: true}
@@ -116,17 +142,50 @@ func buildSSLCheckResult(m db.SslMonitor, expiresAt time.Time, issuer string, da
 		return r
 	}
 
-	r.consecutiveFailures = m.ConsecutiveFailures + 1
+	r.consecutiveFailures = failures + 1
 
-	maxAlerts := m.MaxAlertsPerIncident
-	withinLimit := maxAlerts == 0 || m.AlertCount < maxAlerts
-	if m.AlertsEnabled && withinLimit && r.consecutiveFailures > m.AlertAfterNFailures {
+	if sslShouldAlert(m, r.consecutiveFailures, r.alertCount) {
 		r.alert = sslThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
 		if r.alert != nil {
-			r.alertCount = m.AlertCount + 1
+			r.alertCount++
 		}
 	}
 	return r
+}
+
+// sslShouldAlert applies the monitor's alert switch, alert_after_n_failures
+// and per-incident cap to a check that would alert.
+func sslShouldAlert(m db.SslMonitor, consecutiveFailures, alertCount int32) bool {
+	withinLimit := m.MaxAlertsPerIncident == 0 || alertCount < m.MaxAlertsPerIncident
+	return m.AlertsEnabled && withinLimit && consecutiveFailures > m.AlertAfterNFailures
+}
+
+func buildSSLErrorAlert(m db.SslMonitor, failureReason string) AlertMessage {
+	return buildAlert(alertText{
+		Event: "down", MonitorType: "ssl", Name: m.Name,
+		Icon: "🔴", Headline: ": certificate check failed",
+		Details: []string{codeLine("Host", m.Hostname), "Reason: " + html.EscapeString(failureReason)},
+		Subject: "SSL check failed: " + m.Name,
+		Reason:  failureReason,
+		SMS:     fmt.Sprintf("%s SSL check failed (%s)", m.Name, failureReason),
+	})
+}
+
+// buildSSLRecoveryAlert reports the downtime in days: SSL monitors keep no
+// incident row with a start time, and an error is checked once a day.
+func buildSSLRecoveryAlert(m db.SslMonitor, failedChecks int32) AlertMessage {
+	downtime := "about 1 day"
+	if failedChecks > 1 {
+		downtime = fmt.Sprintf("about %d days", failedChecks)
+	}
+	return buildAlert(alertText{
+		Event: "recovery", MonitorType: "ssl", Name: m.Name,
+		Icon: "✅", Headline: ": certificate check passes again",
+		Details:  []string{codeLine("Host", m.Hostname)},
+		Subject:  m.Name + " recovered",
+		Downtime: downtime,
+		SMS:      fmt.Sprintf("%s SSL check recovered after %s", m.Name, downtime),
+	})
 }
 
 // sslThresholdAlert returns the alert for the first newly-crossed expiry
