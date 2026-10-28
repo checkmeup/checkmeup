@@ -68,6 +68,21 @@ SET consecutive_failures = consecutive_failures + 1,
 WHERE id = $1
 RETURNING *;
 
+-- name: ScheduleUptimeRecheck :exec
+-- A first failed check is checked again on the next tick, about 30 seconds later,
+-- before it counts as a failure (ADR alerting).
+UPDATE uptime_monitors
+SET last_checked_at = NOW(),
+    next_check_at = NOW() + INTERVAL '30 seconds',
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: LatestUptimeCheckFailed :one
+SELECT COALESCE(
+  (SELECT NOT is_up FROM uptime_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 1),
+  false
+)::boolean AS failed;
+
 -- name: MarkUptimeMonitorDown :exec
 UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE id = $1;
 

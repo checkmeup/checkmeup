@@ -48,7 +48,18 @@ func checkOneUptimeMonitor(ctx context.Context, n Notifiers, m db.UptimeMonitor)
 		client = uptimeCheckClient()
 	}
 	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m, client)
+	// A failure right after a passing check is checked again about 30 seconds
+	// later before it counts (ADR alerting): one request lost between this
+	// server and the target shouldn't alert anyone. Asked before this check is
+	// recorded, so the previous check is the one read.
+	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestUptimeCheckFailed(ctx, n, m)
 	if !recordUptimeCheck(ctx, n, m, statusCode, responseTimeMs, isUp, failureReason) {
+		return
+	}
+	if unconfirmed {
+		if err := n.Queries.ScheduleUptimeRecheck(ctx, m.ID); err != nil {
+			n.Logger.Error("uptime worker: schedule recheck", "monitor_id", m.ID, "err", err)
+		}
 		return
 	}
 
@@ -58,6 +69,18 @@ func checkOneUptimeMonitor(ctx context.Context, n Notifiers, m db.UptimeMonitor)
 		return
 	}
 	handleUptimeDown(ctx, n, m, prevStatus, failureReason)
+}
+
+// latestUptimeCheckFailed reports whether the monitor's last recorded check
+// failed. On a read error it says true, so the failure counts right away, as
+// it did before rechecks: a missed alert is worse than an early one.
+func latestUptimeCheckFailed(ctx context.Context, n Notifiers, m db.UptimeMonitor) bool {
+	failed, err := n.Queries.LatestUptimeCheckFailed(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("uptime worker: read latest check", "monitor_id", m.ID, "err", err)
+		return true
+	}
+	return failed
 }
 
 func recordUptimeCheck(ctx context.Context, n Notifiers, m db.UptimeMonitor, statusCode int, responseTimeMs int64, isUp bool, failureReason string) bool {

@@ -15,7 +15,7 @@ An outage is reported within two check intervals, and a single transient error d
 ## Scope
 
 - An uptime monitor with a name, an `http(s)` URL and a check interval no shorter than the plan allows (ADR billing).
-- Periodic checks recording status code and response time; down after two consecutive failed checks; down and recovery alerts.
+- Periodic checks recording status code and response time; down once a failed check is confirmed by a recheck about 30 seconds later; down and recovery alerts.
 - List, detail (response-time chart, uptime %, incidents, check log), edit, pause and resume, delete.
 
 ## Non-goals
@@ -36,7 +36,9 @@ An outage is reported within two check intervals, and a single transient error d
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/200 with no keyword is up"
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/non-200 is down with the status code in the reason"
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/connection error is down with no status code"
-- Two consecutive failed checks mark the monitor down and send an alert; the next passing check marks it up and sends a recovery alert with the downtime.
+- A failed check is rechecked about 30 seconds later; a passing recheck sends nothing, a failed one marks the monitor down and sends an alert (ADR alerting). The next passing check marks it up and sends a recovery alert with the downtime.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/a failure that passes its recheck sends nothing and stays up"
+  → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/a failure its recheck confirms marks the monitor down and alerts"
   → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/escalates to down after two consecutive failures, then recovers"
   → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/delivers a recovery webhook event with a non-zero downtime duration"
 - The list shows each monitor's status and uptime, and an empty state with a create button.

@@ -1807,7 +1807,10 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
 		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
 
-		// First failure: recorded, but alert_after_n_failures=1 suppresses the alert.
+		// A first failure is only rechecked; the recheck failing is the first failure counted.
+		checkUptimeMonitors(context.Background(), n)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		// First counted failure: alert_after_n_failures=1 suppresses the alert.
 		checkUptimeMonitors(context.Background(), n)
 		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
@@ -1852,6 +1855,74 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("a failure that passes its recheck sends nothing and stays up", func(t *testing.T) {
+		var up atomic.Bool
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if up.Load() {
+				w.WriteHeader(http.StatusOK)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}))
+		defer target.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(context.Background(), n)
+		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 0 {
+			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		var recheckIn float64
+		if err := pool.QueryRow(context.Background(),
+			"SELECT EXTRACT(EPOCH FROM next_check_at - last_checked_at) FROM uptime_monitors WHERE id = $1", mon.ID,
+		).Scan(&recheckIn); err != nil {
+			t.Fatalf("query next check: %v", err)
+		}
+		if recheckIn < 29 || recheckIn > 31 {
+			t.Fatalf("want the recheck due 30 s after the failure, got %.0f s", recheckIn)
+		}
+
+		up.Store(true)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
+		if status, failures := getUptimeRow(t, pool, mon.ID); status != "up" || failures != 0 {
+			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alert for a failure its recheck didn't confirm, got %d", got)
+		}
+		var checks int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM uptime_checks WHERE monitor_id = $1", mon.ID).Scan(&checks); err != nil {
+			t.Fatalf("count checks: %v", err)
+		}
+		if checks != 2 {
+			t.Fatalf("want both checks in the history, got %d", checks)
+		}
+	})
+
+	t.Run("a failure its recheck confirms marks the monitor down and alerts", func(t *testing.T) {
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer target.Close()
+
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(context.Background(), n)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
+		if status, failures := getUptimeRow(t, pool, mon.ID); status != "down" || failures != 1 {
+			t.Fatalf("after a confirmed failure: want down with 1 failure, got status=%q failures=%d", status, failures)
+		}
+		if got := sent(); got != 1 {
+			t.Fatalf("want 1 down alert, got %d", got)
+		}
+	})
+
 	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
 		var up atomic.Bool
 		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1869,8 +1940,10 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
 		if status, _ := getUptimeRow(t, pool, mon.ID); status != "down" {
-			t.Fatalf("want down after a failed check, got %q", status)
+			t.Fatalf("want down after a failed check and its recheck, got %q", status)
 		}
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)

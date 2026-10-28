@@ -257,6 +257,20 @@ func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid
 	return i, err
 }
 
+const latestUptimeCheckFailed = `-- name: LatestUptimeCheckFailed :one
+SELECT COALESCE(
+  (SELECT NOT is_up FROM uptime_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 1),
+  false
+)::boolean AS failed
+`
+
+func (q *Queries) LatestUptimeCheckFailed(ctx context.Context, monitorID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, latestUptimeCheckFailed, monitorID)
+	var failed bool
+	err := row.Scan(&failed)
+	return failed, err
+}
+
 const listDueUptimeMonitors = `-- name: ListDueUptimeMonitors :many
 SELECT id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id FROM uptime_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
@@ -655,6 +669,21 @@ func (q *Queries) ResumeUptimeMonitor(ctx context.Context, arg ResumeUptimeMonit
 		&i.ProjectID,
 	)
 	return i, err
+}
+
+const scheduleUptimeRecheck = `-- name: ScheduleUptimeRecheck :exec
+UPDATE uptime_monitors
+SET last_checked_at = NOW(),
+    next_check_at = NOW() + INTERVAL '30 seconds',
+    updated_at = NOW()
+WHERE id = $1
+`
+
+// A first failed check is checked again on the next tick, about 30 seconds later,
+// before it counts as a failure (ADR alerting).
+func (q *Queries) ScheduleUptimeRecheck(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, scheduleUptimeRecheck, id)
+	return err
 }
 
 const updateUptimeMonitor = `-- name: UpdateUptimeMonitor :one
