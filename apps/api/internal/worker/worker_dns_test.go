@@ -175,6 +175,8 @@ func TestCheckDNSMonitors(t *testing.T) {
 
 		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("9.9.9.9")})
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
+		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
 
 		status, _, expected, _ := getDNSRow(t, pool, mon.ID)
@@ -199,6 +201,29 @@ func TestCheckDNSMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("a failure that passes its recheck sends nothing and stays up", func(t *testing.T) {
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger,
+			DNSResolver: fakeDNSResolver(t, nil)} // nil ips == NXDOMAIN
+
+		org := testOrg(t, queries, pool)
+		mon := testDNSMonitor(t, queries, org.ID, "flaky.example", "1.2.3.4")
+		sent := webhookRecorder(t, queries, org.ID, "dns", mon.ID)
+
+		checkDNSMonitors(context.Background(), n)
+		if status, failures, _, _ := getDNSRow(t, pool, mon.ID); status == "down" || failures != 0 {
+			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("1.2.3.4")})
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
+		checkDNSMonitors(context.Background(), n)
+		if status, failures, _, _ := getDNSRow(t, pool, mon.ID); status != "up" || failures != 0 {
+			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alert for a failure its recheck didn't confirm, got %d", got)
+		}
+	})
+
 	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
 		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger,
 			DNSResolver: fakeDNSResolver(t, []net.IP{net.ParseIP("9.9.9.9")})}
@@ -208,6 +233,8 @@ func TestCheckDNSMonitors(t *testing.T) {
 		disableAlerts(t, pool, "dns_monitors", mon.ID)
 		sent := webhookRecorder(t, queries, org.ID, "dns", mon.ID)
 
+		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
 		if status, _, _, _ := getDNSRow(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want down after a mismatch, got %q", status)
@@ -230,6 +257,8 @@ func TestCheckDNSMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDNSMonitor(t, queries, org.ID, "does-not-exist.invalid", "1.2.3.4")
 
+		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
 
 		status, _, _, _ := getDNSRow(t, pool, mon.ID)
@@ -254,6 +283,8 @@ func TestCheckDNSMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDNSMonitor(t, queries, org.ID, "example.com", "1.2.3.4")
 
+		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n) // NXDOMAIN -> down, opens an incident
 
 		status, _, _, _ := getDNSRow(t, pool, mon.ID)

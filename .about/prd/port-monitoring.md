@@ -36,7 +36,8 @@ A service that stops accepting connections, or a port that unexpectedly opens, i
   → test: apps/api/internal/worker/worker_test.go "TestPerformTCPCheck/expected open + unreachable port is down"
   → test: apps/api/internal/worker/worker_test.go "TestPerformTCPCheck/expected closed + reachable port is down (unexpectedly open)"
   → test: apps/api/internal/worker/worker_test.go "TestPerformTCPCheck/expected closed + unreachable port is up (matches expectation)"
-- Each check is recorded; two consecutive failures mark the monitor down and alert; a passing check recovers it with the downtime.
+- Each check is recorded; a failed check is rechecked about 30 seconds later, and only a failed recheck marks the monitor down and alerts (ADR alerting); a passing check recovers it with the downtime.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckPortMonitors/a failure that passes its recheck sends nothing and stays up"
   → test: apps/api/internal/worker/worker_test.go "TestCheckPortMonitors/records a check row for every poll"
   → test: apps/api/internal/worker/worker_test.go "TestCheckPortMonitors/escalates to down after two consecutive failures, then recovers"
 - A closed-state monitor's alert says the port is unexpectedly open, not that it is down.

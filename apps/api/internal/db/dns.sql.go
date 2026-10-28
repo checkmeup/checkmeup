@@ -297,6 +297,20 @@ func (q *Queries) IncrementDNSIncidentAlertCount(ctx context.Context, id uuid.UU
 	return i, err
 }
 
+const latestDNSCheckFailed = `-- name: LatestDNSCheckFailed :one
+SELECT COALESCE(
+  (SELECT NOT is_up FROM dns_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 1),
+  false
+)::boolean AS failed
+`
+
+func (q *Queries) LatestDNSCheckFailed(ctx context.Context, monitorID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, latestDNSCheckFailed, monitorID)
+	var failed bool
+	err := row.Scan(&failed)
+	return failed, err
+}
+
 const listDNSChecks = `-- name: ListDNSChecks :many
 SELECT id, monitor_id, checked_at, response_time_ms, is_up, resolved_value, failure_reason FROM dns_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT $2 OFFSET $3
 `
@@ -694,6 +708,21 @@ func (q *Queries) ResumeDNSMonitor(ctx context.Context, arg ResumeDNSMonitorPara
 		&i.ProjectID,
 	)
 	return i, err
+}
+
+const scheduleDNSRecheck = `-- name: ScheduleDNSRecheck :exec
+UPDATE dns_monitors
+SET last_checked_at = NOW(),
+    next_check_at = NOW() + INTERVAL '30 seconds',
+    updated_at = NOW()
+WHERE id = $1
+`
+
+// A first failed check is checked again on the next tick, about 30 seconds later,
+// before it counts as a failure (ADR alerting).
+func (q *Queries) ScheduleDNSRecheck(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, scheduleDNSRecheck, id)
+	return err
 }
 
 const updateDNSMonitor = `-- name: UpdateDNSMonitor :one

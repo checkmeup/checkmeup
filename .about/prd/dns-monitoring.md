@@ -17,7 +17,7 @@ A changed or unresolvable record is reported within one check interval, saying w
 - A DNS monitor with a hostname, a record type (A, AAAA, CNAME, MX, TXT, NS), an interval within the plan minimum, and an optional expected value.
 - Without an expected value, the first successful lookup becomes the baseline; any later difference is a change until the user edits the monitor.
 - Lookup errors (NXDOMAIN, SERVFAIL, timeout) recorded apart from changes.
-- Down and recovery alerts; list, detail, edit, pause and resume, delete.
+- Down and recovery alerts, once a failed lookup or a changed record is confirmed by a recheck about 30 seconds later (ADR alerting); list, detail, edit, pause and resume, delete.
 
 ## Non-goals
 

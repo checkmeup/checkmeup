@@ -45,7 +45,15 @@ func checkOnePortMonitor(ctx context.Context, n Notifiers, m db.PortMonitor) {
 		dialer = portCheckDialer()
 	}
 	responseTimeMs, isUp, failureReason := performTCPCheck(m, dialer)
+	// Rechecked about 30 seconds later before it counts, as for uptime (ADR alerting).
+	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestPortCheckFailed(ctx, n, m)
 	if !recordPortCheck(ctx, n, m, responseTimeMs, isUp, failureReason) {
+		return
+	}
+	if unconfirmed {
+		if err := n.Queries.SchedulePortRecheck(ctx, m.ID); err != nil {
+			n.Logger.Error("port worker: schedule recheck", "monitor_id", m.ID, "err", err)
+		}
 		return
 	}
 
@@ -55,6 +63,17 @@ func checkOnePortMonitor(ctx context.Context, n Notifiers, m db.PortMonitor) {
 		return
 	}
 	handlePortDown(ctx, n, m, prevStatus, failureReason)
+}
+
+// latestPortCheckFailed reports whether the monitor's last recorded check
+// failed; on a read error it says true, as latestUptimeCheckFailed does.
+func latestPortCheckFailed(ctx context.Context, n Notifiers, m db.PortMonitor) bool {
+	failed, err := n.Queries.LatestPortCheckFailed(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("port worker: read latest check", "monitor_id", m.ID, "err", err)
+		return true
+	}
+	return failed
 }
 
 func recordPortCheck(ctx context.Context, n Notifiers, m db.PortMonitor, responseTimeMs int64, isUp bool, failureReason string) bool {

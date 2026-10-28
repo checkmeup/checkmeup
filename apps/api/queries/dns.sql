@@ -74,6 +74,21 @@ SET consecutive_failures = consecutive_failures + 1,
 WHERE id = $1
 RETURNING *;
 
+-- name: ScheduleDNSRecheck :exec
+-- A first failed check is checked again on the next tick, about 30 seconds later,
+-- before it counts as a failure (ADR alerting).
+UPDATE dns_monitors
+SET last_checked_at = NOW(),
+    next_check_at = NOW() + INTERVAL '30 seconds',
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: LatestDNSCheckFailed :one
+SELECT COALESCE(
+  (SELECT NOT is_up FROM dns_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 1),
+  false
+)::boolean AS failed;
+
 -- name: MarkDNSMonitorDown :exec
 UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE id = $1;
 

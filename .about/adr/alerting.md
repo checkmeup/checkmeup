@@ -12,7 +12,7 @@ An SMS Twilio accepts can still fail at the carrier (an unreachable number, a ST
 
 An alert for a monitor in a project starts its headline with the project name in brackets, `[Acme] nightly-backup missed its ping`, on Telegram, email (body and subject), Slack and SMS; the webhook event adds `projectId` and `projectName` and keeps every existing field, so receivers built before projects keep working (ADR projects). Without a project the alert is unchanged.
 
-An uptime check that fails right after a passing one doesn't count yet: the monitor is checked again on the next tick, about 30 seconds later, and only a failed recheck counts as a failure toward `alert_after_n_failures`. All checks run from one server, so a single request failing between it and the target (as on 2026-10-26, when a check got a 502 while Cloudflare logged no error for any of this server's requests to the target) looked like an outage and alerted, then recovered at the next check 10 minutes later. Both checks stay in the check log.
+An uptime, port or DNS check that fails right after a passing one doesn't count yet: the monitor is checked again on the next tick, about 30 seconds later, and only a failed recheck counts as a failure toward `alert_after_n_failures`. All checks run from one server, so a single request failing between it and the target (as on 2026-10-26, when a check got a 502 while Cloudflare logged no error for any of this server's requests to the target) looked like an outage and alerted, then recovered at the next check 10 minutes later. Both checks stay in the check log.
 
 Each monitor's `max_alerts_per_incident` caps alerts per incident (default 3; 0 means every failed check alerts); the count lives on the incident and starts at zero with the next one. Uptime, port and DNS monitors send one down alert per incident, so the cap only comes into play for cron, SSL and domain monitors. A recovery alert is always sent. The cap is per monitor because urgency differs per monitor.
 
@@ -36,7 +36,7 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 
 ## Consequences
 
-- A real outage alerts about 30 seconds later than before; a blip shorter than that never alerts. The recheck covers uptime monitors only so far; port and DNS checks fail the same way and would take the same rule.
+- A real outage alerts about 30 seconds later than before; a blip shorter than that never alerts.
 - Loading a monitor's channels is one more query per alert. Revisit if monitor counts make it matter.
 - SMS is the only channel that costs money per message; the per-incident cap is what bounds it.
 - Editing a Slack or webhook channel can't send a test until the URL is pasted again: the test needs the real URL, and the client only holds the masked one.

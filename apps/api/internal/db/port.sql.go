@@ -223,6 +223,20 @@ func (q *Queries) IncrementPortIncidentAlertCount(ctx context.Context, id uuid.U
 	return i, err
 }
 
+const latestPortCheckFailed = `-- name: LatestPortCheckFailed :one
+SELECT COALESCE(
+  (SELECT NOT is_up FROM port_checks WHERE monitor_id = $1 ORDER BY checked_at DESC LIMIT 1),
+  false
+)::boolean AS failed
+`
+
+func (q *Queries) LatestPortCheckFailed(ctx context.Context, monitorID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, latestPortCheckFailed, monitorID)
+	var failed bool
+	err := row.Scan(&failed)
+	return failed, err
+}
+
 const listDuePortMonitors = `-- name: ListDuePortMonitors :many
 SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
@@ -589,6 +603,21 @@ func (q *Queries) ResumePortMonitor(ctx context.Context, arg ResumePortMonitorPa
 		&i.ProjectID,
 	)
 	return i, err
+}
+
+const schedulePortRecheck = `-- name: SchedulePortRecheck :exec
+UPDATE port_monitors
+SET last_checked_at = NOW(),
+    next_check_at = NOW() + INTERVAL '30 seconds',
+    updated_at = NOW()
+WHERE id = $1
+`
+
+// A first failed check is checked again on the next tick, about 30 seconds later,
+// before it counts as a failure (ADR alerting).
+func (q *Queries) SchedulePortRecheck(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, schedulePortRecheck, id)
+	return err
 }
 
 const updatePortMonitor = `-- name: UpdatePortMonitor :one

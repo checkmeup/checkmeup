@@ -2775,6 +2775,8 @@ func TestCheckPortMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
 
 		// First failure: recorded, but alert_after_n_failures=1 suppresses the alert.
+		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
 		if status, failures := getPortRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
@@ -2820,6 +2822,29 @@ func TestCheckPortMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("a failure that passes its recheck sends nothing and stays up", func(t *testing.T) {
+		host, port := freeTCPPort(t) // nothing listening yet — the first check fails
+
+		org := testOrg(t, queries, pool)
+		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
+		sent := webhookRecorder(t, queries, org.ID, "port", mon.ID)
+
+		checkPortMonitors(context.Background(), n)
+		if status, failures := getPortRow(t, pool, mon.ID); status == "down" || failures != 0 {
+			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		_, _, closeFn := listenOnPort(t, host, port)
+		defer closeFn()
+		forceDueNow(t, pool, "port_monitors", mon.ID)
+		checkPortMonitors(context.Background(), n)
+		if status, failures := getPortRow(t, pool, mon.ID); status != "up" || failures != 0 {
+			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
+		}
+		if got := sent(); got != 0 {
+			t.Fatalf("want no alert for a failure its recheck didn't confirm, got %d", got)
+		}
+	})
+
 	t.Run("with alerts disabled, goes down and recovers without sending anything", func(t *testing.T) {
 		host, port := freeTCPPort(t) // nothing listening yet — the first check fails
 
@@ -2828,6 +2853,8 @@ func TestCheckPortMonitors(t *testing.T) {
 		disableAlerts(t, pool, "port_monitors", mon.ID)
 		sent := webhookRecorder(t, queries, org.ID, "port", mon.ID)
 
+		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
 		if status, _ := getPortRow(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want down after a failed check, got %q", status)
@@ -2861,6 +2888,8 @@ func TestCheckPortMonitors(t *testing.T) {
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": hookSrv.URL, "secret": "shh"})
 		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
 
+		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n) // 1st failure trips down + webhook (alert_after_n_failures defaults to 0)
 
 		_, _, closeFn := listenOnPort(t, host, port)
@@ -2888,6 +2917,8 @@ func TestCheckPortMonitors(t *testing.T) {
 		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeEmail, map[string]string{"email": "a@b.com"})
 		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
 
+		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
 
 		status, _ := getPortRow(t, pool, mon.ID)

@@ -64,7 +64,16 @@ func checkOneDNSMonitor(ctx context.Context, n Notifiers, m db.DnsMonitor) {
 	}
 
 	prevStatus := m.Status
+	// Rechecked about 30 seconds later before it counts, as for uptime (ADR
+	// alerting); a changed record that is real still differs on the recheck.
+	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestDNSCheckFailed(ctx, n, m)
 	if !recordDNSCheck(ctx, n, m, responseTimeMs, isUp, resolvedValue, failureReason) {
+		return
+	}
+	if unconfirmed {
+		if err := n.Queries.ScheduleDNSRecheck(ctx, m.ID); err != nil {
+			n.Logger.Error("dns worker: schedule recheck", "monitor_id", m.ID, "err", err)
+		}
 		return
 	}
 	if isUp {
@@ -72,6 +81,17 @@ func checkOneDNSMonitor(ctx context.Context, n Notifiers, m db.DnsMonitor) {
 		return
 	}
 	handleDNSDown(ctx, n, m, prevStatus, resolvedValue, failureReason)
+}
+
+// latestDNSCheckFailed reports whether the monitor's last recorded check
+// failed; on a read error it says true, as latestUptimeCheckFailed does.
+func latestDNSCheckFailed(ctx context.Context, n Notifiers, m db.DnsMonitor) bool {
+	failed, err := n.Queries.LatestDNSCheckFailed(ctx, m.ID)
+	if err != nil {
+		n.Logger.Error("dns worker: read latest check", "monitor_id", m.ID, "err", err)
+		return true
+	}
+	return failed
 }
 
 func recordDNSCheck(ctx context.Context, n Notifiers, m db.DnsMonitor, responseTimeMs int64, isUp bool, resolvedValue, failureReason string) bool {
