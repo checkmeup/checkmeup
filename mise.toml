@@ -73,6 +73,10 @@ run = ["rm -rf dist", "bunx turbo run build"]
 description = "Wipe node_modules, dist and coverage"
 run = "rm -rf node_modules dist coverage apps/web/node_modules apps/web/dist apps/web/coverage"
 
+[tasks.traffic]
+description = "Count visitors per day from kamal-proxy's request log on the server (ADR frontend)"
+run = "ssh deploy@167.233.116.118 'docker logs kamal-proxy --since 672h 2>&1' | python3 scripts/proxy-traffic.py"
+
 [tasks.migrate]
 description = "Run goose migrations against DATABASE_URL from apps/api/.env"
 run = '''goose -dir apps/api/migrations postgres "$(grep '^DATABASE_URL=' apps/api/.env 2>/dev/null | cut -d= -f2-)" up'''

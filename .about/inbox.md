@@ -110,9 +110,3 @@ PRD security-hardening says a request body over 64 KB is refused with `413` befo
 2026-10-18 · PRD test pass
 
 PRD webhook-alerts says a slow endpoint is cut off after 10 seconds and never delays the check loop. The 10-second cut-off is real (`deliver.Timeout`), but `DispatchAlert` runs inside each check's goroutine, and `checkUptimeMonitors` waits for all of them (`wg.Wait`) before the tick moves on, so one slow endpoint can hold a 30-second tick for up to 10 seconds. The timeout also can't be shortened in a test without a real 10-second wait. Settled by dispatching alerts outside the check's wait group (and making the timeout injectable) with a test, or by rewording the criterion.
-
-## Analytics sees only visitors who accept cookies
-
-2026-10-28 · traffic check
-
-GA4 loads only after a visitor accepts the consent banner (ADR frontend), so a visitor who declines or ignores it is never counted. GA4 showed the same 18 sessions for three days running (windows ending 2026-10-25 to 2026-10-27) while Search Console impressions rose to 99 a day, so its numbers say how many accepted cookies, not how many came. The real count is in kamal-proxy's request log on the server, which on 2026-10-28 went back only to 2026-10-25 and records no referer. Counted from it: 41, 56, 92 and 35 (partial) distinct non-bot-UA IPs a day from 2026-10-25 to 2026-10-28, but only 1, 4, 12 and 3 of them loaded the app's JS; 208 of ~410 page views were the home page, the mark of bots with browser user agents. Real people are between the two numbers, near the low end (a cached JS bundle isn't fetched again); 2026-10-27, the day of the dev.to post, was the peak. Settled by deciding how to measure traffic: count from the proxy log on each check, add cookieless analytics that needs no banner (a change to ADR frontend), or turn on GA4 consent mode's cookieless pings.

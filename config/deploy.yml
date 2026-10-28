@@ -10,6 +10,13 @@ proxy:
     - checkmeup.net
     - www.checkmeup.net
   app_port: 8080
+  # Referer is added for `mise run traffic` (ADR frontend); the rest are kamal-proxy's defaults.
+  logging:
+    request_headers:
+      - Cache-Control
+      - Last-Modified
+      - User-Agent
+      - Referer
 
 registry:
   server: ghcr.io
