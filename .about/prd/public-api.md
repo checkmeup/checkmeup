@@ -21,7 +21,7 @@ A user creates a key and reads a monitor's status with one `curl` from the docs.
 
 ## Non-goals
 
-- Write endpoints, until key scopes exist (see the Inbox).
+- Write endpoints, and the read-only or read-write key scope that lands with the first of them (ADR auth).
 - OAuth or per-endpoint permissions.
 
 ## Acceptance criteria
@@ -50,4 +50,3 @@ A user creates a key and reads a monitor's status with one `curl` from the docs.
 - The key list shows each key's label, created and last-used dates; recording last use never slows the request.
   → test: apps/web/src/components/ApiKeysCard.test.ts "shows each key's label, created date and last-used time"
   → test: apps/api/internal/middleware/apikey_test.go "TestRequireAPIKey_RecordingLastUseNeverSlowsTheRequest"
-- A key is created read-only or read-write; a read-only key's non-`GET` request gets `403`.
