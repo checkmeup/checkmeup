@@ -27,6 +27,7 @@ SMS alerts ([PRD sms-alerts](../../.about/prd/sms-alerts.md), [ADR alerting](../
    - Fill out the three-step form: business/contact info + address; messaging use case (describe transactional monitoring alerts), estimated monthly volume, and a sample message using actual alert copy (e.g. `"Checkmeup: monitor 'api-prod' is DOWN since 14:32 UTC"`); and **Privacy Policy** (`https://checkmeup.net/privacy`) + **Terms & Conditions** (`https://checkmeup.net/terms`) URLs — mandatory since 2026-09-15.
    - Submit; Twilio emails approval/rejection, usually within days.
    - Once approved, add the toll-free number to the Messaging Service's Sender Pool.
+   - The toll-free number can take replies, so add "Reply STOP to opt out, HELP for help" to the consent text in `NotificationChannelForm.vue` then; Toll-Free Verification asks for that opt-in wording. The alphanumeric sender takes no replies, so the text says to turn the channel off instead.
    - Fall back to full **A2P 10DLC registration** (brand + campaign registration, Console > Messaging > Regulatory Compliance, "Low-Volume Standard" campaign type fits our volume) only if toll-free is rejected or a higher-throughput number is needed — reviews there run 10–15 days, notably slower than toll-free.
    - Sending US-bound SMS through an unregistered sender gets aggressively filtered or blocked by carriers today, not just "sent slower" — don't skip this for US traffic.
 

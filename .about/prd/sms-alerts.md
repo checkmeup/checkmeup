@@ -35,6 +35,8 @@ A user adds a number with consent and gets the next down alert as one text, with
   → test: apps/web/src/components/NotificationChannelsCard.test.ts "disables save and test until the sms consent checkbox is checked"
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creates an sms channel with server-stamped consent_at, stripping the client's consent flag"
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/a client-supplied consent_at is ignored and overwritten with a server-stamped value"
+- The consent box states how often texts come, that rates may apply and how to stop them (turn the channel off or delete it, since the alphanumeric sender takes no replies), and links the Terms and Privacy Policy.
+  → test: apps/web/src/components/NotificationChannelsCard.test.ts "states frequency, rates and how to stop next to the sms consent checkbox, with Terms and Privacy links"
 - Changing a channel's number needs fresh consent; keeping the number keeps the consent on file.
   → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/changing an sms channel's number requires fresh consent"
   → test: apps/api/internal/handler/notification_channels_test.go "TestUpdateNotificationChannel/updating an sms channel with the same number carries consent forward without re-requiring it"

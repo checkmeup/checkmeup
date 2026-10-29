@@ -6,7 +6,7 @@ import type { NotificationChannel } from '@/api/notificationChannels'
 import { ApiError } from '@/api/client'
 
 vi.mock('vue-router', () => ({
-  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
+  RouterLink: { name: 'RouterLink', props: ['to'], template: '<a :href="to"><slot /></a>' },
 }))
 
 const { createMock, updateMock, deleteMock, testMock, regenerateMock } = vi.hoisted(() => ({
@@ -429,6 +429,19 @@ describe('NotificationChannelsCard', () => {
 
     expect(findButtonByText(wrapper, 'Send test SMS')?.attributes('disabled')).toBeUndefined()
     expect(findButtonByText(wrapper, 'Add channel')?.attributes('disabled')).toBeUndefined()
+  })
+
+  it('states frequency, rates and how to stop next to the sms consent checkbox, with Terms and Privacy links', async () => {
+    const wrapper = mountCard()
+    await findButtonByText(wrapper, '+ Add channel')?.trigger('click')
+    await selectChannelType(wrapper, 'SMS')
+
+    const consent = wrapper.find('input[type="checkbox"]').element.closest('label')!.textContent
+    expect(consent).toContain('Message frequency')
+    expect(consent).toContain('Msg & data rates may apply')
+    expect(consent).toContain('To stop, turn this channel off or delete it')
+    const links = wrapper.findAll('label a').map((a) => a.attributes('href'))
+    expect(links).toEqual(['/terms', '/privacy'])
   })
 
   it('creates an sms channel with consent in the config', async () => {

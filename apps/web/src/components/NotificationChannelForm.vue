@@ -124,7 +124,13 @@ defineProps<{
       </p>
       <label v-else class="flex items-start gap-2 text-sm text-[var(--text-dim)]">
         <input v-model="form.smsConsent" type="checkbox" class="mt-0.5" />
-        <span>I agree to receive automated SMS alerts from Checkmeup at this number.</span>
+        <span>
+          I agree to receive automated SMS alerts from Checkmeup at this number. Message frequency
+          depends on how often my monitors go down. Msg &amp; data rates may apply. To stop, turn
+          this channel off or delete it. See the
+          <RouterLink to="/terms" class="underline text-[var(--accent)]">Terms</RouterLink> and
+          <RouterLink to="/privacy" class="underline text-[var(--accent)]">Privacy Policy</RouterLink>.
+        </span>
       </label>
     </div>
     <div v-if="form.type === 'webhook' && form.editingId" class="space-y-2">
