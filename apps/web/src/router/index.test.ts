@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
+import { mount } from '@vue/test-utils'
+import { RouterView } from 'vue-router'
+import { createHead } from '@unhead/vue/client'
+import { articlesMeta } from '@/blog/posts'
 import { useAuthStore, type User } from '@/stores/auth'
 
 const trackPageviewMock = vi.fn()
@@ -128,5 +132,25 @@ describe('router scrolling', () => {
     const position = await scrollBehavior(to, router.currentRoute.value, null)
 
     expect(position).toEqual({ el: '#billing', behavior: 'smooth' })
+  })
+})
+
+describe('blog post route', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useAuthStore().clear()
+  })
+
+  // The browser mounts the app fresh over the prerendered HTML (ADR seo): a
+  // first render without the article lets the footer jump up and back down.
+  it("renders the post's content on its first render, without a loading state", async () => {
+    const post = articlesMeta[0]
+    await router.push(`/blog/${post.slug}`)
+
+    const wrapper = mount(RouterView, { global: { plugins: [router, createHead()] } })
+
+    expect(wrapper.text()).toContain(post.title)
+    expect(wrapper.text()).not.toContain('Loading…')
+    wrapper.unmount()
   })
 })

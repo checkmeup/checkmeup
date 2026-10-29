@@ -39,7 +39,28 @@ const postLoaders = import.meta.glob<{ content: ContentBlock[] }>('./posts/*.ts'
   Record<string, () => Promise<{ content: ContentBlock[] }>>
 >
 
+// Posts getPost has already resolved, by slug, so loadedPost can hand one
+// back synchronously (see loadedPost).
+const loaded = new Map<string, BlogPost | undefined>()
+
+// The post getPost already resolved for this slug, wrapped so an unknown slug
+// ({ post: undefined }) differs from one not loaded yet (null). The blog post
+// route resolves its post before the view mounts, and the view renders it on
+// its first pass: a first render without the article would let the footer
+// jump up and back down over the prerendered page (ADR seo).
+export function loadedPost(slug: string): { post: BlogPost | undefined } | null {
+  return loaded.has(slug) ? { post: loaded.get(slug) } : null
+}
+
 export async function getPost(slug: string): Promise<BlogPost | undefined> {
+  const hit = loadedPost(slug)
+  if (hit) return hit.post
+  const post = await loadPost(slug)
+  loaded.set(slug, post)
+  return post
+}
+
+async function loadPost(slug: string): Promise<BlogPost | undefined> {
   const entry = postsMeta.find((m) => m.slug === slug)
   if (!entry) return undefined
   const loader = postLoaders[`./posts/${entry.file}.ts`]

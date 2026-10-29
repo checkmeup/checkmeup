@@ -5,20 +5,30 @@ import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import NotFoundHero from '@/components/NotFoundHero.vue'
 import type { BlogPost } from '@/blog/posts'
-import { getPost } from '@/blog/posts'
+import { getPost, loadedPost } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 const route = useRoute()
-const post = ref<BlogPost | undefined>(undefined)
+const slug = () => route.params.slug as string
+// The route resolves the post before this view mounts, so it is usually here
+// on the first render (see loadedPost).
+const initial = loadedPost(slug())
+const post = ref<BlogPost | undefined>(initial?.post)
 // Distinguishes "haven't resolved the slug yet" from "resolved to nothing" —
 // getPost() is async (each post's full content is a separate, lazily-loaded
 // chunk, so the list page doesn't have to ship every post's prose), so
 // !post is briefly true during a genuine in-flight load too.
-const loading = ref(true)
+const loading = ref(!initial)
 
 async function loadPost() {
+  const hit = loadedPost(slug())
+  if (hit) {
+    post.value = hit.post
+    loading.value = false
+    return
+  }
   loading.value = true
-  post.value = await getPost(route.params.slug as string)
+  post.value = await getPost(slug())
   loading.value = false
 }
 

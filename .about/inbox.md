@@ -63,12 +63,6 @@ The review recommended the worker first, as alerting is the core of the product,
 
 The redesigned hero (variant A) was meant to sit next to a first-person line from the founder. It didn't ship: the only draft of the line was written by Claude. The live 90-day strip of checkmeup.net, planned with it, has since shipped. Settled when the founder writes the line or drops it.
 
-## SEO leftovers from the 2026-10-17 check
-
-2026-10-17 · session review · kept 2026-10-18
-
-The SEO check fixed long descriptions and `HEAD` 405s but left smaller findings: every post shares one OG image, so shared links all look alike; `http://www.checkmeup.net` takes two redirects instead of one (kamal-proxy's doing). Core Web Vitals were never checked (PageSpeed Insights or a browser). Settled when each is fixed or judged not worth it, and Core Web Vitals have been looked at once.
-
 ## Almost no organic search traffic
 
 2026-10-17 · session review · kept 2026-10-18

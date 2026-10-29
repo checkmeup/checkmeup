@@ -108,6 +108,13 @@ export const routes: RouteRecordRaw[] = [
     path: '/blog/:slug',
     name: 'blog-post',
     component: () => import('@/views/BlogPostView.vue'),
+    // Resolve the post before the view mounts, so its first render already
+    // has the article (see loadedPost). Imported here, not at the top, to
+    // keep the posts module out of the main bundle.
+    beforeEnter: async (to) => {
+      const { getPost } = await import('@/blog/posts')
+      await getPost(to.params.slug as string)
+    },
   },
   {
     path: '/sign-in',
