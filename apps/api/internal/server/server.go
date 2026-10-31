@@ -1,9 +1,11 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -81,9 +83,18 @@ func (s *Server) buildRouter() *chi.Mux {
 	))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// A body that declares its size over the cap is refused before any
-			// handler runs; one that doesn't (chunked) fails when a handler
-			// reads past the cap.
+			// A body over the cap is refused before any handler runs. One that
+			// doesn't declare its size (chunked) is read up to the cap first,
+			// so it gets the same 413 instead of a handler's 400.
+			if r.ContentLength < 0 {
+				body, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
+				if err != nil {
+					respond.Error(w, http.StatusBadRequest, "invalid request body", "bad_request")
+					return
+				}
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				r.ContentLength = int64(len(body))
+			}
 			if r.ContentLength > maxBodyBytes {
 				respond.Error(w, http.StatusRequestEntityTooLarge, "request body too large", "body_too_large")
 				return

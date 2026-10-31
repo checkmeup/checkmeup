@@ -150,6 +150,31 @@ func TestRoutes_OversizedBodyIs413(t *testing.T) {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusRequestEntityTooLarge)
 		}
 	})
+
+	t.Run("a chunked body over 64 KB is refused with 413 too", func(t *testing.T) {
+		body := `{"email":"a@example.com","password":"` + strings.Repeat("x", 70*1024) + `"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-up", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.ContentLength = -1
+		w := httptest.NewRecorder()
+		srv.router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusRequestEntityTooLarge {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusRequestEntityTooLarge)
+		}
+	})
+
+	t.Run("a chunked body under 64 KB still reaches the handler", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-up", strings.NewReader(`{"email":"not-an-email"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.ContentLength = -1
+		w := httptest.NewRecorder()
+		srv.router.ServeHTTP(w, req)
+
+		if w.Code == http.StatusRequestEntityTooLarge || strings.Contains(w.Body.String(), "invalid request body") {
+			t.Fatalf("status = %d, body = %s; want the handler to read the body", w.Code, w.Body.String())
+		}
+	})
 }
 
 func TestRoutes_FreeToolsAreRateLimited(t *testing.T) {
