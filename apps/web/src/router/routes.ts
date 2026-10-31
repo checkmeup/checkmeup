@@ -64,6 +64,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'domain-expiry-checker',
     component: () => import('@/views/DomainExpiryCheckerView.vue'),
   },
+  {
+    path: '/tools/dns-lookup',
+    name: 'dns-lookup',
+    component: () => import('@/views/DNSLookupView.vue'),
+  },
   // One product page per monitor type (PRD marketing-pages). The type list is
   // written out here rather than read from content/monitorPages.ts, so the
   // page content stays in the view's lazy chunk.

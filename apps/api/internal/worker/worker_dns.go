@@ -309,6 +309,73 @@ func lookupRecord(ctx context.Context, resolver *net.Resolver, recordType db.Dns
 	}
 }
 
+// DNSRecordSet is one record type's answer in the free DNS lookup
+// (PRD free-tools): its values, none when the name has no such record, or
+// why the lookup failed.
+type DNSRecordSet struct {
+	Type   string   `json:"type"`
+	Values []string `json:"values"`
+	Error  string   `json:"error,omitempty"`
+}
+
+// dnsLookupTypes are the record types a DNS monitor checks, in the order
+// the free DNS lookup lists them.
+var dnsLookupTypes = []db.DnsRecordType{
+	db.DnsRecordTypeA, db.DnsRecordTypeAAAA, db.DnsRecordTypeCNAME,
+	db.DnsRecordTypeMX, db.DnsRecordTypeTXT, db.DnsRecordTypeNS,
+}
+
+// LookupAllDNS resolves hostname for every record type a DNS monitor
+// checks, all at once, for the free DNS lookup.
+func LookupAllDNS(ctx context.Context, resolver *net.Resolver, hostname string) []DNSRecordSet {
+	ctx, cancel := context.WithTimeout(ctx, deliver.Timeout)
+	defer cancel()
+
+	sets := make([]DNSRecordSet, len(dnsLookupTypes))
+	var wg sync.WaitGroup
+	for i, recordType := range dnsLookupTypes {
+		wg.Go(func() {
+			sets[i] = lookupRecordSet(ctx, resolver, recordType, hostname)
+		})
+	}
+	wg.Wait()
+	return sets
+}
+
+func lookupRecordSet(ctx context.Context, resolver *net.Resolver, recordType db.DnsRecordType, hostname string) DNSRecordSet {
+	set := DNSRecordSet{Type: string(recordType), Values: []string{}}
+	var values []string
+	var err error
+	if recordType == db.DnsRecordTypeMX {
+		// Unlike a monitor's compared value, the lookup shows each mail
+		// server's preference, in the resolver's preference order.
+		var mxs []*net.MX
+		mxs, err = resolver.LookupMX(ctx, hostname)
+		for _, mx := range mxs {
+			values = append(values, fmt.Sprintf("%d %s", mx.Pref, trimTrailingDot(mx.Host)))
+		}
+	} else {
+		values, err = lookupRecord(ctx, resolver, recordType, hostname)
+		sort.Strings(values)
+	}
+	var dnsErr *net.DNSError
+	switch {
+	case errors.As(err, &dnsErr) && dnsErr.IsNotFound:
+		return set
+	case err != nil:
+		set.Error = classifyLookupError(err)
+		return set
+	}
+	// LookupCNAME answers the name itself when it has no CNAME record.
+	if recordType == db.DnsRecordTypeCNAME && len(values) == 1 && values[0] == hostname {
+		return set
+	}
+	if values != nil {
+		set.Values = values
+	}
+	return set
+}
+
 func ipsToStrings(ips []net.IP) []string {
 	out := make([]string, len(ips))
 	for i, ip := range ips {

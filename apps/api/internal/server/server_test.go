@@ -203,6 +203,17 @@ func TestRoutes_FreeToolsAreRateLimited(t *testing.T) {
 		}
 	})
 
+	t.Run("five DNS lookups a minute per IP", func(t *testing.T) {
+		for i := 1; i <= 5; i++ {
+			if code := get("/api/v1/tools/dns?host=", "203.0.113.20"); code != http.StatusBadRequest {
+				t.Fatalf("lookup %d: status = %d, want %d", i, code, http.StatusBadRequest)
+			}
+		}
+		if code := get("/api/v1/tools/dns?host=", "203.0.113.20"); code != http.StatusTooManyRequests {
+			t.Fatalf("6th lookup: status = %d, want %d", code, http.StatusTooManyRequests)
+		}
+	})
+
 	t.Run("thirty domain lookups a minute across all visitors", func(t *testing.T) {
 		for i := 1; i <= 30; i++ {
 			if code := get("/api/v1/tools/domain?domain=", fmt.Sprintf("198.51.100.%d", i)); code != http.StatusBadRequest {

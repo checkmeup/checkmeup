@@ -80,7 +80,7 @@ const LANDING_PATHS = [
   '/blog',
   '/changelog',
 ]
-const TOOL_PATHS = ['/tools/ssl-checker', '/tools/domain-expiry-checker']
+const TOOL_PATHS = ['/tools/ssl-checker', '/tools/domain-expiry-checker', '/tools/dns-lookup']
 
 describe('prerender', () => {
   it('serves every landing page with an <h1> and its own title and Open Graph tags', () => {
@@ -112,7 +112,7 @@ describe('prerender', () => {
     }
   })
 
-  it('serves both free checkers with their <h1>, title, description and Open Graph tags', () => {
+  it('serves every free checker with their <h1>, title, description and Open Graph tags', () => {
     const home = page('/')
     const titles = new Set<string>()
     for (const path of TOOL_PATHS) {

@@ -165,12 +165,13 @@ func (s *Server) buildRouter() *chi.Mux {
 		// cached an hour in the handler.
 		r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Get("/stats", stats.ServeStats)
 
-		// Free SSL and domain expiry checkers (PRD free-tools), no auth: each
-		// request is a live check against a host the visitor names. The
+		// Free SSL, domain expiry and DNS checkers (PRD free-tools), no auth:
+		// each request is a live check against a host the visitor names. The
 		// domain one also has a ceiling across all visitors, since its WHOIS
 		// queries go to the same registry servers paying monitors depend on,
 		// and a registry that bans our IP breaks them (ADR domain-lookups).
 		r.With(httprate.LimitBy(5, time.Minute, clientIPKey)).Get("/tools/ssl", tools.CheckSSL)
+		r.With(httprate.LimitBy(5, time.Minute, clientIPKey)).Get("/tools/dns", tools.CheckDNS)
 		r.With(
 			httprate.LimitBy(5, time.Minute, clientIPKey),
 			httprate.LimitBy(30, time.Minute, httprate.Key("*")),

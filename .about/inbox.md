@@ -55,7 +55,7 @@ Search Console showed 0 clicks and 127 impressions from 2026-07-15 to 2026-10-14
 
 2026-10-17 · traffic review · kept 2026-10-29
 
-Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools); DNS lookup, TCP port and the cron explainer remain, waiting on the first two tools' 2026-12-15 success signal. Settled when the rest are built or dropped.
+Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Almost no organic search traffic"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools), and the DNS lookup followed on 2026-10-31 (`/tools/dns-lookup`); TCP port and the cron explainer remain, waiting on the tools' 2026-12-15 success signal. Settled when the rest are built or dropped.
 
 ## Stack-specific cron guides
 

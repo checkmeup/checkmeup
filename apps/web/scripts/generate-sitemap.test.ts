@@ -37,8 +37,9 @@ describe('generate-sitemap', () => {
     }
   })
 
-  it('lists both free checkers', () => {
+  it('lists every free checker', () => {
     expect(locs).toContain('https://checkmeup.net/tools/ssl-checker')
     expect(locs).toContain('https://checkmeup.net/tools/domain-expiry-checker')
+    expect(locs).toContain('https://checkmeup.net/tools/dns-lookup')
   })
 })

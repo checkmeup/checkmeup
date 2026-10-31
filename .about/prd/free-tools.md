@@ -1,4 +1,4 @@
-# Free SSL and domain expiry checkers
+# Free SSL, domain expiry and DNS checkers
 
 ## Problem
 
@@ -16,13 +16,14 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 
 - `/tools/ssl-checker`: enter a hostname, see the certificate's expiry date, days left and issuer, or why the check failed.
 - `/tools/domain-expiry-checker`: enter a domain, see its expiry date, days left and registrar, or why the lookup failed; the same RDAP-then-WHOIS lookup a domain monitor uses (ADR domain-lookups).
+- `/tools/dns-lookup` (added 2026-10-31): enter a hostname, see its A, AAAA, CNAME, MX (with preference), TXT and NS records at once through the resolver DNS monitors use, each type's own failure reason, or why the lookup failed.
 - No sign-up needed. Under each result, a link to sign up and monitor it automatically.
-- Both pages prerendered, with their own title, description and `<h1>`, listed in `sitemap.xml` and linked from the site footer.
+- Every page prerendered, with its own title, description and `<h1>`, listed in `sitemap.xml` and linked from the site footer.
 
 ## Non-goals
 
 - Carrying the checked host into the sign-up flow or a prefilled monitor form.
-- DNS, port and cron expression tools (Inbox "Free tools without sign-up").
+- Port and cron expression tools (Inbox "Free tools without sign-up").
 - Checking several hosts at once, history, or a result URL to share.
 - Caching results.
 
@@ -39,6 +40,14 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - An empty input gets `400` with no lookup made.
   → test: apps/api/internal/handler/tools_test.go "TestCheckDomain_AnEmptyInputIsRefusedWithoutALookup"
   → test: apps/api/internal/handler/tools_test.go "TestCheckSSL_RefusesWhatIsNotAHostname"
+  → test: apps/api/internal/handler/tools_test.go "TestCheckDNS_RefusesWhatIsNotAHostname"
+- A hostname, or a URL with scheme or path, gets all six record types in a fixed order (A, AAAA, CNAME, MX, TXT, NS), a type with no records shown as none and a failed type with its reason.
+  → test: apps/api/internal/handler/tools_test.go "TestCheckDNS_ListsEveryRecordTypeOfTheHostInAURL"
+  → test: apps/api/internal/worker/worker_dns_test.go "TestLookupAllDNS/lists all six record types, in order, with the answers each has"
+  → test: apps/web/src/components/DNSLookupChecker.test.ts "lists each record type with its values, with an offer to monitor them"
+- A name with no records of any type, or whose lookups all failed, gets `422` with the reason.
+  → test: apps/api/internal/handler/tools_test.go "TestCheckDNS_AFailedLookupGivesItsReason"
+  → test: apps/web/src/components/DNSLookupChecker.test.ts "shows why a lookup failed instead of a result"
 - One IP gets at most 5 checks a minute per tool, and all visitors together at most 30 domain lookups a minute; past either, `429` with `Retry-After`, and the page says to try again in a minute.
   → test: apps/api/internal/server/server_test.go "TestRoutes_FreeToolsAreRateLimited"
   → test: apps/web/src/lib/toolCheck.test.ts "says to try again in a minute when rate limited"
@@ -47,10 +56,10 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
   → test: apps/api/internal/handler/tools_test.go "TestCheckSSL_AFailedCheckGivesItsReason"
 - Each result shows a sign-up link offering to monitor it.
   → test: apps/web/src/components/ToolChecker.test.ts "shows the expiry, days left and registrar, with an offer to monitor it"
-- Fetching either page without JavaScript returns its `<h1>`, title, description and Open Graph tags; both are in `sitemap.xml`.
-  → test: apps/web/scripts/prerender.test.ts "serves both free checkers with their <h1>, title, description and Open Graph tags"
-  → test: apps/web/scripts/generate-sitemap.test.ts "lists both free checkers"
-- Both pages are linked from the footer of every marketing page.
+- Fetching any tool page without JavaScript returns its `<h1>`, title, description and Open Graph tags; all are in `sitemap.xml`.
+  → test: apps/web/scripts/prerender.test.ts "serves every free checker with their <h1>, title, description and Open Graph tags"
+  → test: apps/web/scripts/generate-sitemap.test.ts "lists every free checker"
+- Every tool page is linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
 
 ## Open questions

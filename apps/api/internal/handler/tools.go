@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,17 +14,22 @@ import (
 	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
-// ToolsHandler serves the free, no-sign-up SSL and domain expiry checkers
-// (PRD free-tools): one live check per request, through the same TLS check
-// and RDAP/WHOIS lookup the worker runs for monitors. Nothing is stored.
+// ToolsHandler serves the free, no-sign-up SSL, domain expiry and DNS
+// checkers (PRD free-tools): one live check per request, through the same
+// TLS check, RDAP/WHOIS lookup and DNS resolver the worker runs for
+// monitors. Nothing is stored.
 type ToolsHandler struct {
-	rdap     *rdap.Client
-	whois    *whois.Client
-	checkTLS func(hostname string) (time.Time, string, int, error)
+	rdap      *rdap.Client
+	whois     *whois.Client
+	checkTLS  func(hostname string) (time.Time, string, int, error)
+	lookupDNS func(ctx context.Context, hostname string) []worker.DNSRecordSet
 }
 
 func NewToolsHandler(rd *rdap.Client, wi *whois.Client) *ToolsHandler {
-	return &ToolsHandler{rdap: rd, whois: wi, checkTLS: worker.CheckTLS}
+	return &ToolsHandler{rdap: rd, whois: wi, checkTLS: worker.CheckTLS,
+		lookupDNS: func(ctx context.Context, hostname string) []worker.DNSRecordSet {
+			return worker.LookupAllDNS(ctx, net.DefaultResolver, hostname)
+		}}
 }
 
 type sslToolResponse struct {
@@ -30,6 +37,11 @@ type sslToolResponse struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 	DaysLeft  int       `json:"daysLeft"`
 	Issuer    string    `json:"issuer"`
+}
+
+type dnsToolResponse struct {
+	Host    string                `json:"host"`
+	Records []worker.DNSRecordSet `json:"records"`
 }
 
 type domainToolResponse struct {
@@ -86,4 +98,26 @@ func (h *ToolsHandler) CheckDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	daysLeft := int(time.Until(res.ExpiresAt).Hours() / 24)
 	respond.JSON(w, http.StatusOK, domainToolResponse{Domain: domain, ExpiresAt: res.ExpiresAt, DaysLeft: daysLeft, Registrar: res.Registrar})
+}
+
+// CheckDNS handles GET /api/v1/tools/dns?host=. A name with records of some
+// types and failed lookups for others still answers 200, each type with its
+// own reason; only a name with no records at all is a failed check.
+func (h *ToolsHandler) CheckDNS(w http.ResponseWriter, r *http.Request) {
+	host, ok := toolHost(w, r, "host")
+	if !ok {
+		return
+	}
+	sets := h.lookupDNS(r.Context(), host)
+	reason := host + " has no DNS records"
+	for _, set := range sets {
+		if len(set.Values) > 0 {
+			respond.JSON(w, http.StatusOK, dnsToolResponse{Host: host, Records: sets})
+			return
+		}
+		if set.Error != "" {
+			reason = set.Error
+		}
+	}
+	respond.Error(w, http.StatusUnprocessableEntity, reason, "check_failed")
 }

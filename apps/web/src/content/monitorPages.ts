@@ -122,6 +122,9 @@ export const monitorPages: MonitorPage[] = [
     ],
     limits:
       "Lookups come from one resolver in one place, so a change that hasn't reached it yet, or a split-horizon answer, isn't seen. DNSSEC isn't validated.",
-    related: [{ to: '/blog/dns-record-monitoring-guide', label: 'Guide: DNS record monitoring' }],
+    related: [
+      { to: '/blog/dns-record-monitoring-guide', label: 'Guide: DNS record monitoring' },
+      { to: '/tools/dns-lookup', label: 'Free DNS lookup' },
+    ],
   },
 ]

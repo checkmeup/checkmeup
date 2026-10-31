@@ -43,6 +43,7 @@ const footerColumns = [
       { to: '/blog', label: 'Blog' },
       { to: '/tools/ssl-checker', label: 'SSL checker' },
       { to: '/tools/domain-expiry-checker', label: 'Domain expiry checker' },
+      { to: '/tools/dns-lookup', label: 'DNS lookup' },
       { to: '/alternatives/healthchecks-io', label: 'vs Healthchecks.io' },
       { to: '/alternatives/uptimerobot', label: 'vs UptimeRobot' },
       { to: '/alternatives/cronitor', label: 'vs Cronitor' },

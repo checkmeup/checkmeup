@@ -56,6 +56,7 @@ describe('LandingLayout', () => {
     const hrefs = (await mountAt('/')).findAll('footer nav a').map((a) => a.attributes('href'))
     expect(hrefs).toContain('/tools/ssl-checker')
     expect(hrefs).toContain('/tools/domain-expiry-checker')
+    expect(hrefs).toContain('/tools/dns-lookup')
   })
 
   it('links every monitor type page from the footer', async () => {

@@ -460,3 +460,39 @@ func TestBuildDNSDownAlert(t *testing.T) {
 		}
 	})
 }
+
+func TestLookupAllDNS(t *testing.T) {
+	t.Run("lists all six record types, in order, with the answers each has", func(t *testing.T) {
+		resolver := fakeDNSResolver(t, []net.IP{net.ParseIP("5.6.7.8"), net.ParseIP("1.2.3.4")})
+
+		sets := LookupAllDNS(context.Background(), resolver, "example.com")
+
+		var types []string
+		for _, s := range sets {
+			types = append(types, s.Type)
+		}
+		if got := strings.Join(types, " "); got != "A AAAA CNAME MX TXT NS" {
+			t.Fatalf("types = %q, want %q", got, "A AAAA CNAME MX TXT NS")
+		}
+		if got := strings.Join(sets[0].Values, " "); got != "1.2.3.4 5.6.7.8" {
+			t.Fatalf("A values = %q, want %q", got, "1.2.3.4 5.6.7.8")
+		}
+		// The fake answers every query with A records, which no other
+		// type's lookup accepts: each gets none, and no error.
+		for _, s := range sets[1:] {
+			if len(s.Values) != 0 || s.Error != "" {
+				t.Fatalf("%s = %+v, want no values and no error", s.Type, s)
+			}
+		}
+	})
+
+	t.Run("a name that doesn't exist has no records of any type", func(t *testing.T) {
+		sets := LookupAllDNS(context.Background(), fakeDNSResolver(t, nil), "missing.example.com")
+
+		for _, s := range sets {
+			if len(s.Values) != 0 || s.Error != "" {
+				t.Fatalf("%s = %+v, want no values and no error", s.Type, s)
+			}
+		}
+	})
+}

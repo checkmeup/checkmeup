@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -177,4 +178,93 @@ func TestCheckDomain_AnEmptyInputIsRefusedWithoutALookup(t *testing.T) {
 	if n := hits.Load(); n != 0 {
 		t.Fatalf("RDAP lookups = %d, want 0", n)
 	}
+}
+
+// dnsSets builds a lookup's answer: values per record type, the rest empty.
+func dnsSets(values map[string][]string) []worker.DNSRecordSet {
+	var sets []worker.DNSRecordSet
+	for _, typ := range []string{"A", "AAAA", "CNAME", "MX", "TXT", "NS"} {
+		vs := values[typ]
+		if vs == nil {
+			vs = []string{}
+		}
+		sets = append(sets, worker.DNSRecordSet{Type: typ, Values: vs})
+	}
+	return sets
+}
+
+func TestCheckDNS_ListsEveryRecordTypeOfTheHostInAURL(t *testing.T) {
+	var looked string
+	h := NewToolsHandler(nil, nil)
+	h.lookupDNS = func(_ context.Context, host string) []worker.DNSRecordSet {
+		looked = host
+		return dnsSets(map[string][]string{"A": {"93.184.215.14"}, "MX": {"10 mail.example.com"}})
+	}
+
+	w := toolRequest(t, h.CheckDNS, "/api/v1/tools/dns", "host", " https://Example.com/path ")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if looked != "example.com" {
+		t.Fatalf("looked up %q, want %q", looked, "example.com")
+	}
+	want := `{"host":"example.com","records":[` +
+		`{"type":"A","values":["93.184.215.14"]},{"type":"AAAA","values":[]},{"type":"CNAME","values":[]},` +
+		`{"type":"MX","values":["10 mail.example.com"]},{"type":"TXT","values":[]},{"type":"NS","values":[]}]}`
+	if got := strings.TrimSpace(w.Body.String()); got != want {
+		t.Fatalf("body = %s\nwant   %s", got, want)
+	}
+}
+
+func TestCheckDNS_RefusesWhatIsNotAHostname(t *testing.T) {
+	h := NewToolsHandler(nil, nil)
+	h.lookupDNS = func(context.Context, string) []worker.DNSRecordSet {
+		t.Fatal("no lookup should run")
+		return nil
+	}
+	for _, input := range []string{"", "localhost", "exa mple.com"} {
+		t.Run(fmt.Sprintf("%q", input), func(t *testing.T) {
+			w := toolRequest(t, h.CheckDNS, "/api/v1/tools/dns", "host", input)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+func TestCheckDNS_AFailedLookupGivesItsReason(t *testing.T) {
+	t.Run("a name with no records of any type", func(t *testing.T) {
+		h := NewToolsHandler(nil, nil)
+		h.lookupDNS = func(context.Context, string) []worker.DNSRecordSet { return dnsSets(nil) }
+
+		w := toolRequest(t, h.CheckDNS, "/api/v1/tools/dns", "host", "missing.example.com")
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusUnprocessableEntity)
+		}
+		if msg := errorMessage(t, w); msg != "missing.example.com has no DNS records" {
+			t.Fatalf("error = %q, want %q", msg, "missing.example.com has no DNS records")
+		}
+	})
+
+	t.Run("lookups that all failed", func(t *testing.T) {
+		h := NewToolsHandler(nil, nil)
+		h.lookupDNS = func(context.Context, string) []worker.DNSRecordSet {
+			sets := dnsSets(nil)
+			for i := range sets {
+				sets[i].Error = "DNS lookup timeout"
+			}
+			return sets
+		}
+
+		w := toolRequest(t, h.CheckDNS, "/api/v1/tools/dns", "host", "slow.example.com")
+
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusUnprocessableEntity)
+		}
+		if msg := errorMessage(t, w); msg != "DNS lookup timeout" {
+			t.Fatalf("error = %q, want %q", msg, "DNS lookup timeout")
+		}
+	})
 }
