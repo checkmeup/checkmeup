@@ -6,6 +6,10 @@ servers:
 
 proxy:
   ssl: true
+  # The app redirects plain HTTP itself (redirectCanonical in server.go), so
+  # http://www.checkmeup.net reaches https://checkmeup.net in one hop instead
+  # of two: Kamal can't set kamal-proxy's canonical host (basecamp/kamal#1941).
+  ssl_redirect: false
   hosts:
     - checkmeup.net
     - www.checkmeup.net

@@ -327,46 +327,63 @@ func TestRoutes_HEADOnAPageAnswersLikeGET(t *testing.T) {
 	}
 }
 
-// ─── redirectWWW ─────────────────────────────────────────────────────────────
+// ─── redirectCanonical ───────────────────────────────────────────────────────
 
-func TestRedirectWWW(t *testing.T) {
+func TestRedirectCanonical(t *testing.T) {
 	srv := &Server{cfg: &config.Config{AppURL: "https://checkmeup.net"}}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
-
-	t.Run("www host redirects to the canonical apex, preserving path and query", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/blog/some-post?utm=1", http.NoBody)
-		req.Host = "www.checkmeup.net"
+	serve := func(cfg *config.Config, host, proto, target string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, target, http.NoBody)
+		req.Host = host
+		if proto != "" {
+			req.Header.Set("X-Forwarded-Proto", proto)
+		}
 		w := httptest.NewRecorder()
-		srv.redirectWWW()(next).ServeHTTP(w, req)
-
+		(&Server{cfg: cfg}).redirectCanonical()(next).ServeHTTP(w, req)
+		return w
+	}
+	wantRedirect := func(t *testing.T, w *httptest.ResponseRecorder, location string) {
+		t.Helper()
 		if w.Code != http.StatusMovedPermanently {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusMovedPermanently)
 		}
-		if got, want := w.Header().Get("Location"), "https://checkmeup.net/blog/some-post?utm=1"; got != want {
-			t.Fatalf("Location = %q, want %q", got, want)
+		if got := w.Header().Get("Location"); got != location {
+			t.Fatalf("Location = %q, want %q", got, location)
 		}
+	}
+	wantPass := func(t *testing.T, w *httptest.ResponseRecorder) {
+		t.Helper()
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d (should pass through), Location = %q", w.Code, http.StatusOK, w.Header().Get("Location"))
+		}
+	}
+
+	t.Run("www host redirects to the canonical apex, preserving path and query", func(t *testing.T) {
+		wantRedirect(t, serve(srv.cfg, "www.checkmeup.net", "https", "/blog/some-post?utm=1"), "https://checkmeup.net/blog/some-post?utm=1")
 	})
 
-	t.Run("apex host passes through unchanged", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pricing", http.NoBody)
-		req.Host = "checkmeup.net"
-		w := httptest.NewRecorder()
-		srv.redirectWWW()(next).ServeHTTP(w, req)
+	t.Run("plain HTTP on www goes to HTTPS on the apex in one redirect", func(t *testing.T) {
+		wantRedirect(t, serve(srv.cfg, "www.checkmeup.net", "http", "/pricing"), "https://checkmeup.net/pricing")
+	})
 
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d (non-www host should pass through)", w.Code, http.StatusOK)
-		}
+	t.Run("plain HTTP on the apex goes to HTTPS, preserving path and query", func(t *testing.T) {
+		wantRedirect(t, serve(srv.cfg, "checkmeup.net", "http", "/blog?ref=x"), "https://checkmeup.net/blog?ref=x")
+	})
+
+	t.Run("HTTPS on the apex passes through unchanged", func(t *testing.T) {
+		wantPass(t, serve(srv.cfg, "checkmeup.net", "https", "/pricing"))
+	})
+
+	t.Run("a request the proxy didn't forward, such as its health check, passes through", func(t *testing.T) {
+		wantPass(t, serve(srv.cfg, "172.18.0.5:8080", "", "/up"))
 	})
 
 	t.Run("unrelated host passes through unchanged", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pricing", http.NoBody)
-		req.Host = "example.com"
-		w := httptest.NewRecorder()
-		srv.redirectWWW()(next).ServeHTTP(w, req)
+		wantPass(t, serve(srv.cfg, "example.com", "https", "/pricing"))
+	})
 
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d (host other than www.<canonical> should pass through)", w.Code, http.StatusOK)
-		}
+	t.Run("local dev over plain HTTP passes through", func(t *testing.T) {
+		wantPass(t, serve(&config.Config{AppURL: "http://localhost:5173"}, "localhost:5173", "http", "/pricing"))
 	})
 }
 

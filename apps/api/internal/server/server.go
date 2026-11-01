@@ -54,11 +54,12 @@ func (s *Server) buildRouter() *chi.Mux {
 
 	// kamal-proxy (config/deploy.yml) terminates TLS and forwards traffic
 	// for both checkmeup.net and www.checkmeup.net so the www variant isn't
-	// a dead 404/cert-error dead end, but it has no host-based redirect
-	// primitive of its own — this collapses www onto the one canonical host
-	// every OG/canonical/sitemap URL already assumes, first thing, before
-	// any other middleware does real work.
-	r.Use(s.redirectWWW())
+	// a dead 404/cert-error dead end. Kamal can't set kamal-proxy's
+	// canonical host, so its own HTTPS redirect is off (ssl_redirect: false)
+	// and this sends plain HTTP and www to the one canonical URL every
+	// OG/canonical/sitemap URL already assumes, in one hop, first thing,
+	// before any other middleware does real work.
+	r.Use(s.redirectCanonical())
 	// Populates the context clientIPKey reads from: the TCP peer, replaced
 	// by the visitor's address when the peer is kamal-proxy.
 	r.Use(middleware.ClientIPFromRemoteAddr)
@@ -558,12 +559,14 @@ func (s *Server) securityHeaders() func(http.Handler) http.Handler {
 	}
 }
 
-// redirectWWW 301s any request against www.<canonical-host> (derived from
-// AppURL, e.g. www.checkmeup.net) to the same path+query on the canonical
-// apex host. Any other Host — including local dev, where AppURL doesn't
-// resolve to a real "www.<host>" the request could ever actually carry — is
-// untouched.
-func (s *Server) redirectWWW() func(http.Handler) http.Handler {
+// redirectCanonical 301s a request against www.<canonical-host> (derived
+// from AppURL, e.g. www.checkmeup.net), or one that reached kamal-proxy over
+// a scheme other than AppURL's, to the same path+query on the canonical
+// scheme and host. kamal-proxy sets X-Forwarded-Proto from its own
+// connection and drops the client's (forward_headers is off), so a client
+// can't spoof it. A request without it (kamal-proxy's health check, local
+// dev without a proxy) and any other Host are untouched.
+func (s *Server) redirectCanonical() func(http.Handler) http.Handler {
 	canonical, err := url.Parse(s.cfg.AppURL)
 	wwwHost := ""
 	if err == nil && canonical.Host != "" {
@@ -571,7 +574,9 @@ func (s *Server) redirectWWW() func(http.Handler) http.Handler {
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if wwwHost != "" && r.Host == wwwHost {
+			proto := r.Header.Get("X-Forwarded-Proto")
+			wrongScheme := proto != "" && proto != canonical.Scheme && r.Host == canonical.Host
+			if wwwHost != "" && (r.Host == wwwHost || wrongScheme) {
 				// Scheme+host always come from `canonical` (parsed once
 				// from the AppURL config, never from the request) — only
 				// path/query are copied from the incoming request, onto a
