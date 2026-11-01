@@ -6,7 +6,7 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'Terms of Service — Checkmeup',
-  description: "Checkmeup's terms of service.",
+  description: "The terms for using Checkmeup's monitoring service: accounts, acceptable use, fees and billing, availability, liability, termination and governing law.",
   path: '/terms',
 })
 

@@ -6,7 +6,7 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'Refund Policy — Checkmeup',
-  description: "Checkmeup's refund policy for paid plans.",
+  description: "Any charge for a paid Checkmeup plan, monthly or annual, is refunded in full on request within 30 days, no questions asked, through Paddle.",
   path: '/refund',
 })
 

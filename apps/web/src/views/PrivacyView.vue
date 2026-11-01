@@ -6,7 +6,7 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'Privacy Policy — Checkmeup',
-  description: "Checkmeup's privacy policy and subprocessor list.",
+  description: "What data Checkmeup collects, why, how long it keeps it, and who processes it. No selling your data, no ads; card details stay with Paddle.",
   path: '/privacy',
 })
 
