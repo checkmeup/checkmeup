@@ -64,7 +64,7 @@ def summary(day):
 
 
 if "--yesterday" in sys.argv:
-    day = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    day = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
     if day in days:
         print(json.dumps(summary(day)))
     sys.exit()
