@@ -75,7 +75,15 @@ run = "rm -rf node_modules dist coverage apps/web/node_modules apps/web/dist app
 
 [tasks.traffic]
 description = "Count visitors per day from kamal-proxy's request log on the server (ADR frontend)"
-run = "ssh deploy@167.233.116.118 'docker logs kamal-proxy --since 672h 2>&1' | python3 scripts/proxy-traffic.py"
+run = "ssh deploy@167.233.116.118 'cat traffic/days.jsonl 2>/dev/null; docker logs kamal-proxy --since 672h 2>&1' | python3 scripts/proxy-traffic.py"
+
+[tasks.traffic-install]
+description = "Copy the traffic script to the server and install the cron job that saves each day's summary (ADR frontend)"
+# Rerun after changing scripts/proxy-traffic.py; it replaces the script and its cron line.
+run = '''
+ssh deploy@167.233.116.118 'command -v python3 >/dev/null || { echo "python3 is missing on the server"; exit 1; }; mkdir -p traffic && cat > traffic/proxy-traffic.py' < scripts/proxy-traffic.py
+ssh deploy@167.233.116.118 '(crontab -l 2>/dev/null | grep -v proxy-traffic.py; echo "5 0 * * * docker logs kamal-proxy --since 48h 2>&1 | python3 traffic/proxy-traffic.py --yesterday >> traffic/days.jsonl") | crontab - && crontab -l | grep proxy-traffic.py'
+'''
 
 [tasks.migrate]
 description = "Run goose migrations against DATABASE_URL from apps/api/.env"
