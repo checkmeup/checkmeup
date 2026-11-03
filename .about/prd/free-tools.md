@@ -19,6 +19,7 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - `/tools/dns-lookup` (added 2026-10-31): enter a hostname, see its A, AAAA, CNAME, MX (with preference), TXT and NS records at once through the resolver DNS monitors use, each type's own failure reason, or why the lookup failed.
 - No sign-up needed. Under each result, a link to sign up and monitor it automatically.
 - Every page prerendered, with its own title, description and `<h1>`, listed in `sitemap.xml` and linked from the site footer.
+- `/tools/domain-expiry-checker` (added 2026-11-03) answers the questions searchers ask around expiry (how to check, what happens after, why a lapsed domain shows next year's date, why some TLDs show none), marked up as FAQPage JSON-LD, since it draws most of the site's search impressions.
 
 ## Non-goals
 
@@ -59,6 +60,8 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - Fetching any tool page without JavaScript returns its `<h1>`, title, description and Open Graph tags; all are in `sitemap.xml`.
   → test: apps/web/scripts/prerender.test.ts "serves every free checker with their <h1>, title, description and Open Graph tags"
   → test: apps/web/scripts/generate-sitemap.test.ts "lists every free checker"
+- The domain expiry checker shows its questions and answers on the page and as FAQPage JSON-LD with the same text.
+  → test: apps/web/src/views/DomainExpiryCheckerView.test.ts "emits FAQPage JSON-LD with the same questions and answers"
 - Every tool page is linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
 

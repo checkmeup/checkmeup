@@ -1,16 +1,33 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { useHead } from '@unhead/vue'
 import LandingLayout from '@/layouts/LandingLayout.vue'
 import PageHero from '@/components/PageHero.vue'
 import CtaBanner from '@/components/CtaBanner.vue'
 import ToolChecker from '@/components/ToolChecker.vue'
 import { useSeo } from '@/composables/useSeo'
+import { domainExpiryFaqs } from '@/content/domainExpiryFaqs'
 
 useSeo({
-  title: 'Domain Expiry Checker — Checkmeup',
+  title: 'Domain Expiry Checker: Free Domain Expiration Lookup — Checkmeup',
   description:
-    "Check when any domain expires, for free: expiry date, days left and registrar, over RDAP or WHOIS. No sign-up. Get alerted before it lapses.",
+    'Look up when any domain expires: its expiration date, days left and registrar, straight from the registry over RDAP or WHOIS. Free, no sign-up.',
   path: '/tools/domain-expiry-checker',
+})
+
+// Makes the questions below eligible for Google's expandable FAQ rich results.
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: domainExpiryFaqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: { '@type': 'Answer', text: faq.a },
+  })),
+}
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(faqSchema) }],
 })
 </script>
 
@@ -18,8 +35,8 @@ useSeo({
   <LandingLayout>
     <PageHero title="Domain expiry checker" eyebrow="Free tool · No sign-up">
       <p>
-        Enter a domain to see when its registration expires, how many days are left, and which
-        registrar holds it.
+        Look up when a domain expires: enter it to see its expiration date, how many days are
+        left, and which registrar holds it.
       </p>
     </PageHero>
 
@@ -77,6 +94,17 @@ useSeo({
               >SSL certificate checker</RouterLink
             >.
           </p>
+        </section>
+        <section id="faq">
+          <h2 class="mb-3 text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-strong)]">
+            Domain expiry questions
+          </h2>
+          <div class="space-y-6">
+            <div v-for="faq in domainExpiryFaqs" :key="faq.q">
+              <h3 class="mb-2 text-[17px] font-semibold text-[var(--text-strong)]">{{ faq.q }}</h3>
+              <p>{{ faq.a }}</p>
+            </div>
+          </div>
         </section>
       </div>
     </div>
