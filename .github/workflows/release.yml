@@ -60,6 +60,12 @@ jobs:
 
       - run: sudo gem install kamal --no-document
 
+      # IndexNow (ADR seo): hash the live public pages before the deploy, then
+      # send Bing and Yandex the ones it changed. Never fails the deploy.
+      - name: Snapshot public pages for IndexNow
+        continue-on-error: true
+        run: node scripts/indexnow.mjs snapshot > "$RUNNER_TEMP/pages-before.json"
+
       - name: Deploy
         run: kamal deploy
         env:
@@ -87,6 +93,10 @@ jobs:
           VITE_PADDLE_CLIENT_TOKEN: ${{ secrets.VITE_PADDLE_CLIENT_TOKEN }}
           VITE_PADDLE_ENVIRONMENT: ${{ secrets.VITE_PADDLE_ENVIRONMENT }}
           VITE_GTM_ID: ${{ secrets.VITE_GTM_ID }}
+
+      - name: Submit changed pages to IndexNow
+        continue-on-error: true
+        run: node scripts/indexnow.mjs submit "$RUNNER_TEMP/pages-before.json"
 
       - name: Prune old GHCR image versions
         run: bash scripts/ghcr-clean.sh 5
