@@ -1484,6 +1484,7 @@ func TestCheckOverdue(t *testing.T) {
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
 
 		checkOverdue(context.Background(), n)
+		WaitForAlerts()
 
 		if status := getCronStatus(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want status down, got %q", status)
@@ -1509,6 +1510,7 @@ func TestCheckOverdue(t *testing.T) {
 		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour', alerts_enabled = false WHERE id = $1", mon.ID)
 
 		checkOverdue(context.Background(), n)
+		WaitForAlerts()
 
 		if status := getCronStatus(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want status down, got %q", status)
@@ -1537,6 +1539,7 @@ func TestCheckOverdue(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'cron', $2)", windowID, mon.ID)
 
 		checkOverdue(context.Background(), n)
+		WaitForAlerts()
 
 		if status := getCronStatus(t, pool, mon.ID); status != "up" {
 			t.Fatalf("want status to remain up under maintenance, got %q", status)
@@ -1556,6 +1559,7 @@ func TestCheckOverdue(t *testing.T) {
 		// Freshly created: status 'waiting', not 'up' — never selected by
 		// ListOverdueCronMonitors regardless of next_ping_at.
 		checkOverdue(context.Background(), n)
+		WaitForAlerts()
 		if status := getCronStatus(t, pool, mon.ID); status != "waiting" {
 			t.Fatalf("want status unchanged (waiting), got %q", status)
 		}
@@ -1571,6 +1575,7 @@ func TestCheckOverdue(t *testing.T) {
 		local := n
 		local.Webhook = webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
 		checkOverdue(context.Background(), local)
+		WaitForAlerts()
 
 		if got := webhookEvents(); got != 1 {
 			t.Fatalf("want the alert delivered to the webhook channel too, got %d events", got)
@@ -1634,6 +1639,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		if gotEvent.EventType != "down" {
 			t.Fatalf("want a down-style stuck-run alert, got %+v", gotEvent)
@@ -1667,6 +1673,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), true) // already alerted
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		if callCount != 0 {
 			t.Fatalf("want no alert for a run already flagged, got %d calls", callCount)
@@ -1679,6 +1686,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		var alertedAt pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
@@ -1696,6 +1704,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		testCronRun(t, pool, mon.ID, time.Now(), false)
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		var alertedAt pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(), "SELECT alerted_at FROM cron_runs WHERE monitor_id = $1", mon.ID).Scan(&alertedAt); err != nil {
@@ -1731,6 +1740,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'cron', $2)", windowID, mon.ID)
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		if callCount != 0 {
 			t.Fatalf("want no alert under an active maintenance window, got %d calls", callCount)
@@ -1753,6 +1763,7 @@ func TestCheckStuckCronRuns(t *testing.T) {
 		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
 
 		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
 
 		if callCount != 0 {
 			t.Fatalf("want no alert with alerts disabled, got %d calls", callCount)
@@ -1809,9 +1820,11 @@ func TestCheckUptimeMonitors(t *testing.T) {
 
 		// A first failure is only rechecked; the recheck failing is the first failure counted.
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		// First counted failure: alert_after_n_failures=1 suppresses the alert.
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
 		}
@@ -1819,6 +1832,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		// Second consecutive failure: trips down, opens an incident, alerts.
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		status, failures := getUptimeRow(t, pool, mon.ID)
 		if status != "down" || failures != 2 {
 			t.Fatalf("after 2nd failure: want down with 2 consecutive failures, got status=%q failures=%d", status, failures)
@@ -1841,6 +1855,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		status, failures = getUptimeRow(t, pool, mon.ID)
 		if status != "up" || failures != 0 {
 			t.Fatalf("after recovery: want up with 0 consecutive failures, got status=%q failures=%d", status, failures)
@@ -1871,6 +1886,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getUptimeRow(t, pool, mon.ID); status == "down" || failures != 0 {
 			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
 		}
@@ -1887,6 +1903,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getUptimeRow(t, pool, mon.ID); status != "up" || failures != 0 {
 			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
 		}
@@ -1913,8 +1930,10 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getUptimeRow(t, pool, mon.ID); status != "down" || failures != 1 {
 			t.Fatalf("after a confirmed failure: want down with 1 failure, got status=%q failures=%d", status, failures)
 		}
@@ -1940,14 +1959,17 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _ := getUptimeRow(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want down after a failed check and its recheck, got %q", status)
 		}
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _ := getUptimeRow(t, pool, mon.ID); status != "up" {
 			t.Fatalf("want up after recovery, got %q", status)
 		}
@@ -1983,12 +2005,15 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n) // 2nd failure trips down + webhook
+		WaitForAlerts()
 
 		up.Store(true)
 		forceDueNow(t, pool, "uptime_monitors", mon.ID)
 		checkUptimeMonitors(context.Background(), n) // recovery + webhook
+		WaitForAlerts()
 
 		if len(gotEvents) != 2 {
 			t.Fatalf("want 2 webhook events (down, recovery), got %d: %+v", len(gotEvents), gotEvents)
@@ -2001,6 +2026,53 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		}
 	})
 
+	t.Run("a slow webhook holds up neither the check loop nor the incident's alert count", func(t *testing.T) {
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer target.Close()
+
+		release := make(chan struct{})
+		releaseHook := sync.OnceFunc(func() { close(release) })
+		hookSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			<-release
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer hookSrv.Close()
+		defer releaseHook()
+
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		channel := testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeWebhook, map[string]string{"url": hookSrv.URL, "secret": "shh"})
+		attachNotificationChannel(t, queries, channel.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		done := make(chan struct{})
+		go func() {
+			checkUptimeMonitors(context.Background(), n) // 2nd failure trips down; its webhook hangs
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the check loop waited for the webhook to answer")
+		}
+
+		releaseHook()
+		WaitForAlerts()
+		var alertCount int32
+		if err := pool.QueryRow(context.Background(),
+			"SELECT alert_count FROM uptime_incidents WHERE monitor_id = $1", mon.ID,
+		).Scan(&alertCount); err != nil {
+			t.Fatalf("read incident: %v", err)
+		}
+		if alertCount != 1 {
+			t.Fatalf("want the delivered alert counted once, got alert_count=%d", alertCount)
+		}
+	})
+
 	t.Run("records a check row for every poll", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -2010,6 +2082,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM uptime_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -2038,6 +2111,7 @@ func TestCheckUptimeMonitors(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'uptime', $2)", windowID, mon.ID)
 
 		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM uptime_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -2376,8 +2450,10 @@ func TestCheckSSLMonitors(t *testing.T) {
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
 		checkSSLMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "ssl_monitors", mon.ID)
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status, errorMsg string
 		var lastCheckedAt pgtype.Timestamptz
@@ -2410,6 +2486,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'ssl', $2)", windowID, mon.ID)
 
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status string
 		if err := pool.QueryRow(context.Background(), "SELECT status FROM ssl_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {
@@ -2424,6 +2501,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 		var status string
 		var pending bool
 		var recheckIn float64
@@ -2438,6 +2516,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 
 		forceDueNow(t, pool, "ssl_monitors", mon.ID)
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 		if err := pool.QueryRow(context.Background(),
 			"SELECT status, recheck_pending FROM ssl_monitors WHERE id = $1", mon.ID,
 		).Scan(&status, &pending); err != nil {
@@ -2453,8 +2532,10 @@ func TestCheckSSLMonitors(t *testing.T) {
 		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
 
 		checkSSLMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "ssl_monitors", mon.ID)
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 		var firstCheck, nextCheck pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(),
 			"SELECT last_checked_at, next_check_at FROM ssl_monitors WHERE id = $1", mon.ID,
@@ -2469,6 +2550,7 @@ func TestCheckSSLMonitors(t *testing.T) {
 		}
 
 		checkSSLMonitors(context.Background(), n)
+		WaitForAlerts()
 		var secondCheck pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(), "SELECT last_checked_at FROM ssl_monitors WHERE id = $1", mon.ID).Scan(&secondCheck); err != nil {
 			t.Fatalf("query monitor: %v", err)
@@ -2505,8 +2587,10 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "this-domain-does-not-exist.invalid")
 
 		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status, errorMsg string
 		var lastCheckedAt pgtype.Timestamptz
@@ -2544,6 +2628,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "example.com")
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 		var status string
 		if err := pool.QueryRow(context.Background(), "SELECT status FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {
 			t.Fatalf("query monitor: %v", err)
@@ -2555,6 +2640,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		fail.Store(false)
 		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 		var pending bool
 		if err := pool.QueryRow(context.Background(), "SELECT status, recheck_pending FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status, &pending); err != nil {
 			t.Fatalf("query monitor: %v", err)
@@ -2579,6 +2665,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "example.com")
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status, registrar string
 		var gotExpiresAt pgtype.Timestamptz
@@ -2648,6 +2735,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "sagsuget.co.il")
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, registrar, _, expiresAt := domainRow(t, mon.ID)
 		if status != "up" || registrar != "Live" {
@@ -2664,8 +2752,10 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "nobody-registered-this.co.il")
 
 		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, _, errorMsg, _ := domainRow(t, mon.ID)
 		if status != "error" || !strings.Contains(errorMsg, "not found in registry (whois)") {
@@ -2679,8 +2769,10 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "example.de")
 
 		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, _, errorMsg, _ := domainRow(t, mon.ID)
 		if status != "error" || !strings.Contains(errorMsg, ".de registry doesn't publish domain expiry dates") {
@@ -2707,6 +2799,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'domain', $2)", windowID, mon.ID)
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status string
 		if err := pool.QueryRow(context.Background(), "SELECT status FROM domain_monitors WHERE id = $1", mon.ID).Scan(&status); err != nil {
@@ -2730,6 +2823,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, "example.com")
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var status string
 		var alerted30d, alerted14d, alerted7d bool
@@ -2761,8 +2855,10 @@ func TestCheckDomainMonitors(t *testing.T) {
 		mon := testDomainMonitor(t, queries, org.ID, domain)
 
 		checkDomainMonitors(context.Background(), n) // first error: rechecked before it shows
+		WaitForAlerts()
 		forceDueNow(t, pool, "domain_monitors", mon.ID)
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 		var lastCheck, nextCheck pgtype.Timestamptz
 		if err := pool.QueryRow(context.Background(),
 			"SELECT last_checked_at, next_check_at FROM domain_monitors WHERE id = $1", mon.ID,
@@ -2777,6 +2873,7 @@ func TestCheckDomainMonitors(t *testing.T) {
 		}
 
 		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
 		if got := lookups.Load(); got != 2 {
 			t.Fatalf("want the lookup and its recheck, then none within the day, got %d", got)
 		}
@@ -2920,8 +3017,10 @@ func TestCheckPortMonitors(t *testing.T) {
 
 		// First failure: recorded, but alert_after_n_failures=1 suppresses the alert.
 		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getPortRow(t, pool, mon.ID); status == "down" || failures != 1 {
 			t.Fatalf("after 1st failure: want not-down with 1 consecutive failure, got status=%q failures=%d", status, failures)
 		}
@@ -2929,6 +3028,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		// Second consecutive failure: trips down, opens an incident, alerts.
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		status, failures := getPortRow(t, pool, mon.ID)
 		if status != "down" || failures != 2 {
 			t.Fatalf("after 2nd failure: want down with 2 consecutive failures, got status=%q failures=%d", status, failures)
@@ -2952,6 +3052,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		defer closeFn()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		status, failures = getPortRow(t, pool, mon.ID)
 		if status != "up" || failures != 0 {
 			t.Fatalf("after recovery: want up with 0 consecutive failures, got status=%q failures=%d", status, failures)
@@ -2974,6 +3075,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "port", mon.ID)
 
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getPortRow(t, pool, mon.ID); status == "down" || failures != 0 {
 			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
 		}
@@ -2981,6 +3083,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		defer closeFn()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures := getPortRow(t, pool, mon.ID); status != "up" || failures != 0 {
 			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
 		}
@@ -2998,8 +3101,10 @@ func TestCheckPortMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "port", mon.ID)
 
 		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _ := getPortRow(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want down after a failed check, got %q", status)
 		}
@@ -3007,6 +3112,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		defer closeFn()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _ := getPortRow(t, pool, mon.ID); status != "up" {
 			t.Fatalf("want up after recovery, got %q", status)
 		}
@@ -3033,13 +3139,16 @@ func TestCheckPortMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
 
 		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n) // 1st failure trips down + webhook (alert_after_n_failures defaults to 0)
+		WaitForAlerts()
 
 		_, _, closeFn := listenOnPort(t, host, port)
 		defer closeFn()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n) // recovery + webhook
+		WaitForAlerts()
 
 		if len(gotEvents) != 2 {
 			t.Fatalf("want 2 webhook events (down, recovery), got %d: %+v", len(gotEvents), gotEvents)
@@ -3062,8 +3171,10 @@ func TestCheckPortMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "port", mon.ID)
 
 		checkPortMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "port_monitors", mon.ID)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, _ := getPortRow(t, pool, mon.ID)
 		if status != "down" {
@@ -3087,6 +3198,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testPortMonitor(t, queries, org.ID, host, port, db.PortExpectedStateOpen)
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM port_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -3112,6 +3224,7 @@ func TestCheckPortMonitors(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'port', $2)", windowID, mon.ID)
 
 		checkPortMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM port_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {

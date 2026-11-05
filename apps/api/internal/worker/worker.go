@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -156,6 +157,31 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 		return dispatchFallbackEmail(ctx, n, orgID, msg, mon.ID)
 	}
 	return sent
+}
+
+// alerts counts the alert sends GoAlert has started and not yet finished.
+var alerts sync.WaitGroup
+
+// GoAlert runs send, which dispatches an alert, in its own goroutine, with a
+// context that keeps ctx's values but not its cancellation: a channel that
+// takes its full deliver.Timeout to answer then holds up neither the tick's
+// other checks nor a ping's response, and a cron job that hangs up on its ping
+// doesn't cancel the alert (PRD webhook-alerts). Whatever depends on the
+// alert going out, such as counting it toward the incident's cap, goes inside
+// send, and so do alerts that must arrive in order.
+func GoAlert(ctx context.Context, send func(ctx context.Context)) {
+	ctx = context.WithoutCancel(ctx)
+	alerts.Add(1)
+	go func() {
+		defer alerts.Done()
+		send(ctx)
+	}()
+}
+
+// WaitForAlerts blocks until every alert GoAlert started has been sent.
+// Tests call it before checking what an alert did.
+func WaitForAlerts() {
+	alerts.Wait()
 }
 
 // withMonitorProject names the monitor's project in msg (ADR alerting), looked

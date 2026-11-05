@@ -65,12 +65,14 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	}
 
 	msg := buildOverdueAlert(m)
-	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {
-		return
-	}
-	if _, err := n.Queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
-		n.Logger.Error("worker: increment alert count", "incident_id", inc.ID, "err", err)
-	}
+	GoAlert(ctx, func(ctx context.Context) {
+		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {
+			return
+		}
+		if _, err := n.Queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {
+			n.Logger.Error("worker: increment alert count", "incident_id", inc.ID, "err", err)
+		}
+	})
 }
 
 // checkStuckCronRuns implements PRD zombie-job-detection — detecting a cron run that
@@ -111,7 +113,9 @@ func processStuckCronRun(ctx context.Context, n Notifiers, run db.ListStuckCronR
 		return
 	}
 	msg := buildStuckRunAlert(run)
-	DispatchAlert(ctx, n, run.MonitorOrgID, MonitorRef{Type: "cron", ID: run.MonitorID}, msg)
+	GoAlert(ctx, func(ctx context.Context) {
+		DispatchAlert(ctx, n, run.MonitorOrgID, MonitorRef{Type: "cron", ID: run.MonitorID}, msg)
+	})
 }
 
 func buildStuckRunAlert(run db.ListStuckCronRunsRow) AlertMessage {

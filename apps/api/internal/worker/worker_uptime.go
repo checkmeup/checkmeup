@@ -118,7 +118,9 @@ func handleUptimeUp(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevSt
 		return
 	}
 	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeRecoveryAlert(m, downtime))
+	GoAlert(ctx, func(ctx context.Context) {
+		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeRecoveryAlert(m, downtime))
+	})
 }
 
 func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage {
@@ -154,12 +156,14 @@ func alertUptimeIncident(ctx context.Context, n Notifiers, m db.UptimeMonitor, i
 	if !m.AlertsEnabled {
 		return
 	}
-	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeDownAlert(m, failureReason)) {
-		return
-	}
-	if _, err := n.Queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
-		n.Logger.Error("uptime worker: increment alert count", "incident_id", inc.ID, "err", err)
-	}
+	GoAlert(ctx, func(ctx context.Context) {
+		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeDownAlert(m, failureReason)) {
+			return
+		}
+		if _, err := n.Queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
+			n.Logger.Error("uptime worker: increment alert count", "incident_id", inc.ID, "err", err)
+		}
+	})
 }
 
 func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage {

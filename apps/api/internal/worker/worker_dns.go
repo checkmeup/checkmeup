@@ -128,7 +128,9 @@ func handleDNSUp(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus d
 		return
 	}
 	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSRecoveryAlert(m, resolvedValue, downtime))
+	GoAlert(ctx, func(ctx context.Context) {
+		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSRecoveryAlert(m, resolvedValue, downtime))
+	})
 }
 
 func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) AlertMessage {
@@ -184,12 +186,14 @@ func alertDNSIncident(ctx context.Context, n Notifiers, m db.DnsMonitor, inc db.
 	if !m.AlertsEnabled {
 		return
 	}
-	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSDownAlert(m, resolvedValue, failureReason)) {
-		return
-	}
-	if _, err := n.Queries.IncrementDNSIncidentAlertCount(ctx, inc.ID); err != nil {
-		n.Logger.Error("dns worker: increment alert count", "incident_id", inc.ID, "err", err)
-	}
+	GoAlert(ctx, func(ctx context.Context) {
+		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSDownAlert(m, resolvedValue, failureReason)) {
+			return
+		}
+		if _, err := n.Queries.IncrementDNSIncidentAlertCount(ctx, inc.ID); err != nil {
+			n.Logger.Error("dns worker: increment alert count", "incident_id", inc.ID, "err", err)
+		}
+	})
 }
 
 // buildDNSDownAlert branches on whether failureReason is set: a lookup

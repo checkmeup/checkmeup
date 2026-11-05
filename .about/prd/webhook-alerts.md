@@ -53,5 +53,7 @@ A user receives signed JSON events on their endpoint and can verify each one is 
   → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/webhook channel records failure on a non-2xx response"
 - A webhook pointing at a private or loopback address is refused.
   → test: apps/api/internal/webhook/webhook_test.go "TestSend_BlocksRestrictedAddresses"
-- A slow endpoint is cut off after 10 seconds and never delays the check loop.
+- A slow endpoint is cut off after 10 seconds and never delays the check loop or a cron ping's answer; its alert still counts toward the incident's cap.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/a slow webhook holds up neither the check loop nor the incident's alert count"
+  → test: apps/api/internal/handler/ping_test.go "TestReceivePing/answers the ping while the recovery alert's webhook is still sending"
 - Settings shows a snippet for verifying the signature.

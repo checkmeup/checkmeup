@@ -152,6 +152,7 @@ func TestCheckDNSMonitors(t *testing.T) {
 		mon := testDNSMonitor(t, queries, org.ID, "example.com", "") // no expected value: baseline mode
 
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, failures, expected, captured := getDNSRow(t, pool, mon.ID)
 		if status != "up" || failures != 0 {
@@ -172,12 +173,15 @@ func TestCheckDNSMonitors(t *testing.T) {
 		attachNotificationChannel(t, queries, channel.ID, "dns", mon.ID)
 
 		checkDNSMonitors(context.Background(), n) // captures baseline 1.2.3.4
+		WaitForAlerts()
 
 		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("9.9.9.9")})
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, _, expected, _ := getDNSRow(t, pool, mon.ID)
 		if status != "down" {
@@ -210,12 +214,14 @@ func TestCheckDNSMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "dns", mon.ID)
 
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures, _, _ := getDNSRow(t, pool, mon.ID); status == "down" || failures != 0 {
 			t.Fatalf("after an unconfirmed failure: want not-down with 0 failures, got status=%q failures=%d", status, failures)
 		}
 		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("1.2.3.4")})
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, failures, _, _ := getDNSRow(t, pool, mon.ID); status != "up" || failures != 0 {
 			t.Fatalf("after a passing recheck: want up with 0 failures, got status=%q failures=%d", status, failures)
 		}
@@ -234,14 +240,17 @@ func TestCheckDNSMonitors(t *testing.T) {
 		sent := webhookRecorder(t, queries, org.ID, "dns", mon.ID)
 
 		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _, _, _ := getDNSRow(t, pool, mon.ID); status != "down" {
 			t.Fatalf("want down after a mismatch, got %q", status)
 		}
 		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("1.2.3.4")})
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 		if status, _, _, _ := getDNSRow(t, pool, mon.ID); status != "up" {
 			t.Fatalf("want up after recovery, got %q", status)
 		}
@@ -258,8 +267,10 @@ func TestCheckDNSMonitors(t *testing.T) {
 		mon := testDNSMonitor(t, queries, org.ID, "does-not-exist.invalid", "1.2.3.4")
 
 		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, _, _, _ := getDNSRow(t, pool, mon.ID)
 		if status != "down" {
@@ -284,8 +295,10 @@ func TestCheckDNSMonitors(t *testing.T) {
 		mon := testDNSMonitor(t, queries, org.ID, "example.com", "1.2.3.4")
 
 		checkDNSMonitors(context.Background(), n) // first failure: not counted until its recheck
+		WaitForAlerts()
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n) // NXDOMAIN -> down, opens an incident
+		WaitForAlerts()
 
 		status, _, _, _ := getDNSRow(t, pool, mon.ID)
 		if status != "down" {
@@ -295,6 +308,7 @@ func TestCheckDNSMonitors(t *testing.T) {
 		n.DNSResolver = fakeDNSResolver(t, []net.IP{net.ParseIP("1.2.3.4")})
 		forceDueNow(t, pool, "dns_monitors", mon.ID)
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		status, failures, _, _ := getDNSRow(t, pool, mon.ID)
 		if status != "up" || failures != 0 {
@@ -318,6 +332,7 @@ func TestCheckDNSMonitors(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testDNSMonitor(t, queries, org.ID, "example.com", "")
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM dns_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {
@@ -344,6 +359,7 @@ func TestCheckDNSMonitors(t *testing.T) {
 		mustExecWorker(t, pool, "INSERT INTO maintenance_window_monitors (window_id, monitor_type, monitor_id) VALUES ($1, 'dns', $2)", windowID, mon.ID)
 
 		checkDNSMonitors(context.Background(), n)
+		WaitForAlerts()
 
 		var count int
 		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM dns_checks WHERE monitor_id = $1", mon.ID).Scan(&count); err != nil {

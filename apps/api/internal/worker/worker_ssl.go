@@ -54,11 +54,15 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	}
 	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
-	if result.recovery != nil {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.recovery)
-	}
-	if result.alert != nil {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.alert)
+	if result.recovery != nil || result.alert != nil {
+		GoAlert(ctx, func(ctx context.Context) {
+			if result.recovery != nil {
+				DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.recovery)
+			}
+			if result.alert != nil {
+				DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.alert)
+			}
+		})
 	}
 
 	if _, err := n.Queries.UpdateSSLMonitorCheck(ctx, db.UpdateSSLMonitorCheckParams{

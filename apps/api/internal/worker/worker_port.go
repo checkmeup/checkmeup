@@ -106,7 +106,9 @@ func handlePortUp(ctx context.Context, n Notifiers, m db.PortMonitor, prevStatus
 		return
 	}
 	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortRecoveryAlert(m, downtime))
+	GoAlert(ctx, func(ctx context.Context) {
+		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortRecoveryAlert(m, downtime))
+	})
 }
 
 func buildPortRecoveryAlert(m db.PortMonitor, downtime string) AlertMessage {
@@ -142,12 +144,14 @@ func alertPortIncident(ctx context.Context, n Notifiers, m db.PortMonitor, inc d
 	if !m.AlertsEnabled {
 		return
 	}
-	if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortDownAlert(m, failureReason)) {
-		return
-	}
-	if _, err := n.Queries.IncrementPortIncidentAlertCount(ctx, inc.ID); err != nil {
-		n.Logger.Error("port worker: increment alert count", "incident_id", inc.ID, "err", err)
-	}
+	GoAlert(ctx, func(ctx context.Context) {
+		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortDownAlert(m, failureReason)) {
+			return
+		}
+		if _, err := n.Queries.IncrementPortIncidentAlertCount(ctx, inc.ID); err != nil {
+			n.Logger.Error("port worker: increment alert count", "incident_id", inc.ID, "err", err)
+		}
+	})
 }
 
 // buildPortDownAlert phrases the headline around expected_state: a

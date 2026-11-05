@@ -60,7 +60,9 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 	result := buildDomainCheckResult(m, lookup.ExpiresAt, lookup.Registrar, daysLeft, lookupErr)
 
 	if result.alert != nil {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "domain", ID: m.ID}, *result.alert)
+		GoAlert(ctx, func(ctx context.Context) {
+			DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "domain", ID: m.ID}, *result.alert)
+		})
 	}
 
 	if _, err := n.Queries.UpdateDomainMonitorCheck(ctx, db.UpdateDomainMonitorCheckParams{

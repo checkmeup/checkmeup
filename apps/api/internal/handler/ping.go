@@ -151,7 +151,9 @@ func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.
 	}
 	ranFor := worker.FormatDuration(time.Since(run.StartedAt.Time))
 	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
-	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.StuckRunRecoveryAlert(monitor.Name, reason, ranFor))
+	worker.GoAlert(ctx, func(ctx context.Context) {
+		worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.StuckRunRecoveryAlert(monitor.Name, reason, ranFor))
+	})
 }
 
 // sendCronRecoveryAlert dispatches a recovery alert now that a
@@ -167,7 +169,9 @@ func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.Cron
 	}
 	downtime := worker.FormatDuration(now.Sub(inc.StartedAt.Time))
 	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
-	worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.CronRecoveryAlert(monitor.Name, downtime))
+	worker.GoAlert(ctx, func(ctx context.Context) {
+		worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.CronRecoveryAlert(monitor.Name, downtime))
+	})
 }
 
 // computeNextPing returns when the next ping is expected, after which the grace

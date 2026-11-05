@@ -1,6 +1,6 @@
 # Alerting: notification channels, delivery providers and alert limits
 
-Date: 2026-10-28
+Date: 2026-11-05
 
 A notification channel is one configured destination (a Telegram chat, an email address, a webhook, a Slack webhook, a phone number), owned by the org and attached to any number of monitors through a join table. There is no group of channels; a monitor attaches to channels directly. A monitor's `alerts_enabled` stays a master switch, so muting doesn't mean detaching channels. A Slack or webhook channel's URL is bearer-like, since whoever holds it can post to it, so after creation the API returns it masked (host plus the last few characters), and an update that leaves it empty keeps the stored one. A webhook channel's signing secret stays visible in Settings, so the user can verify `X-Checkmeup-Signature` on their side. A Telegram chat ID, an email address and a phone number are returned as stored: none of them lets anyone send on its own.
 
@@ -15,6 +15,8 @@ An alert for a monitor in a project starts its headline with the project name in
 An uptime, port or DNS check that fails right after a passing one doesn't count yet: the monitor is checked again on the next tick, about 30 seconds later, and only a failed recheck counts as a failure toward `alert_after_n_failures`. All checks run from one server, so a single request failing between it and the target (as on 2026-10-26, when a check got a 502 while Cloudflare logged no error for any of this server's requests to the target) looked like an outage and alerted, then recovered at the next check 10 minutes later. Both checks stay in the check log. SSL and domain checks run once a day, and an error there showed as Error, on the status page too, and blanked the expiry date until the next day; an error right after a working check is rechecked the same way, and since these monitors keep no check history, a `recheck_pending` flag on the monitor marks the recheck.
 
 An SSL check error that survives its recheck alerts, whatever the cause: an expired or untrusted certificate, a wrong name, or nothing answering on port 443. The TLS handshake verifies the certificate, so an expired one fails as an error and never reaches the expiry thresholds; until 2026-10-28 an error only set the status to Error, so a certificate that expired, or was already invalid when the monitor was added, alerted nobody. An error starts a new incident: it alerts again at each daily check, after `alert_after_n_failures` and up to `max_alerts_per_incident`, as the thresholds do, and the first working check after an alerted error sends a recovery. A domain lookup error doesn't alert: it means RDAP or WHOIS failed, not the user's domain.
+
+An alert is sent in its own goroutine (`worker.GoAlert`), apart from the check or the cron ping that raised it, with a context its caller's cancellation doesn't reach. Each channel may take its full 10 seconds, one after another, so sending inside the check made the tick, and every other monitor's check, wait for the slowest endpoint, and made a cron job's ping wait for its recovery alert; a job that gave up on its ping cancelled the alert with it. Counting the alert toward the incident's cap happens in the same goroutine, once it is known to have gone out.
 
 Each monitor's `max_alerts_per_incident` caps alerts per incident (default 3; 0 means every failed check alerts); the count lives on the incident and starts at zero with the next one. Uptime, port and DNS monitors send one down alert per incident, so the cap only comes into play for cron, SSL and domain monitors. A recovery alert is always sent. The cap is per monitor because urgency differs per monitor.
 
@@ -42,6 +44,8 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 ## Consequences
 
 - A real outage alerts about 30 seconds later than before; a blip shorter than that never alerts.
+- A recovery alert can arrive before the down alert it follows when the down alert's channels take longer than the monitor stays down, at least three slow channels in a row; alerts for one monitor aren't queued in order.
+- Alerts still being sent when the process stops are lost: the server has no graceful shutdown.
 - Loading a monitor's channels is one more query per alert. Revisit if monitor counts make it matter.
 - SMS is the only channel that costs money per message; the per-incident cap is what bounds it.
 - Editing a Slack or webhook channel can't send a test until the URL is pasted again: the test needs the real URL, and the client only holds the masked one.

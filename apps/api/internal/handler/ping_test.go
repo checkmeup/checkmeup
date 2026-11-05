@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/telegram"
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 func testPingHandler(t *testing.T) (*AuthHandler, *MonitorHandler, *PingHandler, *pgxpool.Pool) {
@@ -61,6 +63,8 @@ func doPing(t *testing.T, h *PingHandler, token string, headers map[string]strin
 	req = withURLParam(req, "token", token)
 	w := httptest.NewRecorder()
 	h.ReceivePing(w, req)
+	// A recovery alert goes out after the response; wait for it.
+	worker.WaitForAlerts()
 	return w
 }
 
@@ -196,6 +200,69 @@ func TestReceivePing(t *testing.T) {
 		}
 	})
 
+	t.Run("answers the ping while the recovery alert's webhook is still sending", func(t *testing.T) {
+		release := make(chan struct{})
+		releaseHook := sync.OnceFunc(func() { close(release) })
+		received := make(chan webhook.Event, 1)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var e webhook.Event
+			_ = json.NewDecoder(r.Body).Decode(&e)
+			<-release
+			received <- e
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+		defer releaseHook()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Recovering job, slow webhook")
+		seedCronDown(t, pool, mon.ID, time.Now().Add(-30*time.Minute))
+		queries := db.New(pool)
+		channel, err := queries.CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+			OrgID: uuid.MustParse(u.resp.OrgID), Type: db.NotificationChannelTypeWebhook, Name: "Slow hook",
+			Config: []byte(`{"url":"` + srv.URL + `","secret":"shh"}`),
+		})
+		if err != nil {
+			t.Fatalf("create webhook channel: %v", err)
+		}
+		if err := queries.InsertMonitorNotificationChannel(context.Background(), db.InsertMonitorNotificationChannelParams{
+			ChannelID: channel.ID, MonitorType: "cron", MonitorID: uuid.MustParse(mon.ID),
+		}); err != nil {
+			t.Fatalf("attach webhook channel: %v", err)
+		}
+
+		// A cron job that gives up on its ping cancels the request's context.
+		ctx, hangUp := context.WithCancel(context.Background())
+		token := cronPingToken(t, pool, mon.ID)
+		req := withURLParam(httptest.NewRequest(http.MethodGet, "/ping/"+token, nil).WithContext(ctx), "token", token)
+		w := httptest.NewRecorder()
+		done := make(chan struct{})
+		go func() {
+			pingH.ReceivePing(w, req)
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the ping waited for the webhook to answer")
+		}
+		if w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		hangUp()
+		releaseHook()
+		worker.WaitForAlerts()
+		select {
+		case e := <-received:
+			if e.EventType != "recovery" {
+				t.Fatalf("want a recovery event, got %+v", e)
+			}
+		default:
+			t.Fatal("the recovery alert was lost when the pinging job hung up")
+		}
+	})
+
 	t.Run("recovery delivers a webhook event via the monitor's attached channel", func(t *testing.T) {
 		var gotEvent webhook.Event
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -286,6 +353,8 @@ func doPingStart(t *testing.T, h *PingHandler, token string) *httptest.ResponseR
 	req = withURLParam(req, "token", token)
 	w := httptest.NewRecorder()
 	h.ReceivePingStart(w, req)
+	// A recovery alert goes out after the response; wait for it.
+	worker.WaitForAlerts()
 	return w
 }
 
