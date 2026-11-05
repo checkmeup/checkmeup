@@ -62,7 +62,8 @@ type Notifiers struct {
 	DNSResolver *net.Resolver
 }
 
-// Run starts the background worker loops. Returns when ctx is cancelled.
+// Run starts the background worker loops. Returns when ctx is cancelled,
+// after the tick in progress, if any, has finished.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
 //   - Every 24 h: ping/check/incident retention cleanup (ADR limits)
 func Run(ctx context.Context, n Notifiers) {
@@ -77,13 +78,17 @@ func Run(ctx context.Context, n Notifiers) {
 			n.Logger.Info("worker stopped")
 			return
 		case <-ticker.C:
-			checkOverdue(ctx, n)
-			checkStuckCronRuns(ctx, n)
-			checkUptimeMonitors(ctx, n)
-			checkSSLMonitors(ctx, n)
-			checkDomainMonitors(ctx, n)
-			checkPortMonitors(ctx, n)
-			checkDNSMonitors(ctx, n)
+			// A tick still running when ctx is cancelled finishes with a
+			// context that isn't, so a shutdown doesn't cut its checks off
+			// halfway; Run returns once it's done.
+			tickCtx := context.WithoutCancel(ctx)
+			checkOverdue(tickCtx, n)
+			checkStuckCronRuns(tickCtx, n)
+			checkUptimeMonitors(tickCtx, n)
+			checkSSLMonitors(tickCtx, n)
+			checkDomainMonitors(tickCtx, n)
+			checkPortMonitors(tickCtx, n)
+			checkDNSMonitors(tickCtx, n)
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, n.Queries, n.Logger)
 		}
@@ -159,8 +164,14 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 	return sent
 }
 
-// alerts counts the alert sends GoAlert has started and not yet finished.
-var alerts sync.WaitGroup
+// alertsSending counts the alert sends GoAlert has started and not yet
+// finished; alertsDone is signalled when it drops to zero. A WaitGroup can't
+// take a new Add while a Wait from an earlier round may still be returning.
+var (
+	alertsMu      sync.Mutex
+	alertsSending int
+	alertsDone    = sync.NewCond(&alertsMu)
+)
 
 // GoAlert runs send, which dispatches an alert, in its own goroutine, with a
 // context that keeps ctx's values but not its cancellation: a channel that
@@ -171,9 +182,17 @@ var alerts sync.WaitGroup
 // send, and so do alerts that must arrive in order.
 func GoAlert(ctx context.Context, send func(ctx context.Context)) {
 	ctx = context.WithoutCancel(ctx)
-	alerts.Add(1)
+	alertsMu.Lock()
+	alertsSending++
+	alertsMu.Unlock()
 	go func() {
-		defer alerts.Done()
+		defer func() {
+			alertsMu.Lock()
+			if alertsSending--; alertsSending == 0 {
+				alertsDone.Broadcast()
+			}
+			alertsMu.Unlock()
+		}()
 		send(ctx)
 	}()
 }
@@ -181,7 +200,11 @@ func GoAlert(ctx context.Context, send func(ctx context.Context)) {
 // WaitForAlerts blocks until every alert GoAlert started has been sent.
 // Tests call it before checking what an alert did.
 func WaitForAlerts() {
-	alerts.Wait()
+	alertsMu.Lock()
+	defer alertsMu.Unlock()
+	for alertsSending > 0 {
+		alertsDone.Wait()
+	}
 }
 
 // withMonitorProject names the monitor's project in msg (ADR alerting), looked

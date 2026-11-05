@@ -372,7 +372,14 @@ func (s *Server) buildRouter() *chi.Mux {
 	return r
 }
 
-func (s *Server) Start() error {
+// shutdownTimeout bounds how long Run waits for requests in flight once it is
+// told to stop.
+const shutdownTimeout = 10 * time.Second
+
+// Run serves until ctx is cancelled, then stops accepting connections and
+// waits up to shutdownTimeout for the requests in flight to finish, so a
+// deploy doesn't cut a ping or an API call off halfway.
+func (s *Server) Run(ctx context.Context) error {
 	addr := fmt.Sprintf(":%s", s.cfg.Port)
 	s.logger.Info("server starting", "addr", addr, "env", s.cfg.Env)
 
@@ -384,7 +391,16 @@ func (s *Server) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	return srv.ListenAndServe()
+	served := make(chan error, 1)
+	go func() { served <- srv.ListenAndServe() }()
+	select {
+	case err := <-served:
+		return err
+	case <-ctx.Done():
+	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	return srv.Shutdown(shutdownCtx)
 }
 
 // clientIPKey keys a rate limit by the visitor's IP, as clientIPFromProxy

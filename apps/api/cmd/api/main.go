@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -33,6 +36,12 @@ var version = "dev"
 // discussion flagged the default as the most likely actual ceiling on
 // monitor/customer capacity, ahead of the worker's own semaphore/timeout math.
 const dbMaxConns = 25
+
+// workerShutdownTimeout bounds how long a stopping process waits for the
+// worker's tick and the alerts still being sent, after the HTTP server's own
+// shutdownTimeout (10 s): both fit in the 30 s kamal gives a container between
+// SIGTERM and SIGKILL.
+const workerShutdownTimeout = 15 * time.Second
 
 func main() {
 	cfg := config.Load()
@@ -71,14 +80,44 @@ func main() {
 		twilio.StatusCallbackURL(cfg.BaseURL, cfg.JWTSecret))
 	registerTelegramWebhook(cfg, tg, logger)
 
-	workerCtx, workerCancel := context.WithCancel(context.Background())
-	defer workerCancel()
-	go worker.Run(workerCtx, worker.Notifiers{Queries: db.New(pool), Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, RDAP: rd, WHOIS: wi, Logger: logger})
+	// A deploy stops the old container with SIGTERM: stop serving, let the
+	// worker finish its tick, and send the alerts already started.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	defer stop()
+	workerDone := make(chan struct{})
+	go func() {
+		worker.Run(ctx, worker.Notifiers{Queries: db.New(pool), Telegram: tg, Mailer: mailer, Webhook: wh, Slack: sl, SMS: sm, RDAP: rd, WHOIS: wi, Logger: logger})
+		close(workerDone)
+	}()
 
 	srv := server.New(cfg, logger, pool, version)
-	if err := srv.Start(); err != nil {
-		logger.Error("server error", "err", err)
-		os.Exit(1)
+	if err := srv.Run(ctx); err != nil {
+		if ctx.Err() == nil {
+			logger.Error("server error", "err", err)
+			os.Exit(1)
+		}
+		logger.Error("server shutdown", "err", err)
+	}
+	if !waitForWorker(workerDone, workerShutdownTimeout) {
+		logger.Error("worker shutdown timed out; checks or alerts still running are lost")
+	}
+	logger.Info("stopped")
+}
+
+// waitForWorker reports whether the worker loop stopped and every alert it
+// started was sent within timeout.
+func waitForWorker(workerDone <-chan struct{}, timeout time.Duration) bool {
+	finished := make(chan struct{})
+	go func() {
+		<-workerDone
+		worker.WaitForAlerts()
+		close(finished)
+	}()
+	select {
+	case <-finished:
+		return true
+	case <-time.After(timeout):
+		return false
 	}
 }
 

@@ -45,7 +45,7 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 
 - A real outage alerts about 30 seconds later than before; a blip shorter than that never alerts.
 - A recovery alert can arrive before the down alert it follows when the down alert's channels take longer than the monitor stays down, at least three slow channels in a row; alerts for one monitor aren't queued in order.
-- Alerts still being sent when the process stops are lost: the server has no graceful shutdown.
+- A deploy waits for the alerts still being sent, up to 15 seconds after the HTTP server has stopped (ADR infrastructure); one still sending after that is lost.
 - Loading a monitor's channels is one more query per alert. Revisit if monitor counts make it matter.
 - SMS is the only channel that costs money per message; the per-incident cap is what bounds it.
 - Editing a Slack or webhook channel can't send a test until the URL is pasted again: the test needs the real URL, and the client only holds the masked one.

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -917,4 +918,59 @@ func TestRoutes_BadgesAreRateLimitedPerIP(t *testing.T) {
 			t.Fatal("got 429 on a fresh IP")
 		}
 	})
+}
+
+func TestRun_FinishesARequestInFlightBeforeReturning(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("pick a free port: %v", err)
+	}
+	port := fmt.Sprint(ln.Addr().(*net.TCPAddr).Port)
+	_ = ln.Close()
+
+	started := make(chan struct{})
+	router := chi.NewRouter()
+	router.Get("/slow", func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+		time.Sleep(300 * time.Millisecond)
+		_, _ = w.Write([]byte("done"))
+	})
+	s := &Server{cfg: &config.Config{Port: port}, logger: slog.New(slog.NewTextHandler(io.Discard, nil)), router: router}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	runErr := make(chan error, 1)
+	go func() { runErr <- s.Run(ctx) }()
+
+	type result struct {
+		body string
+		err  error
+	}
+	got := make(chan result, 1)
+	go func() {
+		var resp *http.Response
+		var err error
+		for i := 0; i < 50; i++ { // the listener may not be up yet
+			if resp, err = http.Get("http://127.0.0.1:" + port + "/slow"); err == nil {
+				break
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		if err != nil {
+			got <- result{err: err}
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		body, err := io.ReadAll(resp.Body)
+		got <- result{body: string(body), err: err}
+	}()
+
+	<-started
+	cancel()
+	if err := <-runErr; err != nil {
+		t.Fatalf("want Run to return nil after shutting down, got %v", err)
+	}
+	r := <-got
+	if r.err != nil || r.body != "done" {
+		t.Fatalf("want the request in flight to finish with its body, got body=%q err=%v", r.body, r.err)
+	}
 }

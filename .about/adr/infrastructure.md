@@ -1,12 +1,14 @@
 # Hosting, deploys and versioning
 
-Date: 2026-11-01
+Date: 2026-11-05
 
 Production is one Hetzner CX23 VPS. Kamal 2 deploys the single Docker image (frontend and backend built together) with zero-downtime swaps; kamal-proxy terminates TLS with Let's Encrypt. Its own HTTPS redirect is off (`ssl_redirect: false`): it keeps the host, so `http://www.` took two hops to the canonical URL, and Kamal can't set kamal-proxy's canonical host yet (basecamp/kamal#1941). The app sends plain HTTP and `www.` to `https://checkmeup.net` in one 301 instead, reading the scheme from the `X-Forwarded-Proto` kamal-proxy sets itself; ACME challenges are still answered by kamal-proxy. PostgreSQL runs as a Kamal accessory container on the same host; the app reaches it as `checkmeup-db` on the `kamal` Docker network. Images go to `ghcr.io/checkmeup/checkmeup`.
 
 Merging to `main` deploys: after CI passes on `main`, `.github/workflows/release.yml` runs semantic-release, which reads the Conventional Commits since the last tag and creates a tag and a GitHub release (the GitHub Releases page is the changelog; no `CHANGELOG.md`, no version in `package.json`), then runs `kamal deploy` with the secrets held in GitHub. Running a deploy by hand is the operator's break-glass path only. Every build stamps its version from `git describe --tags --always --dirty` into the Go binary and the Vite build; the API reports it on `/api/v1/health`.
 
 kamal-proxy sends traffic to a new container only once `GET /up` answers 200, so `/up` is a real route on the same handler as `/api/v1/health`, database ping included: a deploy waits for a working app, not just for static files. Until 2026-10-14 `/up` had no route and passed only because the SPA fallback answered every path with 200. Once unknown paths got a 404 (ADR seo), deploys failed that check until `/up` got its route. Any path the server has to answer outside the web app's routes needs a route of its own.
+
+The API process stops on SIGTERM, which is how Kamal stops the old container: it stops accepting connections and waits up to 10 seconds for requests in flight, then up to 15 seconds for the worker's tick and the alerts still being sent, inside the 30 seconds Kamal allows before SIGKILL. Until 2026-11-05 the process had no SIGTERM handler, so Go's runtime exited at once, cutting off requests, checks and alerts in flight.
 
 No CDN or WAF sits in front of kamal-proxy for now. With a handful of visitors a day there is nothing yet worth the cost of one: a proxy in front would have to be trusted for real client IPs, or every per-IP rate limit (ADR limits) collapses into one bucket.
 

@@ -2,7 +2,7 @@ package main
 
 // Tests for the cmd/api wiring (newLogger, runMigrations,
 // registerTelegramWebhook). main() itself isn't tested directly — it blocks
-// forever on srv.Start() and os.Exit(1)s on most failure paths, neither of
+// until SIGTERM on srv.Run() and os.Exit(1)s on most failure paths, neither of
 // which is safely callable in-process from a test.
 //
 // runMigrations also os.Exit(1)s on every error path (bad DSN, dialect, or
@@ -21,15 +21,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 func testLoggerToBuf() (*slog.Logger, *bytes.Buffer) {
@@ -115,4 +118,25 @@ func TestRegisterTelegramWebhook(t *testing.T) {
 			t.Fatalf("want a registration-failed log line, got %q", buf.String())
 		}
 	})
+}
+
+func TestWaitForWorker_WaitsForTheWorkerAndTheAlertsItStarted(t *testing.T) {
+	workerDone := make(chan struct{})
+	release := make(chan struct{})
+	worker.GoAlert(context.Background(), func(context.Context) { <-release })
+
+	close(workerDone)
+	if waitForWorker(workerDone, 100*time.Millisecond) {
+		t.Fatal("want false while an alert is still being sent")
+	}
+	close(release)
+	if !waitForWorker(workerDone, time.Second) {
+		t.Fatal("want true once the worker stopped and its alerts were sent")
+	}
+}
+
+func TestWaitForWorker_GivesUpWhileTheWorkerIsStillRunning(t *testing.T) {
+	if waitForWorker(make(chan struct{}), 100*time.Millisecond) {
+		t.Fatal("want false while the worker's tick is still running")
+	}
 }
