@@ -6,7 +6,7 @@ import { articlesMeta } from '@/blog/posts'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Blog — Checkmeup',
+  title: 'Blog: Monitoring Guides and Building Notes — Checkmeup',
   description: 'Monitoring guides, building notes, and the occasional opinion from Checkmeup.',
   path: '/blog',
 })

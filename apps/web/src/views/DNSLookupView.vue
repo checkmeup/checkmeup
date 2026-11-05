@@ -7,7 +7,7 @@ import DNSLookupChecker from '@/components/DNSLookupChecker.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'DNS Lookup — Checkmeup',
+  title: 'Free DNS Lookup: A, AAAA, MX, TXT and NS Records — Checkmeup',
   description:
     "Look up any domain's DNS records for free: A, AAAA, CNAME, MX, TXT and NS in one go. No sign-up. Then get alerted when a record changes.",
   path: '/tools/dns-lookup',

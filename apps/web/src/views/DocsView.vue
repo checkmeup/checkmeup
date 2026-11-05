@@ -23,7 +23,7 @@ import DocsHelp from '@/components/docs/DocsHelp.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'Docs — Checkmeup',
+  title: 'Docs: Set Up Monitors, Alerts and the API — Checkmeup',
   description:
     'How to set up cron, uptime, SSL, domain, port, and DNS monitors, alerts, status pages, and the public API on Checkmeup.',
   path: '/docs',

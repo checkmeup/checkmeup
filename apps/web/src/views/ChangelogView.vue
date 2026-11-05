@@ -9,7 +9,7 @@ import { useSeo } from '@/composables/useSeo'
 // own /blog/:slug URL for readers but is noindex there (see
 // BlogPostMeta.kind), so this page is what search engines see instead.
 useSeo({
-  title: 'Changelog — Checkmeup',
+  title: 'Changelog: Every Release, Newest First — Checkmeup',
   description:
     'Every Checkmeup release, newest first — new monitor types, alerting changes, status page updates, and fixes.',
   path: '/changelog',

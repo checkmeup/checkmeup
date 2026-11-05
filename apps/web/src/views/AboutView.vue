@@ -6,7 +6,7 @@ import PageHero from '@/components/PageHero.vue'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
-  title: 'About — Checkmeup',
+  title: 'About Checkmeup: Who Builds It and Why',
   description: 'Who builds Checkmeup, the stack it runs on, and the values behind it.',
   path: '/about',
 })
