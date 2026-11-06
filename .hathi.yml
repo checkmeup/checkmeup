@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bunderlog/hathi/main/schema.json
+#
+# hathi's settings: every Check is on with its defaults (hathi config --default), but these.
+
+# The longest line of a commit message, as git-hooks.conventional-commits in .claude/baloo.yml has
+# it.
+conventional-commits:
+  max-length: 140

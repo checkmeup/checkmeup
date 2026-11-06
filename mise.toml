@@ -21,6 +21,8 @@ air = "1.67.4"
 "pipx:bandit" = "1.9.4"
 "pipx:prospector" = "1.19.0"
 "pipx:lizard" = "1.23.0"
+# The commit and repo Checks CI runs (.github/workflows/ci.yml), with .hathi.yml's settings.
+"github:bunderlog/hathi" = "1.0"
 
 [env]
 TURBO_TELEMETRY_DISABLED = "1"
