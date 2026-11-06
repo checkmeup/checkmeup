@@ -143,6 +143,25 @@ describe('MonitorListView', () => {
     expect(wrapper.text()).toContain('Loading…')
   })
 
+  it('marks a monitor with alerts turned off as muted, and only that one', () => {
+    cronData.value = [{ ...cron, alertsEnabled: false }]
+    uptimeData.value = [{ ...uptime, alertsEnabled: true }]
+    const wrapper = mountView()
+
+    const muted = wrapper.findAll('[data-muted]')
+    expect(muted.length).toBeGreaterThan(0)
+    for (const label of muted) {
+      expect(label.text()).toBe('Muted')
+      expect(label.attributes('title')).toContain('Alerts are off')
+    }
+    const rowsWithLabel = wrapper
+      .findAll('tbody tr')
+      .filter((tr) => tr.find('[data-muted]').exists())
+    expect(rowsWithLabel.map((tr) => tr.text())).toEqual([
+      expect.stringContaining('Nightly backup'),
+    ])
+  })
+
   it('renders a cron row with its name, status, and schedule', () => {
     cronData.value = [cron]
     const wrapper = mountView()

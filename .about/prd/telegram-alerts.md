@@ -44,3 +44,5 @@ A user connects a chat without leaving the settings page and gets the next down 
 - A monitor with alerts turned off still records its status, incidents and history, but sends nothing.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/an incident still opens when alerts are disabled, but no alert is sent"
 - A muted monitor is marked as muted in its monitor list.
+  → test: apps/web/src/views/MonitorListView.test.ts "marks a monitor with alerts turned off as muted, and only that one"
+  → test: apps/web/src/lib/monitorRows.test.ts "marks a monitor with alerts turned off as muted"

@@ -208,7 +208,16 @@ function open(row: MonitorRow) {
               class="block px-4 py-3 transition-colors hover:bg-[var(--surface)]"
             >
               <div class="flex items-center justify-between gap-3">
-                <span class="truncate font-medium text-[var(--text-strong)]">{{ m.name }}</span>
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="truncate font-medium text-[var(--text-strong)]">{{ m.name }}</span>
+                  <span
+                    v-if="m.muted"
+                    data-muted
+                    title="Alerts are off: checks still run, but nothing is sent"
+                    class="flex-shrink-0 rounded-full border border-[var(--border)] px-1.5 text-[11px] leading-[18px] text-[var(--text-muted)]"
+                    >Muted</span
+                  >
+                </span>
                 <StatusLabel :tone="m.tone" :label="m.statusLabel" />
               </div>
               <div class="mt-1 flex items-center justify-between gap-3 text-xs">
@@ -278,13 +287,22 @@ function open(row: MonitorRow) {
                 <StatusLabel :tone="m.tone" :label="m.statusLabel" />
               </td>
               <td class="max-w-0 px-3 py-2.5">
-                <RouterLink
-                  :to="{ name: detailRouteName[m.type], params: { id: m.id } }"
-                  class="block truncate font-medium text-[var(--text-strong)] focus-visible:underline focus-visible:outline-none"
-                  @click.stop
-                >
-                  {{ m.name }}
-                </RouterLink>
+                <div class="flex min-w-0 items-center gap-2">
+                  <RouterLink
+                    :to="{ name: detailRouteName[m.type], params: { id: m.id } }"
+                    class="truncate font-medium text-[var(--text-strong)] focus-visible:underline focus-visible:outline-none"
+                    @click.stop
+                  >
+                    {{ m.name }}
+                  </RouterLink>
+                  <span
+                    v-if="m.muted"
+                    data-muted
+                    title="Alerts are off: checks still run, but nothing is sent"
+                    class="flex-shrink-0 rounded-full border border-[var(--border)] px-1.5 text-[11px] leading-[18px] text-[var(--text-muted)]"
+                    >Muted</span
+                  >
+                </div>
                 <div class="truncate font-mono text-xs text-[var(--text-dim)]">{{ m.target }}</div>
                 <div v-if="m.note" class="truncate text-xs text-[var(--text-muted)]">
                   {{ m.note }}

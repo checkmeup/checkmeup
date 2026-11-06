@@ -97,6 +97,11 @@ describe('fmtDaysLeft', () => {
 })
 
 describe('row builders', () => {
+  it('marks a monitor with alerts turned off as muted', () => {
+    expect(uptimeRow(uptime({ alertsEnabled: false }), now).muted).toBe(true)
+    expect(uptimeRow(uptime({ alertsEnabled: true }), now).muted).toBe(false)
+  })
+
   it("shows an uptime monitor's keyword rule as its note", () => {
     expect(uptimeRow(uptime({ keyword: 'Welcome' }), now).note).toBe('contains "Welcome"')
     expect(uptimeRow(uptime({ keyword: 'Error', keywordMode: 'not_contains' }), now).note).toBe(
@@ -211,7 +216,7 @@ describe('groupByProject (PRD projects)', () => {
     { id: 'p3', name: 'Empty' },
   ]
 
-  it('carries each monitor\'s project on its row, null without one', () => {
+  it("carries each monitor's project on its row, null without one", () => {
     expect(uptimeRow(uptime({ projectId: 'p1' }), now).projectId).toBe('p1')
     expect(uptimeRow(uptime(), now).projectId).toBeNull()
   })

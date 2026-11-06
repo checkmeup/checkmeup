@@ -37,6 +37,9 @@ export interface MonitorRow {
   uptime24h: number | null
   // The project the monitor is in (PRD projects), null when none.
   projectId: string | null
+  // Alerts are turned off: the monitor still checks, but sends nothing
+  // (PRD telegram-alerts).
+  muted: boolean
   // Hourly check results for the check strip, oldest first; absent for
   // monitors that keep no check history (SSL, domain) or have none yet.
   history?: { ok: boolean | null }[]
@@ -142,7 +145,13 @@ function truncate(s: string, n: number) {
 
 function base(
   type: MonitorType,
-  m: { id: string; name: string; status: string; projectId?: string | null },
+  m: {
+    id: string
+    name: string
+    status: string
+    projectId?: string | null
+    alertsEnabled?: boolean
+  },
 ) {
   const { id, name, status } = m
   return {
@@ -151,6 +160,7 @@ function base(
     id,
     name,
     projectId: m.projectId ?? null,
+    muted: m.alertsEnabled === false,
     status,
     statusLabel: statusLabel(type, status),
     tone: toneOf(status),
