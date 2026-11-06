@@ -79,6 +79,6 @@ async function submit() {
 
     <ProjectField v-model="projectId" />
 
-    <NotificationChannelPicker v-model="channelIds" />
+    <NotificationChannelPicker v-model="channelIds" new-monitor />
   </MonitorFormPage>
 </template>

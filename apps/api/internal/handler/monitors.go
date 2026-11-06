@@ -167,10 +167,10 @@ func (h *MonitorHandler) setMonitorNotificationChannels(ctx context.Context, org
 
 // applyMonitorNotificationChannels sets channelIDs on a newly created
 // monitor, or falls back to every one of the org's enabled channels by
-// default (PRD notification-channels) when none were specified. Shared by every monitor
-// type's create handler.
+// default (PRD notification-channels) when channelIds was left out; an empty
+// list attaches none. Shared by every monitor type's create handler.
 func (h *MonitorHandler) applyMonitorNotificationChannels(ctx context.Context, orgID uuid.UUID, monitorType string, monitorID uuid.UUID, channelIDs []string) error {
-	if len(channelIDs) > 0 {
+	if channelIDs != nil {
 		return h.setMonitorNotificationChannels(ctx, orgID, monitorType, monitorID, channelIDs)
 	}
 	h.attachDefaultNotificationChannels(ctx, orgID, monitorType, monitorID)

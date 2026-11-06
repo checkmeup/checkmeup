@@ -223,10 +223,10 @@ func (h *MonitorHandler) respondPortMonitorWriteError(w http.ResponseWriter, err
 }
 
 // attachPortMonitorChannels attaches the requested channels to a newly
-// created monitor, or falls back to every enabled org channel when none
-// were explicitly selected (PRD notification-channels).
+// created monitor, or falls back to every enabled org channel when
+// channelIds was left out; an empty list attaches none (PRD notification-channels).
 func (h *MonitorHandler) attachPortMonitorChannels(r *http.Request, orgID, monitorID uuid.UUID, channelIDs []string) error {
-	if len(channelIDs) > 0 {
+	if channelIDs != nil {
 		return h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, channelIDs)
 	}
 	h.attachDefaultNotificationChannels(r.Context(), orgID, "port", monitorID)

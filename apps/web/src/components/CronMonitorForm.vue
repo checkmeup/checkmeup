@@ -120,6 +120,6 @@ defineSlots<{
 
     <ProjectField v-model="form.projectId" />
 
-    <NotificationChannelPicker v-model="form.channelIds" />
+    <NotificationChannelPicker v-model="form.channelIds" :new-monitor="!showAlertsToggle" />
   </div>
 </template>

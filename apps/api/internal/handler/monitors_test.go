@@ -119,6 +119,30 @@ func TestCreateCronMonitor(t *testing.T) {
 		}
 	})
 
+	t.Run("attaches every enabled channel when channelIds is left out, and none when it is empty", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		channel, err := db.New(pool).CreateNotificationChannel(context.Background(), db.CreateNotificationChannelParams{
+			OrgID: uuid.MustParse(u.resp.OrgID), Type: db.NotificationChannelTypeEmail, Name: "Ops",
+			Config: []byte(`{"email":"ops@example.com"}`),
+		})
+		if err != nil {
+			t.Fatalf("create channel: %v", err)
+		}
+
+		w := doAuthed(t, http.MethodPost, monitorH.CreateCronMonitor, u.access, map[string]any{"name": "Default channels", "schedule": "every 1h"})
+		if got := decodeBody[cronMonitorResponse](t, w).ChannelIDs; len(got) != 1 || got[0] != channel.ID.String() {
+			t.Fatalf("without channelIds: want the enabled channel %s attached, got %v", channel.ID, got)
+		}
+
+		w = doAuthed(t, http.MethodPost, monitorH.CreateCronMonitor, u.access, map[string]any{"name": "No channels", "schedule": "every 1h", "channelIds": []string{}})
+		if w.Code != http.StatusCreated {
+			t.Fatalf("want 201, got %d: %s", w.Code, w.Body.String())
+		}
+		if got := decodeBody[cronMonitorResponse](t, w).ChannelIDs; len(got) != 0 {
+			t.Fatalf("with channelIds []: want no channel attached, got %v", got)
+		}
+	})
+
 	t.Run("validation", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		cases := []struct {

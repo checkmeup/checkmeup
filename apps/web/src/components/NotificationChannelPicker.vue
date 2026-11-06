@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useNotificationChannels } from '@/composables/useNotificationChannels'
 
-const props = defineProps<{ modelValue: string[] }>()
+const props = defineProps<{
+  modelValue: string[]
+  // A new monitor starts with every enabled channel selected, as the API
+  // would attach them anyway (PRD notification-channels).
+  newMonitor?: boolean
+}>()
 const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 
 const { data, isPending: loading } = useNotificationChannels()
 const channels = computed(() => data.value ?? [])
+
+// Selects them once, when the list first loads, so a choice the user makes
+// isn't undone when it reloads.
+let preselected = false
+watch(
+  channels,
+  (list) => {
+    if (!props.newMonitor || preselected || list.length === 0) return
+    preselected = true
+    emit(
+      'update:modelValue',
+      list.filter((c) => c.enabled).map((c) => c.id),
+    )
+  },
+  { immediate: true },
+)
 
 const typeLabel: Record<string, string> = { telegram: 'Telegram', email: 'Email', sms: 'SMS' }
 const selected = computed(() => new Set(props.modelValue))

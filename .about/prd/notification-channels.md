@@ -48,5 +48,9 @@ A user routes a client's monitors to that client's Slack and their own Telegram 
 - Creating a channel past the plan's limit gets `402 plan_limit_reached`.
   → test: apps/api/internal/handler/notification_channels_test.go "TestCreateNotificationChannel/creating a channel past the plan's limit gets 402 plan_limit_reached"
 - Each monitor's form has a channel picker; a new monitor starts with all the org's enabled channels selected.
+  → test: apps/web/src/components/NotificationChannelPicker.test.ts "starts a new monitor with every enabled channel selected once they've loaded"
+  → test: apps/web/src/components/NotificationChannelPicker.test.ts "doesn't select again what the user cleared when the list reloads"
+- Creating a monitor without `channelIds` attaches every enabled channel; an empty `channelIds` attaches none, so its alerts fall back to email as the form says.
+  → test: apps/api/internal/handler/monitors_test.go "TestCreateCronMonitor/attaches every enabled channel when channelIds is left out, and none when it is empty"
 - One alert sent to several channels counts once against `max_alerts_per_incident`.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/one alert sent to several channels counts once against the per-incident cap"
