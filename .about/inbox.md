@@ -26,7 +26,6 @@ A test pass on 2026-10-18 linked tests to every other shipped criterion. These a
 
 - annual-billing: the renewal date a year after purchase comes from Paddle's `next_billed_at` (`resolveRenewsAt`); only a Go test can check it.
 - dns-monitoring: the detail page's change log (from what, to what) isn't built; there is only the per-lookup check log.
-- webhook-alerts: Settings explains signature checking in one sentence, with no code snippet.
 
 Settled when each is built, tested, or reworded in its PRD.
 

@@ -57,3 +57,5 @@ A user receives signed JSON events on their endpoint and can verify each one is 
   → test: apps/api/internal/worker/worker_test.go "TestCheckUptimeMonitors/a slow webhook holds up neither the check loop nor the incident's alert count"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/answers the ping while the recovery alert's webhook is still sending"
 - Settings shows a snippet for verifying the signature.
+  → test: apps/web/src/components/NotificationChannelsCard.test.ts "shows code that verifies a webhook's signature with its secret"
+  → test: apps/web/src/lib/webhookSignature.test.ts "accepts a request the API signed"

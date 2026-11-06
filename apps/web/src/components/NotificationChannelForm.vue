@@ -7,6 +7,7 @@ import Label from '@/components/ui/Label.vue'
 import UpgradePrompt from '@/components/UpgradePrompt.vue'
 import { useNotificationChannelForm } from '@/composables/useNotificationChannelForm'
 import { valueLabel, valuePlaceholder } from '@/lib/notificationChannelTypes'
+import { signatureSnippet } from '@/lib/webhookSignature'
 
 defineProps<{
   form: UnwrapNestedRefs<ReturnType<typeof useNotificationChannelForm>>
@@ -160,6 +161,9 @@ defineProps<{
         header. Regenerating invalidates the signature for future sends only — already-delivered
         requests aren't affected.
       </p>
+      <pre
+        class="overflow-x-auto rounded-[10px] bg-[var(--surface-raised)] p-3 font-mono text-[12px] leading-relaxed text-[var(--text)]"
+      ><code>{{ signatureSnippet }}</code></pre>
       <p v-if="form.regenerateError" class="text-xs text-[var(--status-down)]">
         {{ form.regenerateError }}
       </p>

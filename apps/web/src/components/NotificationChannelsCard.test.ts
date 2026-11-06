@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import NotificationChannelsCard from './NotificationChannelsCard.vue'
 import type { NotificationChannel } from '@/api/notificationChannels'
 import { ApiError } from '@/api/client'
+import { signatureSnippet } from '@/lib/webhookSignature'
 
 vi.mock('vue-router', () => ({
   RouterLink: { name: 'RouterLink', props: ['to'], template: '<a :href="to"><slot /></a>' },
@@ -192,6 +193,15 @@ describe('NotificationChannelsCard', () => {
     expect(urlInput.value).toBe('')
     expect(urlInput.placeholder).toBe('https://example.com/…ckup')
     expect((wrapper.find('#channel-secret').element as HTMLInputElement).value).toBe('shh-secret')
+  })
+
+  it("shows code that verifies a webhook's signature with its secret", async () => {
+    channelsData.value = [webhookChannel]
+    const wrapper = mountCard()
+
+    await findButtonByText(wrapper, 'Edit')?.trigger('click')
+
+    expect(wrapper.find('pre').text()).toBe(signatureSnippet)
   })
 
   it('saves an edited webhook with an empty URL so the stored one is kept', async () => {
