@@ -67,6 +67,19 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('DNS record monitoring')
   })
 
+  it('links the three free tools under the spec table', () => {
+    const wrapper = mountHome()
+
+    const targets = wrapper.findAllComponents({ name: 'RouterLink' }).map((c) => c.props('to'))
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        '/tools/ssl-checker',
+        '/tools/domain-expiry-checker',
+        '/tools/dns-lookup',
+      ]),
+    )
+  })
+
   it('renders the status pages highlight section', () => {
     const wrapper = mountHome()
 

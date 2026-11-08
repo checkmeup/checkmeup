@@ -285,6 +285,12 @@ useHead({
                 {{ block.text }}
               </p>
 
+              <p v-else-if="block.type === 'link'" class="text-base leading-[1.7]">
+                <RouterLink :to="block.to" class="font-medium text-[var(--accent)] hover:underline"
+                  >{{ block.text }} →</RouterLink
+                >
+              </p>
+
               <div
                 v-else-if="block.type === 'divider'"
                 class="border-t my-4 border-[var(--border)]"

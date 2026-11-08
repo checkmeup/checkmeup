@@ -118,6 +118,11 @@ export const content: ContentBlock[] = [
     text: "Checkmeup's domain monitor uses RDAP wherever a registry runs it, and WHOIS for the TLDs in the table above that publish an expiry date there, with a separate parser for each registry, written against that registry's real answers. A domain the registry doesn't know shows as an error, never as expired. Adding a domain under a TLD whose expiry can't be read is refused with the reason, rather than accepted as a monitor that can only ever show an error. The reasoning behind those choices is in a decision record on GitHub, and the full story of why domains lapse in the first place is in an earlier post on this blog.",
   },
   {
+    type: 'link',
+    to: '/tools/domain-expiry-checker',
+    text: 'See what RDAP or WHOIS says about your domain: check its expiry date for free',
+  },
+  {
     type: 'signature',
     text: '— Andrew',
   },

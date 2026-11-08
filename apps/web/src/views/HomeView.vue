@@ -165,6 +165,20 @@ useHead({
           </table>
         </div>
 
+        <p class="mt-5 text-[15px] text-[var(--text-dim)]">
+          Check one now, free and without signing up:
+          <RouterLink to="/tools/ssl-checker" class="text-[var(--accent)] hover:underline"
+            >SSL certificate checker</RouterLink
+          >,
+          <RouterLink to="/tools/domain-expiry-checker" class="text-[var(--accent)] hover:underline"
+            >domain expiry checker</RouterLink
+          >
+          or
+          <RouterLink to="/tools/dns-lookup" class="text-[var(--accent)] hover:underline"
+            >DNS lookup</RouterLink
+          >.
+        </p>
+
         <!-- What a missed ping actually sends: the real message and payload,
              not a description of them. -->
         <div class="mt-14 flex flex-col gap-5">

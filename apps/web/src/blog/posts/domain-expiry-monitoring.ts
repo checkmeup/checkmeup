@@ -38,6 +38,11 @@ export const content: ContentBlock[] = [
     text: "That's what a domain monitor is for. Checkmeup's does a straightforward RDAP lookup — the structured, standardized successor to WHOIS — once a day for every domain you add, and compares the registration's actual expiry date against three thresholds: 30 days out, 14 days out, and 7 days out, plus a final alert if it actually expires. Each threshold only fires once, so renewing resets it cleanly instead of leaving a stale warning around or requiring you to manually dismiss anything. Alerts go out over whichever channels you've already got wired up for everything else — Telegram, Slack, email, and SMS on paid plans — so a domain nobody's watching becomes a domain that pings you the same way a downed cron job or an expiring SSL cert does.",
   },
   {
+    type: 'link',
+    to: '/tools/domain-expiry-checker',
+    text: "Check a domain's expiration date now with the free domain expiry checker",
+  },
+  {
     type: 'h2',
     text: "A short checklist, if you're doing this by hand today",
   },

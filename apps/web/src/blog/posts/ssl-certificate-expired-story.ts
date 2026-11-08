@@ -46,6 +46,11 @@ export const content: ContentBlock[] = [
     text: "Not the renewal cron job's own success — that's the exact mechanism that already failed silently. What catches it is something external, checking the live certificate itself rather than trusting that the process meant to renew it worked. That's the whole idea behind Checkmeup's SSL monitor: it connects to your domain daily, reads the certificate that's actually being served, and alerts at 30, 14, and 7 days before expiry — plus a final alert if it lapses anyway. It doesn't care whether certbot ran, whether the renewal webhook fired, or whether anyone remembered to check. It only cares what's actually on the wire, which is the one thing that matters at 9:14 AM.",
   },
   {
+    type: 'link',
+    to: '/tools/ssl-checker',
+    text: 'Check when your SSL certificate expires with the free SSL checker',
+  },
+  {
     type: 'h2',
     text: "A short checklist, if you're carrying this risk today",
   },

@@ -79,6 +79,11 @@ export const content: ContentBlock[] = [
     text: "Checkmeup's DNS monitor supports both expected-value and baseline modes across A, AAAA, CNAME, MX, TXT, and NS records, with old-value/new-value change history and the same consecutive-failure and per-incident alert caps as its other monitor types. The Hobby plan is free for up to 10 monitors of any type, no credit card required.",
   },
   {
+    type: 'link',
+    to: '/tools/dns-lookup',
+    text: "Look up a domain's A, AAAA, CNAME, MX, TXT and NS records with the free DNS lookup",
+  },
+  {
     type: 'signature',
     text: '— Andrew',
   },

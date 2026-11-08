@@ -79,6 +79,15 @@ describe('BlogPostView', () => {
     expect(wrapper.text()).toContain(firstH2!.text)
   })
 
+  it('renders a link block as a link to its page', async () => {
+    const wrapper = await mountLoaded('domain-expiry-monitoring')
+
+    const link = wrapper
+      .findAllComponents({ name: 'RouterLink' })
+      .find((l) => l.props('to') === '/tools/domain-expiry-checker')
+    expect(link?.text()).toContain('domain expiry checker')
+  })
+
   it('shows a not-found message for an unknown slug', async () => {
     const wrapper = await mountLoaded('this-slug-does-not-exist')
 

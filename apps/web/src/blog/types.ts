@@ -9,6 +9,9 @@ export type ContentBlock =
   | { type: 'signature'; text: string }
   | { type: 'image'; src: string; alt: string; caption?: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
+  // A link on a line of its own, to another page of the site (a free tool,
+  // a guide): `text` is the anchor, so say what's there in words people search.
+  | { type: 'link'; to: string; text: string }
 
 export interface BlogPostMeta {
   slug: string
