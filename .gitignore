@@ -59,3 +59,4 @@ apps/web/reports/
 
 # Playwright MCP server: page snapshots, console logs and screenshots of browser sessions
 .playwright-mcp/
+/.about/proposals/

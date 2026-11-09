@@ -24,6 +24,9 @@ mise run test   # lint + test + coverage
 mise run build  # production build
 ```
 
+The Git hooks are in `.githooks/` and run `hathi`, which `mise.toml` pins: turn them on once per
+clone with `git config core.hooksPath .githooks`.
+
 ## Documentation
 
 | Doc                                                                | What's there                                          |

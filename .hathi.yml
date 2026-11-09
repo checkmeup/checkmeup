@@ -2,7 +2,9 @@
 #
 # hathi's settings: every Check is on with its defaults (hathi config --default), but these.
 
-# The longest line of a commit message, as git-hooks.conventional-commits in .claude/baloo.yml has
-# it.
+# The commit types in full, so Claude reads the format here through CLAUDE.md (PRD project-setup in
+# bunderlog/claude-plugins), and the longest line of a message: 140, the header limit commitlint
+# enforced before baloo replaced it.
 conventional-commits:
+  types: [build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test]
   max-length: 140
