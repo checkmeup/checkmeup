@@ -1,6 +1,6 @@
 # Local development: toolchain and tasks in mise, services in Docker
 
-Date: 2026-11-09
+Date: 2026-11-10
 
 Development runs on the host; there is no devcontainer. Languages and command-line tools (Go, Bun, Node, golangci-lint, sqlc, air, goose, gcov2lcov, the Codacy linters) are pinned in `mise.toml` at the versions CI pins, so local tools can't quietly drift from CI's. The project's commands are mise tasks in the same file (`mise tasks` lists them); `mise run setup` installs the tools. CI runs `mise run test` too, with mise as the task runner only: its tools come from its own setup steps, and `MISE_AUTO_INSTALL` is off there.
 
@@ -12,7 +12,7 @@ Kamal stays out of `mise.toml`: only the operator runs it, on the break-glass de
 
 ## Considered options
 
-- The baloo plugin's Git hooks, written into `.git/hooks` at session start and configured in `.claude/baloo.yml` (until 2026-11-09): untracked, so a clone ran none until its first Claude Code session, and they checked commits a second time beside `hathi` in CI. `.claude/baloo.yml` stays, with its Git hook Checks, Output style and Status line off, until baloo works without a Config.
+- The baloo plugin's Git hooks, written into `.git/hooks` at session start and configured in `.claude/baloo.yml` (until 2026-11-09): untracked, so a clone ran none until its first Claude Code session, and they checked commits a second time beside `hathi` in CI. `.claude/baloo.yml` went on 2026-11-10, once baloo read it no longer.
 - husky and commitlint (until 2026-10-13): replaced by baloo's hooks, which also cover secrets and AI attribution.
 - A push-time secrets scan in `.claude/hooks/pre_push_guard.py` and the `secrets-scan` skill (until 2026-10-13): replaced by baloo's commit-time secrets check; `pre_push_guard.py` keeps only the guard against force-pushing `main`.
 - A Makefile for the commands (until 2026-10-17): mise tasks keep tools and commands in one file, take named arguments (`mise run migrate-create <name>`) and list themselves with descriptions. Make's `-n` also runs any recipe line that names `$(MAKE)`, which once deployed for real (docs/incidents/2026-07-02-make-dry-run-triggered-deploy.md).
