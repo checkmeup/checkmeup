@@ -714,3 +714,80 @@ func TestVerifyPaddleSignature(t *testing.T) {
 		t.Fatal("expected signature verification to fail for a malformed header")
 	}
 }
+
+// TestResolveRenewsAt covers PRD annual-billing's criterion that an annual
+// subscription renews a year after purchase: the date shown comes from
+// Paddle's next_billed_at, which only a Go test can check — nothing on the
+// web side computes it. The other cases pin which timestamp wins when a
+// cancellation is involved.
+func TestResolveRenewsAt(t *testing.T) {
+	// Payloads are unmarshalled rather than built as literals: the fields
+	// resolveRenewsAt reads are anonymous structs, and a real webhook body is
+	// what the handler parses anyway.
+	parse := func(t *testing.T, body string) *paddleWebhookPayload {
+		t.Helper()
+		var p paddleWebhookPayload
+		if err := json.Unmarshal([]byte(body), &p); err != nil {
+			t.Fatalf("unmarshal payload: %v", err)
+		}
+		return &p
+	}
+
+	tests := []struct {
+		name            string
+		body            string
+		rawStatus       string
+		cancelScheduled bool
+		want            string // RFC3339, or "" for a null timestamp
+	}{
+		{
+			name:      "annual subscription renews a year after purchase",
+			body:      `{"data":{"status":"active","next_billed_at":"2027-07-04T10:00:00Z"}}`,
+			rawStatus: "active",
+			want:      "2027-07-04T10:00:00Z",
+		},
+		{
+			name:      "cancelled subscription runs to the end of the paid period",
+			body:      `{"data":{"status":"canceled","next_billed_at":"2027-07-04T10:00:00Z","current_billing_period":{"ends_at":"2026-08-04T10:00:00Z"}}}`,
+			rawStatus: "canceled",
+			want:      "2026-08-04T10:00:00Z",
+		},
+		{
+			name:            "scheduled cancellation takes its effective date",
+			body:            `{"data":{"status":"active","next_billed_at":"2027-07-04T10:00:00Z","scheduled_change":{"action":"cancel","effective_at":"2026-12-01T10:00:00Z"}}}`,
+			rawStatus:       "active",
+			cancelScheduled: true,
+			want:            "2026-12-01T10:00:00Z",
+		},
+		{
+			name:      "no next billing date leaves the column null",
+			body:      `{"data":{"status":"active","next_billed_at":null}}`,
+			rawStatus: "active",
+			want:      "",
+		},
+		{
+			name:      "a timestamp Paddle sends in another format leaves the column null",
+			body:      `{"data":{"status":"active","next_billed_at":"04/07/2027"}}`,
+			rawStatus: "active",
+			want:      "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := resolveRenewsAt(tc.rawStatus, tc.cancelScheduled, parse(t, tc.body))
+			if tc.want == "" {
+				if got.Valid {
+					t.Fatalf("renews_at = %s, want null", got.Time.Format(time.RFC3339))
+				}
+				return
+			}
+			if !got.Valid {
+				t.Fatalf("renews_at = null, want %s", tc.want)
+			}
+			if gotStr := got.Time.UTC().Format(time.RFC3339); gotStr != tc.want {
+				t.Fatalf("renews_at = %s, want %s", gotStr, tc.want)
+			}
+		})
+	}
+}

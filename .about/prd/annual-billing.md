@@ -34,3 +34,4 @@ Customers can pick annual at checkout and pay ten months' price for twelve.
   → test: apps/web/src/api/billing.test.ts "defaults to a monthly billing cycle"
   → test: apps/api/internal/handler/billing_test.go "TestCreateCheckout/invalid cycle"
 - An annual subscriber's renewal date on the billing page is a year after purchase.
+  → test: apps/api/internal/handler/billing_test.go "TestResolveRenewsAt/annual subscription renews a year after purchase"
