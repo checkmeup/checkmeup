@@ -70,5 +70,6 @@
         ]
       }
     ]
-  }
+  },
+  "enableWorkflows": true
 }
