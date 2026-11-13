@@ -62,7 +62,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     file: 'rdap-vs-whois-domain-expiry',
     slug: 'rdap-vs-whois-domain-expiry',
     kind: 'article',
-    title: 'RDAP vs WHOIS: Why Some Domains Hide Their Expiry',
+    title: 'RDAP vs WHOIS: Why Domains Hide Their Expiry',
     date: 'October 15, 2026',
     readTime: '6 min read',
     excerpt:
@@ -146,7 +146,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     file: 'why-monitoring-matters',
     slug: 'why-monitoring-matters',
     kind: 'article',
-    title: 'Why Monitoring Matters: Finding Out Before Users Do',
+    title: 'Why Monitoring Matters: Know Before Users Do',
     date: 'August 3, 2026',
     readTime: '5 min read',
     excerpt:
@@ -282,7 +282,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     file: 'pomodoro-and-checkmeup',
     slug: 'pomodoro-and-checkmeup',
     kind: 'article',
-    title: 'The Cube on My Desk: Pomodoro and Building Checkmeup',
+    title: 'The Cube on My Desk: Pomodoro and Checkmeup',
     date: 'June 18, 2026',
     readTime: '3 min read',
     excerpt:
@@ -448,7 +448,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     file: 'checkmeup-vs-competitors',
     slug: 'checkmeup-vs-healthchecks-uptimerobot-cronitor',
     kind: 'article',
-    title: 'Checkmeup vs. Healthchecks, UptimeRobot, Cronitor',
+    title: 'Healthchecks vs UptimeRobot vs Cronitor',
     date: 'July 4, 2026',
     readTime: '6 min read',
     excerpt:

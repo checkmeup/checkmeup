@@ -23,7 +23,7 @@ export const alternatives: Alternative[] = [
   {
     slug: 'healthchecks-io',
     name: 'Healthchecks.io',
-    seoTitle: 'Healthchecks.io Alternative with Uptime and Status Pages — Checkmeup',
+    seoTitle: 'Healthchecks.io Alternative with Uptime Monitoring — Checkmeup',
     description:
       'Checkmeup vs Healthchecks.io: cron monitoring plus uptime, SSL, domain, port and DNS checks and client status pages, in one account. Free for 10 monitors.',
     title: 'A Healthchecks.io alternative that also watches your sites',

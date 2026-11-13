@@ -7,7 +7,7 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'About Checkmeup: Who Builds It and Why',
-  description: 'Who builds Checkmeup, the stack it runs on, and the values behind it.',
+  description: 'Who builds Checkmeup, the stack it runs on, and the values behind it: one developer, no venture money, and monitoring that stays simple.',
   path: '/about',
 })
 
