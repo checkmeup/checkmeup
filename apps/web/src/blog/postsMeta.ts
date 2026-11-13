@@ -15,6 +15,18 @@ export interface BlogPostMetaEntry extends BlogPostMeta {
 
 export const postsMeta: BlogPostMetaEntry[] = [
   {
+    file: 'github-actions-cron-monitoring-guide',
+    slug: 'github-actions-cron-monitoring-guide',
+    kind: 'article',
+    title: 'GitHub Actions Cron: Monitoring Scheduled Runs',
+    date: 'November 13, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "GitHub disables scheduled workflows after 60 days without commits, and queued runs can be delayed or dropped — none of which produces a failed run anyone sees. A ping at the end of the job turns that absence into an alert. What it can't tell you is whether the job did the right thing, only that its last step ran.",
+    description:
+      'A scheduled GitHub Actions workflow can stop without ever failing: disabled after 60 days, delayed, or never queued. How to notice when it does.',
+  },
+  {
     file: 'v1-57-to-v1-60-fewer-false-alarms',
     slug: 'v1-57-to-v1-60-fewer-false-alarms',
     kind: 'release',
