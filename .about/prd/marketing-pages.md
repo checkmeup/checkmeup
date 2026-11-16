@@ -2,7 +2,7 @@
 
 ## Problem
 
-Search Console shows almost no non-brand search traffic (Inbox "Almost no organic search traffic"). People searching "cron job monitoring" or "uptime monitoring" find only blog guides here, with no page that says what Checkmeup does for that need, what it costs and how to start. People already choosing between tools search "Healthchecks.io alternative", "UptimeRobot alternative" or "Cronitor alternative", and nothing here answers them; one combined comparison post covers all three.
+Search Console shows almost no non-brand search traffic. People searching "cron job monitoring" or "uptime monitoring" find only blog guides here, with no page that says what Checkmeup does for that need, what it costs and how to start. People already choosing between tools search "Healthchecks.io alternative", "UptimeRobot alternative" or "Cronitor alternative", and nothing here answers them; one combined comparison post covers all three.
 
 ## Users
 

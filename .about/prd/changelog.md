@@ -10,7 +10,7 @@ Search engines, on behalf of visitors searching for what Checkmeup monitors; and
 
 ## Success signal
 
-Search Console shows the release notes excluded by `noindex` and no trailing-slash duplicates indexed (Inbox: Check Search Console after the changelog release).
+Search Console shows the release notes excluded by `noindex` and no trailing-slash duplicates indexed. As of 2026-11-13, 8 release notes and `/blog/v1-28-release-notes/` were still indexed, all last crawled before the change, so only a recrawl is missing.
 
 ## Scope
 
