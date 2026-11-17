@@ -1,12 +1,12 @@
 # Where the project's knowledge lives
 
-Date: 2026-10-17
+Date: 2026-11-18
 
 Decisions are ADRs in `.about/adr/`, one file per subject, saying what holds now; a changed decision is edited in place and the dropped choice moves to Considered options. Features are PRDs in `.about/prd/`, one per feature, with acceptance criteria linked to the tests that check them. Domain terms are in `.about/glossary.md`. Anything open — an undecided question, a finding left for later — is an item in `.about/inbox.md` until something settles it. The baloo plugin's skills (adr, prd, glossary, inbox) keep these files.
 
 `docs/roadmap.md` is a Now / Next / Later list of PRDs with no dates. `docs/incidents/` holds one file per production incident on Checkmeup's own infrastructure: what broke, whether our monitors caught it, impact, cause, follow-up. `docs/reference/` is living how-to and `docs/proposals/` holds feature ideas not yet picked up. `docs/knowledge/mvp-history.md` freezes the MVP build plan. How the code works is read from the code; why it is built that way is in the ADRs.
 
-There are no monthly reports and no hours log: what shipped is in the git log and the GitHub Releases changelog.
+There are no monthly reports and no hours log: what shipped is in the git log and the GitHub Releases changelog. Nor is there a log of traffic and search numbers: Search Console keeps 16 months of them, and the server saves each day of the proxy log to `traffic/days.jsonl` (`mise run traffic`). An Inbox item keeps only what decides it: what settles it, what was tried and with what result, and the latest state in a line.
 
 ## Considered options
 
@@ -18,3 +18,4 @@ There are no monthly reports and no hours log: what shipped is in the git log an
 - A dated, hour-budgeted roadmap: fitted the MVP sprint, not reactive post-launch work.
 - An hours log in `docs/reports/hours/`, kept by the `log-hours` skill, with a hook that blocked `gh pr create` until hours were logged (until 2026-10-13): dropped entirely; git keeps the logs.
 - A `session_summary.py` hook proposing ADR and doc updates at session end (until 2026-10-13): replaced by baloo's session review.
+- Each SEO and traffic check's numbers appended to the Inbox items they bore on, as evidence for the next session (until 2026-11-16): the items grew into a diary of daily figures that Search Console and `traffic/days.jsonl` already keep.
