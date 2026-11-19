@@ -4,10 +4,13 @@
 # includes bots that send a browser User-Agent (ADR frontend), so top pages and
 # referrers count only js_visitors' pageviews.
 #
-# The log keeps only a few days, so a cron job on the server (`mise run traffic-install`)
-# runs this with --yesterday after midnight and appends that day's summary as one JSON
-# line to traffic/days.jsonl. `mise run traffic` feeds those lines in before the log; a
-# saved day wins over the log, whose oldest day may be cut short.
+# Docker keeps kamal-proxy's log in one 10 MB file, about two days, and drops all of it
+# when the file rotates. So cron jobs on the server (`mise run traffic-install`) append
+# the last 65 minutes of the log to traffic/requests.log every hour, and after midnight
+# run this with --yesterday on that file, append that day's summary as one JSON line to
+# traffic/days.jsonl and delete the file. The overlapping hours repeat requests, which
+# are counted once by request_id. `mise run traffic` feeds the saved lines in before the
+# rest; a saved day wins over the log, whose oldest day may be cut short.
 import json, re, sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -21,6 +24,7 @@ days = defaultdict(lambda: {"views": 0, "ips": set(), "hits": []})  # hits: (ip,
 js_ips = defaultdict(set)  # IPs that also loaded the app's JS: real browsers do, most fake-UA bots don't
 bot_by_day = Counter()
 saved = {}  # day -> summary line from traffic/days.jsonl
+seen = set()  # request IDs already counted
 fields, total = None, 0
 for line in sys.stdin:
     line = line.strip()
@@ -35,6 +39,10 @@ for line in sys.stdin:
         continue
     if r.get("msg") != "Request":
         continue
+    rid = r.get("request_id") or line
+    if rid in seen:
+        continue
+    seen.add(rid)
     total += 1
     fields = fields or sorted(r)
     day = str(r.get("time", ""))[:10]
