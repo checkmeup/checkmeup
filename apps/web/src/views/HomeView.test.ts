@@ -134,6 +134,7 @@ describe('HomeView', () => {
     const wrapper = mountHome()
 
     expect(wrapper.text()).toContain("I'm Andrew Molyuk.")
+    expect(wrapper.text()).toContain("90 days' notice")
     expect(wrapper.find('img[src="/img/andrew.jpg"]').exists()).toBe(true)
     const links = wrapper.findAllComponents({ name: 'RouterLink' })
     expect(links.find((c) => c.text().includes('More about me'))!.props('to')).toBe('/about')

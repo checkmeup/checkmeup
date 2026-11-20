@@ -6,7 +6,8 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'Terms of Service — Checkmeup',
-  description: "The terms for using Checkmeup's monitoring service: accounts, acceptable use, fees and billing, availability, liability, termination and governing law.",
+  description:
+    "The terms for using Checkmeup's monitoring service: accounts, acceptable use, fees and billing, availability, liability, termination and governing law.",
   path: '/terms',
 })
 
@@ -150,6 +151,12 @@ const effectiveDate = '2026-06-17'
             <RouterLink to="/privacy" class="underline text-[var(--accent)]"
               >Privacy Policy</RouterLink
             >.
+          </p>
+          <p>
+            If we decide to discontinue the Service, we'll email every account holder at least 90
+            days before it stops, and the source code stays public under its license so you can run
+            it yourself. If you've prepaid for a period that runs past the shutdown date, we'll
+            refund the unused part.
           </p>
         </div>
       </LabeledSection>

@@ -405,17 +405,19 @@ useHead({
           <h2
             class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
           >
-            Built and run by one engineer.
+            Run by an engineer who has kept systems up since 1991.
           </h2>
           <p class="text-[17px] leading-relaxed text-[var(--text-dim)]">
-            I'm Andrew Molyuk. I've written software since 1991 and spent eight years as CTO of
-            Vidcrunch, where our systems handled about 23 billion events a day. Checkmeup is the
-            small, boring tool I wanted for my own cron jobs and sites: one Go service, PostgreSQL
-            and one server, with every check it runs counted on this page.
+            I'm Andrew Molyuk. I spent eight years as CTO of Vidcrunch, where our systems handled
+            about 23 billion events a day. Checkmeup is the small, boring tool I wanted for my own
+            cron jobs and sites: one Go service, PostgreSQL and one server, with every check it runs
+            counted on this page.
           </p>
           <p class="text-[17px] leading-relaxed text-[var(--text-dim)]">
-            The code is public on GitHub, and every architecture decision is written down next to
-            it. If something breaks, you'll hear it from me.
+            The code is public on GitHub and licensed for self-hosting, with every architecture
+            decision written down next to it. If Checkmeup ever shuts down, you get 90 days' notice
+            and can keep your monitors running on your own server. If something breaks, you'll hear
+            it from me.
           </p>
           <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
             <RouterLink to="/about" class="text-[var(--accent)] hover:underline"

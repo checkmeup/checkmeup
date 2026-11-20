@@ -224,6 +224,13 @@ const values = [
                 and what changed.</span
               >
             </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-2.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--accent)]"></span>
+              <span
+                >Shut down without warning. If Checkmeup ever closes, you get 90 days' notice, and
+                the code stays public and licensed for you to run it yourself.</span
+              >
+            </li>
           </ul>
         </div>
       </LabeledSection>

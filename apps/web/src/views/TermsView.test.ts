@@ -72,6 +72,13 @@ describe('TermsView', () => {
     expect(wrapper.text()).toContain('Refund Policy')
   })
 
+  it('promises 90 days notice and a refund of prepaid time if the Service shuts down', () => {
+    const wrapper = mount(TermsView, mountOptions)
+
+    expect(wrapper.text()).toContain('at least 90 days before it stops')
+    expect(wrapper.text()).toContain('refund the unused part')
+  })
+
   it('specifies exclusive Israeli court jurisdiction with no arbitration', () => {
     const wrapper = mount(TermsView, mountOptions)
 
