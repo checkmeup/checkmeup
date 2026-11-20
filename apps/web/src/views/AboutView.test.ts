@@ -26,7 +26,7 @@ describe('AboutView', () => {
     const wrapper = mount(AboutView)
 
     expect(wrapper.text()).toContain('Andrew Molyuk')
-    expect(wrapper.text()).toContain('25+ years writing software')
+    expect(wrapper.text()).toContain('Writing software since 1991')
   })
 
   it('renders the stack list', () => {

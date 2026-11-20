@@ -7,7 +7,8 @@ import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: 'About Checkmeup: Who Builds It and Why',
-  description: 'Who builds Checkmeup, the stack it runs on, and the values behind it: one developer, no venture money, and monitoring that stays simple.',
+  description:
+    'Who builds Checkmeup, the stack it runs on, and the values behind it: one developer, no venture money, and monitoring that stays simple.',
   path: '/about',
 })
 
@@ -15,8 +16,8 @@ const stack = [
   { label: 'Backend', value: 'Go · Chi · sqlc · goose' },
   { label: 'Frontend', value: 'Vue 3 · Vite · Pinia · Tailwind' },
   { label: 'Database', value: 'PostgreSQL' },
-  { label: 'Infrastructure', value: 'Hetzner · Kamal · Traefik' },
-  { label: 'Alerts', value: 'Telegram Bot API' },
+  { label: 'Infrastructure', value: 'Hetzner · Kamal · kamal-proxy' },
+  { label: 'Alerts', value: 'Telegram · Slack · email · SMS · webhooks' },
   { label: 'Billing', value: 'Paddle (Merchant of Record)' },
 ]
 
@@ -61,6 +62,13 @@ const values = [
       <LabeledSection title="Who's building this">
         <div class="max-w-[680px] space-y-3">
           <div class="flex flex-wrap items-center gap-3">
+            <img
+              src="/img/andrew.jpg"
+              alt="Andrew Molyuk"
+              width="56"
+              height="56"
+              class="h-14 w-14 rounded-full border border-[var(--border)] object-cover"
+            />
             <span class="text-lg font-semibold tracking-[-0.02em] text-[var(--text-strong)]"
               >Andrew Molyuk</span
             >
@@ -116,16 +124,16 @@ const values = [
             </div>
           </div>
           <p>
-            25+ years writing software — from enterprise video platforms processing 23 billion
-            events a day, to voting systems handling 30 million concurrent connections, to building
-            and leading remote engineering teams across two continents.
+            Writing software since 1991 — from an ad platform processing 23 billion events a day,
+            where I was CTO for eight years, to live TV voting at peaks of 3 million requests a
+            second, to building and leading remote engineering teams across two continents.
           </p>
           <p>
             After spending years in the high-scale world — AWS, Kubernetes, microservices, the whole
             catalogue — I kept coming back to the same observation: the boring, reliable tools are
             the ones that actually stay running. Checkmeup is built on that principle. Go backend,
-            PostgreSQL, a handful of Hetzner servers. No distributed systems unless the problem
-            actually demands it.
+            PostgreSQL, one Hetzner server. No distributed systems unless the problem actually
+            demands it.
           </p>
           <p>
             I'm based in Israel. Checkmeup is independent and bootstrapped — no VC, no growth

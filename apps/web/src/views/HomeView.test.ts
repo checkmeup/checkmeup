@@ -130,6 +130,15 @@ describe('HomeView', () => {
     expect(wrapper.text()).not.toContain('Most popular')
   })
 
+  it('names the engineer who runs it and links to the About page', () => {
+    const wrapper = mountHome()
+
+    expect(wrapper.text()).toContain("I'm Andrew Molyuk.")
+    expect(wrapper.find('img[src="/img/andrew.jpg"]').exists()).toBe(true)
+    const links = wrapper.findAllComponents({ name: 'RouterLink' })
+    expect(links.find((c) => c.text().includes('More about me'))!.props('to')).toBe('/about')
+  })
+
   it('renders the full pricing details link', () => {
     const wrapper = mountHome()
 

@@ -281,7 +281,9 @@ useHead({
             <a :href="statusUrl" class="self-start">
               <img :src="badgeUrl" alt="checkmeup.net status" />
             </a>
-            <div class="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--border)]">
+            <div
+              class="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--border)]"
+            >
               <div
                 class="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
               >
@@ -382,6 +384,52 @@ useHead({
 
         <PlanTable />
         <p class="mt-4 text-[13px] text-[var(--text-muted)]">{{ everyPlan }}</p>
+      </div>
+    </section>
+
+    <!-- Who runs it: a monitoring tool asks for trust, and a named person
+         with a track record earns more of it than another feature list. -->
+    <section class="border-t border-[var(--border)]">
+      <div
+        class="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-16 sm:flex-row sm:items-start sm:gap-10 sm:px-6 sm:py-20"
+      >
+        <img
+          src="/img/andrew.jpg"
+          alt="Andrew Molyuk"
+          width="112"
+          height="112"
+          loading="lazy"
+          class="h-24 w-24 flex-shrink-0 rounded-full border border-[var(--border)] object-cover sm:h-28 sm:w-28"
+        />
+        <div class="flex max-w-[680px] flex-col gap-4">
+          <h2
+            class="text-[30px] leading-[1.1] font-semibold tracking-[-0.035em] text-[var(--text-strong)] sm:text-[38px]"
+          >
+            Built and run by one engineer.
+          </h2>
+          <p class="text-[17px] leading-relaxed text-[var(--text-dim)]">
+            I'm Andrew Molyuk. I've written software since 1991 and spent eight years as CTO of
+            Vidcrunch, where our systems handled about 23 billion events a day. Checkmeup is the
+            small, boring tool I wanted for my own cron jobs and sites: one Go service, PostgreSQL
+            and one server, with every check it runs counted on this page.
+          </p>
+          <p class="text-[17px] leading-relaxed text-[var(--text-dim)]">
+            The code is public on GitHub, and every architecture decision is written down next to
+            it. If something breaks, you'll hear it from me.
+          </p>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+            <RouterLink to="/about" class="text-[var(--accent)] hover:underline"
+              >More about me →</RouterLink
+            >
+            <a
+              href="https://github.com/checkmeup/checkmeup"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[var(--accent)] hover:underline"
+              >Source on GitHub →</a
+            >
+          </div>
+        </div>
       </div>
     </section>
 
