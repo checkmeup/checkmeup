@@ -79,6 +79,10 @@ run = "rm -rf node_modules dist coverage apps/web/node_modules apps/web/dist app
 description = "Count visitors per day from kamal-proxy's request log on the server (ADR frontend)"
 run = "ssh deploy@167.233.116.118 'cat traffic/days.jsonl traffic/requests.log 2>/dev/null; docker logs kamal-proxy --since 672h 2>&1' | python3 scripts/proxy-traffic.py"
 
+[tasks.signups]
+description = "Count sign-ups in the production database: total, last 7 and 30 days, and the latest"
+run = '''ssh deploy@167.233.116.118 "docker exec checkmeup-db psql -U checkmeup -d checkmeup -c \"SELECT count(*) AS total, count(*) FILTER (WHERE created_at > now() - interval '7 days') AS last_7d, count(*) FILTER (WHERE created_at > now() - interval '30 days') AS last_30d, max(created_at) AS latest FROM users;\""'''
+
 [tasks.traffic-install]
 description = "Copy the traffic script to the server and install the cron jobs that keep the request log and save each day's summary (ADR frontend)"
 # Rerun after changing scripts/proxy-traffic.py; it replaces the script and its cron lines,
