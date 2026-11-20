@@ -2,7 +2,9 @@
 # `mise run traffic`. Prints only aggregates, no IPs or raw lines. Real people are
 # nearer js_visitors (IPs that also loaded the app's JS) than visitors, which still
 # includes bots that send a browser User-Agent (ADR frontend), so top pages and
-# referrers count only js_visitors' pageviews.
+# referrers count only js_visitors' pageviews. An IP signed in that day (a 200 from an
+# API route behind sign-in) is a user, not a visitor, and isn't counted at all: while
+# the only users are the founder's own accounts, that leaves out their own visits.
 #
 # Docker keeps kamal-proxy's log in one 10 MB file, about two days, and drops all of it
 # when the file rotates. So cron jobs on the server (`mise run traffic-install`) append
@@ -19,9 +21,11 @@ BOT = re.compile(r"bot|crawl|spider|slurp|curl|wget|python|go-http|httpclient|ja
                  r"headless|lighthouse|monitor|uptime|checkmeup|preview|facebookexternalhit|semrush|ahrefs|"
                  r"mj12|dotbot|petal|bytespider|gptbot|claude|perplexity|scan|zgrab|masscan|nmap|^$", re.I)
 ASSET = re.compile(r"^/(api|assets|up)(/|$)|\.[a-z0-9]{1,5}$", re.I)
+PUBLIC_API = re.compile(r"^/api/v1/(health|stats|tools|auth)(/|$)")  # the rest needs a session (server.go)
 
-days = defaultdict(lambda: {"views": 0, "ips": set(), "hits": []})  # hits: (ip, path, referrer host)
+days = defaultdict(lambda: {"ips": set(), "hits": []})  # hits: (ip, path, referrer host)
 js_ips = defaultdict(set)  # IPs that also loaded the app's JS: real browsers do, most fake-UA bots don't
+signed_in = defaultdict(set)  # IPs with a session that day
 bot_by_day = Counter()
 saved = {}  # day -> summary line from traffic/days.jsonl
 seen = set()  # request IDs already counted
@@ -50,6 +54,8 @@ for line in sys.stdin:
     path = (r.get("path") or "").split("?")[0]
     if path.startswith("/assets/") and path.endswith(".js") and not BOT.search(ua):
         js_ips[day].add(r.get("remote_addr") or r.get("client_addr"))
+    if path.startswith("/api/v1/") and not PUBLIC_API.match(path) and r.get("status") == 200:
+        signed_in[day].add(r.get("remote_addr") or r.get("client_addr"))
     if r.get("method") != "GET" or r.get("status") != 200 or ASSET.search(path):
         continue
     if BOT.search(ua):
@@ -57,7 +63,6 @@ for line in sys.stdin:
         continue
     ip = r.get("remote_addr") or r.get("client_addr")
     d = days[day]
-    d["views"] += 1
     d["ips"].add(ip)
     # The Referer header is logged under a key named after it (config/deploy.yml proxy.logging).
     ref = next((v for k, v in r.items() if "referer" in k.lower()), None)
@@ -67,11 +72,13 @@ for line in sys.stdin:
 
 def summary(day):
     d = days[day]
-    js = d["ips"] & js_ips[day]
+    ips = d["ips"] - signed_in[day]
+    js = ips & js_ips[day]
     pages = Counter(path for ip, path, _ in d["hits"] if ip in js)
     refs = Counter(host for ip, _, host in d["hits"] if ip in js and host)
-    return {"day": day, "visitors": len(d["ips"]), "js_visitors": len(js),
-            "pageviews": d["views"], "bot_pageviews": bot_by_day[day],
+    views = sum(1 for ip, _, _ in d["hits"] if ip in ips)
+    return {"day": day, "visitors": len(ips), "js_visitors": len(js),
+            "pageviews": views, "bot_pageviews": bot_by_day[day],
             "pages": dict(pages.most_common(20)), "referrers": dict(refs.most_common(15))}
 
 

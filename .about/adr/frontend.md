@@ -1,6 +1,6 @@
 # Frontend structure and web analytics
 
-Date: 2026-11-19
+Date: 2026-11-20
 
 The `use*Monitors.ts` composables are shallow on purpose: they keep the TanStack Query keys in one place. An architecture review should not flag them as pass-throughs to inline.
 
@@ -8,7 +8,7 @@ Web analytics is Google Analytics 4 through a Google Tag Manager container, load
 
 The app only pushes events to the dataLayer; where they go is set in GTM, not in the repo. A successful sign-up pushes `{ event: 'sign_up', method: 'email' }` (`apps/web/src/lib/analytics.ts`), and a GTM Custom Event trigger on `sign_up` fires a GA4 Event tag of the same name, which GA4 counts as a key event. A run of a free checker (PRD free-tools) pushes `{ event: 'tool_check', tool, outcome }`; its GA4 Event tag reads `tool` and `outcome` through Data Layer Variables and sends them as parameters, registered in GA4 as the event-scoped custom dimensions Tool and Tool outcome. The owner's visits are tagged internal by a rule on their static IP in the Google tag's settings, and GA4's Internal Traffic data filter is Active, so a test sign-up from that IP never shows in GA4 reports or Realtime; check it in GTM Preview instead.
 
-GA4 therefore counts only visitors who accept the banner, a small share of them: from 2026-10-25 to 2026-10-28 it recorded no session while kamal-proxy logged 1–12 people a day who loaded the app's JS. Traffic is counted from kamal-proxy's request log instead (`mise run traffic`, which logs the Referer to show where visitors came from), not from GA4. Docker keeps that log in one 10 MB file, about two days, and drops all of it when the file rotates, so cron jobs on the server (`mise run traffic-install`) copy the log into `traffic/requests.log` in the deploy user's home every hour, and after midnight save the finished day's aggregates, with no IPs, to `traffic/days.jsonl` and delete the copy; `mise run traffic` shows those days next to the ones still in the log. Days saved before 2026-11-19 can be short, cut at a rotation: 2026-11-18 lost everything before 19:02 UTC; GA4 stays for the `sign_up` and `tool_check` events of those who consent.
+GA4 therefore counts only visitors who accept the banner, a small share of them: from 2026-10-25 to 2026-10-28 it recorded no session while kamal-proxy logged 1–12 people a day who loaded the app's JS. Traffic is counted from kamal-proxy's request log instead (`mise run traffic`, which logs the Referer to show where visitors came from), not from GA4. Docker keeps that log in one 10 MB file, about two days, and drops all of it when the file rotates, so cron jobs on the server (`mise run traffic-install`) copy the log into `traffic/requests.log` in the deploy user's home every hour, and after midnight save the finished day's aggregates, with no IPs, to `traffic/days.jsonl` and delete the copy; `mise run traffic` shows those days next to the ones still in the log. An IP that got a 200 from an API route behind sign-in that day is a user, not a visitor, and isn't counted, which leaves out the founder's own visits on the days they use the app signed in; days saved before 2026-11-20 still count them. Days saved before 2026-11-19 can be short, cut at a rotation: 2026-11-18 lost everything before 19:02 UTC; GA4 stays for the `sign_up` and `tool_check` events of those who consent.
 
 ## Considered options
 
