@@ -123,10 +123,11 @@ describe('HomeView', () => {
     expect(wrapper.text()).not.toContain('Telegram, Slack & email alerts')
   })
 
-  it('marks the Startup plan as popular', () => {
+  // No plan has paying users to back a "Most popular" claim yet.
+  it('claims no plan is the most popular', () => {
     const wrapper = mountHome()
 
-    expect(wrapper.text()).toContain('Most popular')
+    expect(wrapper.text()).not.toContain('Most popular')
   })
 
   it('renders the full pricing details link', () => {

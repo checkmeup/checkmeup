@@ -180,9 +180,6 @@ const featureRows: TableRow[] = [
           <div class="mb-5">
             <div class="mb-1 flex items-center justify-between gap-2">
               <span class="text-base font-semibold text-[var(--text-strong)]">{{ plan.name }}</span>
-              <span v-if="plan.highlight" class="text-xs font-semibold text-[var(--accent)]"
-                >Most popular</span
-              >
             </div>
             <p class="text-xs leading-relaxed text-[var(--text-muted)]">
               {{ plan.description }}

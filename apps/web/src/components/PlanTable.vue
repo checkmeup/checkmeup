@@ -32,11 +32,6 @@ import { plans, planRows } from '@/content/home'
             class="px-2 py-4 font-normal sm:px-5"
             :class="plan.highlight ? 'bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg))]' : ''"
           >
-            <span
-              v-if="plan.highlight"
-              class="mb-1 block text-xs font-semibold text-[var(--accent)]"
-              >Most popular</span
-            >
             <span class="block text-xs font-semibold text-[var(--text-strong)] sm:text-sm">{{
               plan.name
             }}</span>
