@@ -36,8 +36,8 @@ describe('socialImageLabel', () => {
 describe('fitTitle', () => {
   it('fits a 100-character title in at most 3 lines', async () => {
     expect(HUNDRED_CHARACTERS).toHaveLength(100)
-    const { lines } = await fitTitle(HUNDRED_CHARACTERS)
-    expect(lines).toBeLessThanOrEqual(3)
+    const fit = await fitTitle(HUNDRED_CHARACTERS)
+    expect(fit?.lines).toBeLessThanOrEqual(3)
   })
 
   it('keeps a short title on one line at full size', async () => {
@@ -45,7 +45,7 @@ describe('fitTitle', () => {
   })
 
   it("refuses a title that doesn't fit 3 lines at the smallest size, rather than cut it", async () => {
-    await expect(fitTitle(HUNDRED_CHARACTERS.repeat(3))).rejects.toThrow(/doesn't fit 3 lines/)
+    expect(await fitTitle(HUNDRED_CHARACTERS.repeat(3))).toBeNull()
   })
 })
 
@@ -65,7 +65,7 @@ describe('socialImageNode', () => {
 
 describe('renderSocialImage', () => {
   it('renders a 1200×630 PNG', async () => {
-    const png = await renderSocialImage('Cron expression explainer', 'Free tool')
+    const png = (await renderSocialImage('Cron expression explainer', 'Free tool'))!
     expect(png.subarray(1, 4).toString()).toBe('PNG')
     expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630])
   })

@@ -13,10 +13,7 @@ export function stubNodeFs(fs: typeof NodeFs) {
   const readFileSync = ((path: string, ...rest: unknown[]) =>
     String(path).endsWith('dist/index.html')
       ? fs.readFileSync(new URL('../index.html', import.meta.url), 'utf-8')
-      : (fs.readFileSync as (...args: unknown[]) => unknown)(
-          path,
-          ...rest,
-        )) as typeof fs.readFileSync
+      : Reflect.apply(fs.readFileSync, fs, [path, ...rest])) as typeof fs.readFileSync
   const writeFileSync = ((path: string, data: string | Uint8Array) => {
     written.set(String(path), typeof data === 'string' ? data : Buffer.from(data))
   }) as typeof fs.writeFileSync

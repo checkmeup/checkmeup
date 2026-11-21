@@ -35,18 +35,20 @@ export function socialImageLabel(path: string): string | null {
 // The light theme's colors, read from the tokens in src/style.css so the
 // picture follows them (docs/reference/design.md).
 function lightThemeColors() {
+  // A path fixed in this script, not input.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf-8')
   const tokens = (block: string | undefined) =>
-    Object.fromEntries(
+    new Map(
       [...(block ?? '').matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]),
     )
   const theme = tokens(/@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1])
   const light = tokens(/:root\[data-theme='light'\]\s*\{([\s\S]*?)\n\}/.exec(css)?.[1])
   const color = (name: string): string => {
-    const value = light[name]
+    const value = light.get(name)
     if (!value) throw new Error(`no light-theme token --${name} in src/style.css`)
     const ref = /^var\(--([\w-]+)\)$/.exec(value)?.[1]
-    return ref ? (theme[ref] ?? light[ref]) : value
+    return ref ? (theme.get(ref) ?? light.get(ref) ?? value) : value
   }
   return {
     bg: color('bg'),
@@ -59,20 +61,21 @@ function lightThemeColors() {
 
 function fontFile(dir: string, file: string): Buffer {
   const geist = dirname(createRequire(import.meta.url).resolve('geist/font/sans'))
+  // A font file of the geist package this script names, not input.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return readFileSync(join(geist, 'fonts', dir, file))
 }
 
-let options: SatoriOptions | undefined
+// Read once, on the first image.
+const fonts: SatoriOptions['fonts'] = []
 function satoriOptions(): SatoriOptions {
-  options ??= {
-    width: SOCIAL_IMAGE_WIDTH,
-    height: SOCIAL_IMAGE_HEIGHT,
-    fonts: [
+  if (fonts.length === 0) {
+    fonts.push(
       { name: 'Geist', data: fontFile('geist-sans', 'Geist-SemiBold.ttf'), weight: 600 },
       { name: 'Geist Mono', data: fontFile('geist-mono', 'GeistMono-Regular.ttf'), weight: 400 },
-    ],
+    )
   }
-  return options
+  return { width: SOCIAL_IMAGE_WIDTH, height: SOCIAL_IMAGE_HEIGHT, fonts }
 }
 
 interface Node {
@@ -100,8 +103,11 @@ function titleNode(title: string, fontSize: number, color: string): Node {
 }
 
 // The largest size at which the title wraps to at most 3 lines with no word
-// past the right edge, measured from where satori lays out each word.
-export async function fitTitle(title: string): Promise<{ fontSize: number; lines: number }> {
+// past the right edge, measured from where satori lays out each word; null
+// when it doesn't fit even at the smallest size, rather than cut it.
+export async function fitTitle(
+  title: string,
+): Promise<{ fontSize: number; lines: number } | null> {
   for (const fontSize of TITLE_SIZES) {
     const svg = await satori(titleNode(title, fontSize, '#000') as never, {
       ...satoriOptions(),
@@ -116,11 +122,13 @@ export async function fitTitle(title: string): Promise<{ fontSize: number; lines
       return { fontSize, lines }
     }
   }
-  throw new Error(`"${title}" doesn't fit ${MAX_TITLE_LINES} lines at ${TITLE_SIZES.at(-1)}px`)
+  return null
 }
 
 export function socialImageNode(title: string, label: string | null, fontSize: number): Node {
   const colors = lightThemeColors()
+  // A path fixed in this script, not input.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const logo = readFileSync(new URL('../public/img/logo-light.svg', import.meta.url))
   const mono = { fontFamily: 'Geist Mono', fontWeight: 400 }
   return {
@@ -177,9 +185,14 @@ export function socialImageNode(title: string, label: string | null, fontSize: n
   }
 }
 
-export async function renderSocialImage(title: string, label: string | null): Promise<Buffer> {
-  const { fontSize } = await fitTitle(title)
-  const svg = await satori(socialImageNode(title, label, fontSize) as never, satoriOptions())
+// The page's image as a PNG, or null when its title doesn't fit.
+export async function renderSocialImage(
+  title: string,
+  label: string | null,
+): Promise<Buffer | null> {
+  const fit = await fitTitle(title)
+  if (!fit) return null
+  const svg = await satori(socialImageNode(title, label, fit.fontSize) as never, satoriOptions())
   // Imported here, so a native binary missing on the build's platform fails
   // this page's image, which prerender.mts falls back from, not the build.
   const { Resvg } = await import('@resvg/resvg-js')

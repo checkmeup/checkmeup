@@ -15,6 +15,7 @@ import { renderToString } from 'vue/server-renderer'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
+import { Window } from 'happy-dom'
 import App from '../src/App.vue'
 import { routes } from '../src/router/routes'
 import { postsMeta } from '../src/blog/posts'
@@ -49,26 +50,29 @@ function outputPathFor(routePath: string): string {
 
 const NOT_FOUND_PATH = '/404'
 
-// The text of the first <h1>, as a reader sees it.
-function h1Text(bodyHtml: string): string {
-  const inner = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(bodyHtml)?.[1]
-  if (inner === undefined) throw new Error('no <h1>')
-  return inner
-    .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim()
+// Parses like a client that runs no JavaScript and fetches nothing.
+const domWindow = new Window({
+  settings: {
+    disableJavaScriptEvaluation: true,
+    disableJavaScriptFileLoading: true,
+    disableCSSFileLoading: true,
+    disableIframePageLoading: true,
+  },
+})
+
+// The text of a rendered page's first <h1>, as a reader sees it.
+function h1FromHtml(bodyHtml: string): string | null {
+  // This build's own server-rendered markup, parsed only to read its text.
+  // eslint-disable-next-line xss/no-mixed-html
+  const doc = new domWindow.DOMParser().parseFromString(bodyHtml, 'text/html')
+  return doc.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() || null
 }
 
 // Writes the page's own Open Graph image (PRD social-images) and returns the
 // head tags that describe it. `/` keeps its hand-made card and the 404 page
 // gets it too; so does a page whose image can't be rendered, logged here and
 // caught in CI by prerender.test.ts rather than failing the deploy.
-async function socialImageHead(path: string, bodyHtml: string) {
+async function socialImageHead(path: string, title: string | null) {
   const homepageCard = {
     meta: [
       { property: 'og:image', content: DEFAULT_OG_IMAGE },
@@ -76,11 +80,18 @@ async function socialImageHead(path: string, bodyHtml: string) {
     ],
   }
   if (path === '/' || path === NOT_FOUND_PATH) return homepageCard
+  const fallBack = (reason: string) => {
+    console.warn(`No social image for ${path}, keeping the homepage card: ${reason}`)
+    return homepageCard
+  }
+  if (!title) return fallBack('no <h1>')
   try {
-    const title = h1Text(bodyHtml)
     const png = await renderSocialImage(title, socialImageLabel(path))
+    if (!png) return fallBack(`"${title}" doesn't fit 3 lines`)
     const outPath = join(distDir, 'img/og', `${path.slice(1)}.png`)
     mkdirSync(dirname(outPath), { recursive: true })
+    // Under dist/, named after one of this script's own routes, not input.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(outPath, png)
     return {
       meta: [
@@ -91,8 +102,7 @@ async function socialImageHead(path: string, bodyHtml: string) {
       ],
     }
   } catch (err) {
-    console.warn(`No social image for ${path}, keeping the homepage card: ${(err as Error).message}`)
-    return homepageCard
+    return fallBack((err as Error).message)
   }
 }
 
@@ -114,7 +124,8 @@ async function renderRoute(path: string): Promise<string> {
   app.use(head)
 
   const bodyHtml = await renderToString(app)
-  head.push(await socialImageHead(path, bodyHtml))
+  // eslint-disable-next-line xss/no-mixed-html -- the page's own markup, read for its <h1> text
+  head.push(await socialImageHead(path, path === '/' ? null : h1FromHtml(bodyHtml)))
   const withBody = template.replace('<div id="app"></div>', `<div id="app">${bodyHtml}</div>`)
   return transformHtmlTemplate(head, withBody)
 }
