@@ -18,6 +18,13 @@ import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
 import App from '../src/App.vue'
 import { routes } from '../src/router/routes'
 import { postsMeta } from '../src/blog/posts'
+import { DEFAULT_OG_IMAGE } from '../src/composables/useSeo'
+import {
+  SOCIAL_IMAGE_HEIGHT,
+  SOCIAL_IMAGE_WIDTH,
+  renderSocialImage,
+  socialImageLabel,
+} from './social-image.mts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distDir = join(__dirname, '../dist')
@@ -40,6 +47,55 @@ function outputPathFor(routePath: string): string {
   return join(distDir, routePath.slice(1), 'index.html')
 }
 
+const NOT_FOUND_PATH = '/404'
+
+// The text of the first <h1>, as a reader sees it.
+function h1Text(bodyHtml: string): string {
+  const inner = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(bodyHtml)?.[1]
+  if (inner === undefined) throw new Error('no <h1>')
+  return inner
+    .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Writes the page's own Open Graph image (PRD social-images) and returns the
+// head tags that describe it. `/` keeps its hand-made card and the 404 page
+// gets it too; so does a page whose image can't be rendered, logged here and
+// caught in CI by prerender.test.ts rather than failing the deploy.
+async function socialImageHead(path: string, bodyHtml: string) {
+  const homepageCard = {
+    meta: [
+      { property: 'og:image', content: DEFAULT_OG_IMAGE },
+      { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
+    ],
+  }
+  if (path === '/' || path === NOT_FOUND_PATH) return homepageCard
+  try {
+    const title = h1Text(bodyHtml)
+    const png = await renderSocialImage(title, socialImageLabel(path))
+    const outPath = join(distDir, 'img/og', `${path.slice(1)}.png`)
+    mkdirSync(dirname(outPath), { recursive: true })
+    writeFileSync(outPath, png)
+    return {
+      meta: [
+        { property: 'og:image:width', content: String(SOCIAL_IMAGE_WIDTH) },
+        { property: 'og:image:height', content: String(SOCIAL_IMAGE_HEIGHT) },
+        { property: 'og:image:alt', content: title },
+        { name: 'twitter:image:alt', content: title },
+      ],
+    }
+  } catch (err) {
+    console.warn(`No social image for ${path}, keeping the homepage card: ${(err as Error).message}`)
+    return homepageCard
+  }
+}
+
 async function renderRoute(path: string): Promise<string> {
   // Fresh pinia/router/head per route — no state should leak between
   // renders. A dedicated createMemoryHistory() router (built from the same
@@ -58,6 +114,7 @@ async function renderRoute(path: string): Promise<string> {
   app.use(head)
 
   const bodyHtml = await renderToString(app)
+  head.push(await socialImageHead(path, bodyHtml))
   const withBody = template.replace('<div id="app"></div>', `<div id="app">${bodyHtml}</div>`)
   return transformHtmlTemplate(head, withBody)
 }
@@ -78,7 +135,7 @@ async function main() {
     writeFileSync(outPath, html)
   }
   // Any path no route matches renders the catch-all's NotFoundView.
-  writeFileSync(join(distDir, '404.html'), await renderRoute('/404'))
+  writeFileSync(join(distDir, '404.html'), await renderRoute(NOT_FOUND_PATH))
   writeFileSync(join(distDir, 'spa-routes.json'), JSON.stringify(spaRoutePaths))
   console.log(`Prerendered ${targetPaths.length} routes and 404.html`)
 }

@@ -1,41 +1,34 @@
 // @vitest-environment node
-// Runs the real scripts/prerender.mts with node:fs stubbed: it reads the
-// source index.html in place of the built dist/index.html (only the hashed
-// asset tags differ) and its writes land in `written` instead of dist/, so
-// each page is checked as a crawler that doesn't run JavaScript fetches it,
-// without a full `vite build`.
+// Runs the real scripts/prerender.mts with node:fs stubbed
+// (scripts/prerender-fs-stub.ts), twice, the second time from fresh modules,
+// to check the pages it writes and that the same source writes them the same.
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { articlesMeta, postsMeta, releasesMeta } from '@/blog/posts'
-
-const written = new Map<string, string>()
+import { written } from './prerender-fs-stub'
 
 vi.mock('node:fs', async (importOriginal) => {
-  const fs = await importOriginal<typeof import('node:fs')>()
-  const readFileSync = ((path: string, ...rest: unknown[]) =>
-    String(path).endsWith('dist/index.html')
-      ? fs.readFileSync(new URL('../index.html', import.meta.url), 'utf-8')
-      : (fs.readFileSync as (...args: unknown[]) => unknown)(
-          path,
-          ...rest,
-        )) as typeof fs.readFileSync
-  const writeFileSync = ((path: string, data: string) => {
-    written.set(String(path), String(data))
-  }) as typeof fs.writeFileSync
-  const mkdirSync = (() => undefined) as typeof fs.mkdirSync
-  const stubs = { readFileSync, writeFileSync, mkdirSync }
-  return { ...fs, ...stubs, default: { ...fs, ...stubs } }
+  const { stubNodeFs } = await import('./prerender-fs-stub')
+  return stubNodeFs(await importOriginal<typeof import('node:fs')>())
 })
+
+// What the first run wrote, to compare with the second.
+let firstRun = new Map<string, string | Buffer>()
 
 beforeAll(async () => {
   vi.spyOn(console, 'log').mockImplementation(() => {})
   await import('./generate-sitemap.mjs')
   await import('./prerender.mts')
+  firstRun = new Map(written)
+  written.clear()
+  vi.resetModules()
+  await import('./generate-sitemap.mjs')
+  await import('./prerender.mts')
   // Parsed up front, within this hook's timeout rather than each test's.
   for (const [file, html] of written) {
-    if (file.endsWith('.html')) parsed.set(file, parseHtml(html))
+    if (file.endsWith('.html')) parsed.set(file, parseHtml(String(html)))
   }
-}, 120_000)
+}, 240_000)
 
 const SITE_URL = 'https://checkmeup.net'
 
@@ -67,6 +60,20 @@ function page(path: string): Document {
 function meta(doc: Document, selector: string): string | null {
   return doc.querySelector(`meta[${selector}]`)?.getAttribute('content') ?? null
 }
+
+// A written file by the end of its path, such as /dist/img/og/pricing.png.
+function file(suffix: string): string | Buffer | undefined {
+  return [...written.entries()].find(([path]) => path.endsWith(suffix))?.[1]
+}
+
+// Every prerendered page's URL path, from the index.html files written.
+function pagePaths(): string[] {
+  return [...parsed.keys()]
+    .filter((path) => path.endsWith('/index.html'))
+    .map((path) => path.slice(path.lastIndexOf('/dist/') + 5, -'/index.html'.length) || '/')
+}
+
+const HOMEPAGE_CARD = `${SITE_URL}/img/checkmeup-og.png`
 
 const LANDING_PATHS = [
   '/',
@@ -150,11 +157,64 @@ describe('prerender', () => {
   it('has a prerendered page for every URL in sitemap.xml', () => {
     const sitemap = [...written.entries()].find(([path]) => path.endsWith('/public/sitemap.xml'))
     expect(sitemap).toBeDefined()
-    const locs = [...sitemap![1].matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+    const locs = [...String(sitemap![1]).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
     expect(locs.length).toBeGreaterThan(0)
     for (const loc of locs) {
       const doc = page(loc.slice(SITE_URL.length) || '/')
       expect(meta(doc, 'property="og:url"'), loc).toBe(loc)
+    }
+  })
+
+  it('gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>', () => {
+    const paths = pagePaths().filter((path) => path !== '/')
+    expect(paths.length).toBeGreaterThan(LANDING_PATHS.length + postsMeta.length)
+    for (const path of paths) {
+      const doc = page(path)
+      const url = `${SITE_URL}/img/og${path}.png`
+      expect(meta(doc, 'property="og:image"'), path).toBe(url)
+      expect(meta(doc, 'name="twitter:image"'), path).toBe(url)
+      expect(meta(doc, 'property="og:image:width"'), path).toBe('1200')
+      expect(meta(doc, 'property="og:image:height"'), path).toBe('630')
+      const h1 = doc.querySelector('#app h1')?.textContent?.replace(/\s+/g, ' ').trim()
+      expect(h1, path).toBeTruthy()
+      expect(meta(doc, 'property="og:image:alt"'), path).toBe(h1)
+      expect(meta(doc, 'name="twitter:image:alt"'), path).toBe(h1)
+
+      const png = file(`/dist/img/og${path}.png`)
+      expect(png, path).toBeInstanceOf(Buffer)
+      const bytes = png as Buffer
+      expect(bytes.subarray(1, 4).toString(), path).toBe('PNG')
+      expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)], path).toEqual([1200, 630])
+      expect(bytes.length, path).toBeLessThan(300 * 1024)
+    }
+  })
+
+  it('keeps the hand-made card on / and the 404 page', () => {
+    const notFound = [...parsed.entries()].find(([path]) => path.endsWith('/dist/404.html'))?.[1]
+    for (const doc of [page('/'), notFound!]) {
+      expect(meta(doc, 'property="og:image"')).toBe(HOMEPAGE_CARD)
+      expect(meta(doc, 'name="twitter:image"')).toBe(HOMEPAGE_CARD)
+      expect(meta(doc, 'property="og:image:alt"')).toBeNull()
+    }
+  })
+
+  it("names each post's own social image in its Article JSON-LD", () => {
+    for (const post of postsMeta) {
+      const doc = page(`/blog/${post.slug}`)
+      const schemas = [...doc.querySelectorAll('script[type="application/ld+json"]')].map(
+        (script) => JSON.parse(script.textContent ?? '') as { '@type': string; image?: string },
+      )
+      const article = schemas.find((schema) => schema['@type'] === 'Article')
+      expect(article?.image, post.slug).toBe(meta(doc, 'property="og:image"'))
+    }
+  })
+
+  it('writes the same pages and social images when built again from the same source', () => {
+    expect([...written.keys()].sort()).toEqual([...firstRun.keys()].sort())
+    for (const [path, data] of written) {
+      const before = firstRun.get(path)!
+      const same = Buffer.isBuffer(data) ? data.equals(before as Buffer) : data === before
+      expect(same, path).toBe(true)
     }
   })
 
