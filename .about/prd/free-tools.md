@@ -1,12 +1,12 @@
-# Free SSL, domain expiry and DNS checkers
+# Free SSL, domain expiry and DNS checkers and a cron expression explainer
 
 ## Problem
 
-Checkmeup's domain is young and gets almost no search traffic: Search Console showed 0 clicks from 2026-07-15 to 2026-10-14, nearly all impressions for the brand name. Developers do search for one-off checks ("ssl checker", "domain expiry check"), and nothing on the site answers them without an account.
+Checkmeup's domain is young and gets almost no search traffic: Search Console showed 0 clicks from 2026-07-15 to 2026-10-14, nearly all impressions for the brand name. Developers do search for one-off checks ("ssl checker", "domain expiry check", "cron expression"), and nothing on the site answers them without an account.
 
 ## Users
 
-Developers, freelancers and agencies checking one certificate or domain right now, who may not know Checkmeup. Not for bulk or scripted lookups: that's the public API and paid monitors.
+Developers, freelancers and agencies checking one certificate or domain, or reading one cron expression, right now, who may not know Checkmeup. Not for bulk or scripted lookups: that's the public API and paid monitors.
 
 ## Success signal
 
@@ -20,13 +20,20 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - No sign-up needed. Under each result, a link to sign up and monitor it automatically.
 - Every page prerendered, with its own title, description and `<h1>`, listed in `sitemap.xml` and linked from the site footer.
 - `/tools/domain-expiry-checker` (added 2026-11-03) answers the questions searchers ask around expiry (how to check, what happens after, why a lapsed domain shows next year's date, why some TLDs show none), marked up as FAQPage JSON-LD, since it draws most of the site's search impressions.
+- `/tools/cron-expression` (added 2026-11-21): enter a 5-field cron expression, see what it means in plain English and its next five run times in UTC, which a cron monitor uses, and in the visitor's own time zone, or why it isn't valid. The result follows the input as the visitor types, read by the API with the cron monitor's own schedule parser. Common expressions fill the input in one click: `*/5 * * * *`, `0 * * * *`, `0 0 * * *`, `0 9 * * 1-5`, `0 0 * * 0`, `0 0 1 * *`. It leads to cron monitoring, the product's core, where the other tools lead to SSL, domain and DNS monitors.
 
 ## Non-goals
 
-- Carrying the checked host into the sign-up flow or a prefilled monitor form.
-- Port and cron expression tools (Inbox "Free tools without sign-up").
+- Carrying the checked host or expression into the sign-up flow or a prefilled monitor form.
+- A port checker (Inbox "Free tools without sign-up").
+- Building a cron expression from dropdowns; 6-field (seconds) or Quartz syntax; a `CRON_TZ=` prefix; `@hourly`-style shortcuts; and `every 1h` intervals, which a cron monitor takes but no searcher types.
+- Choosing a time zone other than UTC and the visitor's own.
 - Checking several hosts at once, history, or a result URL to share.
 - Caching results.
+
+## Anti-goals
+
+- The cron explainer accepting an expression the cron monitor's schedule parser can't read, or showing run times other than those the monitor would expect: the tool would then teach a schedule the product gets wrong.
 
 ## Acceptance criteria
 
@@ -64,7 +71,15 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
   → test: apps/web/src/views/DomainExpiryCheckerView.test.ts "emits FAQPage JSON-LD with the same questions and answers"
 - Every tool page is linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
+- Five whitespace-separated fields that the cron monitor's schedule parser reads get a plain-English description and the next five times the schedule fires after the request, with no grace period; `*/5 * * * *` reads "Every 5 minutes", `0 9 * * 1-5` "At 09:00, Monday through Friday", and each common expression has a description of its own.
+- Anything else (not 5 fields, a value out of range, an unknown name, an `every` interval, a `CRON_TZ=` prefix) gets `400` with the reason, naming the field where there is one ("Minute: 60 is above the maximum, 59"), and no run times.
+- For the same expression and start time, the first run time plus the monitor's grace period is when the cron monitor expects its next ping.
+- Each run time shows in UTC and in the browser's time zone.
+- One IP gets at most 60 explanations a minute; past it, `429` with `Retry-After`, and the page says to try again in a minute.
+- Clicking a common expression puts it in the input and shows its result.
+- The page names each of the five fields with its allowed values, gives an example of each of `*`, `,`, `-` and `/`, and answers: what a cron expression is, which time zone cron uses, how to run a job every N minutes, why day-of-month and day-of-week together mean either, and how to know a cron job stopped running; as FAQPage JSON-LD with the same text.
 
 ## Open questions
+
 
 - An expired or untrusted certificate shows the TLS error, not its expiry date and issuer, since the check verifies the chain as monitors do. Settled when it's judged fine, or the tool reads the certificate without verifying it.

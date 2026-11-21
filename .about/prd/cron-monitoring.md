@@ -31,6 +31,7 @@ A missed run is reported within the job's grace period, without the user writing
 - A missing name or schedule is refused with a field error.
   → test: apps/web/src/views/CronMonitorCreateView.test.ts "shows a validation error when name is missing"
   → test: apps/web/src/views/CronMonitorCreateView.test.ts "shows a validation error when schedule is missing"
+- A cron expression the schedule parser can't read, such as minute `60`, is refused with the reason, naming the field, rather than saved and expected hourly.
 - The ping URL can be copied from the detail page in one click.
   → test: apps/web/src/views/CronMonitorDetailView.test.ts "copies the ping URL to the clipboard when Copy is clicked"
 - `GET /ping/{token}` with a known token, without any auth header, records the ping with its time and source IP, sets the monitor up and schedules the next expected ping.
