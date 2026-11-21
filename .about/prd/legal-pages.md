@@ -42,6 +42,8 @@ Every account has a recorded acceptance of the current terms version.
   → test: apps/web/src/views/AcceptTermsView.test.ts "signs out and navigates home when \"Sign out instead\" is clicked"
 - Settings shows the accepted version and date, read-only.
   → test: apps/web/src/views/SettingsView.test.ts "shows the formatted terms acceptance date when accepted"
+- The Terms promise every account holder an email at least 90 days before the Service stops, and a refund of prepaid time past the shutdown date (ADR product).
+  → test: apps/web/src/views/TermsView.test.ts "promises 90 days notice and a refund of prepaid time if the Service shuts down"
 - Terms and Privacy are linked from the footer of the landing pages, the blog and status pages.
   → test: apps/web/scripts/prerender.test.ts "links Terms and Privacy from the footer of the landing pages and the blog"
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/PRD legal-pages: the footer links to Terms and Privacy"
