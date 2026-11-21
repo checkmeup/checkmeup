@@ -40,11 +40,24 @@ Qualitative: pasting the URL of any Article or free tool into a link-preview che
 ## Acceptance criteria
 
 - Fetching any prerendered public page other than `/` and `404.html` without JavaScript returns `og:image` and `twitter:image` of `https://checkmeup.net/img/og/<page path>.png`, and that file is in the build output.
+  → test: apps/web/scripts/prerender.test.ts "gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>"
 - Fetching `/` without JavaScript returns `og:image` and `twitter:image` of `https://checkmeup.net/img/checkmeup-og.png`.
+  → test: apps/web/scripts/prerender.test.ts "keeps the hand-made card on / and the 404 page"
 - Each page's image is a 1200×630 PNG under 300 KB, the size LinkedIn, X and Slack show uncropped in a large card, and the page says so in `og:image:width` and `og:image:height`.
+  → test: apps/web/scripts/prerender.test.ts "gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>"
 - Each page's `og:image:alt` and `twitter:image:alt` are its `<h1>` text.
+  → test: apps/web/scripts/prerender.test.ts "gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>"
 - Each page's image is rendered from its `<h1>` text, the label of its kind (or none, by the list in Scope), the Checkmeup logo and `checkmeup.net`.
+  → test: apps/web/scripts/social-image.test.ts "is drawn from the page's <h1>, its label, the logo and checkmeup.net"
+  → test: apps/web/scripts/social-image.test.ts "labels %s %s"
+  → test: apps/web/scripts/prerender.test.ts "gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>"
 - Every page's `<h1>` in the build, and a 100-character title of ordinary English words, lay out in at most 3 lines inside the picture's margins, with nothing cut off.
+  → test: apps/web/scripts/social-image.test.ts "fits a 100-character title in at most 3 lines"
+  → test: apps/web/scripts/social-image.test.ts "refuses a title that doesn't fit 3 lines at the smallest size, rather than cut it"
+  → test: apps/web/scripts/prerender.test.ts "gives every page but / its own 1200×630 social image under 300 KB, described by its <h1>"
 - Building twice from the same source gives every page the same image URL and the same HTML.
+  → test: apps/web/scripts/prerender.test.ts "writes the same pages and social images when built again from the same source"
 - Every post's `Article` JSON-LD has `image` set to the same URL as its `og:image`.
+  → test: apps/web/scripts/prerender.test.ts "names each post's own social image in its Article JSON-LD"
 - A page whose image fails to render is still written, with the homepage card as its `og:image`, and the build finishes.
+  → test: apps/web/scripts/prerender-fallback.test.ts "keeps the homepage card on a page whose social image fails to render, and writes every page"

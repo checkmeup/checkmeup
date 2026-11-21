@@ -15,6 +15,9 @@ export default defineConfig(
   mergeConfig(baseConfig, {
     ssr: {
       noExternal: true,
+      // A native addon can't go through Vite's transform; scripts/social-image.mts
+      // loads it from node_modules as is.
+      external: ['@resvg/resvg-js'],
     },
     // Prevents Vite from redirecting some `vue-router` imports to its
     // pre-bundled `.vite/deps/vue-router.js` copy while others resolve

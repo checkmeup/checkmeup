@@ -58,9 +58,3 @@ Channels only the founder can post to, for the outside signals a young domain ne
 - Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers: not tried.
 
 Settled when the channels are chosen and tried.
-
-## A social image per post
-
-2026-11-19 · traffic review
-
-Every post and page shares one `og:image`, `/img/checkmeup-og.png`, so a guide's link in Slack, X or LinkedIn previews as the product rather than the article. A per-post image with the post's title, rendered at prerender time (`apps/web/scripts/prerender.mts`), would make shared links read as articles. PRD social-images, agreed on 2026-11-21, covers every public page but `/`. Settled when it is built or dropped.

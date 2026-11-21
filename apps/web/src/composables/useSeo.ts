@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue'
 import { toValue } from 'vue'
 
 const SITE_URL = 'https://checkmeup.net'
-const DEFAULT_OG_IMAGE = `${SITE_URL}/img/checkmeup-og.png`
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/img/checkmeup-og.png`
 
 interface SeoOptions {
   title: MaybeRefOrGetter<string>
@@ -24,13 +24,21 @@ export function canonicalUrl(path: string): string {
   return `${SITE_URL}${trimmed || '/'}`
 }
 
+// A page's own Open Graph image, which scripts/prerender.mts renders from its
+// <h1> at build time (PRD social-images); `/` keeps the hand-made card. The
+// URL follows the page's path alone, so it stays the same from build to build.
+export function socialImageUrl(path: string): string {
+  const page = canonicalUrl(path).slice(SITE_URL.length)
+  return page === '/' ? DEFAULT_OG_IMAGE : `${SITE_URL}/img/og${page}.png`
+}
+
 // Centralizes the per-page <title>/description/OG/canonical tags every
 // marketing and blog view needs — @unhead/vue only updates the live DOM
 // (no SSR here), so this fixes Google indexing and browser tab titles but
 // not social-card unfurls for links shared before a crawl (see SEO thread).
 export function useSeo({ title, description, path, image }: SeoOptions) {
   const url = () => canonicalUrl(toValue(path))
-  const ogImage = () => toValue(image) ?? DEFAULT_OG_IMAGE
+  const ogImage = () => toValue(image) ?? socialImageUrl(toValue(path))
 
   useSeoMeta({
     title,

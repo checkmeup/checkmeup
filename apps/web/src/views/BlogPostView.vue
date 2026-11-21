@@ -6,7 +6,7 @@ import LandingLayout from '@/layouts/LandingLayout.vue'
 import NotFoundHero from '@/components/NotFoundHero.vue'
 import type { BlogPost } from '@/blog/posts'
 import { getPost, loadedPost } from '@/blog/posts'
-import { useSeo } from '@/composables/useSeo'
+import { socialImageUrl, useSeo } from '@/composables/useSeo'
 
 const route = useRoute()
 const slug = () => route.params.slug as string
@@ -88,6 +88,7 @@ const articleSchema = computed(() => {
     '@type': 'Article',
     headline: post.value.title,
     description: post.value.excerpt,
+    image: socialImageUrl(`/blog/${post.value.slug}`),
     datePublished: publishedAt,
     dateModified: publishedAt,
     author: { '@type': 'Person', name: 'Andrew Molyuk', url: 'https://checkmeup.net/about' },
