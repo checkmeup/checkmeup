@@ -142,44 +142,55 @@ func describeCron(fields []string) string {
 }
 
 func describeCronTime(minute, hour string) string {
-	switch {
-	case isCronNumber(minute) && isCronNumber(hour):
-		return "At " + cronClock(hour, minute)
-	case isCronNumber(minute) && isCronList(hour):
-		times := strings.Split(hour, ",")
-		for i, h := range times {
-			times[i] = cronClock(h, minute)
-		}
-		return "At " + joinAnd(times)
-	case minute == "*" && hour == "*":
-		return "Every minute"
-	case minute == "0" && hour == "*":
-		return "Every hour"
-	case isCronNumber(minute) && hour == "*":
-		return fmt.Sprintf("At %s past every hour", plural(minute, "minute", "minutes"))
-	case minute == "0" && isCronStep(hour, "*"):
-		return "Every " + plural(cronStepOf(hour), "hour", "hours")
+	if desc, ok := describeCronCommonTime(minute, hour); ok {
+		return desc
 	}
 	desc := describeCronField(minute, cronUnits[0])
 	if !strings.HasPrefix(desc, "every ") {
 		desc = "at " + desc
 	}
-	desc = strings.ToUpper(desc[:1]) + desc[1:]
+	return strings.ToUpper(desc[:1]) + desc[1:] + describeCronHours(hour)
+}
+
+// describeCronCommonTime reads the minute and hour together where they make
+// a plain phrase: a clock time, "Every hour", "Every 2 hours".
+func describeCronCommonTime(minute, hour string) (string, bool) {
+	switch {
+	case isCronNumber(minute) && isCronList(hour):
+		times := strings.Split(hour, ",")
+		for i, h := range times {
+			times[i] = cronClock(h, minute)
+		}
+		return "At " + joinAnd(times), true
+	case minute == "*" && hour == "*":
+		return "Every minute", true
+	case minute == "0" && hour == "*":
+		return "Every hour", true
+	case isCronNumber(minute) && hour == "*":
+		return fmt.Sprintf("At %s past every hour", plural(minute, "minute", "minutes")), true
+	case minute == "0" && isCronStep(hour, "*"):
+		return "Every " + plural(cronStepOf(hour), "hour", "hours"), true
+	}
+	return "", false
+}
+
+// describeCronHours is the hour field after a minute phrase: ", between
+// 09:00 and 17:59", ", every 3 hours", or nothing for "*".
+func describeCronHours(hour string) string {
 	switch {
 	case hour == "*":
+		return ""
 	case isCronNumber(hour):
-		desc += ", between " + cronClock(hour, "0") + " and " + cronClock(hour, "59")
+		return ", between " + cronClock(hour, "0") + " and " + cronClock(hour, "59")
 	case isCronRange(hour):
 		lo, hi, _ := strings.Cut(hour, "-")
-		desc += ", between " + cronClock(lo, "0") + " and " + cronClock(hi, "59")
-	default:
-		h := describeCronField(hour, cronUnits[1])
-		if !strings.HasPrefix(h, "every ") {
-			h = "during " + h
-		}
-		desc += ", " + h
+		return ", between " + cronClock(lo, "0") + " and " + cronClock(hi, "59")
 	}
-	return desc
+	h := describeCronField(hour, cronUnits[1])
+	if !strings.HasPrefix(h, "every ") {
+		h = "during " + h
+	}
+	return ", " + h
 }
 
 // describeCronDays describes the day-of-month and day-of-week fields. When
