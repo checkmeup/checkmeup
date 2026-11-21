@@ -84,7 +84,7 @@ async function socialImageHead(path: string, title: string | null) {
     console.warn(`No social image for ${path}, keeping the homepage card: ${reason}`)
     return homepageCard
   }
-  if (!title) return fallBack('no <h1>')
+  if (!title) return fallBack('no h1 heading')
   try {
     const png = await renderSocialImage(title, socialImageLabel(path))
     if (!png) return fallBack(`"${title}" doesn't fit 3 lines`)
