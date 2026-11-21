@@ -38,7 +38,7 @@ The review recommended the worker first, as alerting is the core of the product,
 
 2026-10-17 · traffic review · kept 2026-11-13
 
-Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Launch and directory listings"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools), and the DNS lookup followed on 2026-10-31 (`/tools/dns-lookup`); TCP port and the cron explainer remain, waiting on the tools' 2026-12-15 success signal. Settled when the rest are built or dropped.
+Public, no-account checkers people search for: SSL certificate, domain expiry (RDAP/WHOIS), DNS lookup, TCP port, cron expression explainer. The backend already has `rdap`, `whois` and the worker's checks; each result offers to monitor it automatically. Also linkable assets for directories and Show HN (see "Launch and directory listings"). Needs per-IP rate limits and SSRF-safe targets. SSL and domain expiry checkers came first (PRD free-tools), the DNS lookup followed on 2026-10-31 (`/tools/dns-lookup`), and the cron explainer on 2026-11-21 (`/tools/cron-expression`), the one that leads to cron monitoring, the product's core. Only the TCP port checker remains, a non-goal of PRD free-tools for now, waiting on the tools' 2026-12-15 success signal. Settled when it is built or dropped.
 
 ## Stack-specific cron guides
 
