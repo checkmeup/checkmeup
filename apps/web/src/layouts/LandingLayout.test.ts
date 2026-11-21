@@ -57,6 +57,7 @@ describe('LandingLayout', () => {
     expect(hrefs).toContain('/tools/ssl-checker')
     expect(hrefs).toContain('/tools/domain-expiry-checker')
     expect(hrefs).toContain('/tools/dns-lookup')
+    expect(hrefs).toContain('/tools/cron-expression')
   })
 
   it('links every monitor type page from the footer', async () => {

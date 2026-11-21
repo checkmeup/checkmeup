@@ -69,6 +69,11 @@ export const routes: RouteRecordRaw[] = [
     name: 'dns-lookup',
     component: () => import('@/views/DNSLookupView.vue'),
   },
+  {
+    path: '/tools/cron-expression',
+    name: 'cron-expression',
+    component: () => import('@/views/CronExpressionView.vue'),
+  },
   // One product page per monitor type (PRD marketing-pages). The type list is
   // written out here rather than read from content/monitorPages.ts, so the
   // page content stays in the view's lazy chunk.

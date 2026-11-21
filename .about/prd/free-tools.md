@@ -72,14 +72,26 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - Every tool page is linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
 - Five whitespace-separated fields that the cron monitor's schedule parser reads get a plain-English description and the next five times the schedule fires after the request, with no grace period; `*/5 * * * *` reads "Every 5 minutes", `0 9 * * 1-5` "At 09:00, Monday through Friday", and each common expression has a description of its own.
+  → test: apps/api/internal/handler/tools_test.go "TestExplainCron_DescribesTheExpressionAndListsItsNextFiveRuns"
+  → test: apps/api/internal/handler/tools_test.go "TestExplainCron_DescribesEachCommonExpression"
+  → test: apps/api/internal/handler/cronexpr_test.go "TestDescribeCron"
 - Anything else (not 5 fields, a value out of range, an unknown name, an `every` interval, a `CRON_TZ=` prefix) gets `400` with the reason, naming the field where there is one ("Minute: 60 is above the maximum, 59"), and no run times.
+  → test: apps/api/internal/handler/tools_test.go "TestExplainCron_RefusesWhatTheScheduleParserCantRead"
+  → test: apps/web/src/components/CronExpressionChecker.test.ts "shows why an expression is not valid instead of a result"
 - For the same expression and start time, the first run time plus the monitor's grace period is when the cron monitor expects its next ping.
+  → test: apps/api/internal/handler/tools_test.go "TestExplainCron_TheFirstRunIsWhenACronMonitorExpectsItsPing"
 - Each run time shows in UTC and in the browser's time zone.
+  → test: apps/web/src/components/CronExpressionChecker.test.ts "explains the expression a moment after typing stops, with its runs in UTC and an offer to monitor it"
 - One IP gets at most 60 explanations a minute; past it, `429` with `Retry-After`, and the page says to try again in a minute.
+  → test: apps/api/internal/server/server_test.go "TestRoutes_FreeToolsAreRateLimited/sixty cron explanations a minute per IP"
+  → test: apps/web/src/lib/toolCheck.test.ts "says to try again in a minute when rate limited"
 - Clicking a common expression puts it in the input and shows its result.
+  → test: apps/web/src/components/CronExpressionChecker.test.ts "puts a common expression in the input and explains it at once"
 - The page names each of the five fields with its allowed values, gives an example of each of `*`, `,`, `-` and `/`, and answers: what a cron expression is, which time zone cron uses, how to run a job every N minutes, why day-of-month and day-of-week together mean either, and how to know a cron job stopped running; as FAQPage JSON-LD with the same text.
+  → test: apps/web/src/views/CronExpressionView.test.ts "names each field with its allowed values and gives an example of each special character"
+  → test: apps/web/src/views/CronExpressionView.test.ts "answers every cron expression question on the page"
+  → test: apps/web/src/views/CronExpressionView.test.ts "emits FAQPage JSON-LD with the same questions and answers"
 
 ## Open questions
-
 
 - An expired or untrusted certificate shows the TLS error, not its expiry date and issuer, since the check verifies the chain as monitors do. Settled when it's judged fine, or the tool reads the certificate without verifying it.

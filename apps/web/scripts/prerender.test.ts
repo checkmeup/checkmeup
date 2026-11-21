@@ -80,7 +80,12 @@ const LANDING_PATHS = [
   '/blog',
   '/changelog',
 ]
-const TOOL_PATHS = ['/tools/ssl-checker', '/tools/domain-expiry-checker', '/tools/dns-lookup']
+const TOOL_PATHS = [
+  '/tools/ssl-checker',
+  '/tools/domain-expiry-checker',
+  '/tools/dns-lookup',
+  '/tools/cron-expression',
+]
 
 describe('prerender', () => {
   it('serves every landing page with an <h1> and its own title and Open Graph tags', () => {

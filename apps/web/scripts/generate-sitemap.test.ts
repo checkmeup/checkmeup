@@ -41,5 +41,6 @@ describe('generate-sitemap', () => {
     expect(locs).toContain('https://checkmeup.net/tools/ssl-checker')
     expect(locs).toContain('https://checkmeup.net/tools/domain-expiry-checker')
     expect(locs).toContain('https://checkmeup.net/tools/dns-lookup')
+    expect(locs).toContain('https://checkmeup.net/tools/cron-expression')
   })
 })

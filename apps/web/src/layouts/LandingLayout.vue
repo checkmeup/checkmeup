@@ -44,6 +44,7 @@ const footerColumns = [
       { to: '/tools/ssl-checker', label: 'SSL checker' },
       { to: '/tools/domain-expiry-checker', label: 'Domain expiry checker' },
       { to: '/tools/dns-lookup', label: 'DNS lookup' },
+      { to: '/tools/cron-expression', label: 'Cron expression explainer' },
       { to: '/alternatives/healthchecks-io', label: 'vs Healthchecks.io' },
       { to: '/alternatives/uptimerobot', label: 'vs UptimeRobot' },
       { to: '/alternatives/cronitor', label: 'vs Cronitor' },
