@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CronExpressionChecker from './CronExpressionChecker.vue'
 import { commonCronExpressions } from '@/content/cronExpression'
+import { trackToolCheck } from '@/lib/analytics'
+
+vi.mock('@/lib/analytics', () => ({ trackToolCheck: vi.fn(() => true) }))
 
 const RouterLinkStub = { name: 'RouterLink', props: ['to'], template: '<a :href="to"><slot /></a>' }
 
@@ -33,13 +36,18 @@ async function mountChecker() {
   return wrapper
 }
 
+const TZ = process.env.TZ
+
 beforeEach(() => {
   vi.useFakeTimers()
+  vi.mocked(trackToolCheck).mockClear()
+  vi.mocked(trackToolCheck).mockReturnValue(true)
 })
 
 afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  process.env.TZ = TZ
 })
 
 describe('CronExpressionChecker', () => {
@@ -65,7 +73,6 @@ describe('CronExpressionChecker', () => {
       'Thu, Nov 26, 2026, 09:00',
       'Fri, Nov 27, 2026, 09:00',
     ])
-    expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(2)
     expect(wrapper.find('a[href="/sign-up"]').text()).toContain('Monitor it free')
   })
 
@@ -85,10 +92,51 @@ describe('CronExpressionChecker', () => {
     const button = wrapper.findAll('button').find((b) => b.text() === '0 9 * * 1-5')
     await button!.trigger('click')
     await flushPromises()
+    await vi.advanceTimersByTimeAsync(400)
 
     expect((wrapper.find('input').element as HTMLInputElement).value).toBe('0 9 * * 1-5')
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(wrapper.find('[data-test="description"]').text()).toBe('At 09:00, Monday through Friday')
     expect(wrapper.findAll('button').map((b) => b.text())).toEqual(commonCronExpressions)
+  })
+
+  it("shows each run in the browser's time zone beside UTC", async () => {
+    process.env.TZ = 'Asia/Tokyo'
+    stubFetch(weekdays)
+    const wrapper = await mountChecker()
+
+    expect(wrapper.findAll('thead th')[1].text()).toBe('Your time (Asia/Tokyo)')
+    expect(wrapper.findAll('tbody tr')[0].findAll('td')[1].text()).toBe('Mon, Nov 23, 2026, 18:00')
+  })
+
+  it("counts the visitor's first own explanation in GA4, not the example on page load", async () => {
+    stubFetch(weekdays)
+    const wrapper = await mountChecker()
+    expect(trackToolCheck).not.toHaveBeenCalled()
+
+    await wrapper.find('input').setValue('0 9 * * 1-5')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await wrapper.find('input').setValue('0 10 * * 1-5')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+
+    expect(trackToolCheck).toHaveBeenCalledTimes(1)
+    expect(trackToolCheck).toHaveBeenCalledWith('cron', true)
+  })
+
+  it('counts a later explanation when the first went unsent before consent', async () => {
+    vi.mocked(trackToolCheck).mockReturnValueOnce(false)
+    stubFetch(weekdays)
+    const wrapper = await mountChecker()
+
+    await wrapper.find('input').setValue('0 9 * * 1-5')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await wrapper.find('input').setValue('0 10 * * 1-5')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+
+    expect(trackToolCheck).toHaveBeenCalledTimes(2)
   })
 })

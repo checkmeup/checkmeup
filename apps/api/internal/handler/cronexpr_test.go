@@ -2,7 +2,7 @@ package handler
 
 import "testing"
 
-func TestDescribeCron(t *testing.T) {
+func TestDescribeCron_ReadsEachShapeOfExpressionInPlainEnglish(t *testing.T) {
 	cases := map[string]string{
 		"* * * * *":        "Every minute",
 		"*/1 * * * *":      "Every minute",
@@ -27,13 +27,14 @@ func TestDescribeCron(t *testing.T) {
 		"10-50/20 * * * *": "Every 20 minutes from 10 through 50",
 	}
 	for expr, want := range cases {
-		_, fields, err := parseCronExpression(expr)
-		if err != nil {
-			t.Errorf("%q: %v", expr, err)
-			continue
-		}
-		if got := describeCron(fields); got != want {
-			t.Errorf("%q: got %q, want %q", expr, got, want)
-		}
+		t.Run(expr, func(t *testing.T) {
+			_, fields, err := parseCronExpression(expr)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if got := describeCron(fields); got != want {
+				t.Fatalf("got %q, want %q", got, want)
+			}
+		})
 	}
 }

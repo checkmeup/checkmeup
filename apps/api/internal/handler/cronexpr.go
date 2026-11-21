@@ -60,7 +60,7 @@ func parseCronExpression(expr string) (cron.Schedule, []string, error) {
 	}
 	sched, err := cronParser.Parse(strings.Join(fields, " "))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("can't read this expression: %s", readableCronError(err))
 	}
 	if sched.Next(time.Now()).IsZero() {
 		return nil, nil, fmt.Errorf("this schedule never runs: none of its months has that day")

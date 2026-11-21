@@ -292,7 +292,7 @@ func TestExplainCron_DescribesTheExpressionAndListsItsNextFiveRuns(t *testing.T)
 		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
 	}
 	if got.Expression != "0 9 * * MON-FRI" || got.Description != "At 09:00, Monday through Friday" {
-		t.Fatalf("got %q, %q", got.Expression, got.Description)
+		t.Fatalf("got %q, %q; want %q, %q", got.Expression, got.Description, "0 9 * * MON-FRI", "At 09:00, Monday through Friday")
 	}
 	want := []time.Time{
 		time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC),
@@ -322,9 +322,11 @@ func TestExplainCron_DescribesEachCommonExpression(t *testing.T) {
 	}
 	h := NewToolsHandler(nil, nil)
 	for expr, want := range cases {
-		if w, got := explainCron(t, h, expr); w.Code != http.StatusOK || got.Description != want {
-			t.Errorf("%q: status %d, description %q, want %q", expr, w.Code, got.Description, want)
-		}
+		t.Run(expr, func(t *testing.T) {
+			if w, got := explainCron(t, h, expr); w.Code != http.StatusOK || got.Description != want {
+				t.Fatalf("status %d, description %q; want %d, %q", w.Code, got.Description, http.StatusOK, want)
+			}
+		})
 	}
 }
 
@@ -343,14 +345,15 @@ func TestExplainCron_RefusesWhatTheScheduleParserCantRead(t *testing.T) {
 	}
 	h := NewToolsHandler(nil, nil)
 	for expr, want := range cases {
-		w, _ := explainCron(t, h, expr)
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("%q: status = %d, want %d", expr, w.Code, http.StatusBadRequest)
-			continue
-		}
-		if got := errorMessage(t, w); got != want {
-			t.Errorf("%q: error = %q, want %q", expr, got, want)
-		}
+		t.Run(expr, func(t *testing.T) {
+			w, _ := explainCron(t, h, expr)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+			if got := errorMessage(t, w); got != want {
+				t.Fatalf("error = %q, want %q", got, want)
+			}
+		})
 	}
 }
 
@@ -360,10 +363,12 @@ func TestExplainCron_TheFirstRunIsWhenACronMonitorExpectsItsPing(t *testing.T) {
 	h.now = func() time.Time { return now }
 	const grace = 5
 	for _, expr := range []string{"*/5 * * * *", "0 9 * * 1-5", "15 3 1 * *", "0 0 1 1 *"} {
-		_, got := explainCron(t, h, expr)
-		want := computeNextPing(expr, now, grace)
-		if len(got.Runs) == 0 || !got.Runs[0].Add(grace*time.Minute).Equal(want) {
-			t.Errorf("%q: first run %v plus grace, want the monitor's %v", expr, got.Runs, want)
-		}
+		t.Run(expr, func(t *testing.T) {
+			_, got := explainCron(t, h, expr)
+			want := computeNextPing(expr, now, grace)
+			if len(got.Runs) == 0 || !got.Runs[0].Add(grace*time.Minute).Equal(want) {
+				t.Fatalf("first run %v plus grace, want the monitor's %v", got.Runs, want)
+			}
+		})
 	}
 }

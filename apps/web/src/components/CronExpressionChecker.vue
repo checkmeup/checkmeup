@@ -25,16 +25,20 @@ const error = ref('')
 const localZone = ref('')
 let timer: ReturnType<typeof setTimeout> | undefined
 let latest = 0
+let asked = ''
 let tracked = false
 
-async function explain() {
+// byVisitor is false for the example explained on page load, which GA4
+// shouldn't count as a use of the tool.
+async function explain(byVisitor: boolean) {
   const expression = value.value.trim()
+  asked = expression
+  const request = ++latest
   if (!expression) {
     result.value = null
     error.value = ''
     return
   }
-  const request = ++latest
   const outcome = await runToolCheck<CronResult>('/api/v1/tools/cron', 'expression', expression)
   // An answer to an older keystroke arriving late doesn't replace a newer one.
   if (request !== latest) return
@@ -47,26 +51,25 @@ async function explain() {
   }
   // Once per page view: every pause in typing is a request, and GA4 should
   // count visitors who used the tool, not their keystrokes.
-  if (!tracked) {
-    trackToolCheck('cron', outcome.ok)
-    tracked = true
-  }
+  if (byVisitor && !tracked) tracked = trackToolCheck('cron', outcome.ok)
 }
 
 function pick(expression: string) {
   clearTimeout(timer)
   value.value = expression
-  explain()
+  void explain(true)
 }
 
-watch(value, () => {
+watch(value, (v) => {
   clearTimeout(timer)
-  timer = setTimeout(explain, DEBOUNCE_MS)
+  // A picked expression is already being explained.
+  if (v.trim() === asked) return
+  timer = setTimeout(() => void explain(true), DEBOUNCE_MS)
 })
 
 onMounted(() => {
   localZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone
-  explain()
+  void explain(false)
 })
 
 onBeforeUnmount(() => clearTimeout(timer))

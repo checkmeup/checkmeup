@@ -40,8 +40,10 @@ export function trackSignUp() {
 }
 
 // A run of a free checker (PRD free-tools), so GA4 can count tool use beside
-// the sign-ups that follow it.
-export function trackToolCheck(tool: string, ok: boolean) {
-  if (!loaded) return
+// the sign-ups that follow it. Says whether it was sent: nothing is before
+// the visitor accepts the consent banner.
+export function trackToolCheck(tool: string, ok: boolean): boolean {
+  if (!loaded) return false
   window.dataLayer?.push({ event: 'tool_check', tool, outcome: ok ? 'ok' : 'error' })
+  return true
 }

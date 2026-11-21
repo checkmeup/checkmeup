@@ -74,7 +74,7 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 - Five whitespace-separated fields that the cron monitor's schedule parser reads get a plain-English description and the next five times the schedule fires after the request, with no grace period; `*/5 * * * *` reads "Every 5 minutes", `0 9 * * 1-5` "At 09:00, Monday through Friday", and each common expression has a description of its own.
   → test: apps/api/internal/handler/tools_test.go "TestExplainCron_DescribesTheExpressionAndListsItsNextFiveRuns"
   → test: apps/api/internal/handler/tools_test.go "TestExplainCron_DescribesEachCommonExpression"
-  → test: apps/api/internal/handler/cronexpr_test.go "TestDescribeCron"
+  → test: apps/api/internal/handler/cronexpr_test.go "TestDescribeCron_ReadsEachShapeOfExpressionInPlainEnglish"
 - Anything else (not 5 fields, a value out of range, an unknown name, an `every` interval, a `CRON_TZ=` prefix) gets `400` with the reason, naming the field where there is one ("Minute: 60 is above the maximum, 59"), and no run times.
   → test: apps/api/internal/handler/tools_test.go "TestExplainCron_RefusesWhatTheScheduleParserCantRead"
   → test: apps/web/src/components/CronExpressionChecker.test.ts "shows why an expression is not valid instead of a result"
@@ -82,6 +82,7 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
   → test: apps/api/internal/handler/tools_test.go "TestExplainCron_TheFirstRunIsWhenACronMonitorExpectsItsPing"
 - Each run time shows in UTC and in the browser's time zone.
   → test: apps/web/src/components/CronExpressionChecker.test.ts "explains the expression a moment after typing stops, with its runs in UTC and an offer to monitor it"
+  → test: apps/web/src/components/CronExpressionChecker.test.ts "shows each run in the browser's time zone beside UTC"
 - One IP gets at most 60 explanations a minute; past it, `429` with `Retry-After`, and the page says to try again in a minute.
   → test: apps/api/internal/server/server_test.go "TestRoutes_FreeToolsAreRateLimited/sixty cron explanations a minute per IP"
   → test: apps/web/src/lib/toolCheck.test.ts "says to try again in a minute when rate limited"
