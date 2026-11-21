@@ -268,3 +268,102 @@ func TestCheckDNS_AFailedLookupGivesItsReason(t *testing.T) {
 		}
 	})
 }
+
+func explainCron(t *testing.T, h *ToolsHandler, expr string) (*httptest.ResponseRecorder, cronToolResponse) {
+	t.Helper()
+	w := toolRequest(t, h.ExplainCron, "/api/v1/tools/cron", "expression", expr)
+	var got cronToolResponse
+	if w.Code == http.StatusOK {
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+	}
+	return w, got
+}
+
+func TestExplainCron_DescribesTheExpressionAndListsItsNextFiveRuns(t *testing.T) {
+	h := NewToolsHandler(nil, nil)
+	// A Friday, so the weekday schedule's next runs skip the weekend.
+	h.now = func() time.Time { return time.Date(2026, 11, 20, 9, 30, 0, 0, time.UTC) }
+
+	w, got := explainCron(t, h, "  0 9 * * MON-FRI ")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if got.Expression != "0 9 * * MON-FRI" || got.Description != "At 09:00, Monday through Friday" {
+		t.Fatalf("got %q, %q", got.Expression, got.Description)
+	}
+	want := []time.Time{
+		time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC),
+		time.Date(2026, 11, 24, 9, 0, 0, 0, time.UTC),
+		time.Date(2026, 11, 25, 9, 0, 0, 0, time.UTC),
+		time.Date(2026, 11, 26, 9, 0, 0, 0, time.UTC),
+		time.Date(2026, 11, 27, 9, 0, 0, 0, time.UTC),
+	}
+	if len(got.Runs) != len(want) {
+		t.Fatalf("runs = %v, want %v", got.Runs, want)
+	}
+	for i := range want {
+		if !got.Runs[i].Equal(want[i]) {
+			t.Fatalf("runs = %v, want %v", got.Runs, want)
+		}
+	}
+}
+
+func TestExplainCron_DescribesEachCommonExpression(t *testing.T) {
+	cases := map[string]string{
+		"*/5 * * * *": "Every 5 minutes",
+		"0 * * * *":   "Every hour",
+		"0 0 * * *":   "At 00:00, every day",
+		"0 9 * * 1-5": "At 09:00, Monday through Friday",
+		"0 0 * * 0":   "At 00:00, on Sunday",
+		"0 0 1 * *":   "At 00:00, on day 1 of the month",
+	}
+	h := NewToolsHandler(nil, nil)
+	for expr, want := range cases {
+		if w, got := explainCron(t, h, expr); w.Code != http.StatusOK || got.Description != want {
+			t.Errorf("%q: status %d, description %q, want %q", expr, w.Code, got.Description, want)
+		}
+	}
+}
+
+func TestExplainCron_RefusesWhatTheScheduleParserCantRead(t *testing.T) {
+	cases := map[string]string{
+		"":                    "a cron expression has 5 fields (minute, hour, day of month, month, day of week), this one has 0",
+		"0 9 * *":             "a cron expression has 5 fields (minute, hour, day of month, month, day of week), this one has 4",
+		"60 * * * *":          "Minute: 60 is above the maximum, 59",
+		"0 9 * * 7":           "Day of week: 7 is above the maximum, 6",
+		"0 9 * FOO *":         `Month: "FOO" isn't a number or a name cron knows`,
+		"every 1h":            "a cron expression has 5 fields (minute, hour, day of month, month, day of week), this one has 2",
+		"CRON_TZ=UTC 0 * * *": `Minute: "CRON_TZ=UTC" isn't a value cron reads`,
+		"@hourly":             "a cron expression has 5 fields (minute, hour, day of month, month, day of week), this one has 1",
+		"0 0 30 2 *":          "this schedule never runs: none of its months has that day",
+		"0 0 * * * *":         "a cron expression has 5 fields (minute, hour, day of month, month, day of week), this one has 6",
+	}
+	h := NewToolsHandler(nil, nil)
+	for expr, want := range cases {
+		w, _ := explainCron(t, h, expr)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("%q: status = %d, want %d", expr, w.Code, http.StatusBadRequest)
+			continue
+		}
+		if got := errorMessage(t, w); got != want {
+			t.Errorf("%q: error = %q, want %q", expr, got, want)
+		}
+	}
+}
+
+func TestExplainCron_TheFirstRunIsWhenACronMonitorExpectsItsPing(t *testing.T) {
+	now := time.Date(2026, 11, 21, 14, 7, 0, 0, time.UTC)
+	h := NewToolsHandler(nil, nil)
+	h.now = func() time.Time { return now }
+	const grace = 5
+	for _, expr := range []string{"*/5 * * * *", "0 9 * * 1-5", "15 3 1 * *", "0 0 1 1 *"} {
+		_, got := explainCron(t, h, expr)
+		want := computeNextPing(expr, now, grace)
+		if len(got.Runs) == 0 || !got.Runs[0].Add(grace*time.Minute).Equal(want) {
+			t.Errorf("%q: first run %v plus grace, want the monitor's %v", expr, got.Runs, want)
+		}
+	}
+}

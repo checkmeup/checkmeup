@@ -617,10 +617,10 @@ func validateSchedule(s string) error {
 		return nil
 	}
 
-	// Cron expression: 5 whitespace-separated fields
-	fields := strings.Fields(s)
-	if len(fields) == 5 {
-		return nil
+	// Cron expression: 5 fields the schedule parser reads, or the field it can't
+	if len(strings.Fields(s)) == 5 {
+		_, _, err := parseCronExpression(s)
+		return err
 	}
 
 	return fmt.Errorf("schedule must be a cron expression (e.g. \"0 * * * *\") or interval (e.g. \"every 1h\")")

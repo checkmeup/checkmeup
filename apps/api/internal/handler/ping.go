@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/robfig/cron/v3"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
@@ -188,8 +187,7 @@ func computeNextPing(schedule string, now time.Time, graceMins int) time.Time {
 	}
 
 	// Cron expression — use robfig/cron to find the next fire time.
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	sched, err := parser.Parse(schedule)
+	sched, err := cronParser.Parse(schedule)
 	if err == nil {
 		next := sched.Next(now)
 		return next.Add(time.Duration(graceMins) * time.Minute)

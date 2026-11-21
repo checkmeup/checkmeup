@@ -225,6 +225,17 @@ func TestRoutes_FreeToolsAreRateLimited(t *testing.T) {
 			t.Fatalf("31st lookup: status = %d, want %d", code, http.StatusTooManyRequests)
 		}
 	})
+
+	t.Run("sixty cron explanations a minute per IP", func(t *testing.T) {
+		for i := 1; i <= 60; i++ {
+			if code := get("/api/v1/tools/cron?expression=", "203.0.113.30"); code != http.StatusBadRequest {
+				t.Fatalf("explanation %d: status = %d, want %d", i, code, http.StatusBadRequest)
+			}
+		}
+		if code := get("/api/v1/tools/cron?expression=", "203.0.113.30"); code != http.StatusTooManyRequests {
+			t.Fatalf("61st explanation: status = %d, want %d", code, http.StatusTooManyRequests)
+		}
+	})
 }
 
 func TestRoutes_PublicHealthDoesNotRequireAuth(t *testing.T) {

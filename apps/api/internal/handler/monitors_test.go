@@ -658,6 +658,8 @@ func TestValidateSchedule(t *testing.T) {
 		{"interval hours", "every 12h", false},
 		{"five-field cron", "0 9 * * *", false},
 		{"wrong field count", "0 9 * *", true},
+		{"a minute out of range", "60 9 * * *", true},
+		{"a day no month has", "0 0 31 2 *", true},
 		{"gibberish", "whenever I feel like it doing stuff", true},
 	}
 	for _, tc := range cases {
@@ -668,6 +670,13 @@ func TestValidateSchedule(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("names the field it can't read", func(t *testing.T) {
+		err := validateSchedule("60 9 * * *")
+		if err == nil || err.Error() != "Minute: 60 is above the maximum, 59" {
+			t.Fatalf("error = %v, want the minute field named", err)
+		}
+	})
 }
 
 func seedCronPing(t *testing.T, pool *pgxpool.Pool, monitorID string, receivedAt time.Time, sourceIP string) {

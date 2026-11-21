@@ -15,21 +15,23 @@ import (
 )
 
 // ToolsHandler serves the free, no-sign-up SSL, domain expiry and DNS
-// checkers (PRD free-tools): one live check per request, through the same
-// TLS check, RDAP/WHOIS lookup and DNS resolver the worker runs for
-// monitors. Nothing is stored.
+// checkers and the cron expression explainer (PRD free-tools): one live
+// check per request, through the same TLS check, RDAP/WHOIS lookup, DNS
+// resolver and schedule parser monitors use. Nothing is stored.
 type ToolsHandler struct {
 	rdap      *rdap.Client
 	whois     *whois.Client
 	checkTLS  func(hostname string) (time.Time, string, int, error)
 	lookupDNS func(ctx context.Context, hostname string) []worker.DNSRecordSet
+	now       func() time.Time
 }
 
 func NewToolsHandler(rd *rdap.Client, wi *whois.Client) *ToolsHandler {
 	return &ToolsHandler{rdap: rd, whois: wi, checkTLS: worker.CheckTLS,
 		lookupDNS: func(ctx context.Context, hostname string) []worker.DNSRecordSet {
 			return worker.LookupAllDNS(ctx, net.DefaultResolver, hostname)
-		}}
+		},
+		now: time.Now}
 }
 
 type sslToolResponse struct {
@@ -42,6 +44,12 @@ type sslToolResponse struct {
 type dnsToolResponse struct {
 	Host    string                `json:"host"`
 	Records []worker.DNSRecordSet `json:"records"`
+}
+
+type cronToolResponse struct {
+	Expression  string      `json:"expression"`
+	Description string      `json:"description"`
+	Runs        []time.Time `json:"runs"`
 }
 
 type domainToolResponse struct {
@@ -120,4 +128,29 @@ func (h *ToolsHandler) CheckDNS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	respond.Error(w, http.StatusUnprocessableEntity, reason, "check_failed")
+}
+
+// cronToolRuns is how many upcoming run times the cron explainer lists.
+const cronToolRuns = 5
+
+// ExplainCron handles GET /api/v1/tools/cron?expression=: what a cron
+// expression means and when it next fires in UTC, the times a cron monitor
+// with that schedule expects, before its grace period.
+func (h *ToolsHandler) ExplainCron(w http.ResponseWriter, r *http.Request) {
+	sched, fields, err := parseCronExpression(r.URL.Query().Get("expression"))
+	if err != nil {
+		respond.Error(w, http.StatusBadRequest, err.Error(), "bad_request")
+		return
+	}
+	runs := make([]time.Time, 0, cronToolRuns)
+	t := h.now().UTC()
+	for range cronToolRuns {
+		t = sched.Next(t)
+		runs = append(runs, t)
+	}
+	respond.JSON(w, http.StatusOK, cronToolResponse{
+		Expression:  strings.Join(fields, " "),
+		Description: describeCron(fields),
+		Runs:        runs,
+	})
 }

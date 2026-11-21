@@ -177,6 +177,9 @@ func (s *Server) buildRouter() *chi.Mux {
 			httprate.LimitBy(5, time.Minute, clientIPKey),
 			httprate.LimitBy(30, time.Minute, httprate.Key("*")),
 		).Get("/tools/domain", tools.CheckDomain)
+		// The cron explainer only parses: no outside call, and the page asks as
+		// the visitor types, so its limit is higher than the checkers'.
+		r.With(httprate.LimitBy(60, time.Minute, clientIPKey)).Get("/tools/cron", tools.ExplainCron)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.With(httprate.LimitBy(5, time.Hour, clientIPKey)).Post("/sign-up", auth.SignUp)
