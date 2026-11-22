@@ -59,7 +59,10 @@ describe('socialImageNode', () => {
   })
 
   it('leaves the label out on a page without one', () => {
-    expect(texts(socialImageNode('Pricing', null, 72))).toHaveLength(3)
+    const labelled = texts(socialImageNode('Pricing', 'Article', 72))
+    expect(texts(socialImageNode('Pricing', null, 72))).toEqual(
+      labelled.filter((t) => t !== 'Article'),
+    )
   })
 })
 
