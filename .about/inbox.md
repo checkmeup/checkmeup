@@ -24,3 +24,9 @@ Channels only the founder can post to, for the outside signals a young domain ne
 - Product Hunt, Reddit (r/webdev, r/selfhosted, r/freelance), Indie Hackers: not tried.
 
 Settled when the channels are chosen and tried.
+
+## Idea: an email authentication monitor
+
+2026-11-22 · chainofsale session
+
+The DNS monitor compares a record's text, not whether it is right (the DNS record monitoring guide says so), so a broken SPF string or a DMARC record left at `p=none` reads as fine. A monitor for a domain could check the records themselves: DMARC present and its policy, SPF valid and within its 10 DNS lookups, a DKIM selector the user names published. It is cheap on top of the DNS worker, and a DNS monitor already accepts `_dmarc.<domain>` today. MXToolbox, dmarcian, EasyDMARC and Postmark offer the checks; their core is reading DMARC aggregate reports, which would be a product of its own and stays out. Settled by deciding whether it is worth a PRD, from whether "SPF checker" or "DMARC checker" searches would bring traffic as a free tool first.
