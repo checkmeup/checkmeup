@@ -27,6 +27,16 @@ export const postsMeta: BlogPostMetaEntry[] = [
       'A scheduled GitHub Actions workflow can stop without ever failing: disabled after 60 days, delayed, or never queued. How to notice when it does.',
   },
   {
+    file: 'v1-61-to-v1-72-ssl-error-alerts',
+    slug: 'v1-61-to-v1-72-ssl-error-alerts',
+    kind: 'release',
+    title: 'v1.61–v1.72: SSL Errors Alert, Two New Free Tools',
+    date: 'November 22, 2026',
+    readTime: '5 min read',
+    excerpt:
+      "An expired or invalid certificate, or nothing answering on port 443, now sends an SSL alert instead of only showing Error. Alerts go out apart from the check, so a slow channel delays no other monitor, and deploys no longer cut checks or alerts off. Also: a free DNS lookup and cron expression explainer, and a written promise of 90 days' notice if Checkmeup ever shuts down.",
+  },
+  {
     file: 'v1-57-to-v1-60-fewer-false-alarms',
     slug: 'v1-57-to-v1-60-fewer-false-alarms',
     kind: 'release',
