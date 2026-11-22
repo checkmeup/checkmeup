@@ -34,6 +34,6 @@ A user verifies a number and receives the next down alert on WhatsApp within one
 
 ## Open questions
 
-- Which provider: Meta's Cloud API directly or a BSP (see the Inbox).
+- Which provider: Meta's Cloud API directly or a BSP (Twilio, MessageBird). It decides setup effort, per-message cost and who handles template approval; the choice goes into ADR alerting. Nothing waits on it until a user asks for WhatsApp alerts (none as of 2026-11-22).
 - Template wording, and Meta's approval lead time.
 - How the per-message cost is bounded: SMS-style credits (ADR billing) or something else.

@@ -36,5 +36,5 @@ A failure seen from one region only no longer marks a monitor down.
 
 ## Open questions
 
-- Regional VPSes reporting to the one database, or a check-execution service; which regions first (see the Inbox).
+- Regional VPSes reporting to the one PostgreSQL, or a check-execution service, given one VPS and no broker today (ADR workers, ADR infrastructure); and which regions first. The choice goes into ADR workers. Revisit when paying users report false alarms from the single region (none as of 2026-11-22): the 30-second recheck shipped on 2026-10-28 already takes out the one-off failures a second region would catch.
 - Whether the down rule is fixed (majority) or per monitor (any, majority, all).
