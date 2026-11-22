@@ -4,12 +4,9 @@
 
 2026-10-14 · session review · kept 2026-11-13
 
-An architecture review found places where each monitor type repeats logic that should exist once. Two are left:
+An architecture review found places where each monitor type repeats logic that should exist once. One is left: SSL and domain as one "Expiry monitor" (worth exploring), as their workers, handlers and edit views differ only slightly; merging them would need a glossary term.
 
-- Worker incident handling (strong): uptime, port and DNS each count failures, open incidents, apply the alert cap, alert and resolve on their own. One module would own those steps, each type supplying its check, queries and message wording, with a small adapter per type for sqlc's per-table structs. Cron, SSL and domain stay out.
-- SSL and domain as one "Expiry monitor" (worth exploring): their workers, handlers and edit views differ only slightly; merging them would need a glossary term.
-
-The third, the plan checks copied across the monitor handlers, was taken out on 2026-11-22 (`handler/monitor_limits.go`). The review recommended the worker first, as alerting is the core of the product. It wasn't started as of 2026-11-22; the worker candidate wants a session of its own (`/baloo:architecture`), and what the product waits on now is traffic rather than code. Alerts have been sent outside the check since 2026-11-05 (`worker.GoAlert`, ADR alerting), which the module would take over. Settled by picking one and agreeing a plan, or by dropping the candidates.
+The other two were taken out on 2026-11-22: the plan checks copied across the monitor handlers (`handler/monitor_limits.go`), and the incident lifecycle uptime, port and DNS each ran on their own (`worker/incident_tracker.go`). What the product waits on now is traffic rather than code. Settled by agreeing a plan for the Expiry monitor, or by dropping it.
 
 ## Free tools without sign-up
 

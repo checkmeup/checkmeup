@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -45,113 +46,82 @@ func checkOnePortMonitor(ctx context.Context, n Notifiers, m db.PortMonitor) {
 		dialer = portCheckDialer()
 	}
 	responseTimeMs, isUp, failureReason := performTCPCheck(m, dialer)
-	// Rechecked about 30 seconds later before it counts, as for uptime (ADR alerting).
-	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestPortCheckFailed(ctx, n, m)
-	if !recordPortCheck(ctx, n, m, responseTimeMs, isUp, failureReason) {
-		return
-	}
-	if unconfirmed {
-		if err := n.Queries.SchedulePortRecheck(ctx, m.ID); err != nil {
-			n.Logger.Error("port worker: schedule recheck", "monitor_id", m.ID, "err", err)
-		}
-		return
-	}
-
-	prevStatus := m.Status
-	if isUp {
-		handlePortUp(ctx, n, m, prevStatus)
-		return
-	}
-	handlePortDown(ctx, n, m, prevStatus, failureReason)
+	trackCheck(ctx, n, portTracker{q: n.Queries, m: m, responseTimeMs: responseTimeMs, failureReason: failureReason}, isUp)
 }
 
-// latestPortCheckFailed reports whether the monitor's last recorded check
-// failed; on a read error it says true, as latestUptimeCheckFailed does.
-func latestPortCheckFailed(ctx context.Context, n Notifiers, m db.PortMonitor) bool {
-	failed, err := n.Queries.LatestPortCheckFailed(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("port worker: read latest check", "monitor_id", m.ID, "err", err)
-		return true
-	}
-	return failed
+// portTracker is a port monitor's side of trackCheck, bound to one check's result.
+type portTracker struct {
+	q              *db.Queries
+	m              db.PortMonitor
+	responseTimeMs int64
+	failureReason  string
 }
 
-func recordPortCheck(ctx context.Context, n Notifiers, m db.PortMonitor, responseTimeMs int64, isUp bool, failureReason string) bool {
-	if _, err := n.Queries.CreatePortCheck(ctx, db.CreatePortCheckParams{
-		MonitorID:      m.ID,
-		ResponseTimeMs: int32(responseTimeMs),
+func (t portTracker) monitor() trackedMonitor {
+	return trackedMonitor{
+		Type: "port", ID: t.m.ID, OrgID: t.m.OrgID, Status: t.m.Status,
+		ConsecutiveFailures: t.m.ConsecutiveFailures, AlertAfterNFailures: t.m.AlertAfterNFailures,
+		AlertsEnabled: t.m.AlertsEnabled,
+	}
+}
+
+func (t portTracker) latestCheckFailed(ctx context.Context) (bool, error) {
+	return t.q.LatestPortCheckFailed(ctx, t.m.ID)
+}
+
+func (t portTracker) recordCheck(ctx context.Context, isUp bool) error {
+	_, err := t.q.CreatePortCheck(ctx, db.CreatePortCheckParams{
+		MonitorID:      t.m.ID,
+		ResponseTimeMs: int32(t.responseTimeMs),
 		IsUp:           isUp,
-		FailureReason:  pgtype.Text{String: failureReason, Valid: failureReason != ""},
-	}); err != nil {
-		n.Logger.Error("port worker: create check", "monitor_id", m.ID, "err", err)
-		return false
-	}
-	return true
+		FailureReason:  pgtype.Text{String: t.failureReason, Valid: t.failureReason != ""},
+	})
+	return err
 }
 
-func handlePortUp(ctx context.Context, n Notifiers, m db.PortMonitor, prevStatus db.MonitorStatus) {
-	if _, err := n.Queries.RecordPortCheckUp(ctx, m.ID); err != nil {
-		n.Logger.Error("port worker: record up", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if prevStatus != db.MonitorStatusDown {
-		return
-	}
-	inc, err := n.Queries.ResolveLatestPortIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("port worker: resolve incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if !m.AlertsEnabled {
-		return
-	}
-	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	GoAlert(ctx, func(ctx context.Context) {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortRecoveryAlert(m, downtime))
-	})
+func (t portTracker) scheduleRecheck(ctx context.Context) error {
+	return t.q.SchedulePortRecheck(ctx, t.m.ID)
+}
+
+func (t portTracker) recordUp(ctx context.Context) error {
+	_, err := t.q.RecordPortCheckUp(ctx, t.m.ID)
+	return err
+}
+
+func (t portTracker) recordFailure(ctx context.Context) (int32, error) {
+	updated, err := t.q.RecordPortCheckFailure(ctx, t.m.ID)
+	return updated.ConsecutiveFailures, err
+}
+
+func (t portTracker) markDown(ctx context.Context) error {
+	return t.q.MarkPortMonitorDown(ctx, t.m.ID)
+}
+
+func (t portTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
+	inc, err := t.q.CreatePortIncident(ctx, t.m.ID)
+	return inc.ID, err
+}
+
+func (t portTracker) resolveIncident(ctx context.Context) (time.Time, error) {
+	inc, err := t.q.ResolveLatestPortIncident(ctx, t.m.ID)
+	return inc.StartedAt.Time, err
+}
+
+func (t portTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {
+	_, err := t.q.IncrementPortIncidentAlertCount(ctx, incidentID)
+	return err
+}
+
+func (t portTracker) downAlert() AlertMessage {
+	return buildPortDownAlert(t.m, t.failureReason)
+}
+
+func (t portTracker) recoveryAlert(downtime string) AlertMessage {
+	return buildPortRecoveryAlert(t.m, downtime)
 }
 
 func buildPortRecoveryAlert(m db.PortMonitor, downtime string) AlertMessage {
 	return backUpAlert("port", m.Name, downtime, codeLine("Host", fmt.Sprintf("%s:%d", m.Host, m.Port)))
-}
-
-func handlePortDown(ctx context.Context, n Notifiers, m db.PortMonitor, prevStatus db.MonitorStatus, failureReason string) {
-	updated, err := n.Queries.RecordPortCheckFailure(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("port worker: record failure", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if updated.ConsecutiveFailures <= m.AlertAfterNFailures || prevStatus == db.MonitorStatusDown {
-		return
-	}
-	if err := n.Queries.MarkPortMonitorDown(ctx, m.ID); err != nil {
-		n.Logger.Error("port worker: mark down", "monitor_id", m.ID, "err", err)
-		return
-	}
-	inc, err := n.Queries.CreatePortIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("port worker: create incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	alertPortIncident(ctx, n, m, inc, failureReason)
-}
-
-// alertPortIncident dispatches the down alert for a freshly-recorded
-// incident, honoring the monitor's alerts-enabled flag. It runs once per
-// incident, when its alert count is still 0, so max_alerts_per_incident
-// can't apply here (ADR alerting).
-func alertPortIncident(ctx context.Context, n Notifiers, m db.PortMonitor, inc db.PortIncident, failureReason string) {
-	if !m.AlertsEnabled {
-		return
-	}
-	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "port", ID: m.ID}, buildPortDownAlert(m, failureReason)) {
-			return
-		}
-		if _, err := n.Queries.IncrementPortIncidentAlertCount(ctx, inc.ID); err != nil {
-			n.Logger.Error("port worker: increment alert count", "incident_id", inc.ID, "err", err)
-		}
-	})
 }
 
 // buildPortDownAlert phrases the headline around expected_state: a

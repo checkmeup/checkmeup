@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -48,122 +49,90 @@ func checkOneUptimeMonitor(ctx context.Context, n Notifiers, m db.UptimeMonitor)
 		client = uptimeCheckClient()
 	}
 	statusCode, responseTimeMs, isUp, failureReason := performHTTPCheck(m, client)
-	// A failure right after a passing check is checked again about 30 seconds
-	// later before it counts (ADR alerting): one request lost between this
-	// server and the target shouldn't alert anyone. Asked before this check is
-	// recorded, so the previous check is the one read.
-	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestUptimeCheckFailed(ctx, n, m)
-	if !recordUptimeCheck(ctx, n, m, statusCode, responseTimeMs, isUp, failureReason) {
-		return
-	}
-	if unconfirmed {
-		if err := n.Queries.ScheduleUptimeRecheck(ctx, m.ID); err != nil {
-			n.Logger.Error("uptime worker: schedule recheck", "monitor_id", m.ID, "err", err)
-		}
-		return
-	}
-
-	prevStatus := m.Status
-	if isUp {
-		handleUptimeUp(ctx, n, m, prevStatus)
-		return
-	}
-	handleUptimeDown(ctx, n, m, prevStatus, failureReason)
+	trackCheck(ctx, n, uptimeTracker{
+		q: n.Queries, m: m, statusCode: statusCode, responseTimeMs: responseTimeMs, failureReason: failureReason,
+	}, isUp)
 }
 
-// latestUptimeCheckFailed reports whether the monitor's last recorded check
-// failed. On a read error it says true, so the failure counts right away, as
-// it did before rechecks: a missed alert is worse than an early one.
-func latestUptimeCheckFailed(ctx context.Context, n Notifiers, m db.UptimeMonitor) bool {
-	failed, err := n.Queries.LatestUptimeCheckFailed(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("uptime worker: read latest check", "monitor_id", m.ID, "err", err)
-		return true
-	}
-	return failed
+// uptimeTracker is an uptime monitor's side of trackCheck, bound to one check's result.
+type uptimeTracker struct {
+	q              *db.Queries
+	m              db.UptimeMonitor
+	statusCode     int
+	responseTimeMs int64
+	failureReason  string
 }
 
-func recordUptimeCheck(ctx context.Context, n Notifiers, m db.UptimeMonitor, statusCode int, responseTimeMs int64, isUp bool, failureReason string) bool {
+func (t uptimeTracker) monitor() trackedMonitor {
+	return trackedMonitor{
+		Type: "uptime", ID: t.m.ID, OrgID: t.m.OrgID, Status: t.m.Status,
+		ConsecutiveFailures: t.m.ConsecutiveFailures, AlertAfterNFailures: t.m.AlertAfterNFailures,
+		AlertsEnabled: t.m.AlertsEnabled,
+	}
+}
+
+func (t uptimeTracker) latestCheckFailed(ctx context.Context) (bool, error) {
+	return t.q.LatestUptimeCheckFailed(ctx, t.m.ID)
+}
+
+func (t uptimeTracker) recordCheck(ctx context.Context, isUp bool) error {
 	var codeParam pgtype.Int4
-	if statusCode > 0 {
-		codeParam = pgtype.Int4{Int32: int32(statusCode), Valid: true}
+	if t.statusCode > 0 {
+		codeParam = pgtype.Int4{Int32: int32(t.statusCode), Valid: true}
 	}
-	if _, err := n.Queries.CreateUptimeCheck(ctx, db.CreateUptimeCheckParams{
-		MonitorID:      m.ID,
+	_, err := t.q.CreateUptimeCheck(ctx, db.CreateUptimeCheckParams{
+		MonitorID:      t.m.ID,
 		StatusCode:     codeParam,
-		ResponseTimeMs: int32(responseTimeMs),
+		ResponseTimeMs: int32(t.responseTimeMs),
 		IsUp:           isUp,
-		FailureReason:  pgtype.Text{String: failureReason, Valid: failureReason != ""},
-	}); err != nil {
-		n.Logger.Error("uptime worker: create check", "monitor_id", m.ID, "err", err)
-		return false
-	}
-	return true
+		FailureReason:  pgtype.Text{String: t.failureReason, Valid: t.failureReason != ""},
+	})
+	return err
 }
 
-func handleUptimeUp(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevStatus db.MonitorStatus) {
-	if _, err := n.Queries.RecordUptimeCheckUp(ctx, m.ID); err != nil {
-		n.Logger.Error("uptime worker: record up", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if prevStatus != db.MonitorStatusDown {
-		return
-	}
-	inc, err := n.Queries.ResolveLatestUptimeIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("uptime worker: resolve incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if !m.AlertsEnabled {
-		return
-	}
-	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	GoAlert(ctx, func(ctx context.Context) {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeRecoveryAlert(m, downtime))
-	})
+func (t uptimeTracker) scheduleRecheck(ctx context.Context) error {
+	return t.q.ScheduleUptimeRecheck(ctx, t.m.ID)
+}
+
+func (t uptimeTracker) recordUp(ctx context.Context) error {
+	_, err := t.q.RecordUptimeCheckUp(ctx, t.m.ID)
+	return err
+}
+
+func (t uptimeTracker) recordFailure(ctx context.Context) (int32, error) {
+	updated, err := t.q.RecordUptimeCheckFailure(ctx, t.m.ID)
+	return updated.ConsecutiveFailures, err
+}
+
+func (t uptimeTracker) markDown(ctx context.Context) error {
+	return t.q.MarkUptimeMonitorDown(ctx, t.m.ID)
+}
+
+func (t uptimeTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
+	inc, err := t.q.CreateUptimeIncident(ctx, t.m.ID)
+	return inc.ID, err
+}
+
+func (t uptimeTracker) resolveIncident(ctx context.Context) (time.Time, error) {
+	inc, err := t.q.ResolveLatestUptimeIncident(ctx, t.m.ID)
+	return inc.StartedAt.Time, err
+}
+
+func (t uptimeTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {
+	_, err := t.q.IncrementUptimeIncidentAlertCount(ctx, incidentID)
+	return err
+}
+
+func (t uptimeTracker) downAlert() AlertMessage {
+	return buildUptimeDownAlert(t.m, t.failureReason)
+}
+
+func (t uptimeTracker) recoveryAlert(downtime string) AlertMessage {
+	return buildUptimeRecoveryAlert(t.m, downtime)
 }
 
 func buildUptimeRecoveryAlert(m db.UptimeMonitor, downtime string) AlertMessage {
 	return backUpAlert("uptime", m.Name, downtime, codeLine("URL", m.Url))
-}
-
-func handleUptimeDown(ctx context.Context, n Notifiers, m db.UptimeMonitor, prevStatus db.MonitorStatus, failureReason string) {
-	updated, err := n.Queries.RecordUptimeCheckFailure(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("uptime worker: record failure", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if updated.ConsecutiveFailures <= m.AlertAfterNFailures || prevStatus == db.MonitorStatusDown {
-		return
-	}
-	if err := n.Queries.MarkUptimeMonitorDown(ctx, m.ID); err != nil {
-		n.Logger.Error("uptime worker: mark down", "monitor_id", m.ID, "err", err)
-		return
-	}
-	inc, err := n.Queries.CreateUptimeIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("uptime worker: create incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	alertUptimeIncident(ctx, n, m, inc, failureReason)
-}
-
-// alertUptimeIncident dispatches the down alert for a freshly-recorded
-// incident, honoring the monitor's alerts-enabled flag. It runs once per
-// incident, when its alert count is still 0, so max_alerts_per_incident
-// can't apply here (ADR alerting).
-func alertUptimeIncident(ctx context.Context, n Notifiers, m db.UptimeMonitor, inc db.UptimeIncident, failureReason string) {
-	if !m.AlertsEnabled {
-		return
-	}
-	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "uptime", ID: m.ID}, buildUptimeDownAlert(m, failureReason)) {
-			return
-		}
-		if _, err := n.Queries.IncrementUptimeIncidentAlertCount(ctx, inc.ID); err != nil {
-			n.Logger.Error("uptime worker: increment alert count", "incident_id", inc.ID, "err", err)
-		}
-	})
 }
 
 func buildUptimeDownAlert(m db.UptimeMonitor, failureReason string) AlertMessage {

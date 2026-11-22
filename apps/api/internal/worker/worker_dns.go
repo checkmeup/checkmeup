@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -63,74 +64,98 @@ func checkOneDNSMonitor(ctx context.Context, n Notifiers, m db.DnsMonitor) {
 		isUp = false
 	}
 
-	prevStatus := m.Status
-	// Rechecked about 30 seconds later before it counts, as for uptime (ADR
-	// alerting); a changed record that is real still differs on the recheck.
-	unconfirmed := !isUp && m.ConsecutiveFailures == 0 && !latestDNSCheckFailed(ctx, n, m)
-	if !recordDNSCheck(ctx, n, m, responseTimeMs, isUp, resolvedValue, failureReason) {
-		return
-	}
-	if unconfirmed {
-		if err := n.Queries.ScheduleDNSRecheck(ctx, m.ID); err != nil {
-			n.Logger.Error("dns worker: schedule recheck", "monitor_id", m.ID, "err", err)
-		}
-		return
-	}
-	if isUp {
-		handleDNSUp(ctx, n, m, prevStatus, resolvedValue)
-		return
-	}
-	handleDNSDown(ctx, n, m, prevStatus, resolvedValue, failureReason)
+	// A mismatch is rechecked like any failure (ADR alerting); a changed
+	// record that is real still differs on the recheck.
+	trackCheck(ctx, n, dnsTracker{
+		q: n.Queries, m: m, responseTimeMs: responseTimeMs, resolvedValue: resolvedValue, failureReason: failureReason,
+	}, isUp)
 }
 
-// latestDNSCheckFailed reports whether the monitor's last recorded check
-// failed; on a read error it says true, as latestUptimeCheckFailed does.
-func latestDNSCheckFailed(ctx context.Context, n Notifiers, m db.DnsMonitor) bool {
-	failed, err := n.Queries.LatestDNSCheckFailed(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("dns worker: read latest check", "monitor_id", m.ID, "err", err)
-		return true
-	}
-	return failed
+// dnsTracker is a DNS monitor's side of trackCheck, bound to one check's
+// result. failureReason is empty for a record that resolved but differs.
+type dnsTracker struct {
+	q              *db.Queries
+	m              db.DnsMonitor
+	responseTimeMs int64
+	resolvedValue  string
+	failureReason  string
 }
 
-func recordDNSCheck(ctx context.Context, n Notifiers, m db.DnsMonitor, responseTimeMs int64, isUp bool, resolvedValue, failureReason string) bool {
-	if _, err := n.Queries.CreateDNSCheck(ctx, db.CreateDNSCheckParams{
-		MonitorID:      m.ID,
-		ResponseTimeMs: int32(responseTimeMs),
+func (t dnsTracker) monitor() trackedMonitor {
+	return trackedMonitor{
+		Type: "dns", ID: t.m.ID, OrgID: t.m.OrgID, Status: t.m.Status,
+		ConsecutiveFailures: t.m.ConsecutiveFailures, AlertAfterNFailures: t.m.AlertAfterNFailures,
+		AlertsEnabled: t.m.AlertsEnabled,
+	}
+}
+
+func (t dnsTracker) latestCheckFailed(ctx context.Context) (bool, error) {
+	return t.q.LatestDNSCheckFailed(ctx, t.m.ID)
+}
+
+func (t dnsTracker) recordCheck(ctx context.Context, isUp bool) error {
+	_, err := t.q.CreateDNSCheck(ctx, db.CreateDNSCheckParams{
+		MonitorID:      t.m.ID,
+		ResponseTimeMs: int32(t.responseTimeMs),
 		IsUp:           isUp,
-		ResolvedValue:  pgtype.Text{String: resolvedValue, Valid: resolvedValue != ""},
-		FailureReason:  pgtype.Text{String: failureReason, Valid: failureReason != ""},
-	}); err != nil {
-		n.Logger.Error("dns worker: create check", "monitor_id", m.ID, "err", err)
-		return false
-	}
-	return true
+		ResolvedValue:  pgtype.Text{String: t.resolvedValue, Valid: t.resolvedValue != ""},
+		FailureReason:  pgtype.Text{String: t.failureReason, Valid: t.failureReason != ""},
+	})
+	return err
 }
 
-func handleDNSUp(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus db.MonitorStatus, resolvedValue string) {
-	if _, err := n.Queries.RecordDNSCheckUp(ctx, db.RecordDNSCheckUpParams{
-		ID:                m.ID,
-		LastResolvedValue: pgtype.Text{String: resolvedValue, Valid: true},
-	}); err != nil {
-		n.Logger.Error("dns worker: record up", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if prevStatus != db.MonitorStatusDown {
-		return
-	}
-	inc, err := n.Queries.ResolveLatestDNSIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("dns worker: resolve incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if !m.AlertsEnabled {
-		return
-	}
-	downtime := FormatDuration(time.Since(inc.StartedAt.Time))
-	GoAlert(ctx, func(ctx context.Context) {
-		DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSRecoveryAlert(m, resolvedValue, downtime))
+func (t dnsTracker) scheduleRecheck(ctx context.Context) error {
+	return t.q.ScheduleDNSRecheck(ctx, t.m.ID)
+}
+
+func (t dnsTracker) recordUp(ctx context.Context) error {
+	_, err := t.q.RecordDNSCheckUp(ctx, db.RecordDNSCheckUpParams{
+		ID:                t.m.ID,
+		LastResolvedValue: pgtype.Text{String: t.resolvedValue, Valid: true},
 	})
+	return err
+}
+
+func (t dnsTracker) recordFailure(ctx context.Context) (int32, error) {
+	// A lookup failure has no resolvedValue — keep the monitor's last known
+	// good value on display rather than blanking it out (PRD dns-monitoring); a
+	// mismatch always carries a real resolvedValue to show instead.
+	lastResolved := t.m.LastResolvedValue
+	if t.resolvedValue != "" {
+		lastResolved = pgtype.Text{String: t.resolvedValue, Valid: true}
+	}
+	updated, err := t.q.RecordDNSCheckFailure(ctx, db.RecordDNSCheckFailureParams{
+		ID:                t.m.ID,
+		LastResolvedValue: lastResolved,
+	})
+	return updated.ConsecutiveFailures, err
+}
+
+func (t dnsTracker) markDown(ctx context.Context) error {
+	return t.q.MarkDNSMonitorDown(ctx, t.m.ID)
+}
+
+func (t dnsTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
+	inc, err := t.q.CreateDNSIncident(ctx, t.m.ID)
+	return inc.ID, err
+}
+
+func (t dnsTracker) resolveIncident(ctx context.Context) (time.Time, error) {
+	inc, err := t.q.ResolveLatestDNSIncident(ctx, t.m.ID)
+	return inc.StartedAt.Time, err
+}
+
+func (t dnsTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {
+	_, err := t.q.IncrementDNSIncidentAlertCount(ctx, incidentID)
+	return err
+}
+
+func (t dnsTracker) downAlert() AlertMessage {
+	return buildDNSDownAlert(t.m, t.resolvedValue, t.failureReason)
+}
+
+func (t dnsTracker) recoveryAlert(downtime string) AlertMessage {
+	return buildDNSRecoveryAlert(t.m, t.resolvedValue, downtime)
 }
 
 func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) AlertMessage {
@@ -144,55 +169,6 @@ func buildDNSRecoveryAlert(m db.DnsMonitor, resolvedValue, downtime string) Aler
 		Subject:  m.Name + " recovered",
 		Downtime: downtime,
 		SMS:      fmt.Sprintf("%s recovered after %s downtime", m.Name, downtime),
-	})
-}
-
-func handleDNSDown(ctx context.Context, n Notifiers, m db.DnsMonitor, prevStatus db.MonitorStatus, resolvedValue, failureReason string) {
-	// A lookup failure has no resolvedValue — keep the monitor's last known
-	// good value on display rather than blanking it out (PRD dns-monitoring); a
-	// mismatch always carries a real resolvedValue to show instead.
-	lastResolved := m.LastResolvedValue
-	if resolvedValue != "" {
-		lastResolved = pgtype.Text{String: resolvedValue, Valid: true}
-	}
-	updated, err := n.Queries.RecordDNSCheckFailure(ctx, db.RecordDNSCheckFailureParams{
-		ID:                m.ID,
-		LastResolvedValue: lastResolved,
-	})
-	if err != nil {
-		n.Logger.Error("dns worker: record failure", "monitor_id", m.ID, "err", err)
-		return
-	}
-	if updated.ConsecutiveFailures <= m.AlertAfterNFailures || prevStatus == db.MonitorStatusDown {
-		return
-	}
-	if err := n.Queries.MarkDNSMonitorDown(ctx, m.ID); err != nil {
-		n.Logger.Error("dns worker: mark down", "monitor_id", m.ID, "err", err)
-		return
-	}
-	inc, err := n.Queries.CreateDNSIncident(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("dns worker: create incident", "monitor_id", m.ID, "err", err)
-		return
-	}
-	alertDNSIncident(ctx, n, m, inc, resolvedValue, failureReason)
-}
-
-// alertDNSIncident dispatches the down alert for a freshly-recorded
-// incident, honoring the monitor's alerts-enabled flag. It runs once per
-// incident, when its alert count is still 0, so max_alerts_per_incident
-// can't apply here (ADR alerting).
-func alertDNSIncident(ctx context.Context, n Notifiers, m db.DnsMonitor, inc db.DnsIncident, resolvedValue, failureReason string) {
-	if !m.AlertsEnabled {
-		return
-	}
-	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "dns", ID: m.ID}, buildDNSDownAlert(m, resolvedValue, failureReason)) {
-			return
-		}
-		if _, err := n.Queries.IncrementDNSIncidentAlertCount(ctx, inc.ID); err != nil {
-			n.Logger.Error("dns worker: increment alert count", "incident_id", inc.ID, "err", err)
-		}
 	})
 }
 
