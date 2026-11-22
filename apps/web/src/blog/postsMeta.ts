@@ -396,7 +396,7 @@ export const postsMeta: BlogPostMetaEntry[] = [
     kind: 'article',
     title: 'Three Days to MVP: How We Built Checkmeup',
     date: 'June 16, 2026',
-    readTime: '3 min read',
+    readTime: '4 min read',
     excerpt:
       "A cron monitor, uptime checks, SSL alerts, status pages, and billing — shipped in roughly 20 hours over three days. Here's what actually happened.",
     description:

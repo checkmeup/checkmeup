@@ -2,6 +2,10 @@ import type { ContentBlock } from '../types'
 
 export const content: ContentBlock[] = [
   {
+    type: 'blockquote',
+    text: 'Written on launch day, June 16, 2026. A few of the choices below have changed since; what changed is at the end.',
+  },
+  {
     type: 'p',
     text: "This was supposed to be a weekend project. It became three very focused days. By the end of June 16, Checkmeup was live with cron monitoring, uptime checks, SSL expiry alerts, status pages, billing, and a mobile UI. Here's the honest account of how that happened.",
   },
@@ -81,6 +85,19 @@ export const content: ContentBlock[] = [
       "Write the ADR before the code. Documenting the decision first clarifies it. We have 19 ADRs in the repo — they're faster to write than they are to undo.",
       'Shipping the billing integration early is the right call. It forces you to think about plan limits, upgrade flows, and webhooks while the codebase is still small.',
       'The first Telegram alert from your own monitor hits different. Build the demo path first.',
+    ],
+  },
+  {
+    type: 'h2',
+    text: 'What changed since',
+  },
+  {
+    type: 'ul',
+    items: [
+      'The worker. A goroutine and ticker per monitor was the plan written down that day, and it never shipped that way. One shared tick every 30 seconds asks each monitor type what is due and fans the checks out over a bounded pool of goroutines, so under load checks run late instead of goroutines piling up. Still no Redis, queue or broker.',
+      'Billing. LemonSqueezy was replaced by Paddle on July 3, before revenue depended on either. Paddle is still a Merchant of Record, so tax is still handled for every jurisdiction.',
+      'Prices. $9 / $29 / $99 now, with a free Hobby plan of 10 monitors.',
+      'Alerts. The per-incident cap applies to every channel (Telegram, email, Slack, webhooks, SMS), not only Telegram. Uptime, port and DNS monitors send one down alert per incident, and only after a failed check is confirmed by a second one about 30 seconds later.',
     ],
   },
   {
