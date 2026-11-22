@@ -4,13 +4,12 @@
 
 2026-10-14 · session review · kept 2026-11-13
 
-An architecture review found three places where each monitor type repeats logic that should exist once:
+An architecture review found places where each monitor type repeats logic that should exist once. Two are left:
 
 - Worker incident handling (strong): uptime, port and DNS each count failures, open incidents, apply the alert cap, alert and resolve on their own. One module would own those steps, each type supplying its check, queries and message wording, with a small adapter per type for sqlc's per-table structs. Cron, SSL and domain stay out.
-- Plan checks in the monitor handlers (strong): the create-limit check and its 402 are copied across six handlers, the interval clamp three times, and not-found handled three ways. One plan check would write the 402 itself; pause, resume and delete would share one not-found path.
 - SSL and domain as one "Expiry monitor" (worth exploring): their workers, handlers and edit views differ only slightly; merging them would need a glossary term.
 
-The review recommended the worker first, as alerting is the core of the product, or the plan checks as a cheaper first step. None was started as of 2026-11-13; the worker candidate wants a session of its own (`/baloo:architecture`), and what the product waits on now is traffic rather than code. Alerts have been sent outside the check since 2026-11-05 (`worker.GoAlert`, ADR alerting), which the module would take over. Settled by picking one and agreeing a plan, or by dropping the candidates.
+The third, the plan checks copied across the monitor handlers, was taken out on 2026-11-22 (`handler/monitor_limits.go`). The review recommended the worker first, as alerting is the core of the product. It wasn't started as of 2026-11-22; the worker candidate wants a session of its own (`/baloo:architecture`), and what the product waits on now is traffic rather than code. Alerts have been sent outside the check since 2026-11-05 (`worker.GoAlert`, ADR alerting), which the module would take over. Settled by picking one and agreeing a plan, or by dropping the candidates.
 
 ## Free tools without sign-up
 

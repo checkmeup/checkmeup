@@ -4,16 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -119,20 +115,6 @@ func dnsIncidentToResponse(i db.DnsIncident) dnsIncidentResponse {
 	return r
 }
 
-func dnsMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	return orgID, monitorID, true
-}
-
 var validDNSRecordTypes = map[string]db.DnsRecordType{
 	string(db.DnsRecordTypeA):     db.DnsRecordTypeA,
 	string(db.DnsRecordTypeAAAA):  db.DnsRecordTypeAAAA,
@@ -183,63 +165,6 @@ func normalizeDNSMaxAlerts(v int32) int32 {
 		return 3
 	}
 	return v
-}
-
-// getPlanAndCheckDNSLimit fetches the org's plan and verifies it hasn't hit
-// its aggregate monitor limit — used only by create, since update doesn't
-// add a new monitor.
-func (h *MonitorHandler) getPlanAndCheckDNSLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) (db.Plan, bool) {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return "", false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return "", false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "dns_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return "", false
-	}
-	return plan, true
-}
-
-// clampDNSInterval enforces the plan's minimum check interval, writing a
-// 402 response when the requested interval is too low.
-func (h *MonitorHandler) clampDNSInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, plan db.Plan, requestedMins int32) (int32, bool) {
-	clamped, err := billing.ClampInterval(plan, int(requestedMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "dns_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return 0, false
-	}
-	return int32(clamped), true
-}
-
-// getPlanAndClampDNSInterval fetches the org's plan and clamps the
-// requested interval in one step — used by update, which (unlike create)
-// doesn't also need the plan for a monitor-limit check.
-func (h *MonitorHandler) getPlanAndClampDNSInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, requestedMins int32) (int32, bool) {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return 0, false
-	}
-	return h.clampDNSInterval(w, r, orgID, plan, requestedMins)
-}
-
-// respondDNSMonitorWriteError maps a failed lookup-and-write query error to
-// the right HTTP status — 404 when the monitor doesn't exist (or belongs to
-// another org), 500 otherwise.
-func (h *MonitorHandler) respondDNSMonitorWriteError(w http.ResponseWriter, err error) {
-	if errors.Is(err, pgx.ErrNoRows) {
-		respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-		return
-	}
-	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 }
 
 // attachDNSMonitorChannels attaches the requested channels to a newly
@@ -312,11 +237,7 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 	}
 	req.Name = name
 
-	plan, ok := h.getPlanAndCheckDNSLimit(w, r, orgID)
-	if !ok {
-		return
-	}
-	clampedInterval, ok := h.clampDNSInterval(w, r, orgID, plan, req.IntervalMins)
+	clampedInterval, ok := h.allowNewMonitorEvery(w, r, orgID, "dns_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -357,7 +278,7 @@ func (h *MonitorHandler) CreateDNSMonitor(w http.ResponseWriter, r *http.Request
 
 // GetDNSMonitor GET /api/v1/monitors/dns/{id}
 func (h *MonitorHandler) GetDNSMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := dnsMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -365,12 +286,7 @@ func (h *MonitorHandler) GetDNSMonitor(w http.ResponseWriter, r *http.Request) {
 	monitor, err := h.queries.GetDNSMonitor(r.Context(), db.GetDNSMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -469,7 +385,7 @@ type updateDNSMonitorRequest struct {
 
 // UpdateDNSMonitor PATCH /api/v1/monitors/dns/{id}
 func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := dnsMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -486,7 +402,7 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 	}
 	req.Name = name
 
-	clampedInterval, ok := h.getPlanAndClampDNSInterval(w, r, orgID, req.IntervalMins)
+	clampedInterval, ok := h.allowInterval(w, r, orgID, "dns_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -514,8 +430,7 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 	if respondProjectRefused(w, err) {
 		return
 	}
-	if err != nil {
-		h.respondDNSMonitorWriteError(w, err)
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "dns", monitorID, req.ChannelIDs); err != nil {
@@ -530,7 +445,7 @@ func (h *MonitorHandler) UpdateDNSMonitor(w http.ResponseWriter, r *http.Request
 
 // PauseDNSMonitor POST /api/v1/monitors/dns/{id}/pause
 func (h *MonitorHandler) PauseDNSMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := dnsMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -538,12 +453,7 @@ func (h *MonitorHandler) PauseDNSMonitor(w http.ResponseWriter, r *http.Request)
 	monitor, err := h.queries.PauseDNSMonitor(r.Context(), db.PauseDNSMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.dnsMonitorToResponse(monitor))
@@ -551,24 +461,18 @@ func (h *MonitorHandler) PauseDNSMonitor(w http.ResponseWriter, r *http.Request)
 
 // ResumeDNSMonitor POST /api/v1/monitors/dns/{id}/resume
 func (h *MonitorHandler) ResumeDNSMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := dnsMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
 	monitor, err := h.queries.ResumeDNSMonitor(r.Context(), db.ResumeDNSMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.dnsMonitorToResponse(monitor))
@@ -576,7 +480,7 @@ func (h *MonitorHandler) ResumeDNSMonitor(w http.ResponseWriter, r *http.Request
 
 // DeleteDNSMonitor DELETE /api/v1/monitors/dns/{id}
 func (h *MonitorHandler) DeleteDNSMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := dnsMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}

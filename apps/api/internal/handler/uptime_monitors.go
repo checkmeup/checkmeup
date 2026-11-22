@@ -5,18 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -161,20 +158,6 @@ func uptimeIncidentToResponse(i db.UptimeIncident) uptimeIncidentResponse {
 	return r
 }
 
-func uptimeMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	return orgID, monitorID, true
-}
-
 func validateURL(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -202,7 +185,7 @@ func validateKeyword(raw string) error {
 // validateUptimeMonitorRequest validates and normalizes the fields shared by
 // create and update requests, responding with the first validation failure
 // and returning false — same "respond internally, return ok" idiom as
-// uptimeMonitorIDs above.
+// monitorIDs.
 func validateUptimeMonitorRequest(w http.ResponseWriter, name *string, url string, keyword *string, jsonAssertions *[]JsonAssertion, maxResponseTimeMs int32, httpMethod string, acceptedStatusCodes []int32) bool {
 	*name = strings.TrimSpace(*name)
 	if *name == "" {
@@ -250,41 +233,6 @@ var validHTTPMethods = map[string]bool{
 	string(db.HttpMethodGET):  true,
 	string(db.HttpMethodHEAD): true,
 	string(db.HttpMethodPOST): true,
-}
-
-// clampUptimeMonitorInterval applies the org's plan-aware interval clamp,
-// responding with a plan_limit_reached error and returning false if the
-// requested interval is below the plan's minimum.
-func (h *MonitorHandler) clampUptimeMonitorInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, plan db.Plan, requestedIntervalMins int32) (int32, bool) {
-	clampedInterval, err := billing.ClampInterval(plan, int(requestedIntervalMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return 0, false
-	}
-	return int32(clampedInterval), true
-}
-
-// checkUptimeMonitorCreateLimits checks whether orgID can create another
-// uptime monitor under its plan and returns the plan-clamped interval.
-// Responds and returns false on any failure (query error or plan limit hit).
-func (h *MonitorHandler) checkUptimeMonitorCreateLimits(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, requestedIntervalMins int32) (int32, bool) {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return 0, false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return 0, false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "uptime_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return 0, false
-	}
-	return h.clampUptimeMonitorInterval(w, r, orgID, plan, requestedIntervalMins)
 }
 
 func parseKeywordMode(raw string) db.KeywordMode {
@@ -387,7 +335,7 @@ func (h *MonitorHandler) CreateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 	if !validateUptimeMonitorRequest(w, &req.Name, req.URL, &req.Keyword, &req.JsonAssertions, req.MaxResponseTimeMs, req.HttpMethod, req.AcceptedStatusCodes) {
 		return
 	}
-	clampedInterval, ok := h.checkUptimeMonitorCreateLimits(w, r, orgID, req.IntervalMins)
+	clampedInterval, ok := h.allowNewMonitorEvery(w, r, orgID, "uptime_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -440,7 +388,7 @@ func (h *MonitorHandler) respondUptimeMonitor(w http.ResponseWriter, r *http.Req
 
 // GetUptimeMonitor GET /api/v1/monitors/uptime/{id}
 func (h *MonitorHandler) GetUptimeMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := uptimeMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -566,7 +514,7 @@ type updateUptimeMonitorRequest struct {
 
 // UpdateUptimeMonitor PATCH /api/v1/monitors/uptime/{id}
 func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := uptimeMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -581,16 +529,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return
-	}
-	// Same plan-aware clamp as CreateUptimeMonitor — a request below the
-	// org's plan minimum is rejected, not silently floored to a fixed value
-	// that could be either too strict (Hobby's 5-min minimum) or too loose
-	// (denying a paid plan's 1-min minimum).
-	clampedInterval, ok := h.clampUptimeMonitorInterval(w, r, orgID, plan, req.IntervalMins)
+	clampedInterval, ok := h.allowInterval(w, r, orgID, "uptime_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -635,7 +574,7 @@ func (h *MonitorHandler) UpdateUptimeMonitor(w http.ResponseWriter, r *http.Requ
 
 // PauseUptimeMonitor POST /api/v1/monitors/uptime/{id}/pause
 func (h *MonitorHandler) PauseUptimeMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := uptimeMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -651,12 +590,11 @@ func (h *MonitorHandler) PauseUptimeMonitor(w http.ResponseWriter, r *http.Reque
 
 // ResumeUptimeMonitor POST /api/v1/monitors/uptime/{id}/resume
 func (h *MonitorHandler) ResumeUptimeMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := uptimeMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
@@ -671,7 +609,7 @@ func (h *MonitorHandler) ResumeUptimeMonitor(w http.ResponseWriter, r *http.Requ
 
 // DeleteUptimeMonitor DELETE /api/v1/monitors/uptime/{id}
 func (h *MonitorHandler) DeleteUptimeMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := uptimeMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}

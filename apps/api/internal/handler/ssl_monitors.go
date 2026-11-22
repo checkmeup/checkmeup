@@ -3,16 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -70,20 +64,6 @@ func sslMonitorToResponse(m db.SslMonitor) sslMonitorResponse {
 	return r
 }
 
-func sslMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	return orgID, monitorID, true
-}
-
 func parseHostname(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -130,28 +110,6 @@ type createSSLMonitorRequest struct {
 	ProjectID  optionalProjectID `json:"projectId,omitzero"`
 }
 
-// checkSSLMonitorLimit checks whether orgID can create another SSL monitor
-// under its plan. Responds and returns false on any failure (query error or
-// plan limit hit).
-func (h *MonitorHandler) checkSSLMonitorLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "ssl_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return false
-	}
-	return true
-}
-
 // CreateSSLMonitor POST /api/v1/monitors/ssl
 func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -177,7 +135,7 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !h.checkSSLMonitorLimit(w, r, orgID) {
+	if !h.allowNewMonitor(w, r, orgID, "ssl_monitor") {
 		return
 	}
 
@@ -210,7 +168,7 @@ func (h *MonitorHandler) CreateSSLMonitor(w http.ResponseWriter, r *http.Request
 
 // GetSSLMonitor GET /api/v1/monitors/ssl/{id}
 func (h *MonitorHandler) GetSSLMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := sslMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -218,12 +176,7 @@ func (h *MonitorHandler) GetSSLMonitor(w http.ResponseWriter, r *http.Request) {
 	monitor, err := h.queries.GetSSLMonitor(r.Context(), db.GetSSLMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -244,7 +197,7 @@ type updateSSLMonitorRequest struct {
 
 // UpdateSSLMonitor PATCH /api/v1/monitors/ssl/{id}
 func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := sslMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -284,12 +237,7 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 	if respondProjectRefused(w, err) {
 		return
 	}
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "ssl", monitorID, req.ChannelIDs); err != nil {
@@ -304,7 +252,7 @@ func (h *MonitorHandler) UpdateSSLMonitor(w http.ResponseWriter, r *http.Request
 
 // PauseSSLMonitor POST /api/v1/monitors/ssl/{id}/pause
 func (h *MonitorHandler) PauseSSLMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := sslMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -312,12 +260,7 @@ func (h *MonitorHandler) PauseSSLMonitor(w http.ResponseWriter, r *http.Request)
 	monitor, err := h.queries.PauseSSLMonitor(r.Context(), db.PauseSSLMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, sslMonitorToResponse(monitor))
@@ -325,24 +268,18 @@ func (h *MonitorHandler) PauseSSLMonitor(w http.ResponseWriter, r *http.Request)
 
 // ResumeSSLMonitor POST /api/v1/monitors/ssl/{id}/resume
 func (h *MonitorHandler) ResumeSSLMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := sslMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
 	monitor, err := h.queries.ResumeSSLMonitor(r.Context(), db.ResumeSSLMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, sslMonitorToResponse(monitor))
@@ -350,7 +287,7 @@ func (h *MonitorHandler) ResumeSSLMonitor(w http.ResponseWriter, r *http.Request
 
 // DeleteSSLMonitor DELETE /api/v1/monitors/ssl/{id}
 func (h *MonitorHandler) DeleteSSLMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := sslMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}

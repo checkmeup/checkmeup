@@ -4,15 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 )
@@ -106,20 +102,6 @@ func portIncidentToResponse(i db.PortIncident) portIncidentResponse {
 	return r
 }
 
-func portMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	return orgID, monitorID, true
-}
-
 // validatePort reports whether port is in the valid TCP port range.
 func validatePort(port int32) error {
 	if port < 1 || port > 65535 {
@@ -163,63 +145,6 @@ func normalizePortMaxAlerts(v int32) int32 {
 		return 3
 	}
 	return v
-}
-
-// getPlanAndCheckPortLimit fetches the org's plan and verifies it hasn't hit
-// its aggregate monitor limit — used only by create, since update doesn't
-// add a new monitor.
-func (h *MonitorHandler) getPlanAndCheckPortLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) (db.Plan, bool) {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return "", false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return "", false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return "", false
-	}
-	return plan, true
-}
-
-// clampPortInterval enforces the plan's minimum check interval, writing a
-// 402 response when the requested interval is too low.
-func (h *MonitorHandler) clampPortInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, plan db.Plan, requestedMins int32) (int32, bool) {
-	clamped, err := billing.ClampInterval(plan, int(requestedMins))
-	if err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "port_monitor_interval")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return 0, false
-	}
-	return int32(clamped), true
-}
-
-// getPlanAndClampPortInterval fetches the org's plan and clamps the
-// requested interval in one step — used by update, which (unlike create)
-// doesn't also need the plan for a monitor-limit check.
-func (h *MonitorHandler) getPlanAndClampPortInterval(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, requestedMins int32) (int32, bool) {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return 0, false
-	}
-	return h.clampPortInterval(w, r, orgID, plan, requestedMins)
-}
-
-// respondPortMonitorWriteError maps a failed lookup-and-write query error to
-// the right HTTP status — 404 when the monitor doesn't exist (or belongs to
-// another org), 500 otherwise.
-func (h *MonitorHandler) respondPortMonitorWriteError(w http.ResponseWriter, err error) {
-	if errors.Is(err, pgx.ErrNoRows) {
-		respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-		return
-	}
-	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
 }
 
 // attachPortMonitorChannels attaches the requested channels to a newly
@@ -292,11 +217,7 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 	}
 	req.Name = name
 
-	plan, ok := h.getPlanAndCheckPortLimit(w, r, orgID)
-	if !ok {
-		return
-	}
-	clampedInterval, ok := h.clampPortInterval(w, r, orgID, plan, req.IntervalMins)
+	clampedInterval, ok := h.allowNewMonitorEvery(w, r, orgID, "port_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -337,7 +258,7 @@ func (h *MonitorHandler) CreatePortMonitor(w http.ResponseWriter, r *http.Reques
 
 // GetPortMonitor GET /api/v1/monitors/port/{id}
 func (h *MonitorHandler) GetPortMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := portMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -345,12 +266,7 @@ func (h *MonitorHandler) GetPortMonitor(w http.ResponseWriter, r *http.Request) 
 	monitor, err := h.queries.GetPortMonitor(r.Context(), db.GetPortMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -449,7 +365,7 @@ type updatePortMonitorRequest struct {
 
 // UpdatePortMonitor PATCH /api/v1/monitors/port/{id}
 func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := portMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -466,7 +382,7 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 	}
 	req.Name = name
 
-	clampedInterval, ok := h.getPlanAndClampPortInterval(w, r, orgID, req.IntervalMins)
+	clampedInterval, ok := h.allowInterval(w, r, orgID, "port_monitor", req.IntervalMins)
 	if !ok {
 		return
 	}
@@ -494,8 +410,7 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 	if respondProjectRefused(w, err) {
 		return
 	}
-	if err != nil {
-		h.respondPortMonitorWriteError(w, err)
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "port", monitorID, req.ChannelIDs); err != nil {
@@ -510,7 +425,7 @@ func (h *MonitorHandler) UpdatePortMonitor(w http.ResponseWriter, r *http.Reques
 
 // PausePortMonitor POST /api/v1/monitors/port/{id}/pause
 func (h *MonitorHandler) PausePortMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := portMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -518,12 +433,7 @@ func (h *MonitorHandler) PausePortMonitor(w http.ResponseWriter, r *http.Request
 	monitor, err := h.queries.PausePortMonitor(r.Context(), db.PausePortMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.portMonitorToResponse(monitor))
@@ -531,24 +441,18 @@ func (h *MonitorHandler) PausePortMonitor(w http.ResponseWriter, r *http.Request
 
 // ResumePortMonitor POST /api/v1/monitors/port/{id}/resume
 func (h *MonitorHandler) ResumePortMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := portMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
 	monitor, err := h.queries.ResumePortMonitor(r.Context(), db.ResumePortMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, h.portMonitorToResponse(monitor))
@@ -556,7 +460,7 @@ func (h *MonitorHandler) ResumePortMonitor(w http.ResponseWriter, r *http.Reques
 
 // DeletePortMonitor DELETE /api/v1/monitors/port/{id}
 func (h *MonitorHandler) DeletePortMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := portMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}

@@ -3,16 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/whois"
@@ -69,20 +63,6 @@ func domainMonitorToResponse(m db.DomainMonitor) domainMonitorResponse {
 		r.LastCheckedAt = &t
 	}
 	return r
-}
-
-func domainMonitorIDs(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
-	orgID, err := orgIDFrom(r)
-	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "authentication required", "unauthenticated")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	monitorID, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid monitor id", "bad_request")
-		return uuid.UUID{}, uuid.UUID{}, false
-	}
-	return orgID, monitorID, true
 }
 
 // parseDomain is parseHostname plus a refusal of TLDs whose registries
@@ -157,7 +137,7 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !h.checkDomainMonitorLimit(w, r, orgID) {
+	if !h.allowNewMonitor(w, r, orgID, "domain_monitor") {
 		return
 	}
 
@@ -188,31 +168,9 @@ func (h *MonitorHandler) CreateDomainMonitor(w http.ResponseWriter, r *http.Requ
 	respond.JSON(w, http.StatusCreated, resp)
 }
 
-// checkDomainMonitorLimit enforces the org's plan limit before creating a
-// domain monitor, writing the appropriate error response itself so the
-// caller can just check the returned bool.
-func (h *MonitorHandler) checkDomainMonitorLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "domain_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return false
-	}
-	return true
-}
-
 // GetDomainMonitor GET /api/v1/monitors/domain/{id}
 func (h *MonitorHandler) GetDomainMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := domainMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -220,12 +178,7 @@ func (h *MonitorHandler) GetDomainMonitor(w http.ResponseWriter, r *http.Request
 	monitor, err := h.queries.GetDomainMonitor(r.Context(), db.GetDomainMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 
@@ -246,7 +199,7 @@ type updateDomainMonitorRequest struct {
 
 // UpdateDomainMonitor PATCH /api/v1/monitors/domain/{id}
 func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := domainMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -286,12 +239,7 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 	if respondProjectRefused(w, err) {
 		return
 	}
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	if err := h.setMonitorNotificationChannels(r.Context(), orgID, "domain", monitorID, req.ChannelIDs); err != nil {
@@ -306,7 +254,7 @@ func (h *MonitorHandler) UpdateDomainMonitor(w http.ResponseWriter, r *http.Requ
 
 // PauseDomainMonitor POST /api/v1/monitors/domain/{id}/pause
 func (h *MonitorHandler) PauseDomainMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := domainMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
@@ -314,12 +262,7 @@ func (h *MonitorHandler) PauseDomainMonitor(w http.ResponseWriter, r *http.Reque
 	monitor, err := h.queries.PauseDomainMonitor(r.Context(), db.PauseDomainMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, domainMonitorToResponse(monitor))
@@ -327,24 +270,18 @@ func (h *MonitorHandler) PauseDomainMonitor(w http.ResponseWriter, r *http.Reque
 
 // ResumeDomainMonitor POST /api/v1/monitors/domain/{id}/resume
 func (h *MonitorHandler) ResumeDomainMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := domainMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
 	monitor, err := h.queries.ResumeDomainMonitor(r.Context(), db.ResumeDomainMonitorParams{
 		ID: monitorID, OrgID: orgID,
 	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			respond.Error(w, http.StatusNotFound, "monitor not found", "not_found")
-			return
-		}
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
+	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, domainMonitorToResponse(monitor))
@@ -352,7 +289,7 @@ func (h *MonitorHandler) ResumeDomainMonitor(w http.ResponseWriter, r *http.Requ
 
 // DeleteDomainMonitor DELETE /api/v1/monitors/domain/{id}
 func (h *MonitorHandler) DeleteDomainMonitor(w http.ResponseWriter, r *http.Request) {
-	orgID, monitorID, ok := domainMonitorIDs(w, r)
+	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}

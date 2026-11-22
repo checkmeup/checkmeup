@@ -5,9 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/checkmeup/checkmeup/internal/billing"
 	"github.com/checkmeup/checkmeup/internal/config"
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
@@ -232,28 +229,6 @@ func int32PtrToPgInt4(v *int32) pgtype.Int4 {
 	return pgtype.Int4{Int32: *v, Valid: true}
 }
 
-// checkCronMonitorCreateLimit checks whether orgID can create another cron
-// monitor under its plan. Responds and returns false on any failure (query
-// error or plan limit hit).
-func (h *MonitorHandler) checkCronMonitorCreateLimit(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) bool {
-	plan, err := h.queries.GetOrgPlan(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	total, err := h.queries.CountOrgMonitors(r.Context(), orgID)
-	if err != nil {
-		respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-		return false
-	}
-	if err := billing.CheckMonitorLimit(plan, int(total)); err != nil {
-		slog.InfoContext(r.Context(), "plan limit hit", "org_id", orgID, "plan", plan, "resource", "cron_monitor")
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return false
-	}
-	return true
-}
-
 // ListCronMonitors GET /api/v1/monitors/cron
 func (h *MonitorHandler) ListCronMonitors(w http.ResponseWriter, r *http.Request) {
 	orgID, err := orgIDFrom(r)
@@ -303,7 +278,7 @@ func (h *MonitorHandler) CreateCronMonitor(w http.ResponseWriter, r *http.Reques
 	if !validateCronMonitorRequest(w, &req.Name, &req.Schedule, &req.GracePeriodMins, &req.MaxAlertsPerIncident, req.MaxDurationMins) {
 		return
 	}
-	if !h.checkCronMonitorCreateLimit(w, r, orgID) {
+	if !h.allowNewMonitor(w, r, orgID, "cron_monitor") {
 		return
 	}
 
@@ -524,46 +499,13 @@ func (h *MonitorHandler) PauseCronMonitor(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, http.StatusOK, h.monitorToResponse(monitor))
 }
 
-// checkMonitorResumeLimit returns billing.ErrMonitorLimit when resuming a
-// paused monitor would push the org's active-monitor count over its plan
-// limit (ADR billing) — after a downgrade, resuming doesn't create anything
-// new, but it does grow the active count, so it's gated the same way
-// creation is, just checked against CountActiveMonitorsForOrg (non-paused
-// only) rather than the raw total CreateXMonitor checks. A non-nil error
-// that isn't billing.ErrMonitorLimit means the check itself failed (DB
-// error) — callers should treat that as an internal error, not a 402;
-// distinguish with errors.Is(err, billing.ErrMonitorLimit).
-func (h *MonitorHandler) checkMonitorResumeLimit(ctx context.Context, orgID uuid.UUID) error {
-	plan, err := h.queries.GetOrgPlan(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	active, err := h.queries.CountActiveMonitorsForOrg(ctx, orgID)
-	if err != nil {
-		return err
-	}
-	return billing.CheckMonitorLimit(plan, int(active))
-}
-
-// respondResumeLimitErr writes the right response for checkMonitorResumeLimit's
-// error, telling a real plan-limit block (402) apart from an internal
-// failure (500) that happened while checking.
-func respondResumeLimitErr(w http.ResponseWriter, err error) {
-	if errors.Is(err, billing.ErrMonitorLimit) {
-		respond.Error(w, http.StatusPaymentRequired, err.Error(), "plan_limit_reached")
-		return
-	}
-	respond.Error(w, http.StatusInternalServerError, "internal error", "internal_error")
-}
-
 // ResumeCronMonitor POST /api/v1/monitors/cron/{id}/resume
 func (h *MonitorHandler) ResumeCronMonitor(w http.ResponseWriter, r *http.Request) {
 	orgID, monitorID, ok := monitorIDs(w, r)
 	if !ok {
 		return
 	}
-	if err := h.checkMonitorResumeLimit(r.Context(), orgID); err != nil {
-		respondResumeLimitErr(w, err)
+	if !h.allowResume(w, r, orgID) {
 		return
 	}
 
