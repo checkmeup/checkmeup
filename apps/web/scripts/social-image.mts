@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import satori, { type SatoriOptions } from 'satori'
-import { postsMeta } from '../src/blog/posts'
+import { postsMeta } from '../src/blog/postsMeta'
 
 export const SOCIAL_IMAGE_WIDTH = 1200
 export const SOCIAL_IMAGE_HEIGHT = 630
@@ -40,8 +40,8 @@ export function socialImageLabel(path: string): string | null {
 // The picture's colors, read from the tokens in src/style.css so it follows
 // them (docs/reference/design.md): the dark theme's text on the brand's deep
 // green, a theme of neither, so a preview stands out in a light feed and a
-// dark one alike.
-function palette() {
+// dark one alike. scripts/homepage-card.mts draws the homepage card from it too.
+export function palette() {
   // A path fixed in this script, not input.
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf-8')
@@ -63,6 +63,11 @@ function palette() {
     accentWash: color('accent-wash'),
     statusUp: color('status-up'),
     tickUp: color('color-green-700'),
+    statusDown: color('status-down'),
+    terminalBg: color('terminal-bg'),
+    terminalDim: color('terminal-dim'),
+    border: color('border-strong'),
+    onAccent: color('on-accent'),
     // The logo's mark is drawn in green-700 and green-500, which vanish at the
     // faint watermark's opacity: each a step lighter there, keeping the two
     // halves as close. The logo itself keeps its own colors.
@@ -79,9 +84,14 @@ function fontFile(dir: string, file: string): Buffer {
 
 // Read once, on the first image.
 const fonts: SatoriOptions['fonts'] = []
-function satoriOptions(): SatoriOptions {
+export function satoriOptions(): SatoriOptions {
   if (fonts.length === 0) {
     fonts.push(
+      {
+        name: 'Geist',
+        data: fontFile('geist-sans', 'Geist-Regular.ttf'),
+        weight: 400,
+      },
       {
         name: 'Geist',
         data: fontFile('geist-sans', 'Geist-SemiBold.ttf'),
@@ -97,7 +107,7 @@ function satoriOptions(): SatoriOptions {
   return { width: SOCIAL_IMAGE_WIDTH, height: SOCIAL_IMAGE_HEIGHT, fonts }
 }
 
-interface Node {
+export interface Node {
   type: string
   props: {
     style?: Record<string, unknown>
@@ -148,25 +158,27 @@ export async function fitTitle(title: string): Promise<{ fontSize: number; lines
   return null
 }
 
-// The 90-day check strip of the homepage card (CheckStrip.vue), every check
-// passing: the product's look, the same on every page.
-const STRIP_TICKS = 60
-const STRIP_GAP = 6
-
-function checkStrip(color: string): Node {
-  const tick = (TITLE_WIDTH - (STRIP_TICKS - 1) * STRIP_GAP) / STRIP_TICKS
+// A check strip as on the homepage (CheckStrip.vue), TITLE_WIDTH wide: `ticks`
+// checks in `up`, but the one at `down`, if given, in `downColor`.
+export function checkStrip(
+  ticks: number,
+  gap: number,
+  up: string,
+  down?: { at: number; color: string },
+): Node {
+  const tick = (TITLE_WIDTH - (ticks - 1) * gap) / ticks
   return {
     type: 'div',
     props: {
-      style: { display: 'flex', gap: STRIP_GAP },
-      children: Array.from({ length: STRIP_TICKS }, () => ({
+      style: { display: 'flex', gap },
+      children: Array.from({ length: ticks }, (_, i) => ({
         type: 'div',
         props: {
           style: {
             width: tick,
             height: 26,
             borderRadius: 3,
-            backgroundColor: color,
+            backgroundColor: i === down?.at ? down.color : up,
           },
         },
       })),
@@ -174,22 +186,63 @@ function checkStrip(color: string): Node {
   }
 }
 
-export function socialImageNode(title: string, label: string | null, fontSize: number): Node {
-  const colors = palette()
+// public/img/logo-dark.svg, whole or a part of it cropped by the viewBox.
+function logoSvg(from = 0, units = 1686): string {
   // A path fixed in this script, not input.
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   const logo = readFileSync(new URL('../public/img/logo-dark.svg', import.meta.url), 'utf-8')
-  // A part of the logo, cropped by the viewBox.
-  const crop = (from: number, units: number) =>
-    logo.replace(
-      /width="[^"]*" height="[^"]*" viewBox="[^"]*"/,
-      `width="${units}" height="${LOGO_UNITS}" viewBox="${from} 0 ${units} ${LOGO_UNITS}"`,
-    )
-  const mark = crop(0, LOGO_UNITS)
-  const watermark = mark
+  return logo.replace(
+    /width="[^"]*" height="[^"]*" viewBox="[^"]*"/,
+    `width="${units}" height="${LOGO_UNITS}" viewBox="${from} 0 ${units} ${LOGO_UNITS}"`,
+  )
+}
+
+export const svgSrc = (svg: string) =>
+  `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+
+// The logo's mark alone, in its own colors.
+export const markSrc = () => svgSrc(logoSvg(0, LOGO_UNITS))
+
+// The logo: its mark on a light tile, since the mark's own green-700 half
+// would vanish on the green background, and the wordmark beside it.
+export function logoNode(colors: ReturnType<typeof palette>): Node {
+  return {
+    type: 'div',
+    props: {
+      style: { display: 'flex', alignItems: 'center', gap: 14 },
+      children: [
+        {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              padding: LOGO_TILE_INSET,
+              borderRadius: 14,
+              backgroundColor: colors.text,
+            },
+            children: {
+              type: 'img',
+              props: { src: markSrc(), style: { width: LOGO_HEIGHT, height: LOGO_HEIGHT } },
+            },
+          },
+        },
+        {
+          type: 'img',
+          props: {
+            src: svgSrc(logoSvg(WORDMARK_FROM, WORDMARK_UNITS)),
+            style: { width: (LOGO_HEIGHT * WORDMARK_UNITS) / LOGO_UNITS, height: LOGO_HEIGHT },
+          },
+        },
+      ],
+    },
+  }
+}
+
+export function socialImageNode(title: string, label: string | null, fontSize: number): Node {
+  const colors = palette()
+  const watermark = logoSvg(0, LOGO_UNITS)
     .replaceAll('#0F6E56', colors.markGreens[0])
     .replaceAll('#1D9E75', colors.markGreens[1])
-  const svgSrc = (svg: string) => `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
   const mono = { fontFamily: 'Geist Mono', fontWeight: 400 }
   return {
     type: 'div',
@@ -223,44 +276,7 @@ export function socialImageNode(title: string, label: string | null, fontSize: n
             },
           },
         },
-        {
-          type: 'div',
-          props: {
-            style: { display: 'flex', alignItems: 'center', gap: 14 },
-            children: [
-              // The mark on a light tile: its own green-700 half would vanish
-              // on the green background.
-              {
-                type: 'div',
-                props: {
-                  style: {
-                    display: 'flex',
-                    padding: LOGO_TILE_INSET,
-                    borderRadius: 14,
-                    backgroundColor: colors.text,
-                  },
-                  children: {
-                    type: 'img',
-                    props: {
-                      src: svgSrc(mark),
-                      style: { width: LOGO_HEIGHT, height: LOGO_HEIGHT },
-                    },
-                  },
-                },
-              },
-              {
-                type: 'img',
-                props: {
-                  src: svgSrc(crop(WORDMARK_FROM, WORDMARK_UNITS)),
-                  style: {
-                    width: (LOGO_HEIGHT * WORDMARK_UNITS) / LOGO_UNITS,
-                    height: LOGO_HEIGHT,
-                  },
-                },
-              },
-            ],
-          },
-        },
+        logoNode(colors),
         {
           type: 'div',
           props: {
@@ -312,7 +328,7 @@ export function socialImageNode(title: string, label: string | null, fontSize: n
           props: {
             style: { display: 'flex', flexDirection: 'column', gap: 20 },
             children: [
-              checkStrip(colors.tickUp),
+              checkStrip(60, 6, colors.tickUp),
               {
                 type: 'div',
                 props: {
