@@ -1,6 +1,6 @@
 # Search indexing and URL form of the public site
 
-Date: 2026-11-05
+Date: 2026-11-22
 
 Release notes stay at `/blog/<slug>` but carry `noindex, follow` in their prerendered HTML, so dozens of thin per-version pages don't drag down the whole site's ranking. `/changelog` is the one indexed page for them: every release, newest first, each with its own anchor and a link to the full notes. Articles stay indexed and are the only posts on `/blog` and in `sitemap.xml`. `robots.txt` doesn't disallow release notes, because a crawler blocked from a page never sees its `noindex`.
 
@@ -9,6 +9,8 @@ Every public URL has one form, without a trailing slash (except `/`). The server
 Public routes (`/`, `/pricing`, `/docs`, `/faq`, `/about`, `/terms`, `/privacy`, `/refund`, `/blog`, `/changelog`, the free checkers under `/tools/`, the monitor type pages such as `/cron-monitoring`, the `/alternatives/` pages and every post) are prerendered to static HTML at build time, so crawlers that don't run JavaScript (Bingbot among them) see the content and the head tags. `apps/web/scripts/prerender.mts` renders the real components with `vue/server-renderer` under `vite-node` and writes `dist/<route>/index.html`, which the Go server serves as is. The browser then renders the app fresh over it rather than hydrating. Signed-in app routes stay client-rendered.
 
 A path no route of the web app matches gets a 404 with a prerendered `404.html` (`noindex`), not the app shell with a 200: a soft 404 gets crawled as a duplicate page, and an uptime monitor on a missing page reads it as up. The prerender step writes the app's route patterns to `dist/spa-routes.json` from the same `routes.ts` the router uses, so the server never keeps its own copy; `/blog/:slug` is left out because every real post has its own prerendered file.
+
+Each page's social image (PRD social-images) is drawn in the same prerender step: `apps/web/scripts/social-image.mts` lays the page's `<h1>` out with satori into an SVG and rasterizes it to PNG with `@resvg/resvg-js`, two dev dependencies and no headless browser. resvg is a native module, so it is imported lazily inside the render (`await import('@resvg/resvg-js')`): if its binary doesn't load on the deploy image (Alpine), only the images fail, each page keeps the homepage card, and the build and the deploy go on. Don't turn it into a top-level import.
 
 Each deploy tells the IndexNow engines (Bing, Yandex and others; Google doesn't take part) which public pages it changed, so they recrawl them within hours rather than weeks. The release workflow hashes the live HTML of every URL in `sitemap.xml` before `kamal deploy` and again after it, with asset file names and the footer's version number taken out, and `scripts/indexnow.mjs` sends the URLs whose hash changed, or that are new, to `api.indexnow.org`. The key is the one in `apps/web/public/b76076cc360a44c49982ee5d5143ea9b.txt`, which proves the site owns it. Both steps run with `continue-on-error`, so a failed ping never fails a deploy.
 
