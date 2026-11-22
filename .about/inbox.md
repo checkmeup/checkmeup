@@ -1,13 +1,5 @@
 # Inbox
 
-## Architecture deepening candidates
-
-2026-10-14 · session review · kept 2026-11-13
-
-An architecture review found places where each monitor type repeats logic that should exist once. One is left: SSL and domain as one "Expiry monitor" (worth exploring), as their workers, handlers and edit views differ only slightly; merging them would need a glossary term.
-
-The other two were taken out on 2026-11-22: the plan checks copied across the monitor handlers (`handler/monitor_limits.go`), and the incident lifecycle uptime, port and DNS each ran on their own (`worker/incident_tracker.go`). What the product waits on now is traffic rather than code. Settled by agreeing a plan for the Expiry monitor, or by dropping it.
-
 ## Free tools without sign-up
 
 2026-10-17 · traffic review · kept 2026-11-22
