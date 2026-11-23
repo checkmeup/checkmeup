@@ -3288,3 +3288,102 @@ func TestBuildPortDownAlert(t *testing.T) {
 		}
 	})
 }
+
+// failIncidentInserts makes every insert into table for monitorID fail, as a
+// dropped connection would, until the returned func lifts it. The trigger
+// matches one monitor only, so tests in other packages sharing the database
+// still open their incidents.
+func failIncidentInserts(t *testing.T, pool *pgxpool.Pool, table string, monitorID uuid.UUID) func() {
+	t.Helper()
+	name := "fail_incident_" + strings.ReplaceAll(monitorID.String(), "-", "")
+	mustExecWorker(t, pool, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.monitor_id = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
+  RETURN NEW;
+END $$`, name, monitorID))
+	mustExecWorker(t, pool, fmt.Sprintf("CREATE TRIGGER %s BEFORE INSERT ON %s FOR EACH ROW EXECUTE FUNCTION %s()", name, table, name))
+	lifted := false
+	lift := func() {
+		if lifted {
+			return
+		}
+		lifted = true
+		mustExecWorker(t, pool, fmt.Sprintf("DROP TRIGGER %s ON %s", name, table))
+		mustExecWorker(t, pool, fmt.Sprintf("DROP FUNCTION %s()", name))
+	}
+	t.Cleanup(lift)
+	return lift
+}
+
+// A monitor goes down and opens its incident together, or not at all: down
+// without an incident would skip every later check and never alert.
+func TestGoingDownOpensIncidentAtomically(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	n := Notifiers{Queries: queries, Telegram: telegram.NewClient(""), Mailer: email.NewSender(""), Webhook: webhook.NewClient(), Logger: testLogger(), HTTPClient: &http.Client{Timeout: 10 * time.Second}}
+
+	t.Run("uptime", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
+		lift := failIncidentInserts(t, pool, "uptime_incidents", mon.ID)
+
+		// The first failure is only rechecked; the recheck is the one that goes down.
+		checkUptimeMonitors(context.Background(), n)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
+		if status, _ := getUptimeRow(t, pool, mon.ID); status == "down" {
+			t.Fatal("want the monitor not down when its incident failed to open")
+		}
+
+		lift()
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(context.Background(), n)
+		WaitForAlerts()
+		if status, _ := getUptimeRow(t, pool, mon.ID); status != "down" {
+			t.Fatalf("want down on the next failing check, got %q", status)
+		}
+		var open int
+		if err := pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM uptime_incidents WHERE monitor_id = $1 AND resolved_at IS NULL", mon.ID,
+		).Scan(&open); err != nil {
+			t.Fatalf("query incidents: %v", err)
+		}
+		if open != 1 {
+			t.Fatalf("want 1 open incident, got %d", open)
+		}
+	})
+
+	t.Run("cron", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
+		lift := failIncidentInserts(t, pool, "cron_incidents", mon.ID)
+
+		checkOverdue(context.Background(), n)
+		WaitForAlerts()
+		if status := getCronStatus(t, pool, mon.ID); status == "down" {
+			t.Fatal("want the monitor not down when its incident failed to open")
+		}
+
+		lift()
+		checkOverdue(context.Background(), n)
+		WaitForAlerts()
+		if status := getCronStatus(t, pool, mon.ID); status != "down" {
+			t.Fatalf("want down on the next overdue check, got %q", status)
+		}
+		var open int
+		if err := pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM cron_incidents WHERE monitor_id = $1 AND resolved_at IS NULL", mon.ID,
+		).Scan(&open); err != nil {
+			t.Fatalf("query incidents: %v", err)
+		}
+		if open != 1 {
+			t.Fatalf("want 1 open incident, got %d", open)
+		}
+	})
+}

@@ -44,23 +44,6 @@ func (q *Queries) CreatePortCheck(ctx context.Context, arg CreatePortCheckParams
 	return i, err
 }
 
-const createPortIncident = `-- name: CreatePortIncident :one
-INSERT INTO port_incidents (monitor_id) VALUES ($1) RETURNING id, monitor_id, started_at, resolved_at, alert_count
-`
-
-func (q *Queries) CreatePortIncident(ctx context.Context, monitorID uuid.UUID) (PortIncident, error) {
-	row := q.db.QueryRow(ctx, createPortIncident, monitorID)
-	var i PortIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-	)
-	return i, err
-}
-
 const createPortMonitor = `-- name: CreatePortMonitor :one
 INSERT INTO port_monitors (org_id, name, host, port, expected_state, interval_mins, max_alerts_per_incident, alert_after_n_failures, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -428,13 +411,26 @@ func (q *Queries) ListPortMonitors(ctx context.Context, orgID uuid.UUID) ([]Port
 	return items, nil
 }
 
-const markPortMonitorDown = `-- name: MarkPortMonitorDown :exec
-UPDATE port_monitors SET status = 'down', updated_at = NOW() WHERE id = $1
+const openPortIncident = `-- name: OpenPortIncident :one
+WITH down AS (
+    UPDATE port_monitors SET status = 'down', updated_at = NOW() WHERE port_monitors.id = $1 RETURNING id
+)
+INSERT INTO port_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
-func (q *Queries) MarkPortMonitorDown(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, markPortMonitorDown, id)
-	return err
+// Marks the monitor down and opens its incident in one statement, so neither
+// happens without the other: down with no incident skips every later check.
+func (q *Queries) OpenPortIncident(ctx context.Context, id uuid.UUID) (PortIncident, error) {
+	row := q.db.QueryRow(ctx, openPortIncident, id)
+	var i PortIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
+	)
+	return i, err
 }
 
 const pausePortMonitor = `-- name: PausePortMonitor :one

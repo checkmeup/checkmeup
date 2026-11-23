@@ -93,12 +93,8 @@ func (t portTracker) recordFailure(ctx context.Context) (int32, error) {
 	return updated.ConsecutiveFailures, err
 }
 
-func (t portTracker) markDown(ctx context.Context) error {
-	return t.q.MarkPortMonitorDown(ctx, t.m.ID)
-}
-
 func (t portTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
-	inc, err := t.q.CreatePortIncident(ctx, t.m.ID)
+	inc, err := t.q.OpenPortIncident(ctx, t.m.ID)
 	return inc.ID, err
 }
 

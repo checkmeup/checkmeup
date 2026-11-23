@@ -83,9 +83,6 @@ SELECT COALESCE(
   false
 )::boolean AS failed;
 
--- name: MarkUptimeMonitorDown :exec
-UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE id = $1;
-
 -- name: CreateUptimeCheck :one
 INSERT INTO uptime_checks (monitor_id, status_code, response_time_ms, is_up, failure_reason)
 VALUES ($1, $2, $3, $4, $5)
@@ -110,8 +107,13 @@ SELECT
 FROM uptime_checks
 WHERE monitor_id = $1;
 
--- name: CreateUptimeIncident :one
-INSERT INTO uptime_incidents (monitor_id) VALUES ($1) RETURNING *;
+-- name: OpenUptimeIncident :one
+-- Marks the monitor down and opens its incident in one statement, so neither
+-- happens without the other: down with no incident skips every later check.
+WITH down AS (
+    UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE uptime_monitors.id = $1 RETURNING id
+)
+INSERT INTO uptime_incidents (monitor_id) SELECT down.id FROM down RETURNING *;
 
 -- name: ResolveLatestUptimeIncident :one
 UPDATE uptime_incidents

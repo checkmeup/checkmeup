@@ -131,12 +131,8 @@ func (t dnsTracker) recordFailure(ctx context.Context) (int32, error) {
 	return updated.ConsecutiveFailures, err
 }
 
-func (t dnsTracker) markDown(ctx context.Context) error {
-	return t.q.MarkDNSMonitorDown(ctx, t.m.ID)
-}
-
 func (t dnsTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
-	inc, err := t.q.CreateDNSIncident(ctx, t.m.ID)
+	inc, err := t.q.OpenDNSIncident(ctx, t.m.ID)
 	return inc.ID, err
 }
 

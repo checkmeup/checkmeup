@@ -49,25 +49,6 @@ func (q *Queries) CountCronPings(ctx context.Context, monitorID uuid.UUID) (int6
 	return count, err
 }
 
-const createCronIncident = `-- name: CreateCronIncident :one
-INSERT INTO cron_incidents (monitor_id)
-VALUES ($1)
-RETURNING id, monitor_id, started_at, resolved_at, alert_count
-`
-
-func (q *Queries) CreateCronIncident(ctx context.Context, monitorID uuid.UUID) (CronIncident, error) {
-	row := q.db.QueryRow(ctx, createCronIncident, monitorID)
-	var i CronIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-	)
-	return i, err
-}
-
 const createCronMonitor = `-- name: CreateCronMonitor :one
 INSERT INTO cron_monitors (org_id, name, schedule, grace_period_mins, ping_token, max_alerts_per_incident, alert_after_n_failures, max_duration_mins, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -589,6 +570,28 @@ func (q *Queries) MarkCronRunAlerted(ctx context.Context, id uuid.UUID) (CronRun
 	return i, err
 }
 
+const openCronIncident = `-- name: OpenCronIncident :one
+WITH down AS (
+    UPDATE cron_monitors SET status = 'down', updated_at = NOW() WHERE cron_monitors.id = $1 RETURNING id
+)
+INSERT INTO cron_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
+`
+
+// Marks the monitor down and opens its incident in one statement, so neither
+// happens without the other: down with no incident skips every later check.
+func (q *Queries) OpenCronIncident(ctx context.Context, id uuid.UUID) (CronIncident, error) {
+	row := q.db.QueryRow(ctx, openCronIncident, id)
+	var i CronIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
+	)
+	return i, err
+}
+
 const pauseCronMonitor = `-- name: PauseCronMonitor :one
 UPDATE cron_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
@@ -754,17 +757,6 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 		&i.ProjectID,
 	)
 	return i, err
-}
-
-const updateCronMonitorDown = `-- name: UpdateCronMonitorDown :exec
-UPDATE cron_monitors
-SET status = 'down', updated_at = NOW()
-WHERE id = $1
-`
-
-func (q *Queries) UpdateCronMonitorDown(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, updateCronMonitorDown, id)
-	return err
 }
 
 const updateCronMonitorPing = `-- name: UpdateCronMonitorPing :one

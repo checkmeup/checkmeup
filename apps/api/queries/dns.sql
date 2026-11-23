@@ -89,9 +89,6 @@ SELECT COALESCE(
   false
 )::boolean AS failed;
 
--- name: MarkDNSMonitorDown :exec
-UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE id = $1;
-
 -- name: CreateDNSCheck :one
 INSERT INTO dns_checks (monitor_id, response_time_ms, is_up, resolved_value, failure_reason)
 VALUES ($1, $2, $3, $4, $5)
@@ -116,8 +113,13 @@ SELECT
 FROM dns_checks
 WHERE monitor_id = $1;
 
--- name: CreateDNSIncident :one
-INSERT INTO dns_incidents (monitor_id) VALUES ($1) RETURNING *;
+-- name: OpenDNSIncident :one
+-- Marks the monitor down and opens its incident in one statement, so neither
+-- happens without the other: down with no incident skips every later check.
+WITH down AS (
+    UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE dns_monitors.id = $1 RETURNING id
+)
+INSERT INTO dns_incidents (monitor_id) SELECT down.id FROM down RETURNING *;
 
 -- name: ResolveLatestDNSIncident :one
 UPDATE dns_incidents

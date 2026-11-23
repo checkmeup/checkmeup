@@ -58,23 +58,6 @@ func (q *Queries) CreateUptimeCheck(ctx context.Context, arg CreateUptimeCheckPa
 	return i, err
 }
 
-const createUptimeIncident = `-- name: CreateUptimeIncident :one
-INSERT INTO uptime_incidents (monitor_id) VALUES ($1) RETURNING id, monitor_id, started_at, resolved_at, alert_count
-`
-
-func (q *Queries) CreateUptimeIncident(ctx context.Context, monitorID uuid.UUID) (UptimeIncident, error) {
-	row := q.db.QueryRow(ctx, createUptimeIncident, monitorID)
-	var i UptimeIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-	)
-	return i, err
-}
-
 const createUptimeMonitor = `-- name: CreateUptimeMonitor :one
 INSERT INTO uptime_monitors (org_id, name, url, interval_mins, max_alerts_per_incident, alert_after_n_failures, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, http_method, accepted_status_codes, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -474,13 +457,26 @@ func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]Up
 	return items, nil
 }
 
-const markUptimeMonitorDown = `-- name: MarkUptimeMonitorDown :exec
-UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE id = $1
+const openUptimeIncident = `-- name: OpenUptimeIncident :one
+WITH down AS (
+    UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE uptime_monitors.id = $1 RETURNING id
+)
+INSERT INTO uptime_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
-func (q *Queries) MarkUptimeMonitorDown(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, markUptimeMonitorDown, id)
-	return err
+// Marks the monitor down and opens its incident in one statement, so neither
+// happens without the other: down with no incident skips every later check.
+func (q *Queries) OpenUptimeIncident(ctx context.Context, id uuid.UUID) (UptimeIncident, error) {
+	row := q.db.QueryRow(ctx, openUptimeIncident, id)
+	var i UptimeIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
+	)
+	return i, err
 }
 
 const pauseUptimeMonitor = `-- name: PauseUptimeMonitor :one

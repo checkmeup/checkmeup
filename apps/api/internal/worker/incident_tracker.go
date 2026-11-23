@@ -35,7 +35,7 @@ type incidentTracker interface {
 	recordUp(ctx context.Context) error
 	// recordFailure returns the monitor's consecutive failures, this one counted.
 	recordFailure(ctx context.Context) (int32, error)
-	markDown(ctx context.Context) error
+	// openIncident marks the monitor down and opens its incident, both or neither.
 	openIncident(ctx context.Context) (uuid.UUID, error)
 	// resolveIncident closes the monitor's open incident and returns when it started.
 	resolveIncident(ctx context.Context) (time.Time, error)
@@ -116,13 +116,10 @@ func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMon
 	if failures <= m.AlertAfterNFailures || m.Status == db.MonitorStatusDown {
 		return
 	}
-	if err := t.markDown(ctx); err != nil {
-		m.logError(n, "mark down", err)
-		return
-	}
+	// If this fails the monitor stays up, so the next failing check tries again.
 	incidentID, err := t.openIncident(ctx)
 	if err != nil {
-		m.logError(n, "create incident", err)
+		m.logError(n, "open incident", err)
 		return
 	}
 	if !m.AlertsEnabled {

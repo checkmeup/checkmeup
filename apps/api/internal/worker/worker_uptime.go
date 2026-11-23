@@ -104,12 +104,8 @@ func (t uptimeTracker) recordFailure(ctx context.Context) (int32, error) {
 	return updated.ConsecutiveFailures, err
 }
 
-func (t uptimeTracker) markDown(ctx context.Context) error {
-	return t.q.MarkUptimeMonitorDown(ctx, t.m.ID)
-}
-
 func (t uptimeTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
-	inc, err := t.q.CreateUptimeIncident(ctx, t.m.ID)
+	inc, err := t.q.OpenUptimeIncident(ctx, t.m.ID)
 	return inc.ID, err
 }
 

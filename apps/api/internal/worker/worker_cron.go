@@ -46,14 +46,11 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 		return
 	}
 
-	if err := n.Queries.UpdateCronMonitorDown(ctx, m.ID); err != nil {
-		n.Logger.Error("worker: mark down", "monitor_id", m.ID, "err", err)
-		return
-	}
-
-	inc, err := n.Queries.CreateCronIncident(ctx, m.ID)
+	// Marks it down too, both or neither: if this fails the monitor stays up,
+	// so the next tick finds it overdue again.
+	inc, err := n.Queries.OpenCronIncident(ctx, m.ID)
 	if err != nil {
-		n.Logger.Error("worker: create incident", "monitor_id", m.ID, "err", err)
+		n.Logger.Error("worker: open incident", "monitor_id", m.ID, "err", err)
 		return
 	}
 

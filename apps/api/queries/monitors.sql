@@ -47,11 +47,6 @@ SET status = 'up', last_ping_at = $3, next_ping_at = $4, consecutive_failures = 
 WHERE id = $1 AND org_id = $2
 RETURNING *;
 
--- name: UpdateCronMonitorDown :exec
-UPDATE cron_monitors
-SET status = 'down', updated_at = NOW()
-WHERE id = $1;
-
 -- name: IncrementCronConsecutiveFailures :one
 UPDATE cron_monitors
 SET consecutive_failures = consecutive_failures + 1, updated_at = NOW()
@@ -82,10 +77,13 @@ SELECT * FROM cron_pings WHERE monitor_id = $1 ORDER BY received_at DESC LIMIT 1
 -- name: CountCronPings :one
 SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1;
 
--- name: CreateCronIncident :one
-INSERT INTO cron_incidents (monitor_id)
-VALUES ($1)
-RETURNING *;
+-- name: OpenCronIncident :one
+-- Marks the monitor down and opens its incident in one statement, so neither
+-- happens without the other: down with no incident skips every later check.
+WITH down AS (
+    UPDATE cron_monitors SET status = 'down', updated_at = NOW() WHERE cron_monitors.id = $1 RETURNING id
+)
+INSERT INTO cron_incidents (monitor_id) SELECT down.id FROM down RETURNING *;
 
 -- name: ResolveLatestCronIncident :one
 UPDATE cron_incidents

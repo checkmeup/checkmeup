@@ -47,23 +47,6 @@ func (q *Queries) CreateDNSCheck(ctx context.Context, arg CreateDNSCheckParams) 
 	return i, err
 }
 
-const createDNSIncident = `-- name: CreateDNSIncident :one
-INSERT INTO dns_incidents (monitor_id) VALUES ($1) RETURNING id, monitor_id, started_at, resolved_at, alert_count
-`
-
-func (q *Queries) CreateDNSIncident(ctx context.Context, monitorID uuid.UUID) (DnsIncident, error) {
-	row := q.db.QueryRow(ctx, createDNSIncident, monitorID)
-	var i DnsIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-	)
-	return i, err
-}
-
 const createDNSMonitor = `-- name: CreateDNSMonitor :one
 INSERT INTO dns_monitors (org_id, name, hostname, record_type, expected_value, interval_mins, max_alerts_per_incident, alert_after_n_failures, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -508,13 +491,26 @@ func (q *Queries) ListDueDNSMonitors(ctx context.Context) ([]DnsMonitor, error) 
 	return items, nil
 }
 
-const markDNSMonitorDown = `-- name: MarkDNSMonitorDown :exec
-UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE id = $1
+const openDNSIncident = `-- name: OpenDNSIncident :one
+WITH down AS (
+    UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE dns_monitors.id = $1 RETURNING id
+)
+INSERT INTO dns_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
 `
 
-func (q *Queries) MarkDNSMonitorDown(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, markDNSMonitorDown, id)
-	return err
+// Marks the monitor down and opens its incident in one statement, so neither
+// happens without the other: down with no incident skips every later check.
+func (q *Queries) OpenDNSIncident(ctx context.Context, id uuid.UUID) (DnsIncident, error) {
+	row := q.db.QueryRow(ctx, openDNSIncident, id)
+	var i DnsIncident
+	err := row.Scan(
+		&i.ID,
+		&i.MonitorID,
+		&i.StartedAt,
+		&i.ResolvedAt,
+		&i.AlertCount,
+	)
+	return i, err
 }
 
 const pauseDNSMonitor = `-- name: PauseDNSMonitor :one
