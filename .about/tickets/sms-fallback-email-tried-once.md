@@ -20,6 +20,7 @@ An alert whose only delivery was an SMS is lost if that SMS fails at the carrier
 - Such a retry tries an SMS channel only while the alert's SMS attempts, the failed one counted, stay within 3 (PRD alert-delivery's anti-goal).
 - Once a retry delivers the alert, it isn't sent again. A failed SMS whose Fallback email delivered isn't retried either.
 - A recovery or stuck-run alert in the same case stays one-shot, as PRD alert-delivery's non-goal says.
+- PRD alert-delivery lists this case as an acceptance criterion linked to its tests, no longer as a non-goal, and ADR alerting's SMS paragraph says that a failed only-delivery SMS whose Fallback email fails too hands the alert back to its retry.
 
 ## Comments
 
@@ -50,3 +51,14 @@ Picked over retrying the Fallback email on its own, because the existing retries
 
 - When the undo finds nothing to undo, keep the `sms_messages` row and retry the undo on Twilio's next callback, or from the worker.
 - Count the alert before the SMS goes out, and undo the count if the SMS send itself fails.
+
+### 2026-11-24 · decided
+
+Agreed after `/louie:plan`:
+
+- The callback-before-the-count race is closed with the first option. The SMS row is kept as `undo_pending`, and the worker retries the undo at the start of `retryAlerts`. Counting before the SMS goes out is ruled out: an alert counted but never sent, as when the process stops mid-send, would never be retried (PRD alert-delivery).
+- An undo applies only while the alert hasn't been attempted since the SMS (`alert_attempted_at <= sms created_at`), so it never takes back a later delivery or a newer daily check's alert.
+- The 3-SMS cap stays the existing `withSMSCap` on `alert_attempts`, which counts every attempt. There is no separate SMS counter.
+- Tests make the Fallback email fail as the existing retry tests do: an org with no users.
+- SMS rows stored before the migration have no source and stay one-shot.
+- The same change updates PRD alert-delivery: the non-goal "Retrying the Fallback email sent after an SMS that was the alert's only delivery fails at the carrier" becomes an acceptance criterion with its test links. It also updates ADR alerting's SMS paragraph.
