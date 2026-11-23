@@ -60,3 +60,4 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_WorkerStalled"
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_DBUnavailable"
 - An external uptime service checks `https://checkmeup.net/api/v1/health` at least every 5 minutes and emails the operator when it fails (checked by hand once: the service shows the check as up, and its test alert reaches the operator's inbox).
+  → set up: a Better Stack monitor on `https://checkmeup.net/api/v1/health`, 2026-11-23
