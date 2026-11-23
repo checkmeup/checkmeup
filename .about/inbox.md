@@ -36,3 +36,9 @@ The DNS monitor compares a record's text, not whether it is right (the DNS recor
 2026-11-23 · SEO review
 
 About 170 of the checker's ~1300 impressions in 28 days (Search Console, to 2026-11-21) are for "is my domain expired", "check if domain has expired" and the like, and its one click that week came from "domain redemption period check". Competitors in the top 10 (Pulsetic, Domainyze, UptimeObserver) show the domain's status, its lifecycle stage and its nameservers; the checker shows only the date, days left and registrar, because `apps/api/internal/rdap/rdap.go` reads only `events` and `entities` and drops `status` and `nameservers`, and the WHOIS fallback doesn't read `Domain Status:` lines. Settled when the checker shows the status as a lifecycle stage (active, grace, redemption, pending delete) and the FAQ answers in `apps/web/src/content/domainExpiryFaqs.ts` say "the checker shows" instead of pointing to a WHOIS record, or the idea is dropped.
+
+## A monitor paused while down keeps its incident open forever
+
+2026-11-23 · missed-alerts audit
+
+Pausing overwrites a down monitor's status, so neither resume nor the next working check or ping sees it as down, and its open incident is never resolved: no recovery alert, and the incident stays open on the detail page and status pages. A later outage opens a new incident and alerts as it should, so no down alert is lost. Applies to every incident-tracked type (uptime, port, DNS, cron). Settled by resolving the open incident on pause (without a recovery alert), or on resume, and a test for it.
