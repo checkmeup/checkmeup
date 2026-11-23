@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -82,7 +83,11 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 		// Fine again: an alert still pending reports what no longer holds.
 		ClearAlert: result.status == db.DomainMonitorStatusUp,
 	}); err != nil {
-		n.Logger.Error("domain worker: update check", "monitor_id", m.ID, "err", err)
+		// No alert without its write, as for SSL (checkOneSSLMonitor).
+		if !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("domain worker: update check", "monitor_id", m.ID, "err", err)
+		}
+		return
 	}
 
 	if result.alert == nil {

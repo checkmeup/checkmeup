@@ -384,7 +384,7 @@ SET recheck_pending = true,
     last_checked_at = NOW(),
     next_check_at   = NOW() + INTERVAL '30 seconds',
     updated_at      = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 `
 
 // A check that errors right after a working one is checked again on the
@@ -477,7 +477,7 @@ SET status               = $1,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = $12
+WHERE id = $12 AND status <> 'paused'
 RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
@@ -498,7 +498,8 @@ type UpdateSSLMonitorCheckParams struct {
 
 // An alert this check raised is kept, attempted now, until it is delivered
 // (ClearSSLPendingAlert) or the monitor is fine again; ClaimSSLAlertRetries
-// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
+// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it. A check that finishes after a pause writes
+// nothing (no row).
 func (q *Queries) UpdateSSLMonitorCheck(ctx context.Context, arg UpdateSSLMonitorCheckParams) (SslMonitor, error) {
 	row := q.db.QueryRow(ctx, updateSSLMonitorCheck,
 		arg.Status,

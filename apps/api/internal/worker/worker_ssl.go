@@ -3,11 +3,13 @@ package worker
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"html"
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -77,7 +79,13 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 		// Fine again: an alert still pending reports what no longer holds.
 		ClearAlert: result.status == db.SslMonitorStatusUp,
 	}); err != nil {
-		n.Logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
+		// No alert without its write (PRD alert-delivery): the monitor stays
+		// due, so the next tick checks it again, and an alert sent now would
+		// go out again then. No row: paused while it was checked.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
+		}
+		return
 	}
 
 	if result.recovery == nil && result.alert == nil {

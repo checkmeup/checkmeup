@@ -3457,12 +3457,19 @@ func TestBuildPortDownAlert(t *testing.T) {
 // sharing the database still write their incidents.
 func failIncidentWrites(t *testing.T, pool *pgxpool.Pool, op, table string, monitorID uuid.UUID) func() {
 	t.Helper()
-	name := "fail_" + strings.ToLower(op) + "_" + strings.ReplaceAll(monitorID.String(), "-", "")
+	return failWrites(t, pool, op, table, "monitor_id", monitorID)
+}
+
+// failWrites makes every op of table's rows whose column is id fail, until
+// the returned func lifts it.
+func failWrites(t *testing.T, pool *pgxpool.Pool, op, table, column string, id uuid.UUID) func() {
+	t.Helper()
+	name := "fail_" + strings.ToLower(op) + "_" + strings.ReplaceAll(id.String(), "-", "")
 	mustExecWorker(t, pool, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.monitor_id = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
+  IF NEW.%s = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
   RETURN NEW;
-END $$`, name, monitorID))
+END $$`, name, column, id))
 	mustExecWorker(t, pool, fmt.Sprintf("CREATE TRIGGER %s BEFORE %s ON %s FOR EACH ROW EXECUTE FUNCTION %s()", name, op, table, name))
 	lifted := false
 	lift := func() {
@@ -3655,6 +3662,96 @@ func TestCheckFinishingAfterPause(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// An SSL or domain check alerts only once its result is written, and not at
+// all after a pause (PRD alert-delivery): an alert sent without the write
+// would go out again on every tick while the write keeps failing.
+func TestExpiryCheckAlertsOnlyOnceWritten(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	expiresAt := time.Now().Add(20 * 24 * time.Hour).UTC().Truncate(time.Second)
+	rdapSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = fmt.Fprintf(w, `{"events": [{"eventAction": "expiration", "eventDate": %q}]}`, expiresAt.Format(time.RFC3339))
+	}))
+	defer rdapSrv.Close()
+	n := Notifiers{Queries: queries, Telegram: telegram.NewClient(""), Mailer: email.NewSender(""), Logger: testLogger(),
+		Webhook: webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		RDAP:    rdap.NewClientWithHTTPClient(rdapSrv.Client(), rdapSrv.URL+"/domain/")}
+
+	// Each case's monitor alerts on its next check: an SSL error after one
+	// already shown (no recheck), a domain's 30-day warning.
+	cases := []struct {
+		monitorType, table string
+		create             func(t *testing.T, orgID uuid.UUID) uuid.UUID
+		check              func()
+		checkStale         func(id, orgID uuid.UUID) // checks the monitor as read before a pause
+	}{
+		{"ssl", "ssl_monitors", func(t *testing.T, orgID uuid.UUID) uuid.UUID {
+			id := testSSLMonitor(t, queries, orgID, "this-host-does-not-exist.invalid").ID
+			mustExecWorker(t, pool, "UPDATE ssl_monitors SET status = 'error', consecutive_failures = 1 WHERE id = $1", id)
+			return id
+		}, func() { checkSSLMonitors(context.Background(), n) }, func(id, orgID uuid.UUID) {
+			m, err := queries.GetSSLMonitor(context.Background(), db.GetSSLMonitorParams{ID: id, OrgID: orgID})
+			if err != nil {
+				t.Fatalf("read monitor: %v", err)
+			}
+			mustExecWorker(t, pool, "UPDATE ssl_monitors SET status = 'paused' WHERE id = $1", id)
+			checkOneSSLMonitor(context.Background(), n, m)
+		}},
+		{"domain", "domain_monitors", func(t *testing.T, orgID uuid.UUID) uuid.UUID {
+			return testDomainMonitor(t, queries, orgID, "example.com").ID
+		}, func() { checkDomainMonitors(context.Background(), n) }, func(id, orgID uuid.UUID) {
+			m, err := queries.GetDomainMonitor(context.Background(), db.GetDomainMonitorParams{ID: id, OrgID: orgID})
+			if err != nil {
+				t.Fatalf("read monitor: %v", err)
+			}
+			mustExecWorker(t, pool, "UPDATE domain_monitors SET status = 'paused' WHERE id = $1", id)
+			checkOneDomainMonitor(context.Background(), n, m)
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.monitorType+": a failed write sends no alert, the next tick checks again", func(t *testing.T) {
+			org := testOrg(t, queries, pool)
+			id := tc.create(t, org.ID)
+			sent := webhookRecorder(t, queries, org.ID, tc.monitorType, id)
+			lift := failWrites(t, pool, "UPDATE", tc.table, "id", id)
+
+			tc.check()
+			WaitForAlerts()
+			tc.check()
+			WaitForAlerts()
+			if sent() != 0 {
+				t.Fatalf("want no alert while the result can't be written, got %d", sent())
+			}
+
+			lift()
+			tc.check()
+			WaitForAlerts()
+			if sent() != 1 {
+				t.Fatalf("want one alert once the write succeeds, got %d", sent())
+			}
+		})
+
+		t.Run(tc.monitorType+": a check that finishes after a pause writes nothing and sends no alert", func(t *testing.T) {
+			org := testOrg(t, queries, pool)
+			id := tc.create(t, org.ID)
+			sent := webhookRecorder(t, queries, org.ID, tc.monitorType, id)
+
+			tc.checkStale(id, org.ID)
+			WaitForAlerts()
+			var status string
+			if err := pool.QueryRow(context.Background(), "SELECT status FROM "+tc.table+" WHERE id = $1", id).Scan(&status); err != nil {
+				t.Fatalf("read status: %v", err)
+			}
+			if status != "paused" {
+				t.Fatalf("want the monitor still paused, got %q", status)
+			}
+			if sent() != 0 {
+				t.Fatalf("want no alert, got %d", sent())
+			}
+		})
 	}
 }
 

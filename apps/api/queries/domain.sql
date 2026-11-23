@@ -48,12 +48,13 @@ SET recheck_pending = true,
     last_checked_at = NOW(),
     next_check_at   = NOW() + INTERVAL '30 seconds',
     updated_at      = NOW()
-WHERE id = $1;
+WHERE id = $1 AND status <> 'paused';
 
 -- name: UpdateDomainMonitorCheck :one
 -- An alert this check raised is kept, attempted now, until it is delivered
 -- (ClearDomainPendingAlert) or the monitor is fine again; ClaimDomainAlertRetries
--- sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
+-- sends it again meanwhile (PRD alert-delivery). A newer alert replaces it. A check that finishes after a pause writes
+-- nothing (no row).
 UPDATE domain_monitors
 SET status               = sqlc.arg(status),
     expires_at           = sqlc.arg(expires_at),
@@ -73,7 +74,7 @@ SET status               = sqlc.arg(status),
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = sqlc.arg(id)
+WHERE id = sqlc.arg(id) AND status <> 'paused'
 RETURNING *;
 
 

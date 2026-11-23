@@ -390,7 +390,7 @@ SET recheck_pending = true,
     last_checked_at = NOW(),
     next_check_at   = NOW() + INTERVAL '30 seconds',
     updated_at      = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 `
 
 // A check that errors right after a working one is checked again on the
@@ -485,7 +485,7 @@ SET status               = $1,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = $13
+WHERE id = $13 AND status <> 'paused'
 RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
@@ -507,7 +507,8 @@ type UpdateDomainMonitorCheckParams struct {
 
 // An alert this check raised is kept, attempted now, until it is delivered
 // (ClearDomainPendingAlert) or the monitor is fine again; ClaimDomainAlertRetries
-// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
+// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it. A check that finishes after a pause writes
+// nothing (no row).
 func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomainMonitorCheckParams) (DomainMonitor, error) {
 	row := q.db.QueryRow(ctx, updateDomainMonitorCheck,
 		arg.Status,
