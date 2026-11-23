@@ -60,12 +60,12 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 	}
 	result := buildDomainCheckResult(m, lookup.ExpiresAt, lookup.Registrar, daysLeft, lookupErr)
 
+	// Kept until delivered and sent again meanwhile, as an SSL alert is
+	// (checkOneSSLMonitor).
+	var pending []byte
 	if result.alert != nil {
-		GoAlert(ctx, func(ctx context.Context) {
-			DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "domain", ID: m.ID}, *result.alert)
-		})
+		pending = alertJSON(n, m.ID, *result.alert)
 	}
-
 	if _, err := n.Queries.UpdateDomainMonitorCheck(ctx, db.UpdateDomainMonitorCheckParams{
 		ID:                  m.ID,
 		Status:              result.status,
@@ -77,9 +77,24 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 		Alerted7d:           result.alerted7d,
 		ConsecutiveFailures: result.consecutiveFailures,
 		AlertCount:          result.alertCount,
+		AlertedExpired:      result.alertedExpired,
+		Alert:               pending,
+		// Fine again: an alert still pending reports what no longer holds.
+		ClearAlert: result.status == db.DomainMonitorStatusUp,
 	}); err != nil {
 		n.Logger.Error("domain worker: update check", "monitor_id", m.ID, "err", err)
 	}
+
+	if result.alert == nil {
+		return
+	}
+	GoAlert(ctx, func(ctx context.Context) {
+		if DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "domain", ID: m.ID}, *result.alert) {
+			if err := n.Queries.ClearDomainPendingAlert(ctx, m.ID); err != nil {
+				n.Logger.Error("domain worker: clear pending alert", "monitor_id", m.ID, "err", err)
+			}
+		}
+	})
 }
 
 // LookupDomain reads a domain's registrar and expiry over RDAP, or over WHOIS
@@ -113,11 +128,12 @@ type domainCheckResult struct {
 	alerted7d           bool
 	consecutiveFailures int32
 	alertCount          int32
+	alertedExpired      bool
 	alert               *AlertMessage
 }
 
 func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar string, daysLeft int, checkErr error) domainCheckResult {
-	r := domainCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d, alertCount: m.AlertCount}
+	r := domainCheckResult{alerted30d: m.Alerted30d, alerted14d: m.Alerted14d, alerted7d: m.Alerted7d, alertCount: m.AlertCount, alertedExpired: m.AlertedExpired}
 
 	if checkErr != nil {
 		r.status = db.DomainMonitorStatusError
@@ -132,10 +148,7 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 		r.expiresAtParam, r.registrarParam = m.ExpiresAt, m.Registrar
 		known := m.ExpiresAt.Time
 		if domainDaysLeft(known, time.Now()) < 0 {
-			// The status stays Error, so it can't tell whether this was sent:
-			// sent on the check the known date passed, when the last one was
-			// still before it.
-			if m.AlertsEnabled && m.LastCheckedAt.Valid && domainDaysLeft(known, m.LastCheckedAt.Time) >= 0 {
+			if m.AlertsEnabled && !m.AlertedExpired {
 				r.sendExpired(m, known)
 			}
 			return r
@@ -151,18 +164,19 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 	case daysLeft < 0:
 		r.status = db.DomainMonitorStatusExpired
 		r.consecutiveFailures = m.ConsecutiveFailures + 1
-		if m.AlertsEnabled && m.Status != db.DomainMonitorStatusExpired {
+		if m.AlertsEnabled && !m.AlertedExpired {
 			r.sendExpired(m, expiresAt)
 		}
 		return r
 	case daysLeft <= 30:
 		r.status = db.DomainMonitorStatusExpiringSoon
+		r.alertedExpired = false
 		r.consecutiveFailures = m.ConsecutiveFailures + 1
 		r.warn(m, daysLeft, expiresAt)
 	default:
 		r.status = db.DomainMonitorStatusUp
 		// Reset flags, failure counter, and alert count when domain is renewed.
-		r.alerted30d, r.alerted14d, r.alerted7d = false, false, false
+		r.alerted30d, r.alerted14d, r.alerted7d, r.alertedExpired = false, false, false, false
 		r.consecutiveFailures = 0
 		r.alertCount = 0
 	}
@@ -176,14 +190,15 @@ func domainDaysLeft(expiresAt, at time.Time) int {
 }
 
 // sendExpired sends the expired alert past the cap and alert_after_n_failures
-// (PRD domain-expiry-monitoring: "at once when expired"): the 7-day warning
-// shares alerted7d with it, and the three warnings fill the default cap of 3.
+// (PRD domain-expiry-monitoring: "at once when expired"): the three warnings
+// fill the default cap of 3. alerted_expired marks it sent, since the 7-day
+// warning shares alerted7d and a lookup error leaves the status Error.
 func (r *domainCheckResult) sendExpired(m db.DomainMonitor, expiresAt time.Time) {
 	subject, telegramMsg, emailHTML := domainExpiredMessages(m, expiresAt.Format("2006-01-02"))
 	a := domainAlert(m, subject, telegramMsg, emailHTML)
 	r.alert = &a
 	r.alertCount = m.AlertCount + 1
-	r.alerted30d, r.alerted14d, r.alerted7d = true, true, true
+	r.alerted30d, r.alerted14d, r.alerted7d, r.alertedExpired = true, true, true, true
 }
 
 // warn sends the warning for a newly crossed 30, 14 or 7-day threshold, within

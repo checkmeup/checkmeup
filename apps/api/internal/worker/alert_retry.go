@@ -5,14 +5,18 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+
+	"github.com/checkmeup/checkmeup/internal/db"
 )
 
-// A down alert that didn't go out, for any reason (every channel and the
-// Fallback email failed, the channels couldn't be read, the process stopped
-// while sending), is sent again every 5 minutes while its incident is open
-// and its monitor down (PRD alert-delivery). The incident keeps the alert as
-// first built, and the claim queries count each attempt in the database, so
-// a restarted process, or a second one during a deploy, picks it up too.
+// An alert that didn't go out, for any reason (every channel and the Fallback
+// email failed, the channels couldn't be read, the process stopped while
+// sending), is sent again every 5 minutes while what it reports still holds
+// (PRD alert-delivery): a down alert while its incident is open and its
+// monitor down, an SSL or domain alert while the monitor isn't fine again.
+// The incident, or the SSL or domain monitor, keeps the alert as first built,
+// and the claim queries count each attempt in the database, so a restarted
+// process, or a second one during a deploy, picks it up too.
 
 // maxSMSAttempts is how many times one alert may try an SMS channel: each try
 // uses a credit, even one Twilio refuses. The other channels and the Fallback
@@ -22,18 +26,20 @@ const maxSMSAttempts = 3
 // alertRetry is one claimed down alert, whatever its monitor type. Its fields
 // match the sqlc rows of the Claim*AlertRetries queries, so each converts to it.
 type alertRetry struct {
-	ID            uuid.UUID // the incident's
+	ID            uuid.UUID // the incident's, or the monitor's for SSL and domain
 	MonitorID     uuid.UUID
 	OrgID         uuid.UUID
 	Alert         []byte
 	AlertAttempts int32 // this attempt counted
 }
 
-// retrySource claims one monitor type's due retries and counts a delivered one.
+// retrySource claims one monitor type's due retries and records a delivered
+// one: on its incident, or for SSL and domain monitors, which keep no
+// incident row, on the monitor.
 type retrySource struct {
 	monitorType string
 	claim       func(ctx context.Context) ([]alertRetry, error)
-	countAlert  func(ctx context.Context, incidentID uuid.UUID) error
+	delivered   func(ctx context.Context, id uuid.UUID) error
 }
 
 func retrySources(n Notifiers) []retrySource {
@@ -41,54 +47,55 @@ func retrySources(n Notifiers) []retrySource {
 	return []retrySource{
 		{"uptime", func(ctx context.Context) ([]alertRetry, error) {
 			rows, err := q.ClaimUptimeAlertRetries(ctx)
-			out := make([]alertRetry, len(rows))
-			for i, r := range rows {
-				out[i] = alertRetry(r)
-			}
-			return out, err
+			return asRetries(rows, func(r db.ClaimUptimeAlertRetriesRow) alertRetry { return alertRetry(r) }), err
 		}, func(ctx context.Context, id uuid.UUID) error {
 			_, err := q.IncrementUptimeIncidentAlertCount(ctx, id)
 			return err
 		}},
 		{"port", func(ctx context.Context) ([]alertRetry, error) {
 			rows, err := q.ClaimPortAlertRetries(ctx)
-			out := make([]alertRetry, len(rows))
-			for i, r := range rows {
-				out[i] = alertRetry(r)
-			}
-			return out, err
+			return asRetries(rows, func(r db.ClaimPortAlertRetriesRow) alertRetry { return alertRetry(r) }), err
 		}, func(ctx context.Context, id uuid.UUID) error {
 			_, err := q.IncrementPortIncidentAlertCount(ctx, id)
 			return err
 		}},
 		{"dns", func(ctx context.Context) ([]alertRetry, error) {
 			rows, err := q.ClaimDNSAlertRetries(ctx)
-			out := make([]alertRetry, len(rows))
-			for i, r := range rows {
-				out[i] = alertRetry(r)
-			}
-			return out, err
+			return asRetries(rows, func(r db.ClaimDNSAlertRetriesRow) alertRetry { return alertRetry(r) }), err
 		}, func(ctx context.Context, id uuid.UUID) error {
 			_, err := q.IncrementDNSIncidentAlertCount(ctx, id)
 			return err
 		}},
 		{"cron", func(ctx context.Context) ([]alertRetry, error) {
 			rows, err := q.ClaimCronAlertRetries(ctx)
-			out := make([]alertRetry, len(rows))
-			for i, r := range rows {
-				out[i] = alertRetry(r)
-			}
-			return out, err
+			return asRetries(rows, func(r db.ClaimCronAlertRetriesRow) alertRetry { return alertRetry(r) }), err
 		}, func(ctx context.Context, id uuid.UUID) error {
 			_, err := q.IncrementCronIncidentAlertCount(ctx, id)
 			return err
 		}},
+		{"ssl", func(ctx context.Context) ([]alertRetry, error) {
+			rows, err := q.ClaimSSLAlertRetries(ctx)
+			return asRetries(rows, func(r db.ClaimSSLAlertRetriesRow) alertRetry { return alertRetry(r) }), err
+		}, q.ClearSSLPendingAlert},
+		{"domain", func(ctx context.Context) ([]alertRetry, error) {
+			rows, err := q.ClaimDomainAlertRetries(ctx)
+			return asRetries(rows, func(r db.ClaimDomainAlertRetriesRow) alertRetry { return alertRetry(r) }), err
+		}, q.ClearDomainPendingAlert},
 	}
 }
 
-// retryDownAlerts sends again every down alert due a retry. Each send runs in
+// asRetries converts one monitor type's claimed rows.
+func asRetries[R any](rows []R, conv func(R) alertRetry) []alertRetry {
+	out := make([]alertRetry, len(rows))
+	for i, r := range rows {
+		out[i] = conv(r)
+	}
+	return out
+}
+
+// retryAlerts sends again every alert due a retry. Each send runs in
 // its own goroutine, so the tick doesn't wait on it.
-func retryDownAlerts(ctx context.Context, n Notifiers) {
+func retryAlerts(ctx context.Context, n Notifiers) {
 	for _, src := range retrySources(n) {
 		retries, err := src.claim(ctx)
 		if err != nil {
@@ -106,8 +113,8 @@ func retryDownAlerts(ctx context.Context, n Notifiers) {
 				if !DispatchAlert(ctx, n, r.OrgID, ref, msg) {
 					return
 				}
-				if err := src.countAlert(ctx, r.ID); err != nil {
-					n.Logger.Error("worker: increment alert count", "incident_id", r.ID, "err", err)
+				if err := src.delivered(ctx, r.ID); err != nil {
+					n.Logger.Error("worker: record delivered alert", "monitor_type", src.monitorType, "id", r.ID, "err", err)
 				}
 			})
 		}
@@ -121,10 +128,15 @@ func retryMessage(alert []byte, attempt int32) (AlertMessage, error) {
 	if err := json.Unmarshal(alert, &msg); err != nil {
 		return AlertMessage{}, err
 	}
+	return withSMSCap(msg, attempt), nil
+}
+
+// withSMSCap leaves out msg's SMS on an attempt past maxSMSAttempts.
+func withSMSCap(msg AlertMessage, attempt int32) AlertMessage {
 	if attempt > maxSMSAttempts {
 		msg.SMS = ""
 	}
-	return msg, nil
+	return msg
 }
 
 // alertJSON encodes msg for its incident to keep. An encoding error, which no

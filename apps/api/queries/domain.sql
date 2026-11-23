@@ -51,19 +51,51 @@ SET recheck_pending = true,
 WHERE id = $1;
 
 -- name: UpdateDomainMonitorCheck :one
+-- An alert this check raised is kept, attempted now, until it is delivered
+-- (ClearDomainPendingAlert) or the monitor is fine again; ClaimDomainAlertRetries
+-- sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
 UPDATE domain_monitors
-SET status               = $2,
-    expires_at           = $3,
-    registrar            = $4,
-    error_msg            = $5,
-    alerted_30d          = $6,
-    alerted_14d          = $7,
-    alerted_7d           = $8,
-    consecutive_failures = $9,
-    alert_count          = $10,
+SET status               = sqlc.arg(status),
+    expires_at           = sqlc.arg(expires_at),
+    registrar            = sqlc.arg(registrar),
+    error_msg            = sqlc.arg(error_msg),
+    alerted_30d          = sqlc.arg(alerted_30d),
+    alerted_14d          = sqlc.arg(alerted_14d),
+    alerted_7d           = sqlc.arg(alerted_7d),
+    consecutive_failures = sqlc.arg(consecutive_failures),
+    alert_count          = sqlc.arg(alert_count),
+    alerted_expired      = sqlc.arg(alerted_expired),
+    alert                = CASE WHEN sqlc.narg(alert)::jsonb IS NOT NULL THEN sqlc.narg(alert)::jsonb
+                                WHEN sqlc.arg(clear_alert)::boolean THEN NULL ELSE alert END,
+    alert_attempted_at   = CASE WHEN sqlc.narg(alert)::jsonb IS NOT NULL THEN NOW() ELSE alert_attempted_at END,
+    alert_attempts       = CASE WHEN sqlc.narg(alert)::jsonb IS NOT NULL THEN 1 ELSE alert_attempts END,
     recheck_pending      = false,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = $1
+WHERE id = sqlc.arg(id)
 RETURNING *;
+
+
+-- name: ClearDomainPendingAlert :exec
+-- The monitor's pending alert was delivered. A newer one set meanwhile would
+-- be cleared with it, but a newer one comes only with the next daily check.
+UPDATE domain_monitors SET alert = NULL WHERE id = $1;
+
+-- name: ClaimDomainAlertRetries :many
+-- Takes the monitors whose pending alert wasn't attempted in the last 5
+-- minutes, still with the problem, unmuted and under no maintenance window,
+-- and counts the attempt (PRD alert-delivery). One UPDATE, so of two
+-- processes running side by side during a deploy only one takes a monitor.
+UPDATE domain_monitors m
+SET alert_attempted_at = NOW(), alert_attempts = m.alert_attempts + 1
+WHERE m.alert IS NOT NULL
+  AND (m.alert_attempted_at IS NULL OR m.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status NOT IN ('up', 'paused', 'waiting') AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'domain' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING m.id, m.id AS monitor_id, m.org_id, m.alert, m.alert_attempts;

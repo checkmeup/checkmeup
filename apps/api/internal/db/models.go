@@ -623,6 +623,10 @@ type DomainMonitor struct {
 	AlertCount           int32               `json:"alert_count"`
 	ProjectID            pgtype.UUID         `json:"project_id"`
 	RecheckPending       bool                `json:"recheck_pending"`
+	AlertAttempts        int32               `json:"alert_attempts"`
+	AlertedExpired       bool                `json:"alerted_expired"`
+	Alert                []byte              `json:"alert"`
+	AlertAttemptedAt     pgtype.Timestamptz  `json:"alert_attempted_at"`
 }
 
 type FeatureSuggestion struct {
@@ -783,6 +787,9 @@ type SslMonitor struct {
 	AlertCount           int32              `json:"alert_count"`
 	ProjectID            pgtype.UUID        `json:"project_id"`
 	RecheckPending       bool               `json:"recheck_pending"`
+	AlertAttempts        int32              `json:"alert_attempts"`
+	Alert                []byte             `json:"alert"`
+	AlertAttemptedAt     pgtype.Timestamptz `json:"alert_attempted_at"`
 }
 
 type StatusPage struct {

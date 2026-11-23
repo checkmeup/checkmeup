@@ -111,7 +111,7 @@ func Run(ctx context.Context, n Notifiers) {
 			checkDomainMonitors(tickCtx, n)
 			checkPortMonitors(tickCtx, n)
 			checkDNSMonitors(tickCtx, n)
-			retryDownAlerts(tickCtx, n)
+			retryAlerts(tickCtx, n)
 			MarkTickFinished(time.Now())
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, n.Queries, n.Logger)

@@ -41,6 +41,7 @@ Every monitored domain is renewed before it expires, with warnings at 30, 14 and
 - A failed lookup keeps the last known expiry, and its warnings and the expired alert still go out on that date.
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a failed lookup keeps the last known expiry and still warns on it"
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a failed lookup alerts once when the known expiry passes"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryExpiryAndSSLAlerts/a domain whose registry stops answering the day it expires still alerts"
 - A domain under a TLD without RDAP is looked up over WHOIS, with its expiry and registrar read from that registry's real answer format; a domain the registry doesn't know is an error, not "expired".
   → test: apps/api/internal/whois/whois_test.go "TestParse_RegisteredDomains"
   → test: apps/api/internal/whois/whois_test.go "TestParse_UnregisteredDomains"

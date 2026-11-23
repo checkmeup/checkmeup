@@ -12,10 +12,74 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimSSLAlertRetries = `-- name: ClaimSSLAlertRetries :many
+UPDATE ssl_monitors m
+SET alert_attempted_at = NOW(), alert_attempts = m.alert_attempts + 1
+WHERE m.alert IS NOT NULL
+  AND (m.alert_attempted_at IS NULL OR m.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status NOT IN ('up', 'paused', 'waiting') AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'ssl' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING m.id, m.id AS monitor_id, m.org_id, m.alert, m.alert_attempts
+`
+
+type ClaimSSLAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the monitors whose pending alert wasn't attempted in the last 5
+// minutes, still with the problem, unmuted and under no maintenance window,
+// and counts the attempt (PRD alert-delivery). One UPDATE, so of two
+// processes running side by side during a deploy only one takes a monitor.
+func (q *Queries) ClaimSSLAlertRetries(ctx context.Context) ([]ClaimSSLAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimSSLAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimSSLAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimSSLAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clearSSLPendingAlert = `-- name: ClearSSLPendingAlert :exec
+UPDATE ssl_monitors SET alert = NULL WHERE id = $1
+`
+
+// The monitor's pending alert was delivered. A newer one set meanwhile would
+// be cleared with it, but a newer one comes only with the next daily check.
+func (q *Queries) ClearSSLPendingAlert(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearSSLPendingAlert, id)
+	return err
+}
+
 const createSSLMonitor = `-- name: CreateSSLMonitor :one
 INSERT INTO ssl_monitors (org_id, name, hostname, project_id)
 VALUES ($1, $2, $3, $4)
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
 type CreateSSLMonitorParams struct {
@@ -56,6 +120,9 @@ func (q *Queries) CreateSSLMonitor(ctx context.Context, arg CreateSSLMonitorPara
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -75,7 +142,7 @@ func (q *Queries) DeleteSSLMonitor(ctx context.Context, arg DeleteSSLMonitorPara
 }
 
 const getSSLMonitor = `-- name: GetSSLMonitor :one
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM ssl_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at FROM ssl_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetSSLMonitorParams struct {
@@ -109,12 +176,15 @@ func (q *Queries) GetSSLMonitor(ctx context.Context, arg GetSSLMonitorParams) (S
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
 
 const listDueSSLMonitors = `-- name: ListDueSSLMonitors :many
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM ssl_monitors
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at FROM ssl_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -156,6 +226,9 @@ func (q *Queries) ListDueSSLMonitors(ctx context.Context) ([]SslMonitor, error) 
 			&i.AlertCount,
 			&i.ProjectID,
 			&i.RecheckPending,
+			&i.AlertAttempts,
+			&i.Alert,
+			&i.AlertAttemptedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -168,7 +241,7 @@ func (q *Queries) ListDueSSLMonitors(ctx context.Context) ([]SslMonitor, error) 
 }
 
 const listSSLMonitors = `-- name: ListSSLMonitors :many
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM ssl_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at FROM ssl_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMonitor, error) {
@@ -203,6 +276,9 @@ func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMo
 			&i.AlertCount,
 			&i.ProjectID,
 			&i.RecheckPending,
+			&i.AlertAttempts,
+			&i.Alert,
+			&i.AlertAttemptedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +293,7 @@ func (q *Queries) ListSSLMonitors(ctx context.Context, orgID uuid.UUID) ([]SslMo
 const pauseSSLMonitor = `-- name: PauseSSLMonitor :one
 UPDATE ssl_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
 type PauseSSLMonitorParams struct {
@@ -251,6 +327,9 @@ func (q *Queries) PauseSSLMonitor(ctx context.Context, arg PauseSSLMonitorParams
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -258,7 +337,7 @@ func (q *Queries) PauseSSLMonitor(ctx context.Context, arg PauseSSLMonitorParams
 const resumeSSLMonitor = `-- name: ResumeSSLMonitor :one
 UPDATE ssl_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
 type ResumeSSLMonitorParams struct {
@@ -292,6 +371,9 @@ func (q *Queries) ResumeSSLMonitor(ctx context.Context, arg ResumeSSLMonitorPara
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -318,7 +400,7 @@ SET name = $3, hostname = $4, alerts_enabled = $5, alert_after_n_failures = $6, 
     project_id = CASE WHEN $8::bool THEN $9::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
 type UpdateSSLMonitorParams struct {
@@ -369,31 +451,37 @@ func (q *Queries) UpdateSSLMonitor(ctx context.Context, arg UpdateSSLMonitorPara
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
 
 const updateSSLMonitorCheck = `-- name: UpdateSSLMonitorCheck :one
 UPDATE ssl_monitors
-SET status               = $2,
-    expires_at           = $3,
-    issuer               = $4,
-    error_msg            = $5,
-    alerted_30d          = $6,
-    alerted_14d          = $7,
-    alerted_7d           = $8,
-    consecutive_failures = $9,
-    alert_count          = $10,
+SET status               = $1,
+    expires_at           = $2,
+    issuer               = $3,
+    error_msg            = $4,
+    alerted_30d          = $5,
+    alerted_14d          = $6,
+    alerted_7d           = $7,
+    consecutive_failures = $8,
+    alert_count          = $9,
+    alert                = CASE WHEN $10::jsonb IS NOT NULL THEN $10::jsonb
+                                WHEN $11::boolean THEN NULL ELSE alert END,
+    alert_attempted_at   = CASE WHEN $10::jsonb IS NOT NULL THEN NOW() ELSE alert_attempted_at END,
+    alert_attempts       = CASE WHEN $10::jsonb IS NOT NULL THEN 1 ELSE alert_attempts END,
     recheck_pending      = false,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = $1
-RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+WHERE id = $12
+RETURNING id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at
 `
 
 type UpdateSSLMonitorCheckParams struct {
-	ID                  uuid.UUID          `json:"id"`
 	Status              SslMonitorStatus   `json:"status"`
 	ExpiresAt           pgtype.Timestamptz `json:"expires_at"`
 	Issuer              pgtype.Text        `json:"issuer"`
@@ -403,11 +491,16 @@ type UpdateSSLMonitorCheckParams struct {
 	Alerted7d           bool               `json:"alerted_7d"`
 	ConsecutiveFailures int32              `json:"consecutive_failures"`
 	AlertCount          int32              `json:"alert_count"`
+	Alert               []byte             `json:"alert"`
+	ClearAlert          bool               `json:"clear_alert"`
+	ID                  uuid.UUID          `json:"id"`
 }
 
+// An alert this check raised is kept, attempted now, until it is delivered
+// (ClearSSLPendingAlert) or the monitor is fine again; ClaimSSLAlertRetries
+// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
 func (q *Queries) UpdateSSLMonitorCheck(ctx context.Context, arg UpdateSSLMonitorCheckParams) (SslMonitor, error) {
 	row := q.db.QueryRow(ctx, updateSSLMonitorCheck,
-		arg.ID,
 		arg.Status,
 		arg.ExpiresAt,
 		arg.Issuer,
@@ -417,6 +510,9 @@ func (q *Queries) UpdateSSLMonitorCheck(ctx context.Context, arg UpdateSSLMonito
 		arg.Alerted7d,
 		arg.ConsecutiveFailures,
 		arg.AlertCount,
+		arg.Alert,
+		arg.ClearAlert,
+		arg.ID,
 	)
 	var i SslMonitor
 	err := row.Scan(
@@ -442,6 +538,9 @@ func (q *Queries) UpdateSSLMonitorCheck(ctx context.Context, arg UpdateSSLMonito
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }

@@ -55,17 +55,13 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 	}
 	result := buildSSLCheckResult(m, expiresAt, issuer, daysLeft, err)
 
-	if result.recovery != nil || result.alert != nil {
-		GoAlert(ctx, func(ctx context.Context) {
-			if result.recovery != nil {
-				DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.recovery)
-			}
-			if result.alert != nil {
-				DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "ssl", ID: m.ID}, *result.alert)
-			}
-		})
+	// The monitor keeps the alert until it is delivered, and it is sent again
+	// every 5 minutes meanwhile (PRD alert-delivery). Saved before it is sent,
+	// so a quick delivery can't be cleared before it is kept.
+	var pending []byte
+	if result.alert != nil {
+		pending = alertJSON(n, m.ID, *result.alert)
 	}
-
 	if _, err := n.Queries.UpdateSSLMonitorCheck(ctx, db.UpdateSSLMonitorCheckParams{
 		ID:                  m.ID,
 		Status:              result.status,
@@ -77,9 +73,27 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 		Alerted7d:           result.alerted7d,
 		ConsecutiveFailures: result.consecutiveFailures,
 		AlertCount:          result.alertCount,
+		Alert:               pending,
+		// Fine again: an alert still pending reports what no longer holds.
+		ClearAlert: result.status == db.SslMonitorStatusUp,
 	}); err != nil {
 		n.Logger.Error("ssl worker: update check", "monitor_id", m.ID, "err", err)
 	}
+
+	if result.recovery == nil && result.alert == nil {
+		return
+	}
+	ref := MonitorRef{Type: "ssl", ID: m.ID}
+	GoAlert(ctx, func(ctx context.Context) {
+		if result.recovery != nil {
+			DispatchAlert(ctx, n, m.OrgID, ref, *result.recovery)
+		}
+		if result.alert != nil && DispatchAlert(ctx, n, m.OrgID, ref, *result.alert) {
+			if err := n.Queries.ClearSSLPendingAlert(ctx, m.ID); err != nil {
+				n.Logger.Error("ssl worker: clear pending alert", "monitor_id", m.ID, "err", err)
+			}
+		}
+	})
 }
 
 // sslCheckResult is the outcome of one CheckTLS poll: the fields to

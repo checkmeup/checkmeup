@@ -160,7 +160,7 @@ func (q *Queries) GetCronMonitorPublic(ctx context.Context, id uuid.UUID) (GetCr
 }
 
 const getDomainMonitorPublic = `-- name: GetDomainMonitorPublic :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM domain_monitors WHERE id = $1
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at FROM domain_monitors WHERE id = $1
 `
 
 func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (DomainMonitor, error) {
@@ -189,6 +189,10 @@ func (q *Queries) GetDomainMonitorPublic(ctx context.Context, id uuid.UUID) (Dom
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -260,7 +264,7 @@ func (q *Queries) GetPortMonitorPublic(ctx context.Context, id uuid.UUID) (PortM
 }
 
 const getSSLMonitorPublic = `-- name: GetSSLMonitorPublic :one
-SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM ssl_monitors WHERE id = $1
+SELECT id, org_id, name, hostname, status, alerts_enabled, expires_at, issuer, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alert, alert_attempted_at FROM ssl_monitors WHERE id = $1
 `
 
 func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMonitor, error) {
@@ -289,6 +293,9 @@ func (q *Queries) GetSSLMonitorPublic(ctx context.Context, id uuid.UUID) (SslMon
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }

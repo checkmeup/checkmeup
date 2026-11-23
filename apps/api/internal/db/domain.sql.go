@@ -12,10 +12,74 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimDomainAlertRetries = `-- name: ClaimDomainAlertRetries :many
+UPDATE domain_monitors m
+SET alert_attempted_at = NOW(), alert_attempts = m.alert_attempts + 1
+WHERE m.alert IS NOT NULL
+  AND (m.alert_attempted_at IS NULL OR m.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status NOT IN ('up', 'paused', 'waiting') AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'domain' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING m.id, m.id AS monitor_id, m.org_id, m.alert, m.alert_attempts
+`
+
+type ClaimDomainAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the monitors whose pending alert wasn't attempted in the last 5
+// minutes, still with the problem, unmuted and under no maintenance window,
+// and counts the attempt (PRD alert-delivery). One UPDATE, so of two
+// processes running side by side during a deploy only one takes a monitor.
+func (q *Queries) ClaimDomainAlertRetries(ctx context.Context) ([]ClaimDomainAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimDomainAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimDomainAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimDomainAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clearDomainPendingAlert = `-- name: ClearDomainPendingAlert :exec
+UPDATE domain_monitors SET alert = NULL WHERE id = $1
+`
+
+// The monitor's pending alert was delivered. A newer one set meanwhile would
+// be cleared with it, but a newer one comes only with the next daily check.
+func (q *Queries) ClearDomainPendingAlert(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearDomainPendingAlert, id)
+	return err
+}
+
 const createDomainMonitor = `-- name: CreateDomainMonitor :one
 INSERT INTO domain_monitors (org_id, name, domain, project_id)
 VALUES ($1, $2, $3, $4)
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
 type CreateDomainMonitorParams struct {
@@ -56,6 +120,10 @@ func (q *Queries) CreateDomainMonitor(ctx context.Context, arg CreateDomainMonit
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -75,7 +143,7 @@ func (q *Queries) DeleteDomainMonitor(ctx context.Context, arg DeleteDomainMonit
 }
 
 const getDomainMonitor = `-- name: GetDomainMonitor :one
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM domain_monitors WHERE id = $1 AND org_id = $2
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at FROM domain_monitors WHERE id = $1 AND org_id = $2
 `
 
 type GetDomainMonitorParams struct {
@@ -109,12 +177,16 @@ func (q *Queries) GetDomainMonitor(ctx context.Context, arg GetDomainMonitorPara
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
 
 const listDomainMonitors = `-- name: ListDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at FROM domain_monitors WHERE org_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]DomainMonitor, error) {
@@ -149,6 +221,10 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 			&i.AlertCount,
 			&i.ProjectID,
 			&i.RecheckPending,
+			&i.AlertAttempts,
+			&i.AlertedExpired,
+			&i.Alert,
+			&i.AlertAttemptedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -161,7 +237,7 @@ func (q *Queries) ListDomainMonitors(ctx context.Context, orgID uuid.UUID) ([]Do
 }
 
 const listDueDomainMonitors = `-- name: ListDueDomainMonitors :many
-SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending FROM domain_monitors
+SELECT id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at FROM domain_monitors
 WHERE next_check_at <= NOW() AND status != 'paused'
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
@@ -203,6 +279,10 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 			&i.AlertCount,
 			&i.ProjectID,
 			&i.RecheckPending,
+			&i.AlertAttempts,
+			&i.AlertedExpired,
+			&i.Alert,
+			&i.AlertAttemptedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +297,7 @@ func (q *Queries) ListDueDomainMonitors(ctx context.Context) ([]DomainMonitor, e
 const pauseDomainMonitor = `-- name: PauseDomainMonitor :one
 UPDATE domain_monitors SET status = 'paused', updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
 type PauseDomainMonitorParams struct {
@@ -251,6 +331,10 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -258,7 +342,7 @@ func (q *Queries) PauseDomainMonitor(ctx context.Context, arg PauseDomainMonitor
 const resumeDomainMonitor = `-- name: ResumeDomainMonitor :one
 UPDATE domain_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
 type ResumeDomainMonitorParams struct {
@@ -292,6 +376,10 @@ func (q *Queries) ResumeDomainMonitor(ctx context.Context, arg ResumeDomainMonit
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
@@ -318,7 +406,7 @@ SET name = $3, domain = $4, alerts_enabled = $5, alert_after_n_failures = $6, ma
     project_id = CASE WHEN $8::bool THEN $9::uuid ELSE project_id END,
     updated_at = NOW()
 WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
 type UpdateDomainMonitorParams struct {
@@ -369,31 +457,39 @@ func (q *Queries) UpdateDomainMonitor(ctx context.Context, arg UpdateDomainMonit
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
 
 const updateDomainMonitorCheck = `-- name: UpdateDomainMonitorCheck :one
 UPDATE domain_monitors
-SET status               = $2,
-    expires_at           = $3,
-    registrar            = $4,
-    error_msg            = $5,
-    alerted_30d          = $6,
-    alerted_14d          = $7,
-    alerted_7d           = $8,
-    consecutive_failures = $9,
-    alert_count          = $10,
+SET status               = $1,
+    expires_at           = $2,
+    registrar            = $3,
+    error_msg            = $4,
+    alerted_30d          = $5,
+    alerted_14d          = $6,
+    alerted_7d           = $7,
+    consecutive_failures = $8,
+    alert_count          = $9,
+    alerted_expired      = $10,
+    alert                = CASE WHEN $11::jsonb IS NOT NULL THEN $11::jsonb
+                                WHEN $12::boolean THEN NULL ELSE alert END,
+    alert_attempted_at   = CASE WHEN $11::jsonb IS NOT NULL THEN NOW() ELSE alert_attempted_at END,
+    alert_attempts       = CASE WHEN $11::jsonb IS NOT NULL THEN 1 ELSE alert_attempts END,
     recheck_pending      = false,
     last_checked_at      = NOW(),
     next_check_at        = NOW() + INTERVAL '24 hours',
     updated_at           = NOW()
-WHERE id = $1
-RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending
+WHERE id = $13
+RETURNING id, org_id, name, domain, status, alerts_enabled, expires_at, registrar, error_msg, alerted_30d, alerted_14d, alerted_7d, last_checked_at, next_check_at, created_at, updated_at, alert_after_n_failures, consecutive_failures, max_alerts_per_incident, alert_count, project_id, recheck_pending, alert_attempts, alerted_expired, alert, alert_attempted_at
 `
 
 type UpdateDomainMonitorCheckParams struct {
-	ID                  uuid.UUID           `json:"id"`
 	Status              DomainMonitorStatus `json:"status"`
 	ExpiresAt           pgtype.Timestamptz  `json:"expires_at"`
 	Registrar           pgtype.Text         `json:"registrar"`
@@ -403,11 +499,17 @@ type UpdateDomainMonitorCheckParams struct {
 	Alerted7d           bool                `json:"alerted_7d"`
 	ConsecutiveFailures int32               `json:"consecutive_failures"`
 	AlertCount          int32               `json:"alert_count"`
+	AlertedExpired      bool                `json:"alerted_expired"`
+	Alert               []byte              `json:"alert"`
+	ClearAlert          bool                `json:"clear_alert"`
+	ID                  uuid.UUID           `json:"id"`
 }
 
+// An alert this check raised is kept, attempted now, until it is delivered
+// (ClearDomainPendingAlert) or the monitor is fine again; ClaimDomainAlertRetries
+// sends it again meanwhile (PRD alert-delivery). A newer alert replaces it.
 func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomainMonitorCheckParams) (DomainMonitor, error) {
 	row := q.db.QueryRow(ctx, updateDomainMonitorCheck,
-		arg.ID,
 		arg.Status,
 		arg.ExpiresAt,
 		arg.Registrar,
@@ -417,6 +519,10 @@ func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomain
 		arg.Alerted7d,
 		arg.ConsecutiveFailures,
 		arg.AlertCount,
+		arg.AlertedExpired,
+		arg.Alert,
+		arg.ClearAlert,
+		arg.ID,
 	)
 	var i DomainMonitor
 	err := row.Scan(
@@ -442,6 +548,10 @@ func (q *Queries) UpdateDomainMonitorCheck(ctx context.Context, arg UpdateDomain
 		&i.AlertCount,
 		&i.ProjectID,
 		&i.RecheckPending,
+		&i.AlertAttempts,
+		&i.AlertedExpired,
+		&i.Alert,
+		&i.AlertAttemptedAt,
 	)
 	return i, err
 }
