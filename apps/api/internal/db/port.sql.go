@@ -512,8 +512,14 @@ func (q *Queries) OpenPortIncident(ctx context.Context, arg OpenPortIncidentPara
 }
 
 const pausePortMonitor = `-- name: PausePortMonitor :one
+WITH resolved AS (
+    UPDATE port_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM port_monitors m WHERE m.id = $1 AND m.org_id = $2
+    )
+)
 UPDATE port_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE port_monitors.id = $1 AND port_monitors.org_id = $2
 RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
@@ -522,6 +528,9 @@ type PausePortMonitorParams struct {
 	OrgID uuid.UUID `json:"org_id"`
 }
 
+// Also resolves the monitor's open incident: pausing overwrites a down status,
+// so nothing would see the monitor as down again to resolve it. No recovery
+// alert goes out, since the monitor wasn't seen to recover.
 func (q *Queries) PausePortMonitor(ctx context.Context, arg PausePortMonitorParams) (PortMonitor, error) {
 	row := q.db.QueryRow(ctx, pausePortMonitor, arg.ID, arg.OrgID)
 	var i PortMonitor

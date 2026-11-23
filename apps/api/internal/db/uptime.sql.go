@@ -558,8 +558,14 @@ func (q *Queries) OpenUptimeIncident(ctx context.Context, arg OpenUptimeIncident
 }
 
 const pauseUptimeMonitor = `-- name: PauseUptimeMonitor :one
+WITH resolved AS (
+    UPDATE uptime_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM uptime_monitors m WHERE m.id = $1 AND m.org_id = $2
+    )
+)
 UPDATE uptime_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE uptime_monitors.id = $1 AND uptime_monitors.org_id = $2
 RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
@@ -568,6 +574,9 @@ type PauseUptimeMonitorParams struct {
 	OrgID uuid.UUID `json:"org_id"`
 }
 
+// Also resolves the monitor's open incident: pausing overwrites a down status,
+// so nothing would see the monitor as down again to resolve it. No recovery
+// alert goes out, since the monitor wasn't seen to recover.
 func (q *Queries) PauseUptimeMonitor(ctx context.Context, arg PauseUptimeMonitorParams) (UptimeMonitor, error) {
 	row := q.db.QueryRow(ctx, pauseUptimeMonitor, arg.ID, arg.OrgID)
 	var i UptimeMonitor

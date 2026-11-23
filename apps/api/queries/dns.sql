@@ -26,8 +26,17 @@ WHERE id = $1 AND org_id = $2
 RETURNING *;
 
 -- name: PauseDNSMonitor :one
+-- Also resolves the monitor's open incident: pausing overwrites a down status,
+-- so nothing would see the monitor as down again to resolve it. No recovery
+-- alert goes out, since the monitor wasn't seen to recover.
+WITH resolved AS (
+    UPDATE dns_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM dns_monitors m WHERE m.id = sqlc.arg(id) AND m.org_id = sqlc.arg(org_id)
+    )
+)
 UPDATE dns_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE dns_monitors.id = sqlc.arg(id) AND dns_monitors.org_id = sqlc.arg(org_id)
 RETURNING *;
 
 -- name: ResumeDNSMonitor :one

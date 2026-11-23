@@ -671,8 +671,14 @@ func (q *Queries) OpenCronIncident(ctx context.Context, arg OpenCronIncidentPara
 }
 
 const pauseCronMonitor = `-- name: PauseCronMonitor :one
+WITH resolved AS (
+    UPDATE cron_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM cron_monitors m WHERE m.id = $1 AND m.org_id = $2
+    )
+)
 UPDATE cron_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE cron_monitors.id = $1 AND cron_monitors.org_id = $2
 RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
@@ -681,6 +687,9 @@ type PauseCronMonitorParams struct {
 	OrgID uuid.UUID `json:"org_id"`
 }
 
+// Also resolves the monitor's open incident: pausing overwrites a down status,
+// so nothing would see the monitor as down again to resolve it. No recovery
+// alert goes out, since the monitor wasn't seen to recover.
 func (q *Queries) PauseCronMonitor(ctx context.Context, arg PauseCronMonitorParams) (CronMonitor, error) {
 	row := q.db.QueryRow(ctx, pauseCronMonitor, arg.ID, arg.OrgID)
 	var i CronMonitor

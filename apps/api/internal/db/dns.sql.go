@@ -592,8 +592,14 @@ func (q *Queries) OpenDNSIncident(ctx context.Context, arg OpenDNSIncidentParams
 }
 
 const pauseDNSMonitor = `-- name: PauseDNSMonitor :one
+WITH resolved AS (
+    UPDATE dns_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM dns_monitors m WHERE m.id = $1 AND m.org_id = $2
+    )
+)
 UPDATE dns_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE dns_monitors.id = $1 AND dns_monitors.org_id = $2
 RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
@@ -602,6 +608,9 @@ type PauseDNSMonitorParams struct {
 	OrgID uuid.UUID `json:"org_id"`
 }
 
+// Also resolves the monitor's open incident: pausing overwrites a down status,
+// so nothing would see the monitor as down again to resolve it. No recovery
+// alert goes out, since the monitor wasn't seen to recover.
 func (q *Queries) PauseDNSMonitor(ctx context.Context, arg PauseDNSMonitorParams) (DnsMonitor, error) {
 	row := q.db.QueryRow(ctx, pauseDNSMonitor, arg.ID, arg.OrgID)
 	var i DnsMonitor

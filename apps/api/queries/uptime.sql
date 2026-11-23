@@ -24,8 +24,17 @@ WHERE id = $1 AND org_id = $2
 RETURNING *;
 
 -- name: PauseUptimeMonitor :one
+-- Also resolves the monitor's open incident: pausing overwrites a down status,
+-- so nothing would see the monitor as down again to resolve it. No recovery
+-- alert goes out, since the monitor wasn't seen to recover.
+WITH resolved AS (
+    UPDATE uptime_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id = (
+        SELECT m.id FROM uptime_monitors m WHERE m.id = sqlc.arg(id) AND m.org_id = sqlc.arg(org_id)
+    )
+)
 UPDATE uptime_monitors SET status = 'paused', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+WHERE uptime_monitors.id = sqlc.arg(id) AND uptime_monitors.org_id = sqlc.arg(org_id)
 RETURNING *;
 
 -- name: ResumeUptimeMonitor :one
