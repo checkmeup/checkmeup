@@ -499,21 +499,29 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 		return false
 	}
 	if sid != "" {
-		params := db.InsertSMSMessageParams{Sid: sid, OrgID: c.OrgID, ChannelID: c.ID}
-		if onlyDelivery {
-			params.FallbackSubject = pgtype.Text{String: msg.EmailSubject, Valid: true}
-			params.FallbackHtml = pgtype.Text{String: msg.EmailHTML, Valid: true}
-			if mon.Retry != nil {
-				params.MonitorType = pgtype.Text{String: mon.Type, Valid: true}
-				params.AlertSourceID = pgtype.UUID{Bytes: mon.Retry.ID, Valid: true}
-				params.Alert = mon.Retry.Alert
-			}
-		}
-		if err := n.Queries.InsertSMSMessage(ctx, params); err != nil {
-			n.Logger.Error("worker: record sms message", "channel_id", c.ID, "sid", sid, "err", err)
-		}
+		recordSMSMessage(ctx, n, c, sid, msg, mon, onlyDelivery)
 	}
 	return true
+}
+
+// recordSMSMessage keeps an accepted SMS by its SID until Twilio's status
+// callback reports how it ended (HandleSMSStatus). As the alert's only
+// delivery it keeps the Fallback email, and, for an alert that retries, the
+// source a failed one hands the alert back to (PRD alert-delivery).
+func recordSMSMessage(ctx context.Context, n Notifiers, c db.NotificationChannel, sid string, msg AlertMessage, mon MonitorRef, onlyDelivery bool) {
+	params := db.InsertSMSMessageParams{Sid: sid, OrgID: c.OrgID, ChannelID: c.ID}
+	if onlyDelivery {
+		params.FallbackSubject = pgtype.Text{String: msg.EmailSubject, Valid: true}
+		params.FallbackHtml = pgtype.Text{String: msg.EmailHTML, Valid: true}
+		if mon.Retry != nil {
+			params.MonitorType = pgtype.Text{String: mon.Type, Valid: true}
+			params.AlertSourceID = pgtype.UUID{Bytes: mon.Retry.ID, Valid: true}
+			params.Alert = mon.Retry.Alert
+		}
+	}
+	if err := n.Queries.InsertSMSMessage(ctx, params); err != nil {
+		n.Logger.Error("worker: record sms message", "channel_id", c.ID, "sid", sid, "err", err)
+	}
 }
 
 // dispatchFallbackEmail emails every user in the org when a monitor has no
