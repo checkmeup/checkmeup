@@ -30,3 +30,9 @@ Settled when the channels are chosen and tried.
 2026-11-22 · chainofsale session
 
 The DNS monitor compares a record's text, not whether it is right (the DNS record monitoring guide says so), so a broken SPF string or a DMARC record left at `p=none` reads as fine. A monitor for a domain could check the records themselves: DMARC present and its policy, SPF valid and within its 10 DNS lookups, a DKIM selector the user names published. It is cheap on top of the DNS worker, and a DNS monitor already accepts `_dmarc.<domain>` today. MXToolbox, dmarcian, EasyDMARC and Postmark offer the checks; their core is reading DMARC aggregate reports, which would be a product of its own and stays out. Settled by deciding whether it is worth a PRD, from whether "SPF checker" or "DMARC checker" searches would bring traffic as a free tool first.
+
+## Domain status in the domain expiry checker
+
+2026-11-23 · SEO review
+
+About 170 of the checker's ~1300 impressions in 28 days (Search Console, to 2026-11-21) are for "is my domain expired", "check if domain has expired" and the like, and its one click that week came from "domain redemption period check". Competitors in the top 10 (Pulsetic, Domainyze, UptimeObserver) show the domain's status, its lifecycle stage and its nameservers; the checker shows only the date, days left and registrar, because `apps/api/internal/rdap/rdap.go` reads only `events` and `entities` and drops `status` and `nameservers`, and the WHOIS fallback doesn't read `Domain Status:` lines. Settled when the checker shows the status as a lifecycle stage (active, grace, redemption, pending delete) and the FAQ answers in `apps/web/src/content/domainExpiryFaqs.ts` say "the checker shows" instead of pointing to a WHOIS record, or the idea is dropped.
