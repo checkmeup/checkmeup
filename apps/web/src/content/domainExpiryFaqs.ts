@@ -4,15 +4,15 @@
 export const domainExpiryFaqs: { q: string; a: string }[] = [
   {
     q: 'How do I check when a domain expires?',
-    a: "Enter the domain above. The checker asks the registry that runs its top-level domain, over RDAP or WHOIS, and shows the registration's expiry date, the days left and the registrar. It works for any domain, not only your own: for most TLDs the expiry date is public.",
+    a: "Enter the domain above. The checker asks the registry that runs its top-level domain, over RDAP or WHOIS, and shows the registration's expiry date, the days left, the registrar and, where the registry lists the domain's status, its stage. It works for any domain, not only your own: for most TLDs the expiry date is public.",
   },
   {
     q: 'How do I know if a domain has expired?',
-    a: "If the expiry date the checker shows is in the past, the registration has lapsed and the owner hasn't renewed it. A date in the future doesn't always mean it was renewed: for up to 45 days after a lapse, many registries show next year's date anyway (see below). Then the site and email often stop working, and the domain's status in a WHOIS or RDAP record reads clientHold, redemptionPeriod or pendingDelete.",
+    a: "If the expiry date the checker shows is in the past, the registration has lapsed and the owner hasn't renewed it. A date in the future doesn't always mean it was renewed: for up to 45 days after a lapse, many registries show next year's date anyway (see below). Then the site and email often stop working, and the stage the checker shows, where the registry lists the domain's status, reads Grace period, Redemption or Pending delete instead of Active.",
   },
   {
     q: 'How do I check if a domain is in its redemption period?',
-    a: 'Look at its status in a WHOIS or RDAP record: redemptionPeriod in WHOIS, "redemption period" in RDAP. It means the registrar deleted the expired domain and the owner has about 30 days to restore it through the registrar, for a fee on top of the renewal. After that the status turns to pendingDelete, and about 5 days later anyone can register the name.',
+    a: "Check it above: where the registry lists the domain's status, the checker shows its stage, and Redemption means the registrar deleted the expired domain. The owner then has about 30 days to restore it through the registrar, for a fee on top of the renewal. After that the stage turns to Pending delete, and about 5 days later anyone can register the name.",
   },
   {
     q: 'What happens when a domain expires?',

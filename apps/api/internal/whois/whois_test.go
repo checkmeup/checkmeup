@@ -8,6 +8,7 @@ package whois
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -170,4 +171,29 @@ func TestLookup(t *testing.T) {
 			t.Fatal("want an error")
 		}
 	})
+}
+
+// Statuses are read only from the "Domain Status:" lines of the registries
+// whose real answers carry them (ADR domain-lookups); the other formats
+// (it's "Status: ok", il's "status: Transfer Locked") aren't read.
+func TestParse_Statuses(t *testing.T) {
+	for _, c := range []struct {
+		tld, file, want string
+	}{
+		{"io", "io.txt", "[serverDeleteProhibited serverTransferProhibited serverUpdateProhibited]"},
+		{"us", "us.txt", "[serverDeleteProhibited clientDeleteProhibited clientTransferProhibited serverUpdateProhibited serverTransferProhibited]"},
+		{"cn", "cn.txt", "[serverDeleteProhibited serverUpdateProhibited]"},
+		{"it", "it.txt", "[]"},
+		{"il", "il.txt", "[]"},
+	} {
+		t.Run(c.file, func(t *testing.T) {
+			res, err := parse(registries[c.tld], fixture(t, c.file))
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if got := fmt.Sprint(res.Statuses); got != c.want {
+				t.Errorf("statuses %s, want %s", got, c.want)
+			}
+		})
+	}
 }

@@ -15,7 +15,7 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
 ## Scope
 
 - `/tools/ssl-checker`: enter a hostname, see the certificate's expiry date, days left and issuer, or why the check failed.
-- `/tools/domain-expiry-checker`: enter a domain, see its expiry date, days left and registrar, or why the lookup failed; the same RDAP-then-WHOIS lookup a domain monitor uses (ADR domain-lookups).
+- `/tools/domain-expiry-checker`: enter a domain, see its expiry date, days left, registrar and, where the registry lists the domain's status, its lifecycle stage (active, grace period, redemption, pending delete), or why the lookup failed; the same RDAP-then-WHOIS lookup a domain monitor uses (ADR domain-lookups).
 - `/tools/dns-lookup` (added 2026-10-31): enter a hostname, see its A, AAAA, CNAME, MX (with preference), TXT and NS records at once through the resolver DNS monitors use, each type's own failure reason, or why the lookup failed.
 - No sign-up needed. Under each result, a link to sign up and monitor it automatically.
 - Every page prerendered, with its own title, description and `<h1>`, listed in `sitemap.xml` and linked from the site footer.
@@ -43,6 +43,13 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
   → test: apps/api/internal/handler/tools_test.go "TestCheckSSL_RefusesAPrivateAddress"
 - A domain gets its expiry date, days left and registrar, through WHOIS for the TLDs ADR domain-lookups lists and RDAP for the rest.
   → test: apps/api/internal/handler/tools_test.go "TestCheckDomain_ReadsExpiryAndRegistrar"
+- A domain whose registry lists its status gets its lifecycle stage: Pending delete, Redemption or Grace period (the auto-renew or renew period) when one of those is listed, the latest when several are, Active otherwise; none when the registry lists no status. Over WHOIS, only the registries whose real answers carry "Domain Status:" lines are read (ADR domain-lookups).
+  → test: apps/api/internal/rdap/rdap_test.go "TestLifecycleStage"
+  → test: apps/api/internal/rdap/rdap_test.go "TestLookup_ReadsTheDomainsStatuses"
+  → test: apps/api/internal/whois/whois_test.go "TestParse_Statuses"
+  → test: apps/api/internal/handler/tools_test.go "TestCheckDomain_ShowsTheLifecycleStage"
+  → test: apps/web/src/components/ToolChecker.test.ts "shows a domain's lifecycle stage when the registry lists one"
+  → test: apps/web/src/components/ToolChecker.test.ts "shows no stage when the registry lists none"
 - A domain under a TLD that publishes no expiry date (.de, .eu, .at, .ch, .li, .es) gets that reason, with no lookup made.
   → test: apps/api/internal/handler/tools_test.go "TestCheckDomain_ATLDWithNoPublishedExpiryIsRefusedWithoutALookup"
 - An empty input gets `400` with no lookup made.
@@ -69,6 +76,8 @@ By 2026-12-15, eight weeks after launch, Search Console shows impressions for no
   → test: apps/web/scripts/generate-sitemap.test.ts "lists every free checker"
 - The domain expiry checker shows its questions and answers on the page and as FAQPage JSON-LD with the same text.
   → test: apps/web/src/views/DomainExpiryCheckerView.test.ts "emits FAQPage JSON-LD with the same questions and answers"
+- Its answers on whether a domain has expired and on the redemption period point to the stage the checker shows, not to a WHOIS record.
+  → test: apps/web/src/views/DomainExpiryCheckerView.test.ts "points the expired and redemption questions to the stage the checker shows"
 - Every tool page is linked from the footer of every marketing page.
   → test: apps/web/src/layouts/LandingLayout.test.ts "links the free checkers from the footer"
 - Five whitespace-separated fields that the cron monitor's schedule parser reads get a plain-English description and the next five times the schedule fires after the request, with no grace period; `*/5 * * * *` reads "Every 5 minutes", `0 9 * * 1-5` "At 09:00, Monday through Friday", and each common expression has a description of its own.

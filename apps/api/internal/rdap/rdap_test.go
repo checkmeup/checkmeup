@@ -116,3 +116,46 @@ func TestLookup(t *testing.T) {
 		}
 	})
 }
+
+func TestLookup_ReadsTheDomainsStatuses(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, `{
+			"status": ["redemption period", "client transfer prohibited"],
+			"events": [{"eventAction": "expiration", "eventDate": "2027-06-01T00:00:00Z"}]
+		}`)
+	}))
+	result, err := testClient(t, srv).Lookup("example.com")
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if fmt.Sprint(result.Statuses) != "[redemption period client transfer prohibited]" {
+		t.Fatalf("statuses = %q, want the answer's two", result.Statuses)
+	}
+}
+
+// RDAP spells EPP statuses as lower-case phrases (RFC 8056), WHOIS as the EPP
+// codes themselves; both read as the same stage.
+func TestLifecycleStage(t *testing.T) {
+	for _, c := range []struct {
+		statuses []string
+		want     string
+	}{
+		{nil, ""},
+		{[]string{"active"}, "active"},
+		{[]string{"client transfer prohibited", "server delete prohibited"}, "active"},
+		{[]string{"serverDeleteProhibited"}, "active"},
+		{[]string{"auto renew period"}, "grace"},
+		{[]string{"renew period"}, "grace"},
+		{[]string{"autoRenewPeriod"}, "grace"},
+		{[]string{"redemption period"}, "redemption"},
+		{[]string{"redemptionPeriod"}, "redemption"},
+		{[]string{"pending delete"}, "pending_delete"},
+		{[]string{"pendingDelete"}, "pending_delete"},
+		{[]string{"auto renew period", "redemption period"}, "redemption"},
+		{[]string{"redemption period", "pending delete"}, "pending_delete"},
+	} {
+		if got := LifecycleStage(c.statuses); got != c.want {
+			t.Errorf("LifecycleStage(%q) = %q, want %q", c.statuses, got, c.want)
+		}
+	}
+}

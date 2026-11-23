@@ -26,6 +26,15 @@ export async function runToolCheck<T>(
   }
 }
 
+// What the domain checker's stage reads as: where a domain is after expiry,
+// from the statuses its registry lists (rdap.LifecycleStage).
+export const domainStageLabels: Record<string, string> = {
+  active: 'Active',
+  grace: 'Grace period',
+  redemption: 'Redemption',
+  pending_delete: 'Pending delete',
+}
+
 // How an expiry date reads: expiring within 30 days is a warning, matching
 // when SSL and domain monitors turn "expiring soon".
 export function expiryStatus(daysLeft: number): { tone: Tone; label: string } {

@@ -57,6 +57,9 @@ type domainToolResponse struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 	DaysLeft  int       `json:"daysLeft"`
 	Registrar string    `json:"registrar"`
+	// Stage is where the domain is after expiry (rdap.LifecycleStage), left
+	// out when the registry listed no status.
+	Stage string `json:"stage,omitempty"`
 }
 
 // hostnamePattern is a DNS name's character set: anything else (spaces,
@@ -105,7 +108,10 @@ func (h *ToolsHandler) CheckDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	daysLeft := int(time.Until(res.ExpiresAt).Hours() / 24)
-	respond.JSON(w, http.StatusOK, domainToolResponse{Domain: domain, ExpiresAt: res.ExpiresAt, DaysLeft: daysLeft, Registrar: res.Registrar})
+	respond.JSON(w, http.StatusOK, domainToolResponse{
+		Domain: domain, ExpiresAt: res.ExpiresAt, DaysLeft: daysLeft, Registrar: res.Registrar,
+		Stage: rdap.LifecycleStage(res.Statuses),
+	})
 }
 
 // CheckDNS handles GET /api/v1/tools/dns?host=. A name with records of some

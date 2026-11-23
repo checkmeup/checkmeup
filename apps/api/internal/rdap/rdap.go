@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -40,6 +41,35 @@ func NewClientWithHTTPClient(hc *http.Client, baseURL string) *Client {
 type Result struct {
 	Registrar string
 	ExpiresAt time.Time
+	// Statuses are the domain's EPP statuses as the registry lists them:
+	// "redemption period" over RDAP, "redemptionPeriod" over WHOIS.
+	Statuses []string
+}
+
+// LifecycleStage reads a domain's statuses as where it is after expiry:
+// "pending_delete", "redemption", "grace" (the registry's auto-renew or renew
+// period), "active" otherwise, or "" when the registry listed none. The
+// latest stage wins when several are listed.
+func LifecycleStage(statuses []string) string {
+	if len(statuses) == 0 {
+		return ""
+	}
+	stage := "active"
+	for _, s := range statuses {
+		// RDAP spells EPP statuses as lower-case phrases (RFC 8056), WHOIS
+		// as the camel-case codes themselves.
+		switch strings.ToLower(strings.ReplaceAll(s, " ", "")) {
+		case "pendingdelete":
+			return "pending_delete"
+		case "redemptionperiod":
+			stage = "redemption"
+		case "autorenewperiod", "renewperiod":
+			if stage == "active" {
+				stage = "grace"
+			}
+		}
+	}
+	return stage
 }
 
 type rdapEvent struct {
@@ -54,6 +84,7 @@ type rdapEntity struct {
 }
 
 type rdapResponse struct {
+	Status   []string     `json:"status"`
 	Events   []rdapEvent  `json:"events"`
 	Entities []rdapEntity `json:"entities"`
 }
@@ -79,7 +110,7 @@ func (c *Client) Lookup(domain string) (Result, error) {
 		return Result{}, err
 	}
 
-	return Result{Registrar: findRegistrar(parsed.Entities), ExpiresAt: expiresAt}, nil
+	return Result{Registrar: findRegistrar(parsed.Entities), ExpiresAt: expiresAt, Statuses: parsed.Status}, nil
 }
 
 // fetch performs the RDAP HTTP request and validates the response status,

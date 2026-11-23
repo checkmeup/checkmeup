@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import StatusLabel from '@/components/StatusLabel.vue'
 import { trackToolCheck } from '@/lib/analytics'
-import { expiryStatus, runToolCheck } from '@/lib/toolCheck'
+import { domainStageLabels, expiryStatus, runToolCheck } from '@/lib/toolCheck'
 
 // The form and result of a free checker (PRD free-tools): one input, one
 // live check, and under the result an offer to monitor it.
@@ -23,6 +23,8 @@ const props = defineProps<{
 interface ExpiryResult {
   expiresAt: string
   daysLeft: number
+  // The domain checker's lifecycle stage; absent when the registry lists none.
+  stage?: string
   [key: string]: unknown
 }
 
@@ -69,6 +71,10 @@ function formatDate(iso: string) {
         <dd class="text-[var(--text-strong)]">{{ result.daysLeft }}</dd>
         <dt class="text-[var(--text-dim)]">{{ detailLabel }}</dt>
         <dd class="text-[var(--text-strong)]">{{ result[detailKey] || '—' }}</dd>
+        <template v-if="result.stage">
+          <dt class="text-[var(--text-dim)]">Stage</dt>
+          <dd class="text-[var(--text-strong)]">{{ domainStageLabels[result.stage] ?? result.stage }}</dd>
+        </template>
       </dl>
       <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] bg-[var(--surface-raised)] p-4">
         <p class="flex-1 text-sm text-[var(--text-dim)]">{{ monitorCta }}</p>

@@ -52,6 +52,37 @@ describe('ToolChecker', () => {
     expect(wrapper.find('a[href="/sign-up"]').text()).toContain('Monitor it free')
   })
 
+  it("shows a domain's lifecycle stage when the registry lists one", async () => {
+    for (const [stage, label] of [
+      ['active', 'Active'],
+      ['grace', 'Grace period'],
+      ['redemption', 'Redemption'],
+      ['pending_delete', 'Pending delete'],
+    ]) {
+      const wrapper = await checkDomain({
+        domain: 'example.com',
+        expiresAt: '2026-10-01T00:00:00Z',
+        daysLeft: -40,
+        registrar: 'Example Registrar',
+        stage,
+      })
+      const row = wrapper.findAll('dt').find((dt) => dt.text() === 'Stage')
+      expect(row?.element.nextElementSibling?.textContent).toBe(label)
+      wrapper.unmount()
+    }
+  })
+
+  it('shows no stage when the registry lists none', async () => {
+    const wrapper = await checkDomain({
+      domain: 'example.com',
+      expiresAt: '2027-06-01T00:00:00Z',
+      daysLeft: 200,
+      registrar: 'Example Registrar',
+    })
+
+    expect(wrapper.findAll('dt').map((dt) => dt.text())).not.toContain('Stage')
+  })
+
   it('shows why a check failed instead of a result', async () => {
     const wrapper = await checkDomain(
       { error: 'domain not found in registry (whois)', code: 'check_failed' },

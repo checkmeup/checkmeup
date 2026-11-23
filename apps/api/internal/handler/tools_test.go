@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -144,6 +146,61 @@ func TestCheckDomain_ReadsExpiryAndRegistrar(t *testing.T) {
 		!got.ExpiresAt.Equal(time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC)) || got.DaysLeft <= 0 {
 		t.Fatalf("body = %+v, want example.com expiring 2027-06-01 at Example Registrar", got)
 	}
+}
+
+// domainStage asks the checker about domain and returns the stage it shows,
+// and whether the answer had one at all.
+func domainStage(t *testing.T, h *ToolsHandler, domain string) (string, bool) {
+	t.Helper()
+	w := toolRequest(t, h.CheckDomain, "/api/v1/tools/domain", "domain", domain)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	stage, ok := got["stage"].(string)
+	return stage, ok
+}
+
+func TestCheckDomain_ShowsTheLifecycleStage(t *testing.T) {
+	t.Run("a domain whose RDAP answer lists the redemption period", func(t *testing.T) {
+		rd, _ := fakeRDAP(t, `{"status": ["redemption period"], "events": [{"eventAction": "expiration", "eventDate": "2026-10-01T00:00:00Z"}]}`)
+		if stage, _ := domainStage(t, NewToolsHandler(rd, whois.NewClient()), "example.com"); stage != "redemption" {
+			t.Fatalf("stage = %q, want redemption", stage)
+		}
+	})
+
+	t.Run("a domain whose RDAP answer lists no status shows none", func(t *testing.T) {
+		rd, _ := fakeRDAP(t, `{"events": [{"eventAction": "expiration", "eventDate": "2027-06-01T00:00:00Z"}]}`)
+		if stage, ok := domainStage(t, NewToolsHandler(rd, whois.NewClient()), "example.com"); ok {
+			t.Fatalf("stage = %q, want none", stage)
+		}
+	})
+
+	t.Run("a domain under a WHOIS TLD gets its stage from the Domain Status lines", func(t *testing.T) {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = ln.Close() })
+		go func() {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			defer func() { _ = conn.Close() }()
+			_, _ = bufio.NewReader(conn).ReadString('\n')
+			_, _ = fmt.Fprint(conn, "Registry Expiry Date: 2026-10-01T00:00:00Z\nRegistrar: Example Registrar\n"+
+				"Domain Status: pendingDelete https://icann.org/epp#pendingDelete\n")
+		}()
+		wi := whois.NewClientWithAddr(func(string) string { return ln.Addr().String() })
+		rd, _ := fakeRDAP(t, `{}`)
+		if stage, _ := domainStage(t, NewToolsHandler(rd, wi), "example.io"); stage != "pending_delete" {
+			t.Fatalf("stage = %q, want pending_delete", stage)
+		}
+	})
 }
 
 func TestCheckDomain_ATLDWithNoPublishedExpiryIsRefusedWithoutALookup(t *testing.T) {

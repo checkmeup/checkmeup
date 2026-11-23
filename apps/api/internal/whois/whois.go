@@ -22,6 +22,8 @@ import (
 type Result struct {
 	Registrar string
 	ExpiresAt time.Time
+	// Statuses are the EPP codes of the answer's "Domain Status:" lines.
+	Statuses []string
 }
 
 // registry describes one TLD's WHOIS server and how to read its answers.
@@ -37,6 +39,9 @@ type registry struct {
 	// notFound matches the registry's answer for a domain that isn't
 	// registered.
 	notFound *regexp.Regexp
+	// status's group 1 is one EPP status code, matched once per line; nil
+	// when the registry's answer lists none in a form read here.
+	status *regexp.Regexp
 }
 
 type expiryPattern struct {
@@ -52,8 +57,13 @@ func icann(server string) registry {
 		expiry:    []expiryPattern{{regexp.MustCompile(`(?m)^\s*Registry Expiry Date:\s*(\S+)`), time.RFC3339}},
 		registrar: regexp.MustCompile(`(?m)^\s*Registrar:\s*(.+?)\s*$`),
 		notFound:  regexp.MustCompile(`(?mi)^\s*(Domain not found\.|No Data Found|The queried object does not exist)`),
+		status:    domainStatus,
 	}
 }
+
+// domainStatus reads "Domain Status: serverDeleteProhibited https://icann.org/epp#…",
+// the form the ICANN-style registries and CNNIC answer in.
+var domainStatus = regexp.MustCompile(`(?m)^\s*Domain Status:\s*(\S+)`)
 
 // registries are the TLDs with no RDAP service whose WHOIS publishes an
 // expiry date, keyed by the domain's last label.
@@ -97,6 +107,7 @@ var registries = map[string]registry{
 		expiry:    []expiryPattern{{regexp.MustCompile(`(?m)^Expiration Time:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`), "2006-01-02 15:04:05"}},
 		registrar: regexp.MustCompile(`(?m)^Sponsoring Registrar:\s*(.+?)\s*$`),
 		notFound:  regexp.MustCompile(`No matching record`),
+		status:    domainStatus,
 	},
 	"se": {
 		server:    "whois.iis.se",
@@ -233,6 +244,11 @@ func parse(reg registry, answer string) (Result, error) {
 	if reg.registrar != nil {
 		if m := reg.registrar.FindStringSubmatch(answer); m != nil {
 			res.Registrar = m[1]
+		}
+	}
+	if reg.status != nil {
+		for _, m := range reg.status.FindAllStringSubmatch(answer, -1) {
+			res.Statuses = append(res.Statuses, m[1])
 		}
 	}
 	return res, nil

@@ -32,6 +32,17 @@ describe('DomainExpiryCheckerView', () => {
     }
   })
 
+  it('points the expired and redemption questions to the stage the checker shows', () => {
+    for (const q of [
+      'How do I know if a domain has expired?',
+      'How do I check if a domain is in its redemption period?',
+    ]) {
+      const faq = domainExpiryFaqs.find((f) => f.q === q)
+      expect(faq?.a).toContain('the checker shows')
+      expect(faq?.a).toContain('stage')
+    }
+  })
+
   it('emits FAQPage JSON-LD with the same questions and answers', async () => {
     wrapper = mount(DomainExpiryCheckerView)
     await flushHead()

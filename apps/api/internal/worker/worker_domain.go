@@ -110,7 +110,7 @@ func LookupDomain(rd *rdap.Client, wi *whois.Client, domain string) (rdap.Result
 		if errors.Is(err, whois.ErrNotRegistered) {
 			return rdap.Result{}, errors.New("domain not found in registry (whois)")
 		}
-		return rdap.Result{Registrar: res.Registrar, ExpiresAt: res.ExpiresAt}, err
+		return rdap.Result{Registrar: res.Registrar, ExpiresAt: res.ExpiresAt, Statuses: res.Statuses}, err
 	}
 	return rd.Lookup(domain)
 }
