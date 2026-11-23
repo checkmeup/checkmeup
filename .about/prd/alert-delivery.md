@@ -78,6 +78,7 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - A cron monitor's missed run is counted, and the monitor marked down, only while it is still up and overdue: a ping recorded after the worker read it as overdue leaves it up, its count and next expected ping as the ping set them, with no incident and no alert.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/a ping after the worker read the monitor as overdue wins"
 - A check that finishes after its monitor was paused writes nothing to the monitor (status, failure count, schedule, and for SSL and domain monitors expiry, issuer and alert flags) and to its incidents, and sends no alert, for every monitor type; an uptime, port or DNS check row itself may be kept.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckFinishingAfterPause"
 - An SSL or domain check whose result fails to write sends no alert, recovery included, and leaves the monitor due, so the next tick checks it again; one alert goes out once a write succeeds.
 - A cron monitor set to skip the first N failures alerts on the (N+1)th missed run in a row: each missed run counts once, and the monitor is then expected at its next scheduled run after the tick that counted it, plus the grace period (as a ping at that moment would set it). Runs missed while the worker was down count as one. A ping resets the count.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/the alert filter skips missed runs, not ticks"

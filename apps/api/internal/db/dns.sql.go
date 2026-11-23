@@ -647,7 +647,7 @@ SET consecutive_failures = consecutive_failures + 1,
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     last_resolved_value = $2,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 RETURNING id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
 `
 
@@ -694,7 +694,7 @@ WITH up AS (
         expected_value = COALESCE(expected_value, $2),
         baseline_captured = (expected_value IS NULL),
         updated_at = NOW()
-    WHERE dns_monitors.id = $1
+    WHERE dns_monitors.id = $1 AND dns_monitors.status <> 'paused'
     RETURNING dns_monitors.id
 ), resolved AS (
     UPDATE dns_incidents SET resolved_at = NOW()
@@ -715,7 +715,8 @@ type RecordDNSCheckUpParams struct {
 // Marks the monitor up and resolves its open incidents in one statement, so
 // neither happens without the other (PRD alert-delivery): up with an open
 // incident would never resolve it. Returns when the earliest resolved one
-// started, NULL when none was open.
+// started, NULL when none was open. A check that finishes after a pause
+// writes nothing (PRD alert-delivery).
 func (q *Queries) RecordDNSCheckUp(ctx context.Context, arg RecordDNSCheckUpParams) (pgtype.Timestamptz, error) {
 	row := q.db.QueryRow(ctx, recordDNSCheckUp, arg.ID, arg.LastResolvedValue)
 	var incident_started_at pgtype.Timestamptz
@@ -766,7 +767,7 @@ UPDATE dns_monitors
 SET last_checked_at = NOW(),
     next_check_at = NOW() + INTERVAL '30 seconds',
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 `
 
 // A first failed check is checked again on the next tick, about 30 seconds later,

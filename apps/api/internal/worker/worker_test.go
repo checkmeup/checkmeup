@@ -35,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -3540,6 +3541,121 @@ func TestIncidentOpensOnce(t *testing.T) {
 			t.Fatal("want a second open incident for one monitor refused")
 		}
 	})
+}
+
+// A check that finishes after its monitor was paused writes nothing to the
+// monitor and its incidents, and sends no alert (PRD alert-delivery): the
+// pause would otherwise be overwritten and the monitor silently resume.
+func TestCheckFinishingAfterPause(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+
+	// pauseDuring is set by each case to pause its monitor while its check runs.
+	var pauseDuring atomic.Pointer[func()]
+	during := func() {
+		if f := pauseDuring.Load(); f != nil {
+			(*f)()
+		}
+	}
+	var passing atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		during()
+		if !passing.Load() {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+	openHost, openPort, closeFn := openTCPPort(t)
+	defer closeFn()
+	closedHost, closedPort := freeTCPPort(t)
+	dnsGood, dnsBad := fakeDNSResolver(t, []net.IP{net.ParseIP("192.0.2.1")}), fakeDNSResolver(t, []net.IP{net.ParseIP("192.0.2.2")})
+	n := Notifiers{Queries: queries, Telegram: telegram.NewClient(""), Mailer: email.NewSender(""), Webhook: wh, Logger: testLogger(),
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		TCPDialer: &net.Dialer{Timeout: 10 * time.Second, Control: func(string, string, syscall.RawConn) error {
+			during()
+			return nil
+		}},
+		DNSResolver: &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			during()
+			if passing.Load() {
+				return dnsGood.Dial(ctx, network, address)
+			}
+			return dnsBad.Dial(ctx, network, address)
+		}},
+	}
+
+	cases := []struct {
+		monitorType, monitorTable, incidentTable string
+		create                                   func(t *testing.T, orgID uuid.UUID, pass bool) uuid.UUID
+		check                                    func()
+	}{
+		{"uptime", "uptime_monitors", "uptime_incidents", func(t *testing.T, orgID uuid.UUID, _ bool) uuid.UUID {
+			return testUptimeMonitor(t, queries, orgID, srv.URL).ID
+		}, func() { checkUptimeMonitors(context.Background(), n) }},
+		{"port", "port_monitors", "port_incidents", func(t *testing.T, orgID uuid.UUID, pass bool) uuid.UUID {
+			if pass {
+				return testPortMonitor(t, queries, orgID, openHost, openPort, db.PortExpectedStateOpen).ID
+			}
+			return testPortMonitor(t, queries, orgID, closedHost, closedPort, db.PortExpectedStateOpen).ID
+		}, func() { checkPortMonitors(context.Background(), n) }},
+		{"dns", "dns_monitors", "dns_incidents", func(t *testing.T, orgID uuid.UUID, _ bool) uuid.UUID {
+			return testDNSMonitor(t, queries, orgID, "example.com", "192.0.2.1").ID
+		}, func() { checkDNSMonitors(context.Background(), n) }},
+	}
+	for _, tc := range cases {
+		row := func(t *testing.T, id uuid.UUID) (status string, failures int32) {
+			t.Helper()
+			if err := pool.QueryRow(context.Background(),
+				"SELECT status, consecutive_failures FROM "+tc.monitorTable+" WHERE id = $1", id,
+			).Scan(&status, &failures); err != nil {
+				t.Fatalf("read monitor: %v", err)
+			}
+			return
+		}
+		for _, pass := range []bool{true, false} {
+			name := tc.monitorType + ": a failing check"
+			if pass {
+				name = tc.monitorType + ": a passing check on a down monitor"
+			}
+			t.Run(name, func(t *testing.T) {
+				org := testOrg(t, queries, pool)
+				id := tc.create(t, org.ID, pass)
+				sent := webhookRecorder(t, queries, org.ID, tc.monitorType, id)
+				if pass {
+					seedOpenIncident(t, pool, tc.monitorTable, tc.incidentTable, id, "down")
+				} else {
+					// One failure already counted, so this one would open an incident.
+					mustExecWorker(t, pool, "UPDATE "+tc.monitorTable+" SET status = 'up', consecutive_failures = 1 WHERE id = $1", id)
+				}
+				pause := func() {
+					mustExecWorker(t, pool, "UPDATE "+tc.monitorTable+" SET status = 'paused' WHERE id = $1", id)
+					mustExecWorker(t, pool, "UPDATE "+tc.incidentTable+" SET resolved_at = NOW() WHERE monitor_id = $1 AND resolved_at IS NULL", id)
+				}
+				var once sync.Once
+				pauseOnce := func() { once.Do(pause) }
+				passing.Store(pass)
+				pauseDuring.Store(&pauseOnce)
+				defer pauseDuring.Store(nil)
+
+				tc.check()
+				WaitForAlerts()
+				status, failures := row(t, id)
+				if status != "paused" {
+					t.Fatalf("want the monitor still paused, got %q", status)
+				}
+				if !pass && failures != 1 {
+					t.Fatalf("want its failure count left at 1, got %d", failures)
+				}
+				if open := openIncidents(t, pool, tc.incidentTable, id); open != 0 {
+					t.Fatalf("want no open incident, got %d", open)
+				}
+				if sent() != 0 {
+					t.Fatalf("want no alert, got %d", sent())
+				}
+			})
+		}
+	}
 }
 
 // seedOpenIncident puts monitorID in status with an open incident started 10

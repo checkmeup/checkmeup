@@ -64,7 +64,8 @@ WHERE next_check_at <= NOW() AND status != 'paused'
 -- Marks the monitor up and resolves its open incidents in one statement, so
 -- neither happens without the other (PRD alert-delivery): up with an open
 -- incident would never resolve it. Returns when the earliest resolved one
--- started, NULL when none was open.
+-- started, NULL when none was open. A check that finishes after a pause
+-- writes nothing (PRD alert-delivery).
 WITH up AS (
     UPDATE dns_monitors
     SET status = 'up',
@@ -75,7 +76,7 @@ WITH up AS (
         expected_value = COALESCE(expected_value, $2),
         baseline_captured = (expected_value IS NULL),
         updated_at = NOW()
-    WHERE dns_monitors.id = $1
+    WHERE dns_monitors.id = $1 AND dns_monitors.status <> 'paused'
     RETURNING dns_monitors.id
 ), resolved AS (
     UPDATE dns_incidents SET resolved_at = NOW()
@@ -91,7 +92,7 @@ SET consecutive_failures = consecutive_failures + 1,
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     last_resolved_value = $2,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 RETURNING *;
 
 -- name: ScheduleDNSRecheck :exec
@@ -101,7 +102,7 @@ UPDATE dns_monitors
 SET last_checked_at = NOW(),
     next_check_at = NOW() + INTERVAL '30 seconds',
     updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1 AND status <> 'paused';
 
 -- name: LatestDNSCheckFailed :one
 SELECT COALESCE(

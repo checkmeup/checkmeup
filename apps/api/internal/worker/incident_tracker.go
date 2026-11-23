@@ -109,6 +109,9 @@ func trackUp(ctx context.Context, n Notifiers, t incidentTracker, m trackedMonit
 // still 0, so max_alerts_per_incident can't apply here (ADR alerting).
 func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMonitor) {
 	failures, err := t.recordFailure(ctx)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return // paused while it was checked
+	}
 	if err != nil {
 		m.logError(n, "record failure", err)
 		return

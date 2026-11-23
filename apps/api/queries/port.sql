@@ -56,7 +56,8 @@ WHERE next_check_at <= NOW() AND status != 'paused'
 -- Marks the monitor up and resolves its open incidents in one statement, so
 -- neither happens without the other (PRD alert-delivery): up with an open
 -- incident would never resolve it. Returns when the earliest resolved one
--- started, NULL when none was open.
+-- started, NULL when none was open. A check that finishes after a pause
+-- writes nothing (PRD alert-delivery).
 WITH up AS (
     UPDATE port_monitors
     SET status = 'up',
@@ -64,7 +65,7 @@ WITH up AS (
         last_checked_at = NOW(),
         next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
         updated_at = NOW()
-    WHERE port_monitors.id = $1
+    WHERE port_monitors.id = $1 AND port_monitors.status <> 'paused'
     RETURNING port_monitors.id
 ), resolved AS (
     UPDATE port_incidents SET resolved_at = NOW()
@@ -79,7 +80,7 @@ SET consecutive_failures = consecutive_failures + 1,
     last_checked_at = NOW(),
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 RETURNING *;
 
 -- name: SchedulePortRecheck :exec
@@ -89,7 +90,7 @@ UPDATE port_monitors
 SET last_checked_at = NOW(),
     next_check_at = NOW() + INTERVAL '30 seconds',
     updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1 AND status <> 'paused';
 
 -- name: LatestPortCheckFailed :one
 SELECT COALESCE(

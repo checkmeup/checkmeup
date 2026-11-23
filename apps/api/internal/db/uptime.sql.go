@@ -615,7 +615,7 @@ SET consecutive_failures = consecutive_failures + 1,
     last_checked_at = NOW(),
     next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
 `
 
@@ -657,7 +657,7 @@ WITH up AS (
         last_checked_at = NOW(),
         next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
         updated_at = NOW()
-    WHERE uptime_monitors.id = $1
+    WHERE uptime_monitors.id = $1 AND uptime_monitors.status <> 'paused'
     RETURNING uptime_monitors.id
 ), resolved AS (
     UPDATE uptime_incidents SET resolved_at = NOW()
@@ -670,7 +670,8 @@ SELECT (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_a
 // Marks the monitor up and resolves its open incidents in one statement, so
 // neither happens without the other (PRD alert-delivery): up with an open
 // incident would never resolve it. Returns when the earliest resolved one
-// started, NULL when none was open.
+// started, NULL when none was open. A check that finishes after a pause
+// writes nothing (PRD alert-delivery).
 func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (pgtype.Timestamptz, error) {
 	row := q.db.QueryRow(ctx, recordUptimeCheckUp, id)
 	var incident_started_at pgtype.Timestamptz
@@ -724,7 +725,7 @@ UPDATE uptime_monitors
 SET last_checked_at = NOW(),
     next_check_at = NOW() + INTERVAL '30 seconds',
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND status <> 'paused'
 `
 
 // A first failed check is checked again on the next tick, about 30 seconds later,
