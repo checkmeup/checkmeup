@@ -30,3 +30,9 @@ Settled when the channels are chosen and tried.
 2026-11-22 · chainofsale session · kept 2026-11-23
 
 The DNS monitor compares a record's text, not whether it is right (the DNS record monitoring guide says so), so a broken SPF string or a DMARC record left at `p=none` reads as fine. A monitor for a domain could check the records themselves: DMARC present and its policy, SPF valid and within its 10 DNS lookups, a DKIM selector the user names published. It is cheap on top of the DNS worker, and a DNS monitor already accepts `_dmarc.<domain>` today. MXToolbox, dmarcian, EasyDMARC and Postmark offer the checks; their core is reading DMARC aggregate reports, which would be a product of its own and stays out. Settled by deciding whether it is worth a PRD, from whether "SPF checker" or "DMARC checker" searches would bring traffic as a free tool first. Kept on 2026-11-23 to wait for the free tools' 2026-12-15 success signal (Inbox "Free tools without sign-up"): if the existing checkers bring traffic, an SPF/DMARC checker is the next free tool to try, and the monitor would follow it.
+
+## The Fallback email after a failed only-delivery SMS is tried once
+
+2026-11-23 · alert-delivery audit
+
+When an SMS was the alert's only delivery and Twilio's status callback later reports it failed, `HandleSMSStatus` emails the org once. If that email fails too (a Resend outage), the alert is lost: the incident already counts it delivered (`alert_count = 1`), so no retry picks it up. Retrying needs the `sms_messages` row tied to its incident, or the callback resetting the incident's count so `Claim*AlertRetries` sends it again. Settled by deciding whether a carrier failure plus an email outage at once is worth that, and how.

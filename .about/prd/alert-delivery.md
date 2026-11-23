@@ -4,6 +4,8 @@
 
 A customer pays Checkmeup to hear when something is down, and today a down alert is tried once. When every channel and the Fallback email fail (a Resend or Twilio outage, a database blip while reading the channels), or the process stops mid-send (every merge deploys, and a crash), the alert is gone: the incident stays open with nothing sent, and nothing tries again. And when the worker itself hangs or dies, every monitor goes silent while `/api/v1/health` still answers "ok", so nobody, the operator included, finds out.
 
+A monitor's state moves on in several statements, and anything that runs between them leaves it wrong. A monitor marked up whose incident then fails to resolve keeps that incident open for good, with no recovery alert, and the next outage opens a second one beside it. A cron ping that lands while the worker is marking its monitor down brings a down alert for a job that just ran, or leaves an incident open on a monitor that's up. A pause made while a check is running is overwritten by the check, so the monitor silently resumes. Two processes during a deploy check the same monitor and can open two incidents for one outage. An SSL or domain check whose write fails sends its alert anyway, and again on every tick while the write keeps failing. And a cron monitor's "skip the first N failures" counts 30-second ticks, not missed runs, so it alerts a minute or two after the first missed run whatever N says.
+
 ## Users
 
 Every org with a monitor: the alerts are theirs. The operator, for the worker's own health.
@@ -12,6 +14,7 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 
 - Open incidents with alerts on, on a monitor still down, whose down alert never went out: from staying so forever to none older than 10 minutes, except while every channel and the Fallback email keep failing.
 - A hung or dead worker: from unnoticed to the operator alerted within 10 minutes.
+- Open incidents on a monitor that is up or paused, and monitors with more than one open incident: from possible to none.
 
 ## Scope
 
@@ -20,6 +23,11 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - `/api/v1/health`, and `/up` with it, fails when the worker has stopped finishing ticks.
 - The operator points an external uptime service at `/api/v1/health` (a step outside the code).
 - ADR alerting changed with it: each channel had one attempt per alert, never a retry, and an alert still sending when the process stopped was lost.
+- A monitor's status and its incident change together, in one statement, and only from the state the change expects: a recovery resolves the open incidents as it marks the monitor up, an incident opens only on a monitor that is up or waiting, and no check result overwrites a pause. The database holds at most one open incident per monitor (a unique partial index), and a migration first resolves the open incidents the older code left on monitors that aren't down, and all but the newest where a monitor has several.
+- An SSL or domain check whose result can't be written sends no alert; the next tick checks it again.
+- A cron monitor's alert filter counts missed runs.
+- A cron ping is never lost to a failed write of its history row, and a database error never answers it 404. A ping whose monitor can't be read at all is still lost: there is nothing to record it on.
+- A stuck run of a paused cron monitor doesn't alert.
 
 ## Non-goals
 
@@ -28,6 +36,8 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - Retrying a single channel that failed when another one, or the Fallback email, delivered: as today, the alert counts as delivered once anything delivered it (PRD notification-channels), and Settings shows the failed channel's last delivery.
 - Treating an SMS as undelivered until Twilio's status callback: as today, an SMS Twilio accepted counts as delivered, and a later carrier failure sends the Fallback email (ADR alerting).
 - A status page or customer-facing notice of Checkmeup's own outage.
+- Claiming due monitors so two processes during a deploy never check the same one: a duplicate check row for those few seconds is harmless once an incident can't open twice.
+- Retrying the Fallback email sent after an SMS that was the alert's only delivery fails at the carrier: it needs the SMS tied to its incident, and is an Inbox item.
 
 ## Anti-goals
 
@@ -60,3 +70,11 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_DBUnavailable"
 - An external uptime service checks `https://checkmeup.net/api/v1/health` at least every 5 minutes and emails the operator when it fails (checked by hand once: the service shows the check as up, and its test alert reaches the operator's inbox).
   → set up: a Better Stack monitor on `https://checkmeup.net/api/v1/health`, checked every 3 minutes, alerting by email; its test alert reached the operator, 2026-11-23
+- An uptime, port or DNS check that passes on a down monitor, or a ping to a down cron monitor, marks it up and resolves its open incidents in one statement: when either write fails (a test injects the failure with a trigger that raises), neither is done, the monitor stays down, no recovery alert goes out, and the next passing check or ping recovers it. A passing check or a ping on a monitor that isn't down but has an open incident resolves that incident too, silently: its downtime is unknown, and a recovery after days would mislead.
+- An incident opens only on a monitor that is up or waiting, so two checks of one failing monitor, as from two processes during a deploy, open one incident and send one down alert; the second finds the monitor down and does nothing more. Inserting a second open incident for one monitor fails in the database.
+- A cron monitor's missed run is counted, and the monitor marked down, only while it is still up and overdue: a ping recorded after the worker read it as overdue leaves it up, its count and next expected ping as the ping set them, with no incident and no alert.
+- A check that finishes after its monitor was paused writes nothing to the monitor (status, failure count, schedule, and for SSL and domain monitors expiry, issuer and alert flags) and to its incidents, and sends no alert, for every monitor type; an uptime, port or DNS check row itself may be kept.
+- An SSL or domain check whose result fails to write sends no alert, recovery included, and leaves the monitor due, so the next tick checks it again; one alert goes out once a write succeeds.
+- A cron monitor set to skip the first N failures alerts on the (N+1)th missed run in a row: each missed run counts once, and the monitor is then expected at its next scheduled run after the tick that counted it, plus the grace period (as a ping at that moment would set it). Runs missed while the worker was down count as one. A ping resets the count.
+- A ping whose history row fails to write still marks its monitor up and recovers it, and a ping that fails to read its monitor for any reason but an unknown token answers 200, not 404.
+- A run of a paused cron monitor that passes its maximum duration sends no stuck-run alert while the monitor is paused; once it is resumed, a run still open alerts then.
