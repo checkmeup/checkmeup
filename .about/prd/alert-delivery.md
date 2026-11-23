@@ -19,7 +19,7 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - The time of an alert's last attempt is kept in PostgreSQL, so a retry, a restarted process and the two processes running side by side during a deploy all see it.
 - `/api/v1/health`, and `/up` with it, fails when the worker has stopped finishing ticks.
 - The operator points an external uptime service at `/api/v1/health` (a step outside the code).
-- ADR alerting changes with it: today each channel gets one attempt per alert, never a retry, and an alert still sending when the process stops is lost.
+- ADR alerting changed with it: each channel had one attempt per alert, never a retry, and an alert still sending when the process stopped was lost.
 
 ## Non-goals
 
@@ -27,7 +27,6 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - Exactly-once delivery: an alert that went out but wasn't recorded (a restart right after sending) may go out twice. Twice is better than never.
 - Retrying a single channel that failed when another one, or the Fallback email, delivered: as today, the alert counts as delivered once anything delivered it (PRD notification-channels), and Settings shows the failed channel's last delivery.
 - Treating an SMS as undelivered until Twilio's status callback: as today, an SMS Twilio accepted counts as delivered, and a later carrier failure sends the Fallback email (ADR alerting).
-- Resolving the incident of a monitor paused while down (in the Inbox): such an incident is not retried, since its monitor is not down.
 - A status page or customer-facing notice of Checkmeup's own outage.
 
 ## Anti-goals

@@ -30,9 +30,10 @@
       </li>
     </ol>
     <p class="text-sm leading-relaxed mt-4 text-[var(--text-dim)]">
-      Alerts are capped per incident — by default, 3 alerts and then silence until the monitor
-      recovers, so a flapping check doesn't spam your phone. The recovery alert always sends,
-      regardless of the cap. The alert limit is configurable per monitor.
+      Each outage sends one down alert and, once it's over, one recovery alert. SSL and domain
+      monitors, which warn at several thresholds, stop after 3 alerts per incident by default;
+      the limit is configurable per monitor. The recovery alert always sends, regardless of the
+      cap.
     </p>
   </section>
 </template>

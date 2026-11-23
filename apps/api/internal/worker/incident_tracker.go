@@ -12,8 +12,9 @@ import (
 // The incident lifecycle uptime, port and DNS monitors share: what a check's
 // result does to the monitor, its incident and its alerts (ADR alerting).
 // Each type supplies an incidentTracker, its queries bound to the monitor
-// being checked and the check's result, and its alert wording. Cron, SSL and
-// domain monitors alert more than once per incident, so they keep their own.
+// being checked and the check's result, and its alert wording. Cron monitors
+// keep their own, since a missed ping isn't a check; SSL and domain monitors
+// too, since they alert more than once per incident.
 
 // trackedMonitor is what trackCheck reads of a monitor, as it was when the
 // check began.

@@ -30,3 +30,9 @@ Settled when the channels are chosen and tried.
 2026-11-22 · chainofsale session · kept 2026-11-23
 
 The DNS monitor compares a record's text, not whether it is right (the DNS record monitoring guide says so), so a broken SPF string or a DMARC record left at `p=none` reads as fine. A monitor for a domain could check the records themselves: DMARC present and its policy, SPF valid and within its 10 DNS lookups, a DKIM selector the user names published. It is cheap on top of the DNS worker, and a DNS monitor already accepts `_dmarc.<domain>` today. MXToolbox, dmarcian, EasyDMARC and Postmark offer the checks; their core is reading DMARC aggregate reports, which would be a product of its own and stays out. Settled by deciding whether it is worth a PRD, from whether "SPF checker" or "DMARC checker" searches would bring traffic as a free tool first. Kept on 2026-11-23 to wait for the free tools' 2026-12-15 success signal (Inbox "Free tools without sign-up"): if the existing checkers bring traffic, an SPF/DMARC checker is the next free tool to try, and the monitor would follow it.
+
+## The alert limit does nothing on uptime, port, DNS and cron monitors
+
+2026-11-23 · tidy
+
+These monitors send one down alert per incident (ADR alerting): a cron monitor once down isn't checked for missed pings until it pings again, and the others alert only on going down. So `max_alerts_per_incident` applies only to SSL and domain monitors, and the check of it in `processOverdueMonitor` (`apps/api/internal/worker/worker_cron.go`) never trips on an incident just opened. Yet the uptime, port, DNS and cron monitor forms (`UptimeMonitorForm.vue`, `PortMonitorForm.vue`, `DNSMonitorForm.vue`, `CronMonitorForm.vue`) still offer the limit. Settled by hiding the field on those four and removing the dead check, or by deciding they should remind while a monitor stays down, which would make the limit meaningful.
