@@ -6,7 +6,7 @@ A notification channel is one configured destination (a Telegram chat, an email 
 
 A monitor always has somewhere to alert: when it has no enabled channel attached, or nothing it tried was delivered, the alert goes to the email of every user in the org. This applied to existing orgs too, on purpose: a monitor going down with nobody told is worse than an unasked-for email.
 
-Each channel gets one delivery attempt per alert, never a retry: retrying against a receiver that is already failing adds load when it hurts most, and the fallback email covers a failed send. Webhook, Slack and SMS record the outcome on the channel, so Settings shows the last delivery.
+Each channel gets one delivery attempt per alert, never an immediate retry: retrying against a receiver that is already failing adds load when it hurts most, and the fallback email covers a failed send. A down alert that nothing delivered (an uptime, port, DNS or cron one) is sent again 5 minutes later, though, and every 5 minutes after, while its incident is open and its monitor down, unmuted and under no maintenance window (PRD alert-delivery): until 2026-11-23 a provider outage, a failed read of the channels or a process stopped mid-send lost it for good. The incident keeps the alert as first built and the time of its last attempt, so a restarted process, or the second one running during a deploy, picks it up without sending it twice. An alert tries an SMS channel at most 3 times, since each try uses a credit even when Twilio refuses it. Webhook, Slack and SMS record the outcome on the channel, so Settings shows the last delivery.
 
 An SMS Twilio accepts can still fail at the carrier (an unreachable number, a STOP opt-out), so its outcome is final only when its status callback says so: a failure is recorded on the channel then, and when the SMS was the alert's only delivery, the fallback email goes out then. A dispatch sends SMS last, so that is known when the SMS is sent and stored with it; an SMS waits in `sms_messages` for its callback for up to 7 days. Twilio signs callbacks only with the account's primary Auth Token, which this app doesn't hold, so the callback URL carries a secret token derived from `JWT_SECRET` instead.
 
@@ -45,7 +45,7 @@ A missing provider key (Resend, Telegram, Twilio) turns that channel off with a 
 
 - A real outage alerts about 30 seconds later than before; a blip shorter than that never alerts.
 - A recovery alert can arrive before the down alert it follows when the down alert's channels take longer than the monitor stays down, at least three slow channels in a row; alerts for one monitor aren't queued in order.
-- A deploy waits for the alerts still being sent, up to 15 seconds after the HTTP server has stopped (ADR infrastructure); one still sending after that is lost.
+- A deploy waits for the alerts still being sent, up to 15 seconds after the HTTP server has stopped (ADR infrastructure); a down alert still sending after that goes out again 5 minutes later, and a recovery is lost.
 - Loading a monitor's channels is one more query per alert. Revisit if monitor counts make it matter.
 - SMS is the only channel that costs money per message; the per-incident cap is what bounds it.
 - Editing a Slack or webhook channel can't send a test until the URL is pasted again: the test needs the real URL, and the client only holds the masked one.

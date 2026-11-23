@@ -12,6 +12,62 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimUptimeAlertRetries = `-- name: ClaimUptimeAlertRetries :many
+UPDATE uptime_incidents i
+SET alert_attempted_at = NOW(), alert_attempts = i.alert_attempts + 1
+FROM uptime_monitors m
+WHERE m.id = i.monitor_id
+  AND i.resolved_at IS NULL AND i.alert_count = 0 AND i.alert IS NOT NULL
+  AND (i.alert_attempted_at IS NULL OR i.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status = 'down' AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'uptime' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts
+`
+
+type ClaimUptimeAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the open incidents whose down alert never went out and wasn't
+// attempted in the last 5 minutes, on a monitor still down, unmuted and
+// under no maintenance window, and counts the attempt (PRD alert-delivery).
+// One UPDATE, so of two processes running side by side during a deploy only
+// one takes an incident.
+func (q *Queries) ClaimUptimeAlertRetries(ctx context.Context) ([]ClaimUptimeAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimUptimeAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimUptimeAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimUptimeAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countUptimeMonitors = `-- name: CountUptimeMonitors :one
 SELECT COUNT(*) FROM uptime_monitors WHERE org_id = $1
 `
@@ -224,7 +280,7 @@ func (q *Queries) GetUptimeStats(ctx context.Context, monitorID uuid.UUID) (GetU
 }
 
 const incrementUptimeIncidentAlertCount = `-- name: IncrementUptimeIncidentAlertCount :one
-UPDATE uptime_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count
+UPDATE uptime_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid.UUID) (UptimeIncident, error) {
@@ -236,6 +292,9 @@ func (q *Queries) IncrementUptimeIncidentAlertCount(ctx context.Context, id uuid
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -381,7 +440,7 @@ func (q *Queries) ListUptimeChecks24h(ctx context.Context, monitorID uuid.UUID) 
 }
 
 const listUptimeIncidents = `-- name: ListUptimeIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
+SELECT id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListUptimeIncidents(ctx context.Context, monitorID uuid.UUID) ([]UptimeIncident, error) {
@@ -399,6 +458,9 @@ func (q *Queries) ListUptimeIncidents(ctx context.Context, monitorID uuid.UUID) 
 			&i.StartedAt,
 			&i.ResolvedAt,
 			&i.AlertCount,
+			&i.Alert,
+			&i.AlertAttemptedAt,
+			&i.AlertAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -459,15 +521,28 @@ func (q *Queries) ListUptimeMonitors(ctx context.Context, orgID uuid.UUID) ([]Up
 
 const openUptimeIncident = `-- name: OpenUptimeIncident :one
 WITH down AS (
-    UPDATE uptime_monitors SET status = 'down', updated_at = NOW() WHERE uptime_monitors.id = $1 RETURNING id
+    UPDATE uptime_monitors SET status = 'down', updated_at = NOW()
+    WHERE uptime_monitors.id = $2 RETURNING id, alerts_enabled
 )
-INSERT INTO uptime_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
+INSERT INTO uptime_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
+SELECT down.id, $1::jsonb,
+       CASE WHEN down.alerts_enabled THEN NOW() END,
+       CASE WHEN down.alerts_enabled THEN 1 ELSE 0 END
+FROM down
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
+
+type OpenUptimeIncidentParams struct {
+	Alert     []byte    `json:"alert"`
+	MonitorID uuid.UUID `json:"monitor_id"`
+}
 
 // Marks the monitor down and opens its incident in one statement, so neither
 // happens without the other: down with no incident skips every later check.
-func (q *Queries) OpenUptimeIncident(ctx context.Context, id uuid.UUID) (UptimeIncident, error) {
-	row := q.db.QueryRow(ctx, openUptimeIncident, id)
+// The incident keeps its down alert, attempted now when alerts are on, for
+// ClaimUptimeAlertRetries (PRD alert-delivery).
+func (q *Queries) OpenUptimeIncident(ctx context.Context, arg OpenUptimeIncidentParams) (UptimeIncident, error) {
+	row := q.db.QueryRow(ctx, openUptimeIncident, arg.Alert, arg.MonitorID)
 	var i UptimeIncident
 	err := row.Scan(
 		&i.ID,
@@ -475,6 +550,9 @@ func (q *Queries) OpenUptimeIncident(ctx context.Context, id uuid.UUID) (UptimeI
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -610,7 +688,7 @@ WHERE id = (
     ORDER BY ui.started_at DESC
     LIMIT 1
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uuid.UUID) (UptimeIncident, error) {
@@ -622,6 +700,9 @@ func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uui
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }

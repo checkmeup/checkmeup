@@ -104,10 +104,39 @@ WHERE monitor_id = $1;
 -- name: OpenPortIncident :one
 -- Marks the monitor down and opens its incident in one statement, so neither
 -- happens without the other: down with no incident skips every later check.
+-- The incident keeps its down alert, attempted now when alerts are on, for
+-- ClaimPortAlertRetries (PRD alert-delivery).
 WITH down AS (
-    UPDATE port_monitors SET status = 'down', updated_at = NOW() WHERE port_monitors.id = $1 RETURNING id
+    UPDATE port_monitors SET status = 'down', updated_at = NOW()
+    WHERE port_monitors.id = sqlc.arg(monitor_id) RETURNING id, alerts_enabled
 )
-INSERT INTO port_incidents (monitor_id) SELECT down.id FROM down RETURNING *;
+INSERT INTO port_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
+SELECT down.id, sqlc.arg(alert)::jsonb,
+       CASE WHEN down.alerts_enabled THEN NOW() END,
+       CASE WHEN down.alerts_enabled THEN 1 ELSE 0 END
+FROM down
+RETURNING *;
+
+-- name: ClaimPortAlertRetries :many
+-- Takes the open incidents whose down alert never went out and wasn't
+-- attempted in the last 5 minutes, on a monitor still down, unmuted and
+-- under no maintenance window, and counts the attempt (PRD alert-delivery).
+-- One UPDATE, so of two processes running side by side during a deploy only
+-- one takes an incident.
+UPDATE port_incidents i
+SET alert_attempted_at = NOW(), alert_attempts = i.alert_attempts + 1
+FROM port_monitors m
+WHERE m.id = i.monitor_id
+  AND i.resolved_at IS NULL AND i.alert_count = 0 AND i.alert IS NOT NULL
+  AND (i.alert_attempted_at IS NULL OR i.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status = 'down' AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'port' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts;
 
 -- name: ResolveLatestPortIncident :one
 UPDATE port_incidents

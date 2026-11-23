@@ -40,10 +40,17 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 ## Acceptance criteria
 
 - An uptime, port, DNS or cron monitor goes down and every attached channel and the Fallback email fail: the down alert is attempted again on the first tick at least 5 minutes after the previous attempt started, and so on, until one attempt delivers it; after that it is not sent again.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/a down alert that didn't go out is sent again 5 minutes later, until delivered, then not again"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/every incident-tracked type retries its undelivered down alert"
 - A failed read of the monitor's channels counts as a failed attempt and is retried the same way.
 - An open incident whose down alert was never delivered and whose last attempt started more than 5 minutes ago, or that has none, as after a process stopped mid-send, gets its down alert on the next tick; one whose last attempt started less than 5 minutes ago is not sent a second time, by this process or another.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/every incident-tracked type retries its undelivered down alert"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/a down alert that didn't go out is sent again 5 minutes later, until delivered, then not again"
 - A down alert is retried only while its incident is open and its monitor is down, not paused, under no maintenance window and with alerts on; once the incident is resolved it is dropped, and the recovery alert goes out as today. A monitor whose alerts are turned on again while still down gets its down alert then.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/no retry once the problem it reports is gone or muted"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/a down alert opened with alerts off goes out once they are turned on"
 - An SMS channel is attempted at most 3 times for one alert; the other channels and the Fallback email keep being retried after that.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryMessage_SMSTriedAtMostThreeTimes"
 - An SSL error alert or SSL warning, or a domain warning or expired alert, that fails is attempted again on the first tick at least 5 minutes later, from a fresh check, until delivered; its threshold counts as alerted, and it counts toward `max_alerts_per_incident`, only once delivered, so a delivered one is not sent again and its attempts count once. If a later threshold is crossed meanwhile, the alert for it replaces the undelivered one.
 - `/api/v1/health` and `/up` answer 503 with the code `worker_stalled` when no worker tick has finished in the last 2 minutes, with the first 2 minutes after the process starts counting as finished (so a deploy isn't held up), and 200 otherwise. A database that doesn't answer still gives `db_unavailable`, checked first. A tick slower than 2 minutes, which delays every check by as much, gives 503 too, on purpose.
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_WorkerStalled"

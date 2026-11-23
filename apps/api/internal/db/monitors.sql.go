@@ -12,6 +12,62 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimCronAlertRetries = `-- name: ClaimCronAlertRetries :many
+UPDATE cron_incidents i
+SET alert_attempted_at = NOW(), alert_attempts = i.alert_attempts + 1
+FROM cron_monitors m
+WHERE m.id = i.monitor_id
+  AND i.resolved_at IS NULL AND i.alert_count = 0 AND i.alert IS NOT NULL
+  AND (i.alert_attempted_at IS NULL OR i.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status = 'down' AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'cron' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts
+`
+
+type ClaimCronAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the open incidents whose down alert never went out and wasn't
+// attempted in the last 5 minutes, on a monitor still down, unmuted and
+// under no maintenance window, and counts the attempt (PRD alert-delivery).
+// One UPDATE, so of two processes running side by side during a deploy only
+// one takes an incident.
+func (q *Queries) ClaimCronAlertRetries(ctx context.Context) ([]ClaimCronAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimCronAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimCronAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimCronAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const completeCronRun = `-- name: CompleteCronRun :one
 UPDATE cron_runs
 SET completed_at = NOW()
@@ -318,7 +374,7 @@ func (q *Queries) IncrementCronConsecutiveFailures(ctx context.Context, id uuid.
 }
 
 const incrementCronIncidentAlertCount = `-- name: IncrementCronIncidentAlertCount :one
-UPDATE cron_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count
+UPDATE cron_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) IncrementCronIncidentAlertCount(ctx context.Context, id uuid.UUID) (CronIncident, error) {
@@ -330,12 +386,15 @@ func (q *Queries) IncrementCronIncidentAlertCount(ctx context.Context, id uuid.U
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
 
 const listCronIncidents = `-- name: ListCronIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
+SELECT id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([]CronIncident, error) {
@@ -353,6 +412,9 @@ func (q *Queries) ListCronIncidents(ctx context.Context, monitorID uuid.UUID) ([
 			&i.StartedAt,
 			&i.ResolvedAt,
 			&i.AlertCount,
+			&i.Alert,
+			&i.AlertAttemptedAt,
+			&i.AlertAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -572,15 +634,28 @@ func (q *Queries) MarkCronRunAlerted(ctx context.Context, id uuid.UUID) (CronRun
 
 const openCronIncident = `-- name: OpenCronIncident :one
 WITH down AS (
-    UPDATE cron_monitors SET status = 'down', updated_at = NOW() WHERE cron_monitors.id = $1 RETURNING id
+    UPDATE cron_monitors SET status = 'down', updated_at = NOW()
+    WHERE cron_monitors.id = $2 RETURNING id, alerts_enabled
 )
-INSERT INTO cron_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
+INSERT INTO cron_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
+SELECT down.id, $1::jsonb,
+       CASE WHEN down.alerts_enabled THEN NOW() END,
+       CASE WHEN down.alerts_enabled THEN 1 ELSE 0 END
+FROM down
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
+
+type OpenCronIncidentParams struct {
+	Alert     []byte    `json:"alert"`
+	MonitorID uuid.UUID `json:"monitor_id"`
+}
 
 // Marks the monitor down and opens its incident in one statement, so neither
 // happens without the other: down with no incident skips every later check.
-func (q *Queries) OpenCronIncident(ctx context.Context, id uuid.UUID) (CronIncident, error) {
-	row := q.db.QueryRow(ctx, openCronIncident, id)
+// The incident keeps its down alert, attempted now when alerts are on, for
+// ClaimCronAlertRetries (PRD alert-delivery).
+func (q *Queries) OpenCronIncident(ctx context.Context, arg OpenCronIncidentParams) (CronIncident, error) {
+	row := q.db.QueryRow(ctx, openCronIncident, arg.Alert, arg.MonitorID)
 	var i CronIncident
 	err := row.Scan(
 		&i.ID,
@@ -588,6 +663,9 @@ func (q *Queries) OpenCronIncident(ctx context.Context, id uuid.UUID) (CronIncid
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -637,7 +715,7 @@ WHERE id = (
     ORDER BY ci.started_at DESC
     LIMIT 1
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.UUID) (CronIncident, error) {
@@ -649,6 +727,9 @@ func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }

@@ -94,8 +94,8 @@ func (t portTracker) recordFailure(ctx context.Context) (int32, error) {
 	return updated.ConsecutiveFailures, err
 }
 
-func (t portTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
-	inc, err := t.q.OpenPortIncident(ctx, t.m.ID)
+func (t portTracker) openIncident(ctx context.Context, alert []byte) (uuid.UUID, error) {
+	inc, err := t.q.OpenPortIncident(ctx, db.OpenPortIncidentParams{MonitorID: t.m.ID, Alert: alert})
 	return inc.ID, err
 }
 

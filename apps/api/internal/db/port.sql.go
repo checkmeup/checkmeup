@@ -12,6 +12,62 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimPortAlertRetries = `-- name: ClaimPortAlertRetries :many
+UPDATE port_incidents i
+SET alert_attempted_at = NOW(), alert_attempts = i.alert_attempts + 1
+FROM port_monitors m
+WHERE m.id = i.monitor_id
+  AND i.resolved_at IS NULL AND i.alert_count = 0 AND i.alert IS NOT NULL
+  AND (i.alert_attempted_at IS NULL OR i.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status = 'down' AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'port' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts
+`
+
+type ClaimPortAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the open incidents whose down alert never went out and wasn't
+// attempted in the last 5 minutes, on a monitor still down, unmuted and
+// under no maintenance window, and counts the attempt (PRD alert-delivery).
+// One UPDATE, so of two processes running side by side during a deploy only
+// one takes an incident.
+func (q *Queries) ClaimPortAlertRetries(ctx context.Context) ([]ClaimPortAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimPortAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimPortAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimPortAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createPortCheck = `-- name: CreatePortCheck :one
 INSERT INTO port_checks (monitor_id, response_time_ms, is_up, failure_reason)
 VALUES ($1, $2, $3, $4)
@@ -190,7 +246,7 @@ func (q *Queries) GetPortStats(ctx context.Context, monitorID uuid.UUID) (GetPor
 }
 
 const incrementPortIncidentAlertCount = `-- name: IncrementPortIncidentAlertCount :one
-UPDATE port_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count
+UPDATE port_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) IncrementPortIncidentAlertCount(ctx context.Context, id uuid.UUID) (PortIncident, error) {
@@ -202,6 +258,9 @@ func (q *Queries) IncrementPortIncidentAlertCount(ctx context.Context, id uuid.U
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -340,7 +399,7 @@ func (q *Queries) ListPortChecks24h(ctx context.Context, monitorID uuid.UUID) ([
 }
 
 const listPortIncidents = `-- name: ListPortIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM port_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
+SELECT id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts FROM port_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListPortIncidents(ctx context.Context, monitorID uuid.UUID) ([]PortIncident, error) {
@@ -358,6 +417,9 @@ func (q *Queries) ListPortIncidents(ctx context.Context, monitorID uuid.UUID) ([
 			&i.StartedAt,
 			&i.ResolvedAt,
 			&i.AlertCount,
+			&i.Alert,
+			&i.AlertAttemptedAt,
+			&i.AlertAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -413,15 +475,28 @@ func (q *Queries) ListPortMonitors(ctx context.Context, orgID uuid.UUID) ([]Port
 
 const openPortIncident = `-- name: OpenPortIncident :one
 WITH down AS (
-    UPDATE port_monitors SET status = 'down', updated_at = NOW() WHERE port_monitors.id = $1 RETURNING id
+    UPDATE port_monitors SET status = 'down', updated_at = NOW()
+    WHERE port_monitors.id = $2 RETURNING id, alerts_enabled
 )
-INSERT INTO port_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
+INSERT INTO port_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
+SELECT down.id, $1::jsonb,
+       CASE WHEN down.alerts_enabled THEN NOW() END,
+       CASE WHEN down.alerts_enabled THEN 1 ELSE 0 END
+FROM down
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
+
+type OpenPortIncidentParams struct {
+	Alert     []byte    `json:"alert"`
+	MonitorID uuid.UUID `json:"monitor_id"`
+}
 
 // Marks the monitor down and opens its incident in one statement, so neither
 // happens without the other: down with no incident skips every later check.
-func (q *Queries) OpenPortIncident(ctx context.Context, id uuid.UUID) (PortIncident, error) {
-	row := q.db.QueryRow(ctx, openPortIncident, id)
+// The incident keeps its down alert, attempted now when alerts are on, for
+// ClaimPortAlertRetries (PRD alert-delivery).
+func (q *Queries) OpenPortIncident(ctx context.Context, arg OpenPortIncidentParams) (PortIncident, error) {
+	row := q.db.QueryRow(ctx, openPortIncident, arg.Alert, arg.MonitorID)
 	var i PortIncident
 	err := row.Scan(
 		&i.ID,
@@ -429,6 +504,9 @@ func (q *Queries) OpenPortIncident(ctx context.Context, id uuid.UUID) (PortIncid
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -549,7 +627,7 @@ WHERE id = (
     ORDER BY pi.started_at DESC
     LIMIT 1
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) ResolveLatestPortIncident(ctx context.Context, monitorID uuid.UUID) (PortIncident, error) {
@@ -561,6 +639,9 @@ func (q *Queries) ResolveLatestPortIncident(ctx context.Context, monitorID uuid.
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }

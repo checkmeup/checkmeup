@@ -35,8 +35,9 @@ type incidentTracker interface {
 	recordUp(ctx context.Context) error
 	// recordFailure returns the monitor's consecutive failures, this one counted.
 	recordFailure(ctx context.Context) (int32, error)
-	// openIncident marks the monitor down and opens its incident, both or neither.
-	openIncident(ctx context.Context) (uuid.UUID, error)
+	// openIncident marks the monitor down and opens its incident, both or
+	// neither, keeping alert, the down alert as JSON, for its retries.
+	openIncident(ctx context.Context, alert []byte) (uuid.UUID, error)
 	// resolveIncident closes the monitor's open incident and returns when it started.
 	resolveIncident(ctx context.Context) (time.Time, error)
 	countAlert(ctx context.Context, incidentID uuid.UUID) error
@@ -116,8 +117,9 @@ func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMon
 	if failures <= m.AlertAfterNFailures || m.Status == db.MonitorStatusDown {
 		return
 	}
+	msg := t.downAlert()
 	// If this fails the monitor stays up, so the next failing check tries again.
-	incidentID, err := t.openIncident(ctx)
+	incidentID, err := t.openIncident(ctx, alertJSON(n, m.ID, msg))
 	if err != nil {
 		m.logError(n, "open incident", err)
 		return
@@ -126,7 +128,7 @@ func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMon
 		return
 	}
 	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, m.ref(), t.downAlert()) {
+		if !DispatchAlert(ctx, n, m.OrgID, m.ref(), msg) {
 			return
 		}
 		if err := t.countAlert(ctx, incidentID); err != nil {

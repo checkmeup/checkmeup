@@ -47,9 +47,10 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 		return
 	}
 
+	msg := buildOverdueAlert(m)
 	// Marks it down too, both or neither: if this fails the monitor stays up,
 	// so the next tick finds it overdue again.
-	inc, err := n.Queries.OpenCronIncident(ctx, m.ID)
+	inc, err := n.Queries.OpenCronIncident(ctx, db.OpenCronIncidentParams{MonitorID: m.ID, Alert: alertJSON(n, m.ID, msg)})
 	if err != nil {
 		n.Logger.Error("worker: open incident", "monitor_id", m.ID, "err", err)
 		return
@@ -62,7 +63,6 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 		return
 	}
 
-	msg := buildOverdueAlert(m)
 	GoAlert(ctx, func(ctx context.Context) {
 		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {
 			return

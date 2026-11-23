@@ -509,11 +509,14 @@ type ApiKey struct {
 }
 
 type CronIncident struct {
-	ID         uuid.UUID          `json:"id"`
-	MonitorID  uuid.UUID          `json:"monitor_id"`
-	StartedAt  pgtype.Timestamptz `json:"started_at"`
-	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
-	AlertCount int32              `json:"alert_count"`
+	ID               uuid.UUID          `json:"id"`
+	MonitorID        uuid.UUID          `json:"monitor_id"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount       int32              `json:"alert_count"`
+	Alert            []byte             `json:"alert"`
+	AlertAttemptedAt pgtype.Timestamptz `json:"alert_attempted_at"`
+	AlertAttempts    int32              `json:"alert_attempts"`
 }
 
 type CronMonitor struct {
@@ -565,11 +568,14 @@ type DnsCheck struct {
 }
 
 type DnsIncident struct {
-	ID         uuid.UUID          `json:"id"`
-	MonitorID  uuid.UUID          `json:"monitor_id"`
-	StartedAt  pgtype.Timestamptz `json:"started_at"`
-	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
-	AlertCount int32              `json:"alert_count"`
+	ID               uuid.UUID          `json:"id"`
+	MonitorID        uuid.UUID          `json:"monitor_id"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount       int32              `json:"alert_count"`
+	Alert            []byte             `json:"alert"`
+	AlertAttemptedAt pgtype.Timestamptz `json:"alert_attempted_at"`
+	AlertAttempts    int32              `json:"alert_attempts"`
 }
 
 type DnsMonitor struct {
@@ -699,11 +705,14 @@ type PortCheck struct {
 }
 
 type PortIncident struct {
-	ID         uuid.UUID          `json:"id"`
-	MonitorID  uuid.UUID          `json:"monitor_id"`
-	StartedAt  pgtype.Timestamptz `json:"started_at"`
-	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
-	AlertCount int32              `json:"alert_count"`
+	ID               uuid.UUID          `json:"id"`
+	MonitorID        uuid.UUID          `json:"monitor_id"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount       int32              `json:"alert_count"`
+	Alert            []byte             `json:"alert"`
+	AlertAttemptedAt pgtype.Timestamptz `json:"alert_attempted_at"`
+	AlertAttempts    int32              `json:"alert_attempts"`
 }
 
 type PortMonitor struct {
@@ -835,11 +844,14 @@ type UptimeCheck struct {
 }
 
 type UptimeIncident struct {
-	ID         uuid.UUID          `json:"id"`
-	MonitorID  uuid.UUID          `json:"monitor_id"`
-	StartedAt  pgtype.Timestamptz `json:"started_at"`
-	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
-	AlertCount int32              `json:"alert_count"`
+	ID               uuid.UUID          `json:"id"`
+	MonitorID        uuid.UUID          `json:"monitor_id"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+	AlertCount       int32              `json:"alert_count"`
+	Alert            []byte             `json:"alert"`
+	AlertAttemptedAt pgtype.Timestamptz `json:"alert_attempted_at"`
+	AlertAttempts    int32              `json:"alert_attempts"`
 }
 
 type UptimeMonitor struct {

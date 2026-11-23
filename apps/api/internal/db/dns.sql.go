@@ -12,6 +12,62 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimDNSAlertRetries = `-- name: ClaimDNSAlertRetries :many
+UPDATE dns_incidents i
+SET alert_attempted_at = NOW(), alert_attempts = i.alert_attempts + 1
+FROM dns_monitors m
+WHERE m.id = i.monitor_id
+  AND i.resolved_at IS NULL AND i.alert_count = 0 AND i.alert IS NOT NULL
+  AND (i.alert_attempted_at IS NULL OR i.alert_attempted_at <= NOW() - INTERVAL '5 minutes')
+  AND m.status = 'down' AND m.alerts_enabled
+  AND NOT EXISTS (
+    SELECT 1 FROM maintenance_window_monitors mwm
+    JOIN maintenance_windows mw ON mw.id = mwm.window_id
+    WHERE mwm.monitor_type = 'dns' AND mwm.monitor_id = m.id
+      AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
+  )
+RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts
+`
+
+type ClaimDNSAlertRetriesRow struct {
+	ID            uuid.UUID `json:"id"`
+	MonitorID     uuid.UUID `json:"monitor_id"`
+	OrgID         uuid.UUID `json:"org_id"`
+	Alert         []byte    `json:"alert"`
+	AlertAttempts int32     `json:"alert_attempts"`
+}
+
+// Takes the open incidents whose down alert never went out and wasn't
+// attempted in the last 5 minutes, on a monitor still down, unmuted and
+// under no maintenance window, and counts the attempt (PRD alert-delivery).
+// One UPDATE, so of two processes running side by side during a deploy only
+// one takes an incident.
+func (q *Queries) ClaimDNSAlertRetries(ctx context.Context) ([]ClaimDNSAlertRetriesRow, error) {
+	rows, err := q.db.Query(ctx, claimDNSAlertRetries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ClaimDNSAlertRetriesRow{}
+	for rows.Next() {
+		var i ClaimDNSAlertRetriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.OrgID,
+			&i.Alert,
+			&i.AlertAttempts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createDNSCheck = `-- name: CreateDNSCheck :one
 INSERT INTO dns_checks (monitor_id, response_time_ms, is_up, resolved_value, failure_reason)
 VALUES ($1, $2, $3, $4, $5)
@@ -264,7 +320,7 @@ func (q *Queries) GetDNSStats(ctx context.Context, monitorID uuid.UUID) (GetDNSS
 }
 
 const incrementDNSIncidentAlertCount = `-- name: IncrementDNSIncidentAlertCount :one
-UPDATE dns_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count
+UPDATE dns_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) IncrementDNSIncidentAlertCount(ctx context.Context, id uuid.UUID) (DnsIncident, error) {
@@ -276,6 +332,9 @@ func (q *Queries) IncrementDNSIncidentAlertCount(ctx context.Context, id uuid.UU
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -367,7 +426,7 @@ func (q *Queries) ListDNSChecks24h(ctx context.Context, monitorID uuid.UUID) ([]
 }
 
 const listDNSIncidents = `-- name: ListDNSIncidents :many
-SELECT id, monitor_id, started_at, resolved_at, alert_count FROM dns_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
+SELECT id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts FROM dns_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200
 `
 
 func (q *Queries) ListDNSIncidents(ctx context.Context, monitorID uuid.UUID) ([]DnsIncident, error) {
@@ -385,6 +444,9 @@ func (q *Queries) ListDNSIncidents(ctx context.Context, monitorID uuid.UUID) ([]
 			&i.StartedAt,
 			&i.ResolvedAt,
 			&i.AlertCount,
+			&i.Alert,
+			&i.AlertAttemptedAt,
+			&i.AlertAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -493,15 +555,28 @@ func (q *Queries) ListDueDNSMonitors(ctx context.Context) ([]DnsMonitor, error) 
 
 const openDNSIncident = `-- name: OpenDNSIncident :one
 WITH down AS (
-    UPDATE dns_monitors SET status = 'down', updated_at = NOW() WHERE dns_monitors.id = $1 RETURNING id
+    UPDATE dns_monitors SET status = 'down', updated_at = NOW()
+    WHERE dns_monitors.id = $2 RETURNING id, alerts_enabled
 )
-INSERT INTO dns_incidents (monitor_id) SELECT down.id FROM down RETURNING id, monitor_id, started_at, resolved_at, alert_count
+INSERT INTO dns_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
+SELECT down.id, $1::jsonb,
+       CASE WHEN down.alerts_enabled THEN NOW() END,
+       CASE WHEN down.alerts_enabled THEN 1 ELSE 0 END
+FROM down
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
+
+type OpenDNSIncidentParams struct {
+	Alert     []byte    `json:"alert"`
+	MonitorID uuid.UUID `json:"monitor_id"`
+}
 
 // Marks the monitor down and opens its incident in one statement, so neither
 // happens without the other: down with no incident skips every later check.
-func (q *Queries) OpenDNSIncident(ctx context.Context, id uuid.UUID) (DnsIncident, error) {
-	row := q.db.QueryRow(ctx, openDNSIncident, id)
+// The incident keeps its down alert, attempted now when alerts are on, for
+// ClaimDNSAlertRetries (PRD alert-delivery).
+func (q *Queries) OpenDNSIncident(ctx context.Context, arg OpenDNSIncidentParams) (DnsIncident, error) {
+	row := q.db.QueryRow(ctx, openDNSIncident, arg.Alert, arg.MonitorID)
 	var i DnsIncident
 	err := row.Scan(
 		&i.ID,
@@ -509,6 +584,9 @@ func (q *Queries) OpenDNSIncident(ctx context.Context, id uuid.UUID) (DnsInciden
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }
@@ -652,7 +730,7 @@ WHERE id = (
     ORDER BY di.started_at DESC
     LIMIT 1
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count
+RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
 `
 
 func (q *Queries) ResolveLatestDNSIncident(ctx context.Context, monitorID uuid.UUID) (DnsIncident, error) {
@@ -664,6 +742,9 @@ func (q *Queries) ResolveLatestDNSIncident(ctx context.Context, monitorID uuid.U
 		&i.StartedAt,
 		&i.ResolvedAt,
 		&i.AlertCount,
+		&i.Alert,
+		&i.AlertAttemptedAt,
+		&i.AlertAttempts,
 	)
 	return i, err
 }

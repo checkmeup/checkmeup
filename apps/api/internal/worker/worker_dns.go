@@ -132,8 +132,8 @@ func (t dnsTracker) recordFailure(ctx context.Context) (int32, error) {
 	return updated.ConsecutiveFailures, err
 }
 
-func (t dnsTracker) openIncident(ctx context.Context) (uuid.UUID, error) {
-	inc, err := t.q.OpenDNSIncident(ctx, t.m.ID)
+func (t dnsTracker) openIncident(ctx context.Context, alert []byte) (uuid.UUID, error) {
+	inc, err := t.q.OpenDNSIncident(ctx, db.OpenDNSIncidentParams{MonitorID: t.m.ID, Alert: alert})
 	return inc.ID, err
 }
 
