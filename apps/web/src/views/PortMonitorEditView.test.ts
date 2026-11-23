@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -189,7 +191,6 @@ describe('PortMonitorEditView', () => {
       expectedState: 'open',
       intervalMins: 5,
       alertsEnabled: true,
-      maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       channelIds: [],
       projectId: null,

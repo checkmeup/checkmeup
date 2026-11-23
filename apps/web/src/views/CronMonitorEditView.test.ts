@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -176,7 +178,6 @@ describe('CronMonitorEditView', () => {
       schedule: '0 0 * * *',
       gracePeriodMins: 5,
       alertsEnabled: true,
-      maxAlertsPerIncident: 3,
       maxDurationMins: 30,
       channelIds: ['ch1'],
       projectId: null,

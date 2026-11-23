@@ -9,7 +9,6 @@ export interface DNSMonitorFormState {
   expectedValue: string
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
   projectId: string | null
@@ -23,7 +22,6 @@ export function createDNSMonitorFormState(): DNSMonitorFormState {
     expectedValue: '',
     intervalMins: 10,
     alertsEnabled: true,
-    maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     channelIds: [],
     projectId: null,
@@ -38,7 +36,6 @@ export function dnsMonitorToFormState(m: DNSMonitor): DNSMonitorFormState {
     expectedValue: m.expectedValue ?? '',
     intervalMins: m.intervalMins,
     alertsEnabled: m.alertsEnabled,
-    maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     channelIds: [...(m.channelIds ?? [])],
     projectId: m.projectId ?? null,
@@ -55,7 +52,6 @@ export function dnsMonitorFormPayload(f: DNSMonitorFormState) {
     hostname: f.hostname.trim(),
     recordType: f.recordType,
     intervalMins: f.intervalMins,
-    maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     channelIds: f.channelIds,
     projectId: f.projectId,
@@ -75,14 +71,6 @@ export const recordTypeOptions: { label: string; value: DNSRecordType }[] = [
   { label: 'MX — mail exchange', value: 'MX' },
   { label: 'TXT — text record', value: 'TXT' },
   { label: 'NS — nameserver', value: 'NS' },
-]
-
-export const alertLimitOptions = [
-  { label: '1 time', value: 1 },
-  { label: '2 times', value: 2 },
-  { label: '3 times (default)', value: 3 },
-  { label: '5 times', value: 5 },
-  { label: '10 times', value: 10 },
 ]
 
 export const alertFilterOptions = [

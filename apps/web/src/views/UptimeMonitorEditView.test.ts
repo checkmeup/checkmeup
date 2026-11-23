@@ -213,7 +213,6 @@ describe('UptimeMonitorEditView', () => {
       url: 'https://api.example.com/health',
       intervalMins: 5,
       alertsEnabled: true,
-      maxAlertsPerIncident: 3,
       keyword: '',
       keywordMode: 'contains',
       keywordCaseSensitive: false,

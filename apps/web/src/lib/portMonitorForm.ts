@@ -9,7 +9,6 @@ export interface PortMonitorFormState {
   expectedState: ExpectedState
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
   projectId: string | null
@@ -23,7 +22,6 @@ export function createPortMonitorFormState(): PortMonitorFormState {
     expectedState: 'open',
     intervalMins: 10,
     alertsEnabled: true,
-    maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     channelIds: [],
     projectId: null,
@@ -38,7 +36,6 @@ export function portMonitorToFormState(m: PortMonitor): PortMonitorFormState {
     expectedState: m.expectedState,
     intervalMins: m.intervalMins,
     alertsEnabled: m.alertsEnabled,
-    maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     channelIds: [...(m.channelIds ?? [])],
     projectId: m.projectId ?? null,
@@ -52,7 +49,6 @@ export function portMonitorFormPayload(f: PortMonitorFormState) {
     port: f.port as number,
     expectedState: f.expectedState,
     intervalMins: f.intervalMins,
-    maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     channelIds: f.channelIds,
     projectId: f.projectId,
@@ -69,14 +65,6 @@ export function validatePortMonitorForm(f: PortMonitorFormState): string {
 export const expectedStateOptions: { label: string; value: ExpectedState }[] = [
   { label: 'Open — alert if it stops accepting connections', value: 'open' },
   { label: 'Closed — alert if it becomes reachable', value: 'closed' },
-]
-
-export const alertLimitOptions = [
-  { label: '1 time', value: 1 },
-  { label: '2 times', value: 2 },
-  { label: '3 times (default)', value: 3 },
-  { label: '5 times', value: 5 },
-  { label: '10 times', value: 10 },
 ]
 
 export const alertFilterOptions = [

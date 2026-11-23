@@ -7,7 +7,6 @@ export interface CronMonitorFormState {
   schedule: string
   gracePeriodMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds: string[]
@@ -20,7 +19,6 @@ export function createCronMonitorFormState(): CronMonitorFormState {
     schedule: '',
     gracePeriodMins: 5,
     alertsEnabled: true,
-    maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     maxDurationMins: null,
     channelIds: [],
@@ -34,7 +32,6 @@ export function cronMonitorToFormState(m: CronMonitor): CronMonitorFormState {
     schedule: m.schedule,
     gracePeriodMins: m.gracePeriodMins,
     alertsEnabled: m.alertsEnabled,
-    maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     maxDurationMins: m.maxDurationMins,
     channelIds: [...(m.channelIds ?? [])],
@@ -47,7 +44,6 @@ export function cronMonitorFormPayload(f: CronMonitorFormState) {
     name: f.name.trim(),
     schedule: f.schedule.trim(),
     gracePeriodMins: f.gracePeriodMins,
-    maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     maxDurationMins: f.maxDurationMins,
     channelIds: f.channelIds,
@@ -75,14 +71,6 @@ export const graceOptions = [
   { label: '10 min', value: 10 },
   { label: '30 min', value: 30 },
   { label: '1 hour', value: 60 },
-]
-
-export const alertLimitOptions = [
-  { label: '1 time', value: 1 },
-  { label: '2 times', value: 2 },
-  { label: '3 times (default)', value: 3 },
-  { label: '5 times', value: 5 },
-  { label: '10 times', value: 10 },
 ]
 
 export const alertFilterOptions = [

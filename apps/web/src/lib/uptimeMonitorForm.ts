@@ -15,7 +15,6 @@ export interface UptimeMonitorFormState {
   url: string
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   keyword: string
   keywordMode: KeywordMode
@@ -36,7 +35,6 @@ export function createUptimeMonitorFormState(): UptimeMonitorFormState {
     url: '',
     intervalMins: 10,
     alertsEnabled: true,
-    maxAlertsPerIncident: 3,
     alertAfterNFailures: 0,
     keyword: '',
     keywordMode: 'contains',
@@ -58,7 +56,6 @@ export function uptimeMonitorToFormState(m: UptimeMonitor): UptimeMonitorFormSta
     url: m.url,
     intervalMins: m.intervalMins,
     alertsEnabled: m.alertsEnabled,
-    maxAlertsPerIncident: m.maxAlertsPerIncident,
     alertAfterNFailures: m.alertAfterNFailures,
     keyword: m.keyword ?? '',
     keywordMode: m.keywordMode,
@@ -82,7 +79,6 @@ export function uptimeMonitorFormPayload(f: UptimeMonitorFormState) {
     name: f.name.trim(),
     url: f.url.trim(),
     intervalMins: f.intervalMins,
-    maxAlertsPerIncident: f.maxAlertsPerIncident,
     alertAfterNFailures: f.alertAfterNFailures,
     keyword: f.keyword.trim(),
     keywordMode: f.keywordMode,
@@ -126,14 +122,6 @@ export const comparatorOptions: { label: string; value: AssertionComparator }[] 
   { label: 'contains', value: 'contains' },
   { label: '>', value: 'greater_than' },
   { label: '<', value: 'less_than' },
-]
-
-export const alertLimitOptions = [
-  { label: '1 time', value: 1 },
-  { label: '2 times', value: 2 },
-  { label: '3 times (default)', value: 3 },
-  { label: '5 times', value: 5 },
-  { label: '10 times', value: 10 },
 ]
 
 export const alertFilterOptions = [

@@ -43,7 +43,6 @@ export interface CreateCronMonitorInput {
   name: string
   schedule: string
   gracePeriodMins: number
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds?: string[]
@@ -56,7 +55,6 @@ export interface UpdateCronMonitorInput {
   schedule: string
   gracePeriodMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   maxDurationMins: number | null
   channelIds: string[]
@@ -135,7 +133,6 @@ export interface CreateUptimeMonitorInput {
   name: string
   url: string
   intervalMins: number
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   keyword: string
   keywordMode: KeywordMode
@@ -154,7 +151,6 @@ export interface UpdateUptimeMonitorInput {
   url: string
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   keyword: string
   keywordMode: KeywordMode
@@ -296,7 +292,6 @@ export interface CreatePortMonitorInput {
   port: number
   expectedState: ExpectedState
   intervalMins: number
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds?: string[]
   // Left out: unchanged; null: no project.
@@ -310,7 +305,6 @@ export interface UpdatePortMonitorInput {
   expectedState: ExpectedState
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
   // Left out: unchanged; null: no project.
@@ -374,7 +368,6 @@ export interface CreateDNSMonitorInput {
   recordType: DNSRecordType
   expectedValue?: string
   intervalMins: number
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds?: string[]
   // Left out: unchanged; null: no project.
@@ -388,7 +381,6 @@ export interface UpdateDNSMonitorInput {
   expectedValue: string
   intervalMins: number
   alertsEnabled: boolean
-  maxAlertsPerIncident: number
   alertAfterNFailures: number
   channelIds: string[]
   // Left out: unchanged; null: no project.

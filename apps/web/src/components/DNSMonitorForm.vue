@@ -6,7 +6,6 @@ import NotificationChannelPicker from '@/components/NotificationChannelPicker.vu
 import ProjectField from '@/components/ProjectField.vue'
 import {
   alertFilterOptions,
-  alertLimitOptions,
   intervalOptionsFor,
   recordTypeOptions,
   type DNSMonitorFormState,
@@ -82,21 +81,6 @@ defineSlots<{ expectedValueHelp?: () => unknown }>()
       </select>
     </div>
 
-    <div>
-      <Label for="alertLimit">Alert limit per incident</Label>
-      <select
-        id="alertLimit"
-        v-model="form.maxAlertsPerIncident"
-        class="mt-1 w-full h-10 rounded-lg border pl-3 text-sm"
-      >
-        <option v-for="opt in alertLimitOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <p class="text-xs mt-1 text-[var(--text-muted)]">
-        Stop alerting after this many notifications per incident.
-      </p>
-    </div>
 
     <div>
       <Label for="alertFilter">Alert filter</Label>

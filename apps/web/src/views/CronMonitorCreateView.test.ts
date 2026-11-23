@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -74,7 +76,8 @@ describe('CronMonitorCreateView', () => {
 
     expect(wrapper.text()).toContain('New cron monitor')
     expect((wrapper.find('select#grace').element as HTMLSelectElement).value).toBe('5')
-    expect((wrapper.find('select#alertLimit').element as HTMLSelectElement).value).toBe('3')
+    // One down alert per incident: an alert limit would do nothing (ADR alerting).
+    expect(wrapper.find('#alertLimit').exists()).toBe(false)
     const maxDurationSelect = wrapper.find('select#maxDuration').element as HTMLSelectElement
     expect(maxDurationSelect.options[maxDurationSelect.selectedIndex].text).toBe('Off (default)')
   })
@@ -129,7 +132,6 @@ describe('CronMonitorCreateView', () => {
       name: 'Daily backup',
       schedule: 'every 1h',
       gracePeriodMins: 5,
-      maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       maxDurationMins: null,
       channelIds: [],

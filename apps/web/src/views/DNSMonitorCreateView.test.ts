@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -71,6 +73,8 @@ describe('DNSMonitorCreateView', () => {
     expect(wrapper.find('#hostname').exists()).toBe(true)
     expect(wrapper.find('#recordType').exists()).toBe(true)
     expect(wrapper.find('#expectedValue').exists()).toBe(true)
+    // One down alert per incident: an alert limit would do nothing (ADR alerting).
+    expect(wrapper.find('#alertLimit').exists()).toBe(false)
   })
 
   it('adds the 1-minute interval option when billing allows it', async () => {
@@ -117,7 +121,6 @@ describe('DNSMonitorCreateView', () => {
       recordType: 'A',
       expectedValue: undefined,
       intervalMins: 10,
-      maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       channelIds: [],
       projectId: null,

@@ -72,6 +72,8 @@ describe('UptimeMonitorCreateView', () => {
     expect(wrapper.find('#name').exists()).toBe(true)
     expect(wrapper.find('#url').exists()).toBe(true)
     expect(wrapper.find('#keywordMode').exists()).toBe(false)
+    // One down alert per incident: an alert limit would do nothing (ADR alerting).
+    expect(wrapper.find('#alertLimit').exists()).toBe(false)
   })
 
   it('reveals keyword mode options once a keyword is entered', async () => {
@@ -148,7 +150,6 @@ describe('UptimeMonitorCreateView', () => {
       name: 'Production API',
       url: 'https://example.com/health',
       intervalMins: 10,
-      maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       keyword: '',
       keywordMode: 'contains',

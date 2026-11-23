@@ -59,9 +59,6 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	if !m.AlertsEnabled {
 		return
 	}
-	if max := m.MaxAlertsPerIncident; max > 0 && inc.AlertCount >= max {
-		return
-	}
 
 	GoAlert(ctx, func(ctx context.Context) {
 		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {

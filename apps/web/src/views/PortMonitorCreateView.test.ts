@@ -15,7 +15,9 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>([])
+const projectsData = ref<{ id: string; name: string; monitorCount: number; createdAt: string }[]>(
+  [],
+)
 const addProjectMock = vi.fn()
 
 vi.mock('@/composables/useProjects', () => ({
@@ -71,6 +73,8 @@ describe('PortMonitorCreateView', () => {
     expect(wrapper.find('#host').exists()).toBe(true)
     expect(wrapper.find('#port').exists()).toBe(true)
     expect(wrapper.find('#expectedState').exists()).toBe(true)
+    // One down alert per incident: an alert limit would do nothing (ADR alerting).
+    expect(wrapper.find('#alertLimit').exists()).toBe(false)
   })
 
   it('adds the 1-minute interval option when billing allows it', async () => {
@@ -132,7 +136,6 @@ describe('PortMonitorCreateView', () => {
       port: 25,
       expectedState: 'open',
       intervalMins: 10,
-      maxAlertsPerIncident: 3,
       alertAfterNFailures: 0,
       channelIds: [],
       projectId: null,
