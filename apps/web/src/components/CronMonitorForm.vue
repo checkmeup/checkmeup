@@ -84,7 +84,7 @@ defineSlots<{
         </option>
       </select>
       <p class="text-xs mt-1 text-[var(--text-muted)]">
-        Suppress alerts until N consecutive failures are detected. Resets on success.
+        Skip alerts for the first N missed runs in a row. A ping resets the count.
       </p>
     </div>
 

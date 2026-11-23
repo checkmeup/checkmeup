@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/slack"
@@ -39,14 +40,18 @@ func checkOverdue(ctx context.Context, n Notifiers) {
 }
 
 func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
-	updated, err := n.Queries.IncrementCronConsecutiveFailures(ctx, m.ID)
-	if err != nil {
-		n.Logger.Error("worker: increment consecutive failures", "monitor_id", m.ID, "err", err)
-		return
-	}
-	// Filter: suppress alert until more than N consecutive failures observed.
-	// The monitor stays 'up' while filtering so the worker re-detects it every cycle.
-	if updated.ConsecutiveFailures <= m.AlertAfterNFailures {
+	// The alert filter skips the first N missed runs: each is counted and the
+	// monitor expected at its next run, staying up; the run past them opens the
+	// incident. Both only while it's still up and overdue, so a ping since it
+	// was read wins (no row).
+	if m.ConsecutiveFailures < m.AlertAfterNFailures {
+		_, err := n.Queries.CountCronMissedRun(ctx, db.CountCronMissedRunParams{
+			ID:         m.ID,
+			NextPingAt: pgtype.Timestamptz{Time: NextPing(m.Schedule, time.Now(), int(m.GracePeriodMins)), Valid: true},
+		})
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			n.Logger.Error("worker: count missed run", "monitor_id", m.ID, "err", err)
+		}
 		return
 	}
 

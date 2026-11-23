@@ -94,6 +94,48 @@ func (q *Queries) CompleteCronRun(ctx context.Context, monitorID uuid.UUID) (Cro
 	return i, err
 }
 
+const countCronMissedRun = `-- name: CountCronMissedRun :one
+UPDATE cron_monitors
+SET consecutive_failures = consecutive_failures + 1, next_ping_at = $1, updated_at = NOW()
+WHERE id = $2 AND status = 'up' AND next_ping_at < NOW()
+RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
+`
+
+type CountCronMissedRunParams struct {
+	NextPingAt pgtype.Timestamptz `json:"next_ping_at"`
+	ID         uuid.UUID          `json:"id"`
+}
+
+// Counts one missed run and expects the next at next_ping_at (the schedule's
+// next run plus the grace period, as a ping now would set it), so the alert
+// filter counts missed runs, not ticks (PRD alert-delivery). Only while still
+// up and overdue: a ping since the worker read the monitor leaves it as the
+// ping set it (no row).
+func (q *Queries) CountCronMissedRun(ctx context.Context, arg CountCronMissedRunParams) (CronMonitor, error) {
+	row := q.db.QueryRow(ctx, countCronMissedRun, arg.NextPingAt, arg.ID)
+	var i CronMonitor
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.Name,
+		&i.Schedule,
+		&i.GracePeriodMins,
+		&i.PingToken,
+		&i.Status,
+		&i.AlertsEnabled,
+		&i.LastPingAt,
+		&i.NextPingAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MaxAlertsPerIncident,
+		&i.AlertAfterNFailures,
+		&i.ConsecutiveFailures,
+		&i.MaxDurationMins,
+		&i.ProjectID,
+	)
+	return i, err
+}
+
 const countCronPings = `-- name: CountCronPings :one
 SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1
 `
@@ -337,38 +379,6 @@ func (q *Queries) GetOpenCronRun(ctx context.Context, monitorID uuid.UUID) (Cron
 		&i.CompletedAt,
 		&i.AlertedAt,
 		&i.Overlap,
-	)
-	return i, err
-}
-
-const incrementCronConsecutiveFailures = `-- name: IncrementCronConsecutiveFailures :one
-UPDATE cron_monitors
-SET consecutive_failures = consecutive_failures + 1, updated_at = NOW()
-WHERE id = $1
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
-`
-
-func (q *Queries) IncrementCronConsecutiveFailures(ctx context.Context, id uuid.UUID) (CronMonitor, error) {
-	row := q.db.QueryRow(ctx, incrementCronConsecutiveFailures, id)
-	var i CronMonitor
-	err := row.Scan(
-		&i.ID,
-		&i.OrgID,
-		&i.Name,
-		&i.Schedule,
-		&i.GracePeriodMins,
-		&i.PingToken,
-		&i.Status,
-		&i.AlertsEnabled,
-		&i.LastPingAt,
-		&i.NextPingAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.MaxAlertsPerIncident,
-		&i.AlertAfterNFailures,
-		&i.ConsecutiveFailures,
-		&i.MaxDurationMins,
-		&i.ProjectID,
 	)
 	return i, err
 }
@@ -634,7 +644,7 @@ func (q *Queries) MarkCronRunAlerted(ctx context.Context, id uuid.UUID) (CronRun
 
 const openCronIncident = `-- name: OpenCronIncident :one
 WITH down AS (
-    UPDATE cron_monitors SET status = 'down', updated_at = NOW()
+    UPDATE cron_monitors SET status = 'down', consecutive_failures = consecutive_failures + 1, updated_at = NOW()
     WHERE cron_monitors.id = $2 AND cron_monitors.status = 'up' AND cron_monitors.next_ping_at < NOW()
     RETURNING id, alerts_enabled
 )

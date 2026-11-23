@@ -76,8 +76,10 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - An incident opens only on a monitor that is up or waiting, so two checks of one failing monitor, as from two processes during a deploy, open one incident and send one down alert; the second finds the monitor down and does nothing more. Inserting a second open incident for one monitor fails in the database.
   → test: apps/api/internal/worker/worker_test.go "TestIncidentOpensOnce"
 - A cron monitor's missed run is counted, and the monitor marked down, only while it is still up and overdue: a ping recorded after the worker read it as overdue leaves it up, its count and next expected ping as the ping set them, with no incident and no alert.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/a ping after the worker read the monitor as overdue wins"
 - A check that finishes after its monitor was paused writes nothing to the monitor (status, failure count, schedule, and for SSL and domain monitors expiry, issuer and alert flags) and to its incidents, and sends no alert, for every monitor type; an uptime, port or DNS check row itself may be kept.
 - An SSL or domain check whose result fails to write sends no alert, recovery included, and leaves the monitor due, so the next tick checks it again; one alert goes out once a write succeeds.
 - A cron monitor set to skip the first N failures alerts on the (N+1)th missed run in a row: each missed run counts once, and the monitor is then expected at its next scheduled run after the tick that counted it, plus the grace period (as a ping at that moment would set it). Runs missed while the worker was down count as one. A ping resets the count.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/the alert filter skips missed runs, not ticks"
 - A ping whose history row fails to write still marks its monitor up and recovers it, and a ping that fails to read its monitor for any reason but an unknown token answers 200, not 404.
 - A run of a paused cron monitor that passes its maximum duration sends no stuck-run alert while the monitor is paused; once it is resumed, a run still open alerts then.

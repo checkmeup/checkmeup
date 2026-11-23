@@ -79,10 +79,15 @@ SELECT COALESCE((SELECT was_down FROM up), false)::boolean AS was_down,
        EXISTS (SELECT 1 FROM up) AS marked_up,
        (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at;
 
--- name: IncrementCronConsecutiveFailures :one
+-- name: CountCronMissedRun :one
+-- Counts one missed run and expects the next at next_ping_at (the schedule's
+-- next run plus the grace period, as a ping now would set it), so the alert
+-- filter counts missed runs, not ticks (PRD alert-delivery). Only while still
+-- up and overdue: a ping since the worker read the monitor leaves it as the
+-- ping set it (no row).
 UPDATE cron_monitors
-SET consecutive_failures = consecutive_failures + 1, updated_at = NOW()
-WHERE id = $1
+SET consecutive_failures = consecutive_failures + 1, next_ping_at = sqlc.arg(next_ping_at), updated_at = NOW()
+WHERE id = sqlc.arg(id) AND status = 'up' AND next_ping_at < NOW()
 RETURNING *;
 
 -- name: ListOverdueCronMonitors :many
@@ -117,7 +122,7 @@ SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1;
 -- The incident keeps its down alert, attempted now when alerts are on, for
 -- ClaimCronAlertRetries (PRD alert-delivery).
 WITH down AS (
-    UPDATE cron_monitors SET status = 'down', updated_at = NOW()
+    UPDATE cron_monitors SET status = 'down', consecutive_failures = consecutive_failures + 1, updated_at = NOW()
     WHERE cron_monitors.id = sqlc.arg(monitor_id) AND cron_monitors.status = 'up' AND cron_monitors.next_ping_at < NOW()
     RETURNING id, alerts_enabled
 )

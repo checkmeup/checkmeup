@@ -1564,6 +1564,76 @@ func TestCheckOverdue(t *testing.T) {
 			t.Fatalf("want status unchanged (waiting), got %q", status)
 		}
 	})
+	cronRow := func(t *testing.T, id uuid.UUID) (status string, failures int32, nextPing time.Time) {
+		t.Helper()
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, consecutive_failures, next_ping_at FROM cron_monitors WHERE id = $1", id,
+		).Scan(&status, &failures, &nextPing); err != nil {
+			t.Fatalf("read cron monitor: %v", err)
+		}
+		return
+	}
+
+	t.Run("the alert filter skips missed runs, not ticks", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 minute', grace_period_mins = 5, alert_after_n_failures = 1 WHERE id = $1", mon.ID)
+
+		before := time.Now()
+		checkOverdue(context.Background(), n)
+		WaitForAlerts()
+		status, failures, nextPing := cronRow(t, mon.ID)
+		if status != "up" || failures != 1 {
+			t.Fatalf("after the first missed run: want up with 1 failure, got %q with %d", status, failures)
+		}
+		// Expected at its next run plus the grace period, as a ping now would set it.
+		if want := before.Add(time.Hour + 5*time.Minute); nextPing.Before(want.Add(-time.Minute)) || nextPing.After(want.Add(time.Minute)) {
+			t.Fatalf("want the next ping expected about %v, got %v", want, nextPing)
+		}
+
+		// The next tick, 30 seconds on, finds no new missed run.
+		checkOverdue(context.Background(), n)
+		WaitForAlerts()
+		if status, failures, _ := cronRow(t, mon.ID); status != "up" || failures != 1 {
+			t.Fatalf("on the next tick: want still up with 1 failure, got %q with %d", status, failures)
+		}
+
+		forceDueNow(t, pool, "cron_monitors", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET next_ping_at = NOW() - INTERVAL '1 second' WHERE id = $1", mon.ID)
+		checkOverdue(context.Background(), n)
+		WaitForAlerts()
+		if status, _, _ := cronRow(t, mon.ID); status != "down" {
+			t.Fatalf("after the second missed run: want down, got %q", status)
+		}
+	})
+
+	t.Run("a ping after the worker read the monitor as overdue wins", func(t *testing.T) {
+		for _, skip := range []int32{0, 1} {
+			org := testOrg(t, queries, pool)
+			mon := testCronMonitor(t, queries, org.ID, "every 1h")
+			sent := webhookRecorder(t, queries, org.ID, "cron", mon.ID)
+			mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 minute', alert_after_n_failures = $2 WHERE id = $1", mon.ID, skip)
+			stale, err := queries.GetCronMonitor(context.Background(), db.GetCronMonitorParams{ID: mon.ID, OrgID: org.ID})
+			if err != nil {
+				t.Fatalf("read monitor: %v", err)
+			}
+			pinged := time.Now().Add(2 * time.Hour).Truncate(time.Second)
+			mustExecWorker(t, pool, "UPDATE cron_monitors SET next_ping_at = $2, consecutive_failures = 0 WHERE id = $1", mon.ID, pinged)
+
+			local := n
+			local.Webhook = webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+			processOverdueMonitor(context.Background(), local, stale)
+			WaitForAlerts()
+			status, failures, nextPing := cronRow(t, mon.ID)
+			if status != "up" || failures != 0 || !nextPing.Equal(pinged) {
+				t.Fatalf("skip %d: want up, 0 failures, next ping %v as the ping set them; got %q, %d, %v", skip, pinged, status, failures, nextPing)
+			}
+			if open := openIncidents(t, pool, "cron_incidents", mon.ID); open != 0 || sent() != 0 {
+				t.Fatalf("skip %d: want no incident and no alert, got %d open and %d sent", skip, open, sent())
+			}
+		}
+	})
+
 	t.Run("one alert sent to several channels counts once against the per-incident cap", func(t *testing.T) {
 		org := testOrg(t, queries, pool)
 		mon := testCronMonitor(t, queries, org.ID, "every 1h")
