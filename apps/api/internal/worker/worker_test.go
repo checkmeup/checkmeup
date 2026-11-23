@@ -3406,6 +3406,72 @@ END $$`, name, monitorID))
 	return lift
 }
 
+// Two checks of one failing monitor, as from the two processes running during
+// a deploy, each read it before either marked it down: one incident opens and
+// one down alert goes out (PRD alert-delivery).
+func TestIncidentOpensOnce(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	wh := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+	n := Notifiers{Queries: queries, Telegram: telegram.NewClient(""), Mailer: email.NewSender(""), Webhook: wh, Logger: testLogger(),
+		HTTPClient: &http.Client{Timeout: 10 * time.Second}}
+
+	t.Run("uptime", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, srv.URL)
+		sent := webhookRecorder(t, queries, org.ID, "uptime", mon.ID)
+		checkUptimeMonitors(context.Background(), n) // the first failure is only rechecked
+
+		stale, err := queries.GetUptimeMonitor(context.Background(), db.GetUptimeMonitorParams{ID: mon.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("read monitor: %v", err)
+		}
+		checkOneUptimeMonitor(context.Background(), n, stale)
+		checkOneUptimeMonitor(context.Background(), n, stale)
+		WaitForAlerts()
+		if open := openIncidents(t, pool, "uptime_incidents", mon.ID); open != 1 {
+			t.Fatalf("want 1 open incident, got %d", open)
+		}
+		if sent() != 1 {
+			t.Fatalf("want 1 down alert, got %d", sent())
+		}
+	})
+
+	t.Run("cron", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		sent := webhookRecorder(t, queries, org.ID, "cron", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 minute' WHERE id = $1", mon.ID)
+
+		stale, err := queries.GetCronMonitor(context.Background(), db.GetCronMonitorParams{ID: mon.ID, OrgID: org.ID})
+		if err != nil {
+			t.Fatalf("read monitor: %v", err)
+		}
+		processOverdueMonitor(context.Background(), n, stale)
+		processOverdueMonitor(context.Background(), n, stale)
+		WaitForAlerts()
+		if open := openIncidents(t, pool, "cron_incidents", mon.ID); open != 1 {
+			t.Fatalf("want 1 open incident, got %d", open)
+		}
+		if sent() != 1 {
+			t.Fatalf("want 1 down alert, got %d", sent())
+		}
+	})
+
+	t.Run("the database refuses a second open incident", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, "https://example.com")
+		mustExecWorker(t, pool, "INSERT INTO uptime_incidents (monitor_id) VALUES ($1)", mon.ID)
+		if _, err := pool.Exec(context.Background(), "INSERT INTO uptime_incidents (monitor_id) VALUES ($1)", mon.ID); err == nil {
+			t.Fatal("want a second open incident for one monitor refused")
+		}
+	})
+}
+
 // seedOpenIncident puts monitorID in status with an open incident started 10
 // minutes ago whose down alert was delivered, so no retry sends it again.
 func seedOpenIncident(t *testing.T, pool *pgxpool.Pool, monitorTable, incidentTable string, monitorID uuid.UUID, status string) {

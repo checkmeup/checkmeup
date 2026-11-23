@@ -112,11 +112,14 @@ SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1;
 -- name: OpenCronIncident :one
 -- Marks the monitor down and opens its incident in one statement, so neither
 -- happens without the other: down with no incident skips every later check.
+-- Only while still up and overdue: a monitor already down has its incident,
+-- and one that pinged after the worker read it as overdue isn't down (no row).
 -- The incident keeps its down alert, attempted now when alerts are on, for
 -- ClaimCronAlertRetries (PRD alert-delivery).
 WITH down AS (
     UPDATE cron_monitors SET status = 'down', updated_at = NOW()
-    WHERE cron_monitors.id = sqlc.arg(monitor_id) RETURNING id, alerts_enabled
+    WHERE cron_monitors.id = sqlc.arg(monitor_id) AND cron_monitors.status = 'up' AND cron_monitors.next_ping_at < NOW()
+    RETURNING id, alerts_enabled
 )
 INSERT INTO cron_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
 SELECT down.id, sqlc.arg(alert)::jsonb,

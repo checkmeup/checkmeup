@@ -74,6 +74,7 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/worker/worker_test.go "TestRecoveryResolvesIncidentAtomically"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a ping whose incident fails to resolve leaves the monitor down for the next ping"
 - An incident opens only on a monitor that is up or waiting, so two checks of one failing monitor, as from two processes during a deploy, open one incident and send one down alert; the second finds the monitor down and does nothing more. Inserting a second open incident for one monitor fails in the database.
+  → test: apps/api/internal/worker/worker_test.go "TestIncidentOpensOnce"
 - A cron monitor's missed run is counted, and the monitor marked down, only while it is still up and overdue: a ping recorded after the worker read it as overdue leaves it up, its count and next expected ping as the ping set them, with no incident and no alert.
 - A check that finishes after its monitor was paused writes nothing to the monitor (status, failure count, schedule, and for SSL and domain monitors expiry, issuer and alert flags) and to its incidents, and sends no alert, for every monitor type; an uptime, port or DNS check row itself may be kept.
 - An SSL or domain check whose result fails to write sends no alert, recovery included, and leaves the monitor due, so the next tick checks it again; one alert goes out once a write succeeds.

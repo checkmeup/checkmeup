@@ -136,11 +136,13 @@ WHERE monitor_id = $1;
 -- name: OpenDNSIncident :one
 -- Marks the monitor down and opens its incident in one statement, so neither
 -- happens without the other: down with no incident skips every later check.
--- The incident keeps its down alert, attempted now when alerts are on, for
--- ClaimDNSAlertRetries (PRD alert-delivery).
+-- Only from up or waiting: a monitor already down has its incident, and a
+-- second check of it, as from a second process during a deploy, opens none
+-- (no row). The incident keeps its down alert, attempted now when alerts are
+-- on, for ClaimDNSAlertRetries (PRD alert-delivery).
 WITH down AS (
     UPDATE dns_monitors SET status = 'down', updated_at = NOW()
-    WHERE dns_monitors.id = sqlc.arg(monitor_id) RETURNING id, alerts_enabled
+    WHERE dns_monitors.id = sqlc.arg(monitor_id) AND dns_monitors.status IN ('up', 'waiting') RETURNING id, alerts_enabled
 )
 INSERT INTO dns_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
 SELECT down.id, sqlc.arg(alert)::jsonb,

@@ -2,9 +2,11 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
@@ -117,6 +119,9 @@ func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMon
 	msg := t.downAlert()
 	// If this fails the monitor stays up, so the next failing check tries again.
 	incidentID, err := t.openIncident(ctx, alertJSON(n, m.ID, msg))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return // already down, as from a second process's check, or paused
+	}
 	if err != nil {
 		m.logError(n, "open incident", err)
 		return

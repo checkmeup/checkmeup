@@ -476,7 +476,7 @@ func (q *Queries) ListPortMonitors(ctx context.Context, orgID uuid.UUID) ([]Port
 const openPortIncident = `-- name: OpenPortIncident :one
 WITH down AS (
     UPDATE port_monitors SET status = 'down', updated_at = NOW()
-    WHERE port_monitors.id = $2 RETURNING id, alerts_enabled
+    WHERE port_monitors.id = $2 AND port_monitors.status IN ('up', 'waiting') RETURNING id, alerts_enabled
 )
 INSERT INTO port_incidents (monitor_id, alert, alert_attempted_at, alert_attempts)
 SELECT down.id, $1::jsonb,
@@ -493,8 +493,10 @@ type OpenPortIncidentParams struct {
 
 // Marks the monitor down and opens its incident in one statement, so neither
 // happens without the other: down with no incident skips every later check.
-// The incident keeps its down alert, attempted now when alerts are on, for
-// ClaimPortAlertRetries (PRD alert-delivery).
+// Only from up or waiting: a monitor already down has its incident, and a
+// second check of it, as from a second process during a deploy, opens none
+// (no row). The incident keeps its down alert, attempted now when alerts are
+// on, for ClaimPortAlertRetries (PRD alert-delivery).
 func (q *Queries) OpenPortIncident(ctx context.Context, arg OpenPortIncidentParams) (PortIncident, error) {
 	row := q.db.QueryRow(ctx, openPortIncident, arg.Alert, arg.MonitorID)
 	var i PortIncident

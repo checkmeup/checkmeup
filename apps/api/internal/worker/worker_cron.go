@@ -2,9 +2,12 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/slack"
@@ -51,6 +54,9 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	// Marks it down too, both or neither: if this fails the monitor stays up,
 	// so the next tick finds it overdue again.
 	inc, err := n.Queries.OpenCronIncident(ctx, db.OpenCronIncidentParams{MonitorID: m.ID, Alert: alertJSON(n, m.ID, msg)})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return // pinged since it was read as overdue, or already down
+	}
 	if err != nil {
 		n.Logger.Error("worker: open incident", "monitor_id", m.ID, "err", err)
 		return
