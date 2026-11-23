@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,6 +64,26 @@ type Notifiers struct {
 	DNSResolver *net.Resolver
 }
 
+// stallAfter is how long without a finished tick the health check reports the
+// worker stalled (PRD alert-delivery): four 30-second ticks in a row.
+const stallAfter = 2 * time.Minute
+
+// lastTickDone is when a tick last finished, in Unix nanoseconds. It starts at
+// the process start, so a process just started counts as fresh for stallAfter
+// and a deploy, which waits for /up, isn't held up by the first tick.
+var lastTickDone = func() *atomic.Int64 {
+	var v atomic.Int64
+	v.Store(time.Now().UnixNano())
+	return &v
+}()
+
+// MarkTickFinished records that a tick finished at t.
+func MarkTickFinished(t time.Time) { lastTickDone.Store(t.UnixNano()) }
+
+// Stalled reports whether no tick has finished in the last stallAfter: every
+// monitor's checks have stopped, or are that late.
+func Stalled() bool { return time.Since(time.Unix(0, lastTickDone.Load())) > stallAfter }
+
 // Run starts the background worker loops. Returns when ctx is cancelled,
 // after the tick in progress, if any, has finished.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
@@ -90,6 +111,7 @@ func Run(ctx context.Context, n Notifiers) {
 			checkDomainMonitors(tickCtx, n)
 			checkPortMonitors(tickCtx, n)
 			checkDNSMonitors(tickCtx, n)
+			MarkTickFinished(time.Now())
 		case <-cleanupTicker.C:
 			pruneOldPings(ctx, n.Queries, n.Logger)
 		}

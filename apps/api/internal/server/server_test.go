@@ -39,6 +39,7 @@ import (
 
 	"github.com/checkmeup/checkmeup/internal/config"
 	apimiddleware "github.com/checkmeup/checkmeup/internal/middleware"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 const testJWTSecret = "test-jwt-secret-32-chars-minimum-xxx"
@@ -120,6 +121,34 @@ func TestHandleHealth_DBUnavailable(t *testing.T) {
 	}
 	if got["code"] != "db_unavailable" {
 		t.Fatalf("code = %q, want db_unavailable", got["code"])
+	}
+}
+
+// A stalled worker silences every monitor, so the health check, which an
+// external uptime service watches, fails with it (PRD alert-delivery).
+func TestHandleHealth_WorkerStalled(t *testing.T) {
+	srv, _ := testServer(t, nil)
+	t.Cleanup(func() { worker.MarkTickFinished(time.Now()) })
+
+	get := func(path string) (int, string) {
+		t.Helper()
+		w := httptest.NewRecorder()
+		srv.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, http.NoBody))
+		var got map[string]string
+		_ = json.Unmarshal(w.Body.Bytes(), &got)
+		return w.Code, got["code"]
+	}
+
+	worker.MarkTickFinished(time.Now().Add(-3 * time.Minute))
+	for _, path := range []string{"/api/v1/health", "/up"} {
+		if code, errCode := get(path); code != http.StatusServiceUnavailable || errCode != "worker_stalled" {
+			t.Fatalf("%s with no tick for 3 min: got %d %q, want 503 worker_stalled", path, code, errCode)
+		}
+	}
+
+	worker.MarkTickFinished(time.Now().Add(-90 * time.Second))
+	if code, _ := get("/api/v1/health"); code != http.StatusOK {
+		t.Fatalf("with a tick 90 s ago: got %d, want 200", code)
 	}
 }
 

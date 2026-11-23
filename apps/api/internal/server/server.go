@@ -32,6 +32,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 	"github.com/checkmeup/checkmeup/internal/whois"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 type Server struct {
@@ -524,6 +525,13 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err := s.db.Ping(ctx); err != nil {
 		s.logger.Error("health check: db ping failed", "err", err)
 		respond.Error(w, http.StatusServiceUnavailable, "database unavailable", "db_unavailable")
+		return
+	}
+	// A stalled worker checks and alerts nothing while the API still answers,
+	// so the external uptime service watching this sees it (PRD alert-delivery).
+	if worker.Stalled() {
+		s.logger.Error("health check: worker stalled")
+		respond.Error(w, http.StatusServiceUnavailable, "worker stalled", "worker_stalled")
 		return
 	}
 

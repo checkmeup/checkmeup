@@ -1,7 +1,5 @@
 # Alert delivery: no alert lost to a failed send or a dead worker
 
-Status: proposed
-
 ## Problem
 
 A customer pays Checkmeup to hear when something is down, and today a down alert is tried once. When every channel and the Fallback email fail (a Resend or Twilio outage, a database blip while reading the channels), or the process stops mid-send (every merge deploys, and a crash), the alert is gone: the incident stays open with nothing sent, and nothing tries again. And when the worker itself hangs or dies, every monitor goes silent while `/api/v1/health` still answers "ok", so nobody, the operator included, finds out.
@@ -48,4 +46,6 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - An SMS channel is attempted at most 3 times for one alert; the other channels and the Fallback email keep being retried after that.
 - An SSL error alert or SSL warning, or a domain warning or expired alert, that fails is attempted again on the first tick at least 5 minutes later, from a fresh check, until delivered; its threshold counts as alerted, and it counts toward `max_alerts_per_incident`, only once delivered, so a delivered one is not sent again and its attempts count once. If a later threshold is crossed meanwhile, the alert for it replaces the undelivered one.
 - `/api/v1/health` and `/up` answer 503 with the code `worker_stalled` when no worker tick has finished in the last 2 minutes, with the first 2 minutes after the process starts counting as finished (so a deploy isn't held up), and 200 otherwise. A database that doesn't answer still gives `db_unavailable`, checked first. A tick slower than 2 minutes, which delays every check by as much, gives 503 too, on purpose.
+  → test: apps/api/internal/server/server_test.go "TestHandleHealth_WorkerStalled"
+  → test: apps/api/internal/server/server_test.go "TestHandleHealth_DBUnavailable"
 - An external uptime service checks `https://checkmeup.net/api/v1/health` at least every 5 minutes and emails the operator when it fails (checked by hand once: the service shows the check as up, and its test alert reaches the operator's inbox).
