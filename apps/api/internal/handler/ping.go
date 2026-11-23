@@ -51,9 +51,8 @@ func NewPingHandler(pool *pgxpool.Pool, tg *telegram.Client, mailer *email.Sende
 func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 
-	monitor, err := h.queries.GetCronMonitorByToken(r.Context(), token)
-	if err != nil {
-		http.Error(w, "not found", http.StatusNotFound)
+	monitor, ok := h.monitorByToken(w, r, token)
+	if !ok {
 		return
 	}
 
@@ -70,15 +69,15 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		runStartedAt = closedRun.StartedAt
 	}
 
+	// A failed history row doesn't lose the ping: the monitor is still marked
+	// up below, or it would alert for a job that ran (PRD alert-delivery).
 	if _, err := h.queries.CreateCronPing(r.Context(), db.CreateCronPingParams{
 		MonitorID:    monitor.ID,
 		SourceIp:     sourceIP,
 		Metadata:     buildPingMetadata(r),
 		RunStartedAt: runStartedAt,
 	}); err != nil {
-		// Log but don't fail — the job must always get 200.
-		w.WriteHeader(http.StatusOK)
-		return
+		slog.Default().Error("ping: record ping", "monitor_id", monitor.ID, "err", err)
 	}
 
 	// Don't update next_ping_at for paused monitors; the worker ignores them anyway.
@@ -119,9 +118,8 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 
-	monitor, err := h.queries.GetCronMonitorByToken(r.Context(), token)
-	if err != nil {
-		http.Error(w, "not found", http.StatusNotFound)
+	monitor, ok := h.monitorByToken(w, r, token)
+	if !ok {
 		return
 	}
 
@@ -140,6 +138,23 @@ func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// monitorByToken reads the monitor a ping is for. An unknown token answers
+// 404, the monitor having been deleted; any other failure answers 200, since
+// a job must never fail, or stop pinging, because monitoring is down.
+func (h *PingHandler) monitorByToken(w http.ResponseWriter, r *http.Request, token string) (db.CronMonitor, bool) {
+	monitor, err := h.queries.GetCronMonitorByToken(r.Context(), token)
+	if errors.Is(err, pgx.ErrNoRows) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return monitor, false
+	}
+	if err != nil {
+		slog.Default().Error("ping: read monitor", "err", err)
+		w.WriteHeader(http.StatusOK)
+		return monitor, false
+	}
+	return monitor, true
 }
 
 // sendStuckRunRecoveryAlert dispatches a recovery alert for a cron run that

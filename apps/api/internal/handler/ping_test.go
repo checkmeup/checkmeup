@@ -347,6 +347,41 @@ func TestReceivePing(t *testing.T) {
 		}
 	})
 
+	t.Run("a ping whose history row fails to write still recovers the monitor", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Recovering job, history fails")
+		seedCronDown(t, pool, mon.ID, time.Now().Add(-30*time.Minute))
+		token := cronPingToken(t, pool, mon.ID)
+
+		name := "fail_ping_" + strings.ReplaceAll(mon.ID, "-", "")
+		mustExec(t, pool, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.monitor_id = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
+  RETURN NEW;
+END $$`, name, mon.ID))
+		mustExec(t, pool, fmt.Sprintf("CREATE TRIGGER %s BEFORE INSERT ON cron_pings FOR EACH ROW EXECUTE FUNCTION %s()", name, name))
+		t.Cleanup(func() {
+			mustExec(t, pool, fmt.Sprintf("DROP TRIGGER %s ON cron_pings", name))
+			mustExec(t, pool, fmt.Sprintf("DROP FUNCTION %s()", name))
+		})
+
+		if w := doPing(t, pingH, token, nil); w.Code != http.StatusOK {
+			t.Fatalf("want 200, got %d", w.Code)
+		}
+		if row := getCronMonitorRow(t, pool, mon.ID); row.Status != db.MonitorStatusUp {
+			t.Fatalf("want the monitor up although its ping history failed to write, got %q", row.Status)
+		}
+	})
+
+	t.Run("a ping that can't read its monitor answers 200, not 404", func(t *testing.T) {
+		closed := testPool(t)
+		closed.Close() // a closed pool fails every query, as a dropped connection would
+		h := NewPingHandler(closed, telegram.NewClient(""), email.NewSender(""), webhook.NewClient(), slack.NewClient(), twilio.NewClient("", "", "", "", ""))
+		if w := doPing(t, h, "any-token", nil); w.Code != http.StatusOK {
+			t.Fatalf("want 200 when the database fails, got %d", w.Code)
+		}
+	})
+
 	t.Run("a ping whose incident fails to resolve leaves the monitor down for the next ping", func(t *testing.T) {
 		// Up with its incident still open would never resolve it (PRD alert-delivery).
 		u := signUpTestUser(t, authH, pool)

@@ -85,4 +85,6 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - A cron monitor set to skip the first N failures alerts on the (N+1)th missed run in a row: each missed run counts once, and the monitor is then expected at its next scheduled run after the tick that counted it, plus the grace period (as a ping at that moment would set it). Runs missed while the worker was down count as one. A ping resets the count.
   → test: apps/api/internal/worker/worker_test.go "TestCheckOverdue/the alert filter skips missed runs, not ticks"
 - A ping whose history row fails to write still marks its monitor up and recovers it, and a ping that fails to read its monitor for any reason but an unknown token answers 200, not 404.
+  → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a ping whose history row fails to write still recovers the monitor"
+  → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a ping that can't read its monitor answers 200, not 404"
 - A run of a paused cron monitor that passes its maximum duration sends no stuck-run alert while the monitor is paused; once it is resumed, a run still open alerts then.
