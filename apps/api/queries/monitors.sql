@@ -34,8 +34,15 @@ WHERE id = $1 AND org_id = $2
 RETURNING *;
 
 -- name: ResumeCronMonitor :one
-UPDATE cron_monitors SET status = 'waiting', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+-- A monitor that has pinged before is checked again from its next run, so a
+-- job that broke while paused alerts on schedule; one that never pinged keeps
+-- waiting for its first ping, as a new monitor does (PRD cron-monitoring).
+UPDATE cron_monitors
+SET status = CASE WHEN last_ping_at IS NULL THEN 'waiting'::monitor_status ELSE 'up'::monitor_status END,
+    next_ping_at = CASE WHEN last_ping_at IS NULL THEN next_ping_at ELSE sqlc.arg(next_ping_at) END,
+    consecutive_failures = 0,
+    updated_at = NOW()
+WHERE id = sqlc.arg(id) AND org_id = sqlc.arg(org_id)
 RETURNING *;
 
 -- name: DeleteCronMonitor :exec

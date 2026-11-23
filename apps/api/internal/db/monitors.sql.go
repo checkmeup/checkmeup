@@ -654,18 +654,26 @@ func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.
 }
 
 const resumeCronMonitor = `-- name: ResumeCronMonitor :one
-UPDATE cron_monitors SET status = 'waiting', updated_at = NOW()
-WHERE id = $1 AND org_id = $2
+UPDATE cron_monitors
+SET status = CASE WHEN last_ping_at IS NULL THEN 'waiting'::monitor_status ELSE 'up'::monitor_status END,
+    next_ping_at = CASE WHEN last_ping_at IS NULL THEN next_ping_at ELSE $1 END,
+    consecutive_failures = 0,
+    updated_at = NOW()
+WHERE id = $2 AND org_id = $3
 RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
 `
 
 type ResumeCronMonitorParams struct {
-	ID    uuid.UUID `json:"id"`
-	OrgID uuid.UUID `json:"org_id"`
+	NextPingAt pgtype.Timestamptz `json:"next_ping_at"`
+	ID         uuid.UUID          `json:"id"`
+	OrgID      uuid.UUID          `json:"org_id"`
 }
 
+// A monitor that has pinged before is checked again from its next run, so a
+// job that broke while paused alerts on schedule; one that never pinged keeps
+// waiting for its first ping, as a new monitor does (PRD cron-monitoring).
 func (q *Queries) ResumeCronMonitor(ctx context.Context, arg ResumeCronMonitorParams) (CronMonitor, error) {
-	row := q.db.QueryRow(ctx, resumeCronMonitor, arg.ID, arg.OrgID)
+	row := q.db.QueryRow(ctx, resumeCronMonitor, arg.NextPingAt, arg.ID, arg.OrgID)
 	var i CronMonitor
 	err := row.Scan(
 		&i.ID,

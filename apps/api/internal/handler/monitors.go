@@ -509,8 +509,13 @@ func (h *MonitorHandler) ResumeCronMonitor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	current, err := h.queries.GetCronMonitor(r.Context(), db.GetCronMonitorParams{ID: monitorID, OrgID: orgID})
+	if respondMonitorNotFoundOrInternal(w, err) {
+		return
+	}
+	nextPing := computeNextPing(current.Schedule, time.Now().UTC(), int(current.GracePeriodMins))
 	monitor, err := h.queries.ResumeCronMonitor(r.Context(), db.ResumeCronMonitorParams{
-		ID: monitorID, OrgID: orgID,
+		ID: monitorID, OrgID: orgID, NextPingAt: pgtype.Timestamptz{Time: nextPing, Valid: true},
 	})
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return

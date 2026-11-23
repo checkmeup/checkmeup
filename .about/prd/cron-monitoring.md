@@ -65,9 +65,10 @@ A missed run is reported within the job's grace period, without the user writing
 - Editing changes the name, schedule and grace period but never the ping URL; the new schedule applies on the next tick.
   → test: apps/api/internal/handler/monitors_test.go "TestUpdateCronMonitor/success applies changes and defaults"
   → test: apps/web/src/views/CronMonitorEditView.test.ts "saves changes and navigates to the detail view on success"
-- A paused monitor keeps accepting pings but is neither marked up nor alerted on; resuming restores checking.
+- A paused monitor keeps accepting pings but is neither marked up nor alerted on; resuming restores checking from the job's next run, or waits for a first ping if it never had one.
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a paused monitor is not flipped to up or rescheduled"
   → test: apps/api/internal/handler/monitors_test.go "TestPauseResumeCronMonitor/pause then resume round-trips status"
+  → test: apps/api/internal/handler/monitors_test.go "TestPauseResumeCronMonitor/resuming a monitor that has pinged checks it again from its next run"
 - Deleting asks for confirmation, then removes the monitor and its history.
   → test: apps/web/src/views/CronMonitorDetailView.test.ts "deletes the monitor and navigates back to the list on confirm"
   → test: apps/api/internal/handler/monitors_test.go "TestDeleteCronMonitor/cross-tenant delete is a no-op, owner delete succeeds and cascades"

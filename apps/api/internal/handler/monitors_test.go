@@ -555,6 +555,29 @@ func TestPauseResumeCronMonitor(t *testing.T) {
 		}
 	})
 
+	t.Run("resuming a monitor that has pinged checks it again from its next run", func(t *testing.T) {
+		// A job that broke while paused must alert on schedule, not wait for a
+		// first ping as a new monitor does (PRD cron-monitoring).
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Pinged before")
+		mustExec(t, pool, "UPDATE cron_monitors SET last_ping_at = NOW() - INTERVAL '2 days', next_ping_at = NOW() - INTERVAL '1 day' WHERE id = $1", mon.ID)
+
+		if w := doMonitorRequest(t, http.MethodPost, monitorH.PauseCronMonitor, u.access, mon.ID, nil); w.Code != http.StatusOK {
+			t.Fatalf("pause: want 200, got %d: %s", w.Code, w.Body.String())
+		}
+		resumeW := doMonitorRequest(t, http.MethodPost, monitorH.ResumeCronMonitor, u.access, mon.ID, nil)
+		if resumeW.Code != http.StatusOK {
+			t.Fatalf("resume: want 200, got %d: %s", resumeW.Code, resumeW.Body.String())
+		}
+		if resumed := decodeBody[cronMonitorResponse](t, resumeW); resumed.Status != "up" {
+			t.Fatalf("want status up after resume, got %q", resumed.Status)
+		}
+		// Due from now, not overdue at once from before the pause.
+		if row := getCronMonitorRow(t, pool, mon.ID); !row.NextPingAt.Time.After(time.Now()) {
+			t.Fatalf("want next_ping_at in the future, got %v", row.NextPingAt.Time)
+		}
+	})
+
 	t.Run("resume is blocked once active monitors are already at the plan limit (ADR billing)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		orgID := uuid.MustParse(u.resp.OrgID)
