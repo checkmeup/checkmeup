@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 )
@@ -33,14 +34,14 @@ type incidentTracker interface {
 	latestCheckFailed(ctx context.Context) (bool, error)
 	recordCheck(ctx context.Context, isUp bool) error
 	scheduleRecheck(ctx context.Context) error
-	recordUp(ctx context.Context) error
+	// recordUp marks the monitor up and resolves its open incidents, both or
+	// neither, returning when the earliest of them started (not Valid: none).
+	recordUp(ctx context.Context) (pgtype.Timestamptz, error)
 	// recordFailure returns the monitor's consecutive failures, this one counted.
 	recordFailure(ctx context.Context) (int32, error)
 	// openIncident marks the monitor down and opens its incident, both or
 	// neither, keeping alert, the down alert as JSON, for its retries.
 	openIncident(ctx context.Context, alert []byte) (uuid.UUID, error)
-	// resolveIncident closes the monitor's open incident and returns when it started.
-	resolveIncident(ctx context.Context) (time.Time, error)
 	countAlert(ctx context.Context, incidentID uuid.UUID) error
 	downAlert() AlertMessage
 	recoveryAlert(downtime string) AlertMessage
@@ -85,22 +86,17 @@ func latestCheckFailed(ctx context.Context, n Notifiers, t incidentTracker, m tr
 }
 
 func trackUp(ctx context.Context, n Notifiers, t incidentTracker, m trackedMonitor) {
-	if err := t.recordUp(ctx); err != nil {
+	startedAt, err := t.recordUp(ctx)
+	if err != nil {
 		m.logError(n, "record up", err)
 		return
 	}
-	if m.Status != db.MonitorStatusDown {
+	// An incident left open on a monitor that wasn't down is resolved
+	// silently: its downtime is unknown, and a recovery after days would mislead.
+	if m.Status != db.MonitorStatusDown || !startedAt.Valid || !m.AlertsEnabled {
 		return
 	}
-	startedAt, err := t.resolveIncident(ctx)
-	if err != nil {
-		m.logError(n, "resolve incident", err)
-		return
-	}
-	if !m.AlertsEnabled {
-		return
-	}
-	downtime := FormatDuration(time.Since(startedAt))
+	downtime := FormatDuration(time.Since(startedAt.Time))
 	GoAlert(ctx, func(ctx context.Context) {
 		DispatchAlert(ctx, n, m.OrgID, m.ref(), t.recoveryAlert(downtime))
 	})

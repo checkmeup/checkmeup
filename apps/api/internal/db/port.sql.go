@@ -592,67 +592,32 @@ func (q *Queries) RecordPortCheckFailure(ctx context.Context, id uuid.UUID) (Por
 }
 
 const recordPortCheckUp = `-- name: RecordPortCheckUp :one
-UPDATE port_monitors
-SET status = 'up',
-    consecutive_failures = 0,
-    last_checked_at = NOW(),
-    next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id
-`
-
-func (q *Queries) RecordPortCheckUp(ctx context.Context, id uuid.UUID) (PortMonitor, error) {
-	row := q.db.QueryRow(ctx, recordPortCheckUp, id)
-	var i PortMonitor
-	err := row.Scan(
-		&i.ID,
-		&i.OrgID,
-		&i.Name,
-		&i.Host,
-		&i.Port,
-		&i.ExpectedState,
-		&i.IntervalMins,
-		&i.Status,
-		&i.AlertsEnabled,
-		&i.MaxAlertsPerIncident,
-		&i.AlertAfterNFailures,
-		&i.ConsecutiveFailures,
-		&i.LastCheckedAt,
-		&i.NextCheckAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.ProjectID,
-	)
-	return i, err
-}
-
-const resolveLatestPortIncident = `-- name: ResolveLatestPortIncident :one
-UPDATE port_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT pi.id FROM port_incidents pi
-    WHERE pi.monitor_id = $1 AND pi.resolved_at IS NULL
-    ORDER BY pi.started_at DESC
-    LIMIT 1
+WITH up AS (
+    UPDATE port_monitors
+    SET status = 'up',
+        consecutive_failures = 0,
+        last_checked_at = NOW(),
+        next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
+        updated_at = NOW()
+    WHERE port_monitors.id = $1
+    RETURNING port_monitors.id
+), resolved AS (
+    UPDATE port_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
+SELECT (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at
 `
 
-func (q *Queries) ResolveLatestPortIncident(ctx context.Context, monitorID uuid.UUID) (PortIncident, error) {
-	row := q.db.QueryRow(ctx, resolveLatestPortIncident, monitorID)
-	var i PortIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-		&i.Alert,
-		&i.AlertAttemptedAt,
-		&i.AlertAttempts,
-	)
-	return i, err
+// Marks the monitor up and resolves its open incidents in one statement, so
+// neither happens without the other (PRD alert-delivery): up with an open
+// incident would never resolve it. Returns when the earliest resolved one
+// started, NULL when none was open.
+func (q *Queries) RecordPortCheckUp(ctx context.Context, id uuid.UUID) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, recordPortCheckUp, id)
+	var incident_started_at pgtype.Timestamptz
+	err := row.Scan(&incident_started_at)
+	return incident_started_at, err
 }
 
 const resumePortMonitor = `-- name: ResumePortMonitor :one

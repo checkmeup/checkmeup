@@ -648,72 +648,32 @@ func (q *Queries) RecordUptimeCheckFailure(ctx context.Context, id uuid.UUID) (U
 }
 
 const recordUptimeCheckUp = `-- name: RecordUptimeCheckUp :one
-UPDATE uptime_monitors
-SET status = 'up',
-    consecutive_failures = 0,
-    last_checked_at = NOW(),
-    next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING id, org_id, name, url, interval_mins, status, alerts_enabled, max_alerts_per_incident, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, keyword, keyword_mode, keyword_case_sensitive, json_assertions, max_response_time_ms, alert_after_n_failures, http_method, accepted_status_codes, project_id
-`
-
-func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (UptimeMonitor, error) {
-	row := q.db.QueryRow(ctx, recordUptimeCheckUp, id)
-	var i UptimeMonitor
-	err := row.Scan(
-		&i.ID,
-		&i.OrgID,
-		&i.Name,
-		&i.Url,
-		&i.IntervalMins,
-		&i.Status,
-		&i.AlertsEnabled,
-		&i.MaxAlertsPerIncident,
-		&i.ConsecutiveFailures,
-		&i.LastCheckedAt,
-		&i.NextCheckAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Keyword,
-		&i.KeywordMode,
-		&i.KeywordCaseSensitive,
-		&i.JsonAssertions,
-		&i.MaxResponseTimeMs,
-		&i.AlertAfterNFailures,
-		&i.HttpMethod,
-		&i.AcceptedStatusCodes,
-		&i.ProjectID,
-	)
-	return i, err
-}
-
-const resolveLatestUptimeIncident = `-- name: ResolveLatestUptimeIncident :one
-UPDATE uptime_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT ui.id FROM uptime_incidents ui
-    WHERE ui.monitor_id = $1 AND ui.resolved_at IS NULL
-    ORDER BY ui.started_at DESC
-    LIMIT 1
+WITH up AS (
+    UPDATE uptime_monitors
+    SET status = 'up',
+        consecutive_failures = 0,
+        last_checked_at = NOW(),
+        next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
+        updated_at = NOW()
+    WHERE uptime_monitors.id = $1
+    RETURNING uptime_monitors.id
+), resolved AS (
+    UPDATE uptime_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
 )
-RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
+SELECT (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at
 `
 
-func (q *Queries) ResolveLatestUptimeIncident(ctx context.Context, monitorID uuid.UUID) (UptimeIncident, error) {
-	row := q.db.QueryRow(ctx, resolveLatestUptimeIncident, monitorID)
-	var i UptimeIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-		&i.Alert,
-		&i.AlertAttemptedAt,
-		&i.AlertAttempts,
-	)
-	return i, err
+// Marks the monitor up and resolves its open incidents in one statement, so
+// neither happens without the other (PRD alert-delivery): up with an open
+// incident would never resolve it. Returns when the earliest resolved one
+// started, NULL when none was open.
+func (q *Queries) RecordUptimeCheckUp(ctx context.Context, id uuid.UUID) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, recordUptimeCheckUp, id)
+	var incident_started_at pgtype.Timestamptz
+	err := row.Scan(&incident_started_at)
+	return incident_started_at, err
 }
 
 const resumeUptimeMonitor = `-- name: ResumeUptimeMonitor :one

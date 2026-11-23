@@ -59,14 +59,25 @@ WHERE next_check_at <= NOW() AND status != 'paused'
   );
 
 -- name: RecordUptimeCheckUp :one
-UPDATE uptime_monitors
-SET status = 'up',
-    consecutive_failures = 0,
-    last_checked_at = NOW(),
-    next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING *;
+-- Marks the monitor up and resolves its open incidents in one statement, so
+-- neither happens without the other (PRD alert-delivery): up with an open
+-- incident would never resolve it. Returns when the earliest resolved one
+-- started, NULL when none was open.
+WITH up AS (
+    UPDATE uptime_monitors
+    SET status = 'up',
+        consecutive_failures = 0,
+        last_checked_at = NOW(),
+        next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
+        updated_at = NOW()
+    WHERE uptime_monitors.id = $1
+    RETURNING uptime_monitors.id
+), resolved AS (
+    UPDATE uptime_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
+)
+SELECT (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at;
 
 -- name: RecordUptimeCheckFailure :one
 UPDATE uptime_monitors
@@ -152,17 +163,6 @@ WHERE m.id = i.monitor_id
       AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
   )
 RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts;
-
--- name: ResolveLatestUptimeIncident :one
-UPDATE uptime_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT ui.id FROM uptime_incidents ui
-    WHERE ui.monitor_id = $1 AND ui.resolved_at IS NULL
-    ORDER BY ui.started_at DESC
-    LIMIT 1
-)
-RETURNING *;
 
 -- name: ListUptimeIncidents :many
 SELECT * FROM uptime_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200;

@@ -82,13 +82,12 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wasDown := monitor.Status == db.MonitorStatusDown
-	markedUp := false
-
 	// Don't update next_ping_at for paused monitors; the worker ignores them anyway.
 	if monitor.Status != db.MonitorStatusPaused {
 		nextPing := computeNextPing(monitor.Schedule, now, int(monitor.GracePeriodMins))
-		_, err := h.queries.UpdateCronMonitorPing(r.Context(), db.UpdateCronMonitorPingParams{
+		// Marks the monitor up and resolves its incident in one statement, so a
+		// failure leaves both for the next ping (PRD alert-delivery).
+		up, err := h.queries.UpdateCronMonitorPing(r.Context(), db.UpdateCronMonitorPingParams{
 			ID:         monitor.ID,
 			OrgID:      monitor.OrgID,
 			LastPingAt: pgtype.Timestamptz{Time: now, Valid: true},
@@ -97,15 +96,11 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			slog.Default().Error("ping: mark monitor up", "monitor_id", monitor.ID, "err", err)
 		}
-		markedUp = err == nil
-	}
-
-	// Recovery: monitor was down and just checked in again. Only once it is
-	// marked up: resolving the incident of a monitor still down would leave it
-	// down with no incident, which the worker skips, so the job failing again
-	// would alert nobody. The next ping recovers it instead.
-	if wasDown && markedUp {
-		h.sendCronRecoveryAlert(r.Context(), monitor, now)
+		// An incident left open on a monitor that wasn't down is resolved
+		// silently, as the worker does (trackUp).
+		if err == nil && up.WasDown && up.IncidentStartedAt.Valid {
+			h.sendCronRecoveryAlert(r.Context(), monitor, now.Sub(up.IncidentStartedAt.Time))
+		}
 	}
 
 	// Zombie recovery (PRD zombie-job-detection): this completion closed a run that had
@@ -164,17 +159,17 @@ func (h *PingHandler) sendStuckRunRecoveryAlert(ctx context.Context, monitor db.
 }
 
 // sendCronRecoveryAlert dispatches a recovery alert now that a
-// previously-down cron monitor has checked in again. The incident is
-// resolved regardless of AlertsEnabled — only the alert send itself is
-// gated by that setting (matches the uptime-monitor worker's pattern).
-// Routed through worker.DispatchAlert so cron recovery alerts respect the
-// monitor's attached notification_channels, same as every other alert path.
-func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.CronMonitor, now time.Time) {
-	inc, err := h.queries.ResolveLatestCronIncident(ctx, monitor.ID)
-	if err != nil || !monitor.AlertsEnabled {
+// previously-down cron monitor has checked in again and its incident is
+// resolved, which happens regardless of AlertsEnabled — only the alert send
+// itself is gated by that setting (matches the uptime-monitor worker's
+// pattern). Routed through worker.DispatchAlert so cron recovery alerts
+// respect the monitor's attached notification_channels, same as every other
+// alert path.
+func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.CronMonitor, down time.Duration) {
+	if !monitor.AlertsEnabled {
 		return
 	}
-	downtime := worker.FormatDuration(now.Sub(inc.StartedAt.Time))
+	downtime := worker.FormatDuration(down)
 	n := worker.Notifiers{Queries: h.queries, Telegram: h.tg, Mailer: h.mailer, Webhook: h.wh, Slack: h.sl, SMS: h.sm, Logger: slog.Default()}
 	worker.GoAlert(ctx, func(ctx context.Context) {
 		worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.CronRecoveryAlert(monitor.Name, downtime))

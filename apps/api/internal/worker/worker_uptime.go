@@ -95,9 +95,8 @@ func (t uptimeTracker) scheduleRecheck(ctx context.Context) error {
 	return t.q.ScheduleUptimeRecheck(ctx, t.m.ID)
 }
 
-func (t uptimeTracker) recordUp(ctx context.Context) error {
-	_, err := t.q.RecordUptimeCheckUp(ctx, t.m.ID)
-	return err
+func (t uptimeTracker) recordUp(ctx context.Context) (pgtype.Timestamptz, error) {
+	return t.q.RecordUptimeCheckUp(ctx, t.m.ID)
 }
 
 func (t uptimeTracker) recordFailure(ctx context.Context) (int32, error) {
@@ -108,11 +107,6 @@ func (t uptimeTracker) recordFailure(ctx context.Context) (int32, error) {
 func (t uptimeTracker) openIncident(ctx context.Context, alert []byte) (uuid.UUID, error) {
 	inc, err := t.q.OpenUptimeIncident(ctx, db.OpenUptimeIncidentParams{MonitorID: t.m.ID, Alert: alert})
 	return inc.ID, err
-}
-
-func (t uptimeTracker) resolveIncident(ctx context.Context) (time.Time, error) {
-	inc, err := t.q.ResolveLatestUptimeIncident(ctx, t.m.ID)
-	return inc.StartedAt.Time, err
 }
 
 func (t uptimeTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {

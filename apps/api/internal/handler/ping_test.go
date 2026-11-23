@@ -348,6 +348,53 @@ func TestReceivePing(t *testing.T) {
 		}
 	})
 
+	t.Run("a ping whose incident fails to resolve leaves the monitor down for the next ping", func(t *testing.T) {
+		// Up with its incident still open would never resolve it (PRD alert-delivery).
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Recovering job, resolve fails")
+		seedCronDown(t, pool, mon.ID, time.Now().Add(-30*time.Minute))
+		token := cronPingToken(t, pool, mon.ID)
+
+		name := "fail_resolve_" + strings.ReplaceAll(mon.ID, "-", "")
+		mustExec(t, pool, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.monitor_id = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
+  RETURN NEW;
+END $$`, name, mon.ID))
+		mustExec(t, pool, fmt.Sprintf("CREATE TRIGGER %s BEFORE UPDATE ON cron_incidents FOR EACH ROW EXECUTE FUNCTION %s()", name, name))
+		lifted := false
+		lift := func() {
+			if !lifted {
+				lifted = true
+				mustExec(t, pool, fmt.Sprintf("DROP TRIGGER %s ON cron_incidents", name))
+				mustExec(t, pool, fmt.Sprintf("DROP FUNCTION %s()", name))
+			}
+		}
+		t.Cleanup(lift)
+
+		if w := doPing(t, pingH, token, nil); w.Code != http.StatusOK {
+			t.Fatalf("want 200 even when the resolve fails, got %d", w.Code)
+		}
+		if row := getCronMonitorRow(t, pool, mon.ID); row.Status != db.MonitorStatusDown {
+			t.Fatalf("want the monitor still down when its incident failed to resolve, got %q", row.Status)
+		}
+
+		lift()
+		doPing(t, pingH, token, nil)
+		if row := getCronMonitorRow(t, pool, mon.ID); row.Status != db.MonitorStatusUp {
+			t.Fatalf("want status up after the next ping, got %q", row.Status)
+		}
+		var open int
+		if err := pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM cron_incidents WHERE monitor_id = $1 AND resolved_at IS NULL", mon.ID,
+		).Scan(&open); err != nil {
+			t.Fatalf("query incidents: %v", err)
+		}
+		if open != 0 {
+			t.Fatalf("want the incident resolved by the next ping, %d open", open)
+		}
+	})
+
 	t.Run("a ping that fails to mark the monitor up leaves its incident open for the next ping", func(t *testing.T) {
 		// Resolving the incident while the monitor stays down would leave it
 		// down with no incident: the worker skips down monitors, so the job

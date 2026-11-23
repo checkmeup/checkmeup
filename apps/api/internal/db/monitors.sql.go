@@ -715,34 +715,6 @@ func (q *Queries) PauseCronMonitor(ctx context.Context, arg PauseCronMonitorPara
 	return i, err
 }
 
-const resolveLatestCronIncident = `-- name: ResolveLatestCronIncident :one
-UPDATE cron_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT ci.id FROM cron_incidents ci
-    WHERE ci.monitor_id = $1 AND ci.resolved_at IS NULL
-    ORDER BY ci.started_at DESC
-    LIMIT 1
-)
-RETURNING id, monitor_id, started_at, resolved_at, alert_count, alert, alert_attempted_at, alert_attempts
-`
-
-func (q *Queries) ResolveLatestCronIncident(ctx context.Context, monitorID uuid.UUID) (CronIncident, error) {
-	row := q.db.QueryRow(ctx, resolveLatestCronIncident, monitorID)
-	var i CronIncident
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.ResolvedAt,
-		&i.AlertCount,
-		&i.Alert,
-		&i.AlertAttemptedAt,
-		&i.AlertAttempts,
-	)
-	return i, err
-}
-
 const resumeCronMonitor = `-- name: ResumeCronMonitor :one
 UPDATE cron_monitors
 SET status = CASE WHEN last_ping_at IS NULL THEN 'waiting'::monitor_status ELSE 'up'::monitor_status END,
@@ -858,45 +830,49 @@ func (q *Queries) UpdateCronMonitor(ctx context.Context, arg UpdateCronMonitorPa
 }
 
 const updateCronMonitorPing = `-- name: UpdateCronMonitorPing :one
-UPDATE cron_monitors
-SET status = 'up', last_ping_at = $3, next_ping_at = $4, consecutive_failures = 0, updated_at = NOW()
-WHERE id = $1 AND org_id = $2
-RETURNING id, org_id, name, schedule, grace_period_mins, ping_token, status, alerts_enabled, last_ping_at, next_ping_at, created_at, updated_at, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, max_duration_mins, project_id
+WITH up AS (
+    UPDATE cron_monitors m
+    SET status = 'up', last_ping_at = $1, next_ping_at = $2,
+        consecutive_failures = 0, updated_at = NOW()
+    FROM (SELECT c.id, c.status FROM cron_monitors c WHERE c.id = $3 AND c.org_id = $4 FOR UPDATE) prev
+    WHERE m.id = prev.id
+    RETURNING m.id, prev.status = 'down' AS was_down
+), resolved AS (
+    UPDATE cron_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
+)
+SELECT COALESCE((SELECT was_down FROM up), false)::boolean AS was_down,
+       EXISTS (SELECT 1 FROM up) AS marked_up,
+       (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at
 `
 
 type UpdateCronMonitorPingParams struct {
-	ID         uuid.UUID          `json:"id"`
-	OrgID      uuid.UUID          `json:"org_id"`
 	LastPingAt pgtype.Timestamptz `json:"last_ping_at"`
 	NextPingAt pgtype.Timestamptz `json:"next_ping_at"`
+	ID         uuid.UUID          `json:"id"`
+	OrgID      uuid.UUID          `json:"org_id"`
 }
 
-func (q *Queries) UpdateCronMonitorPing(ctx context.Context, arg UpdateCronMonitorPingParams) (CronMonitor, error) {
+type UpdateCronMonitorPingRow struct {
+	WasDown           bool               `json:"was_down"`
+	MarkedUp          bool               `json:"marked_up"`
+	IncidentStartedAt pgtype.Timestamptz `json:"incident_started_at"`
+}
+
+// Marks the monitor up and resolves its open incidents in one statement, as
+// RecordUptimeCheckUp does (PRD alert-delivery). was_down is read under the
+// row's lock, not from the ping's earlier read, so a monitor the worker marked
+// down in between still gets its recovery. incident_started_at is when the
+// earliest resolved incident started, NULL when none was open.
+func (q *Queries) UpdateCronMonitorPing(ctx context.Context, arg UpdateCronMonitorPingParams) (UpdateCronMonitorPingRow, error) {
 	row := q.db.QueryRow(ctx, updateCronMonitorPing,
-		arg.ID,
-		arg.OrgID,
 		arg.LastPingAt,
 		arg.NextPingAt,
+		arg.ID,
+		arg.OrgID,
 	)
-	var i CronMonitor
-	err := row.Scan(
-		&i.ID,
-		&i.OrgID,
-		&i.Name,
-		&i.Schedule,
-		&i.GracePeriodMins,
-		&i.PingToken,
-		&i.Status,
-		&i.AlertsEnabled,
-		&i.LastPingAt,
-		&i.NextPingAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.MaxAlertsPerIncident,
-		&i.AlertAfterNFailures,
-		&i.ConsecutiveFailures,
-		&i.MaxDurationMins,
-		&i.ProjectID,
-	)
+	var i UpdateCronMonitorPingRow
+	err := row.Scan(&i.WasDown, &i.MarkedUp, &i.IncidentStartedAt)
 	return i, err
 }

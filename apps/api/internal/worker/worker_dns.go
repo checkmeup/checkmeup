@@ -109,12 +109,11 @@ func (t dnsTracker) scheduleRecheck(ctx context.Context) error {
 	return t.q.ScheduleDNSRecheck(ctx, t.m.ID)
 }
 
-func (t dnsTracker) recordUp(ctx context.Context) error {
-	_, err := t.q.RecordDNSCheckUp(ctx, db.RecordDNSCheckUpParams{
+func (t dnsTracker) recordUp(ctx context.Context) (pgtype.Timestamptz, error) {
+	return t.q.RecordDNSCheckUp(ctx, db.RecordDNSCheckUpParams{
 		ID:                t.m.ID,
 		LastResolvedValue: pgtype.Text{String: t.resolvedValue, Valid: true},
 	})
-	return err
 }
 
 func (t dnsTracker) recordFailure(ctx context.Context) (int32, error) {
@@ -135,11 +134,6 @@ func (t dnsTracker) recordFailure(ctx context.Context) (int32, error) {
 func (t dnsTracker) openIncident(ctx context.Context, alert []byte) (uuid.UUID, error) {
 	inc, err := t.q.OpenDNSIncident(ctx, db.OpenDNSIncidentParams{MonitorID: t.m.ID, Alert: alert})
 	return inc.ID, err
-}
-
-func (t dnsTracker) resolveIncident(ctx context.Context) (time.Time, error) {
-	inc, err := t.q.ResolveLatestDNSIncident(ctx, t.m.ID)
-	return inc.StartedAt.Time, err
 }
 
 func (t dnsTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {

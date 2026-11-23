@@ -61,17 +61,28 @@ WHERE next_check_at <= NOW() AND status != 'paused'
 -- expected_value/baseline_captured only change the first time (COALESCE is
 -- a no-op once expected_value is already set) — this is where a baseline
 -- monitor's first successful lookup gets pinned as its comparison value.
-UPDATE dns_monitors
-SET status = 'up',
-    consecutive_failures = 0,
-    last_checked_at = NOW(),
-    next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
-    last_resolved_value = $2,
-    expected_value = COALESCE(expected_value, $2),
-    baseline_captured = (expected_value IS NULL),
-    updated_at = NOW()
-WHERE id = $1
-RETURNING *;
+-- Marks the monitor up and resolves its open incidents in one statement, so
+-- neither happens without the other (PRD alert-delivery): up with an open
+-- incident would never resolve it. Returns when the earliest resolved one
+-- started, NULL when none was open.
+WITH up AS (
+    UPDATE dns_monitors
+    SET status = 'up',
+        consecutive_failures = 0,
+        last_checked_at = NOW(),
+        next_check_at = NOW() + (interval_mins * INTERVAL '1 minute'),
+        last_resolved_value = $2,
+        expected_value = COALESCE(expected_value, $2),
+        baseline_captured = (expected_value IS NULL),
+        updated_at = NOW()
+    WHERE dns_monitors.id = $1
+    RETURNING dns_monitors.id
+), resolved AS (
+    UPDATE dns_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
+)
+SELECT (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at;
 
 -- name: RecordDNSCheckFailure :one
 UPDATE dns_monitors
@@ -158,17 +169,6 @@ WHERE m.id = i.monitor_id
       AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
   )
 RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts;
-
--- name: ResolveLatestDNSIncident :one
-UPDATE dns_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT di.id FROM dns_incidents di
-    WHERE di.monitor_id = $1 AND di.resolved_at IS NULL
-    ORDER BY di.started_at DESC
-    LIMIT 1
-)
-RETURNING *;
 
 -- name: ListDNSIncidents :many
 SELECT * FROM dns_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200;

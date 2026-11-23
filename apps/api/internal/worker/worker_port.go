@@ -84,9 +84,8 @@ func (t portTracker) scheduleRecheck(ctx context.Context) error {
 	return t.q.SchedulePortRecheck(ctx, t.m.ID)
 }
 
-func (t portTracker) recordUp(ctx context.Context) error {
-	_, err := t.q.RecordPortCheckUp(ctx, t.m.ID)
-	return err
+func (t portTracker) recordUp(ctx context.Context) (pgtype.Timestamptz, error) {
+	return t.q.RecordPortCheckUp(ctx, t.m.ID)
 }
 
 func (t portTracker) recordFailure(ctx context.Context) (int32, error) {
@@ -97,11 +96,6 @@ func (t portTracker) recordFailure(ctx context.Context) (int32, error) {
 func (t portTracker) openIncident(ctx context.Context, alert []byte) (uuid.UUID, error) {
 	inc, err := t.q.OpenPortIncident(ctx, db.OpenPortIncidentParams{MonitorID: t.m.ID, Alert: alert})
 	return inc.ID, err
-}
-
-func (t portTracker) resolveIncident(ctx context.Context) (time.Time, error) {
-	inc, err := t.q.ResolveLatestPortIncident(ctx, t.m.ID)
-	return inc.StartedAt.Time, err
 }
 
 func (t portTracker) countAlert(ctx context.Context, incidentID uuid.UUID) error {

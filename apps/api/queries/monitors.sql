@@ -58,10 +58,26 @@ RETURNING *;
 DELETE FROM cron_monitors WHERE id = $1 AND org_id = $2;
 
 -- name: UpdateCronMonitorPing :one
-UPDATE cron_monitors
-SET status = 'up', last_ping_at = $3, next_ping_at = $4, consecutive_failures = 0, updated_at = NOW()
-WHERE id = $1 AND org_id = $2
-RETURNING *;
+-- Marks the monitor up and resolves its open incidents in one statement, as
+-- RecordUptimeCheckUp does (PRD alert-delivery). was_down is read under the
+-- row's lock, not from the ping's earlier read, so a monitor the worker marked
+-- down in between still gets its recovery. incident_started_at is when the
+-- earliest resolved incident started, NULL when none was open.
+WITH up AS (
+    UPDATE cron_monitors m
+    SET status = 'up', last_ping_at = sqlc.arg(last_ping_at), next_ping_at = sqlc.arg(next_ping_at),
+        consecutive_failures = 0, updated_at = NOW()
+    FROM (SELECT c.id, c.status FROM cron_monitors c WHERE c.id = sqlc.arg(id) AND c.org_id = sqlc.arg(org_id) FOR UPDATE) prev
+    WHERE m.id = prev.id
+    RETURNING m.id, prev.status = 'down' AS was_down
+), resolved AS (
+    UPDATE cron_incidents SET resolved_at = NOW()
+    WHERE resolved_at IS NULL AND monitor_id IN (SELECT id FROM up)
+    RETURNING started_at
+)
+SELECT COALESCE((SELECT was_down FROM up), false)::boolean AS was_down,
+       EXISTS (SELECT 1 FROM up) AS marked_up,
+       (SELECT MIN(started_at) FROM resolved)::timestamptz AS incident_started_at;
 
 -- name: IncrementCronConsecutiveFailures :one
 UPDATE cron_monitors
@@ -129,17 +145,6 @@ WHERE m.id = i.monitor_id
       AND mw.starts_at <= NOW() AND (mw.ends_at IS NULL OR mw.ends_at > NOW())
   )
 RETURNING i.id, i.monitor_id, m.org_id, i.alert, i.alert_attempts;
-
--- name: ResolveLatestCronIncident :one
-UPDATE cron_incidents
-SET resolved_at = NOW()
-WHERE id = (
-    SELECT ci.id FROM cron_incidents ci
-    WHERE ci.monitor_id = $1 AND ci.resolved_at IS NULL
-    ORDER BY ci.started_at DESC
-    LIMIT 1
-)
-RETURNING *;
 
 -- name: ListCronIncidents :many
 SELECT * FROM cron_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT 200;
