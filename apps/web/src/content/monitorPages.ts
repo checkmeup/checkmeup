@@ -111,7 +111,7 @@ export const monitorPages: MonitorPage[] = [
   {
     id: 'dns',
     path: '/dns-monitoring',
-    seoTitle: 'DNS Record Monitoring — Checkmeup',
+    seoTitle: 'DNS Monitoring: Alerts When a Record Changes — Checkmeup',
     description:
       'Get alerted when an A, AAAA, CNAME, MX, TXT or NS record changes or stops resolving, with the old and new value. Free for 10 monitors.',
     title: 'DNS record monitoring',

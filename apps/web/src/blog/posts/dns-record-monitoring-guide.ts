@@ -7,6 +7,23 @@ export const content: ContentBlock[] = [
   },
   {
     type: 'h2',
+    text: 'What is DNS monitoring?',
+  },
+  {
+    type: 'p',
+    text: "DNS monitoring is checking, on a schedule, that a domain's DNS still answers and still answers with the right values, and alerting someone when it doesn't. You need it because every request to your site and every email to your domain starts with a DNS lookup: a wrong answer breaks or redirects all of it at once, while every check that starts after the lookup sees nothing wrong.",
+  },
+  {
+    type: 'p',
+    text: 'The term covers two different jobs. DNS server monitoring watches the nameservers themselves: whether they respond, how fast, and from which regions. DNS record monitoring watches what they say: whether the A, MX or NS record for your domain is still the one you set. A nameserver can be fast and healthy while serving a record an attacker changed, so record monitoring is the one this guide is about.',
+  },
+  {
+    type: 'link',
+    to: '/dns-monitoring',
+    text: 'DNS monitoring with Checkmeup: an alert with the old and new value when a record changes',
+  },
+  {
+    type: 'h2',
     text: 'What DNS record monitoring actually does',
   },
   {

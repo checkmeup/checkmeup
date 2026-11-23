@@ -7,6 +7,14 @@ export const domainExpiryFaqs: { q: string; a: string }[] = [
     a: "Enter the domain above. The checker asks the registry that runs its top-level domain, over RDAP or WHOIS, and shows the registration's expiry date, the days left and the registrar. It works for any domain, not only your own: for most TLDs the expiry date is public.",
   },
   {
+    q: 'How do I know if a domain has expired?',
+    a: "If the expiry date the checker shows is in the past, the registration has lapsed and the owner hasn't renewed it. A date in the future doesn't always mean it was renewed: for up to 45 days after a lapse, many registries show next year's date anyway (see below). Then the site and email often stop working, and the domain's status in a WHOIS or RDAP record reads clientHold, redemptionPeriod or pendingDelete.",
+  },
+  {
+    q: 'How do I check if a domain is in its redemption period?',
+    a: 'Look at its status in a WHOIS or RDAP record: redemptionPeriod in WHOIS, "redemption period" in RDAP. It means the registrar deleted the expired domain and the owner has about 30 days to restore it through the registrar, for a fee on top of the renewal. After that the status turns to pendingDelete, and about 5 days later anyone can register the name.',
+  },
+  {
     q: 'What happens when a domain expires?',
     a: "It doesn't disappear at once. For .com and most other generic TLDs, the registrar usually holds it for a grace period of up to 45 days, when the owner can still renew at the normal price, though the site and email often stop working. Then comes a 30-day redemption period, when restoring it costs an extra fee, and about 5 days pending deletion before anyone can register it. Country-code TLDs set their own rules.",
   },
