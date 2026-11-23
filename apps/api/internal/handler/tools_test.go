@@ -422,7 +422,7 @@ func TestExplainCron_TheFirstRunIsWhenACronMonitorExpectsItsPing(t *testing.T) {
 	for _, expr := range []string{"*/5 * * * *", "0 9 * * 1-5", "15 3 1 * *", "0 0 1 1 *"} {
 		t.Run(expr, func(t *testing.T) {
 			_, got := explainCron(t, h, expr)
-			want := computeNextPing(expr, now, grace)
+			want := worker.NextPing(expr, now, grace)
 			if len(got.Runs) == 0 || !got.Runs[0].Add(grace*time.Minute).Equal(want) {
 				t.Fatalf("first run %v plus grace, want the monitor's %v", got.Runs, want)
 			}

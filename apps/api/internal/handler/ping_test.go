@@ -3,10 +3,9 @@ package handler
 // Tests for ping.go: the public, unauthenticated GET /ping/{token} endpoint
 // cron jobs hit to check in, plus its pure helper functions. Integration
 // tests follow the same conventions as the other *_test.go files in this
-// package (real Postgres, ADR testing); the pure functions (computeNextPing,
-// parseEveryDuration, realIP) are deterministic given their inputs (no
-// internal time.Now() — "now" is always passed in), so they're tested with
-// exact-value table tests, no tolerance windows needed. Downtime formatting
+// package (real Postgres, ADR testing); the pure function realIP is
+// tested with exact-value table tests. NextPing moved to worker, which
+// counts a cron monitor's missed runs from it. Downtime formatting
 // (formerly a local formatDuration here) moved to worker.FormatDuration —
 // see worker_test.go — once the cron-recovery path started sharing
 // worker.DispatchAlert instead of sending alerts directly (PRD webhook-alerts).
@@ -683,61 +682,6 @@ func TestReceivePingStart(t *testing.T) {
 			t.Fatalf("want no alert for a run that was never flagged stuck, got %+v", gotEvent)
 		}
 	})
-}
-
-func TestComputeNextPing(t *testing.T) {
-	now := time.Date(2026, 6, 19, 12, 0, 0, 0, time.UTC)
-
-	t.Run("interval schedule adds the interval plus grace", func(t *testing.T) {
-		got := computeNextPing("every 1h", now, 5)
-		want := now.Add(time.Hour + 5*time.Minute)
-		if !got.Equal(want) {
-			t.Fatalf("want %v, got %v", want, got)
-		}
-	})
-
-	t.Run("cron expression uses the next scheduled fire time plus grace", func(t *testing.T) {
-		// "0 13 * * *" = 13:00 daily; from 12:00 the next fire is 13:00 the same day.
-		got := computeNextPing("0 13 * * *", now, 10)
-		want := time.Date(2026, 6, 19, 13, 10, 0, 0, time.UTC)
-		if !got.Equal(want) {
-			t.Fatalf("want %v, got %v", want, got)
-		}
-	})
-
-	t.Run("unparseable schedule falls back to 1 hour plus grace", func(t *testing.T) {
-		got := computeNextPing("garbage schedule", now, 5)
-		want := now.Add(time.Hour + 5*time.Minute)
-		if !got.Equal(want) {
-			t.Fatalf("want %v, got %v", want, got)
-		}
-	})
-}
-
-func TestParseEveryDuration(t *testing.T) {
-	cases := []struct {
-		in   string
-		want time.Duration
-	}{
-		{"1h", time.Hour},
-		{"30m", 30 * time.Minute},
-		{"1d", 24 * time.Hour},
-		{"1w", 7 * 24 * time.Hour},
-		{"2hours", 2 * time.Hour},
-		{"45mins", 45 * time.Minute},
-		{"3hr", 3 * time.Hour},
-		{"", 0},
-		{"abc", 0},
-		{"0h", 0},
-		{"-5m", 0},
-	}
-	for _, tc := range cases {
-		t.Run(tc.in, func(t *testing.T) {
-			if got := parseEveryDuration(tc.in); got != tc.want {
-				t.Fatalf("parseEveryDuration(%q) = %v, want %v", tc.in, got, tc.want)
-			}
-		})
-	}
 }
 
 func TestRealIP(t *testing.T) {

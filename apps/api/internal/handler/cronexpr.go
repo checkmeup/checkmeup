@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
-// cronParser reads a cron monitor's schedule (PRD cron-monitoring) and the
-// free cron explainer's input (PRD free-tools): the 5 standard fields, with
-// no seconds field and no @hourly-style descriptors.
-var cronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+// cronParser reads the free cron explainer's input (PRD free-tools) as a
+// cron monitor's schedule is read, so the explainer's next runs are the ones
+// the monitor expects.
+var cronParser = worker.CronParser
 
 // cronUnit is one of the 5 fields: its name in error messages, its range,
 // and how its values and steps read in a description.

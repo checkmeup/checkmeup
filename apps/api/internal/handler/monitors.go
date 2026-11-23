@@ -20,6 +20,7 @@ import (
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/respond"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/worker"
 )
 
 type MonitorHandler struct {
@@ -465,7 +466,7 @@ func (h *MonitorHandler) UpdateCronMonitor(w http.ResponseWriter, r *http.Reques
 		MaxAlertsPerIncident: req.MaxAlertsPerIncident,
 		AlertAfterNFailures:  req.AlertAfterNFailures,
 		MaxDurationMins:      int32PtrToPgInt4(req.MaxDurationMins),
-		NextPingAt:           pgtype.Timestamptz{Time: computeNextPing(req.Schedule, time.Now(), int(req.GracePeriodMins)), Valid: true},
+		NextPingAt:           pgtype.Timestamptz{Time: worker.NextPing(req.Schedule, time.Now(), int(req.GracePeriodMins)), Valid: true},
 	})
 	if respondProjectRefused(w, err) {
 		return
@@ -513,7 +514,7 @@ func (h *MonitorHandler) ResumeCronMonitor(w http.ResponseWriter, r *http.Reques
 	if respondMonitorNotFoundOrInternal(w, err) {
 		return
 	}
-	nextPing := computeNextPing(current.Schedule, time.Now().UTC(), int(current.GracePeriodMins))
+	nextPing := worker.NextPing(current.Schedule, time.Now().UTC(), int(current.GracePeriodMins))
 	monitor, err := h.queries.ResumeCronMonitor(r.Context(), db.ResumeCronMonitorParams{
 		ID: monitorID, OrgID: orgID, NextPingAt: pgtype.Timestamptz{Time: nextPing, Valid: true},
 	})

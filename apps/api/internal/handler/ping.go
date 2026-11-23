@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -84,7 +83,7 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 
 	// Don't update next_ping_at for paused monitors; the worker ignores them anyway.
 	if monitor.Status != db.MonitorStatusPaused {
-		nextPing := computeNextPing(monitor.Schedule, now, int(monitor.GracePeriodMins))
+		nextPing := worker.NextPing(monitor.Schedule, now, int(monitor.GracePeriodMins))
 		// Marks the monitor up and resolves its incident in one statement, so a
 		// failure leaves both for the next ping (PRD alert-delivery).
 		up, err := h.queries.UpdateCronMonitorPing(r.Context(), db.UpdateCronMonitorPingParams{
@@ -174,77 +173,6 @@ func (h *PingHandler) sendCronRecoveryAlert(ctx context.Context, monitor db.Cron
 	worker.GoAlert(ctx, func(ctx context.Context) {
 		worker.DispatchAlert(ctx, n, monitor.OrgID, worker.MonitorRef{Type: "cron", ID: monitor.ID}, worker.CronRecoveryAlert(monitor.Name, downtime))
 	})
-}
-
-// computeNextPing returns when the next ping is expected, after which the grace
-// period starts. Formula: next scheduled time after now + grace buffer.
-func computeNextPing(schedule string, now time.Time, graceMins int) time.Time {
-	s := strings.ToLower(strings.TrimSpace(schedule))
-
-	if strings.HasPrefix(s, "every ") {
-		d := parseEveryDuration(strings.TrimPrefix(s, "every "))
-		if d > 0 {
-			// next expected ping = now + interval + grace
-			return now.Add(d + time.Duration(graceMins)*time.Minute)
-		}
-	}
-
-	// Cron expression — use robfig/cron to find the next fire time.
-	sched, err := cronParser.Parse(schedule)
-	if err == nil {
-		next := sched.Next(now)
-		return next.Add(time.Duration(graceMins) * time.Minute)
-	}
-
-	// Fallback: 1 hour from now.
-	return now.Add(time.Hour + time.Duration(graceMins)*time.Minute)
-}
-
-// parseEveryDuration parses "1h", "1hr", "1hour", "30m", "30min", "30mins",
-// "1d", "1day", "1w", "1week" etc.
-func parseEveryDuration(s string) time.Duration {
-	s = normalizeDurationSuffix(strings.TrimSpace(strings.ToLower(s)))
-	if len(s) < 2 {
-		return 0
-	}
-	unit := s[len(s)-1]
-	n, err := strconv.Atoi(strings.TrimSpace(s[:len(s)-1]))
-	if err != nil || n <= 0 {
-		return 0
-	}
-	return time.Duration(n) * durationUnit(unit)
-}
-
-// normalizeDurationSuffix rewrites a word suffix ("minutes", "hour", "days",
-// "week", ...) to the single-char unit parseEveryDuration expects.
-func normalizeDurationSuffix(s string) string {
-	for _, r := range []struct{ old, new string }{
-		{"minutes", "m"}, {"minute", "m"}, {"mins", "m"}, {"min", "m"},
-		{"hours", "h"}, {"hour", "h"}, {"hrs", "h"}, {"hr", "h"},
-		{"weeks", "w"}, {"week", "w"},
-		{"days", "d"}, {"day", "d"},
-	} {
-		if strings.HasSuffix(s, r.old) {
-			return strings.TrimSpace(s[:len(s)-len(r.old)]) + r.new
-		}
-	}
-	return s
-}
-
-// durationUnit maps a single-char unit to its time.Duration multiplier, or
-// 0 for an unrecognized unit (parseEveryDuration treats that as invalid).
-func durationUnit(unit byte) time.Duration {
-	switch unit {
-	case 'm':
-		return time.Minute
-	case 'h':
-		return time.Hour
-	case 'd':
-		return 24 * time.Hour
-	case 'w':
-		return 7 * 24 * time.Hour
-	}
-	return 0
 }
 
 // buildPingMetadata captures the ping's query-string params (e.g. a CI job
