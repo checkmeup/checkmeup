@@ -1694,6 +1694,27 @@ func TestCheckStuckCronRuns(t *testing.T) {
 	logger := testLogger()
 	n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: wh, Logger: logger}
 
+	t.Run("a paused monitor's stuck run alerts only once the monitor is resumed", func(t *testing.T) {
+		org := testOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		sent := webhookRecorder(t, queries, org.ID, "cron", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30, status = 'paused' WHERE id = $1", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
+		if sent() != 0 {
+			t.Fatalf("want no stuck-run alert while paused, got %d", sent())
+		}
+
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up' WHERE id = $1", mon.ID)
+		checkStuckCronRuns(context.Background(), n)
+		WaitForAlerts()
+		if sent() != 1 {
+			t.Fatalf("want the stuck-run alert once resumed, got %d", sent())
+		}
+	})
+
 	t.Run("alerts once on a run that exceeded max_duration_mins, then marks it alerted", func(t *testing.T) {
 		var gotEvent webhook.Event
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

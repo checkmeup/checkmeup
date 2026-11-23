@@ -88,3 +88,4 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a ping whose history row fails to write still recovers the monitor"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/a ping that can't read its monitor answers 200, not 404"
 - A run of a paused cron monitor that passes its maximum duration sends no stuck-run alert while the monitor is paused; once it is resumed, a run still open alerts then.
+  → test: apps/api/internal/worker/worker_test.go "TestCheckStuckCronRuns/a paused monitor's stuck run alerts only once the monitor is resumed"

@@ -192,6 +192,8 @@ JOIN cron_monitors ON cron_monitors.id = cron_runs.monitor_id
 WHERE cron_runs.completed_at IS NULL
   AND cron_runs.alerted_at IS NULL
   AND cron_monitors.max_duration_mins IS NOT NULL
+  -- A paused monitor's run alerts once it is resumed, if still open (PRD alert-delivery).
+  AND cron_monitors.status <> 'paused'
   AND cron_runs.started_at < NOW() - make_interval(mins => cron_monitors.max_duration_mins)
   AND NOT EXISTS (
     SELECT 1 FROM maintenance_window_monitors mwm
