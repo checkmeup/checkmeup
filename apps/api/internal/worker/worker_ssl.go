@@ -35,6 +35,7 @@ func checkSSLMonitors(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "ssl check", m.ID)
 			checkOneSSLMonitor(ctx, n, m)
 		}()
 	}

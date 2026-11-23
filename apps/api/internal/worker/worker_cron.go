@@ -28,6 +28,7 @@ func checkOverdue(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "cron overdue check", m.ID)
 			processOverdueMonitor(ctx, n, m)
 		}()
 	}
@@ -92,6 +93,7 @@ func checkStuckCronRuns(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "stuck cron run check", run.ID)
 			processStuckCronRun(ctx, n, run)
 		}()
 	}

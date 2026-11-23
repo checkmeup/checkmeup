@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -164,6 +165,16 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 	return sent
 }
 
+// recoverPanic, deferred in each goroutine the worker starts, logs a panic
+// instead of letting it crash the process: one monitor's check or alert
+// would otherwise stop every monitor's checks and alerts with it. id names
+// the monitor or run, nil when there is none.
+func recoverPanic(logger *slog.Logger, what string, id any) {
+	if v := recover(); v != nil {
+		logger.Error("worker: panic in "+what, "id", id, "panic", v, "stack", string(debug.Stack()))
+	}
+}
+
 // alertsSending counts the alert sends GoAlert has started and not yet
 // finished; alertsDone is signalled when it drops to zero. A WaitGroup can't
 // take a new Add while a Wait from an earlier round may still be returning.
@@ -186,6 +197,7 @@ func GoAlert(ctx context.Context, send func(ctx context.Context)) {
 	alertsSending++
 	alertsMu.Unlock()
 	go func() {
+		defer recoverPanic(slog.Default(), "alert", nil)
 		defer func() {
 			alertsMu.Lock()
 			if alertsSending--; alertsSending == 0 {

@@ -38,6 +38,7 @@ func checkDomainMonitors(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "domain check", m.ID)
 			checkOneDomainMonitor(ctx, n, m)
 		}()
 	}

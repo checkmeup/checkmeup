@@ -36,6 +36,7 @@ func checkDNSMonitors(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "dns check", m.ID)
 			checkOneDNSMonitor(ctx, n, m)
 		}()
 	}

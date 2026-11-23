@@ -34,6 +34,7 @@ func checkPortMonitors(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "port check", m.ID)
 			checkOnePortMonitor(ctx, n, m)
 		}()
 	}

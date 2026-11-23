@@ -3478,3 +3478,32 @@ func TestGoingDownOpensIncidentAtomically(t *testing.T) {
 		}
 	})
 }
+
+// panickingTransport stands in for any bug a check could hit on a monitor's
+// response.
+type panickingTransport struct{}
+
+func (panickingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	panic("injected panic")
+}
+
+// One monitor's check or alert panicking must not crash the process, which
+// would stop every other monitor's checks and alerts with it.
+func TestPanic_StaysInItsMonitor(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+
+	t.Run("a check that panics leaves the tick running", func(t *testing.T) {
+		n := Notifiers{Queries: queries, Telegram: telegram.NewClient(""), Mailer: email.NewSender(""), Webhook: webhook.NewClient(), Logger: testLogger(),
+			HTTPClient: &http.Client{Transport: panickingTransport{}}}
+		org := testOrg(t, queries, pool)
+		testUptimeMonitor(t, queries, org.ID, "http://example.invalid")
+
+		checkUptimeMonitors(context.Background(), n)
+	})
+
+	t.Run("an alert that panics still counts as finished", func(t *testing.T) {
+		GoAlert(context.Background(), func(context.Context) { panic("injected panic") })
+		WaitForAlerts()
+	})
+}

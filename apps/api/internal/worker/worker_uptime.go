@@ -37,6 +37,7 @@ func checkUptimeMonitors(ctx context.Context, n Notifiers) {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer recoverPanic(n.Logger, "uptime check", m.ID)
 			checkOneUptimeMonitor(ctx, n, m)
 		}()
 	}
