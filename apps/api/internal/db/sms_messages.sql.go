@@ -16,15 +16,29 @@ const deleteOldSMSMessages = `-- name: DeleteOldSMSMessages :exec
 DELETE FROM sms_messages WHERE created_at < NOW() - INTERVAL '7 days'
 `
 
-// A message whose final status never arrived.
+// A message whose final status never arrived, or whose undo never applied.
 func (q *Queries) DeleteOldSMSMessages(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, deleteOldSMSMessages)
 	return err
 }
 
+const deleteSMSMessage = `-- name: DeleteSMSMessage :exec
+DELETE FROM sms_messages WHERE sid = $1 AND org_id = $2
+`
+
+type DeleteSMSMessageParams struct {
+	Sid   string    `json:"sid"`
+	OrgID uuid.UUID `json:"org_id"`
+}
+
+func (q *Queries) DeleteSMSMessage(ctx context.Context, arg DeleteSMSMessageParams) error {
+	_, err := q.db.Exec(ctx, deleteSMSMessage, arg.Sid, arg.OrgID)
+	return err
+}
+
 const insertSMSMessage = `-- name: InsertSMSMessage :exec
-INSERT INTO sms_messages (sid, org_id, channel_id, fallback_subject, fallback_html)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO sms_messages (sid, org_id, channel_id, fallback_subject, fallback_html, monitor_type, alert_source_id, alert)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertSMSMessageParams struct {
@@ -33,8 +47,13 @@ type InsertSMSMessageParams struct {
 	ChannelID       uuid.UUID   `json:"channel_id"`
 	FallbackSubject pgtype.Text `json:"fallback_subject"`
 	FallbackHtml    pgtype.Text `json:"fallback_html"`
+	MonitorType     pgtype.Text `json:"monitor_type"`
+	AlertSourceID   pgtype.UUID `json:"alert_source_id"`
+	Alert           []byte      `json:"alert"`
 }
 
+// monitor_type, alert_source_id and alert are set only for an SMS that was its
+// alert's only delivery, of an alert that is retried (PRD alert-delivery).
 func (q *Queries) InsertSMSMessage(ctx context.Context, arg InsertSMSMessageParams) error {
 	_, err := q.db.Exec(ctx, insertSMSMessage,
 		arg.Sid,
@@ -42,25 +61,110 @@ func (q *Queries) InsertSMSMessage(ctx context.Context, arg InsertSMSMessagePara
 		arg.ChannelID,
 		arg.FallbackSubject,
 		arg.FallbackHtml,
+		arg.MonitorType,
+		arg.AlertSourceID,
+		arg.Alert,
 	)
 	return err
 }
 
+const keepSMSUndoPending = `-- name: KeepSMSUndoPending :exec
+INSERT INTO sms_messages (sid, org_id, channel_id, monitor_type, alert_source_id, alert, created_at, undo_pending)
+VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+ON CONFLICT (sid) DO NOTHING
+`
+
+type KeepSMSUndoPendingParams struct {
+	Sid           string             `json:"sid"`
+	OrgID         uuid.UUID          `json:"org_id"`
+	ChannelID     uuid.UUID          `json:"channel_id"`
+	MonitorType   pgtype.Text        `json:"monitor_type"`
+	AlertSourceID pgtype.UUID        `json:"alert_source_id"`
+	Alert         []byte             `json:"alert"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+// Keeps a taken message whose delivery couldn't be undone yet, as when its
+// callback came before the alert was counted delivered, for the worker to
+// undo on its next tick (ListPendingSMSUndos). created_at stays the SMS's, so
+// the undo never takes back an attempt made after it.
+func (q *Queries) KeepSMSUndoPending(ctx context.Context, arg KeepSMSUndoPendingParams) error {
+	_, err := q.db.Exec(ctx, keepSMSUndoPending,
+		arg.Sid,
+		arg.OrgID,
+		arg.ChannelID,
+		arg.MonitorType,
+		arg.AlertSourceID,
+		arg.Alert,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const listPendingSMSUndos = `-- name: ListPendingSMSUndos :many
+SELECT sid, org_id, monitor_type, alert_source_id, alert, created_at
+FROM sms_messages WHERE undo_pending ORDER BY created_at
+`
+
+type ListPendingSMSUndosRow struct {
+	Sid           string             `json:"sid"`
+	OrgID         uuid.UUID          `json:"org_id"`
+	MonitorType   pgtype.Text        `json:"monitor_type"`
+	AlertSourceID pgtype.UUID        `json:"alert_source_id"`
+	Alert         []byte             `json:"alert"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+// Every org's messages kept for their undo: a worker read across tenants, as
+// the Claim*AlertRetries queries are.
+func (q *Queries) ListPendingSMSUndos(ctx context.Context) ([]ListPendingSMSUndosRow, error) {
+	rows, err := q.db.Query(ctx, listPendingSMSUndos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPendingSMSUndosRow{}
+	for rows.Next() {
+		var i ListPendingSMSUndosRow
+		if err := rows.Scan(
+			&i.Sid,
+			&i.OrgID,
+			&i.MonitorType,
+			&i.AlertSourceID,
+			&i.Alert,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const takeSMSMessage = `-- name: TakeSMSMessage :one
-DELETE FROM sms_messages WHERE sid = $1
-RETURNING org_id, channel_id, fallback_subject, fallback_html
+DELETE FROM sms_messages WHERE sid = $1 AND NOT undo_pending
+RETURNING org_id, channel_id, fallback_subject, fallback_html, monitor_type, alert_source_id, alert, created_at
 `
 
 type TakeSMSMessageRow struct {
-	OrgID           uuid.UUID   `json:"org_id"`
-	ChannelID       uuid.UUID   `json:"channel_id"`
-	FallbackSubject pgtype.Text `json:"fallback_subject"`
-	FallbackHtml    pgtype.Text `json:"fallback_html"`
+	OrgID           uuid.UUID          `json:"org_id"`
+	ChannelID       uuid.UUID          `json:"channel_id"`
+	FallbackSubject pgtype.Text        `json:"fallback_subject"`
+	FallbackHtml    pgtype.Text        `json:"fallback_html"`
+	MonitorType     pgtype.Text        `json:"monitor_type"`
+	AlertSourceID   pgtype.UUID        `json:"alert_source_id"`
+	Alert           []byte             `json:"alert"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 // Deletes and returns the message, so of Twilio's several status callbacks
 // only the first final one acts on it. Looked up by Twilio's SID alone: the
-// callback carries no org context, and its URL token authenticates it.
+// callback carries no org context, and its URL token authenticates it. A
+// message kept for its undo (KeepSMSUndoPending) is the worker's, not a later
+// callback's.
 func (q *Queries) TakeSMSMessage(ctx context.Context, sid string) (TakeSMSMessageRow, error) {
 	row := q.db.QueryRow(ctx, takeSMSMessage, sid)
 	var i TakeSMSMessageRow
@@ -69,6 +173,10 @@ func (q *Queries) TakeSMSMessage(ctx context.Context, sid string) (TakeSMSMessag
 		&i.ChannelID,
 		&i.FallbackSubject,
 		&i.FallbackHtml,
+		&i.MonitorType,
+		&i.AlertSourceID,
+		&i.Alert,
+		&i.CreatedAt,
 	)
 	return i, err
 }

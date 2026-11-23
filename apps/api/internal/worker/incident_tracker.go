@@ -132,8 +132,10 @@ func trackDown(ctx context.Context, n Notifiers, t incidentTracker, m trackedMon
 	if !m.AlertsEnabled {
 		return
 	}
+	ref := m.ref()
+	ref.Retry = &AlertSource{ID: incidentID}
 	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, m.ref(), msg) {
+		if !DispatchAlert(ctx, n, m.OrgID, ref, msg) {
 			return
 		}
 		if err := t.countAlert(ctx, incidentID); err != nil {

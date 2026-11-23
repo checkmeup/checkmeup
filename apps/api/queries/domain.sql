@@ -83,6 +83,16 @@ RETURNING *;
 -- be cleared with it, but a newer one comes only with the next daily check.
 UPDATE domain_monitors SET alert = NULL WHERE id = $1;
 
+-- name: RestoreDomainPendingAlert :execrows
+-- Puts a delivered alert back on the monitor for ClaimDomainAlertRetries: its
+-- only delivery was an SMS that failed at the carrier, and so did the Fallback
+-- email (PRD alert-delivery). Only while the monitor has no pending alert and
+-- no attempt was made after that SMS, so a newer check's alert wins, and while
+-- it isn't fine again, as a check that finds it fine clears its alert.
+UPDATE domain_monitors SET alert = sqlc.arg(alert)::jsonb
+WHERE id = sqlc.arg(id) AND org_id = sqlc.arg(org_id) AND alert IS NULL
+  AND alert_attempted_at <= sqlc.arg(sms_created_at)::timestamptz AND status <> 'up';
+
 -- name: ClaimDomainAlertRetries :many
 -- Takes the monitors whose pending alert wasn't attempted in the last 5
 -- minutes, still with the problem, unmuted and under no maintenance window,

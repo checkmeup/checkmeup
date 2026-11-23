@@ -94,7 +94,8 @@ func checkOneDomainMonitor(ctx context.Context, n Notifiers, m db.DomainMonitor)
 		return
 	}
 	GoAlert(ctx, func(ctx context.Context) {
-		if DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "domain", ID: m.ID}, *result.alert) {
+		ref := MonitorRef{Type: "domain", ID: m.ID, Retry: &AlertSource{ID: m.ID, Alert: pending}}
+		if DispatchAlert(ctx, n, m.OrgID, ref, *result.alert) {
 			if err := n.Queries.ClearDomainPendingAlert(ctx, m.ID); err != nil {
 				n.Logger.Error("domain worker: clear pending alert", "monitor_id", m.ID, "err", err)
 			}

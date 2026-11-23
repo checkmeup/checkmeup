@@ -179,6 +179,18 @@ SELECT * FROM dns_incidents WHERE monitor_id = $1 ORDER BY started_at DESC LIMIT
 -- name: IncrementDNSIncidentAlertCount :one
 UPDATE dns_incidents SET alert_count = alert_count + 1 WHERE id = $1 RETURNING *;
 
+-- name: UndoDNSAlertDelivery :execrows
+-- Hands an open incident's down alert back to ClaimDNSAlertRetries: its
+-- only delivery was an SMS that failed at the carrier, and so did the Fallback
+-- email (PRD alert-delivery). Only while no attempt was made after that SMS,
+-- so a later delivery is never taken back; alert_attempted_at stays, so the
+-- retry comes 5 minutes after the last attempt.
+UPDATE dns_incidents i SET alert_count = 0
+FROM dns_monitors m
+WHERE i.id = sqlc.arg(id) AND m.id = i.monitor_id AND m.org_id = sqlc.arg(org_id)
+  AND i.resolved_at IS NULL AND i.alert_count > 0
+  AND i.alert_attempted_at <= sqlc.arg(sms_created_at)::timestamptz;
+
 -- name: DeleteOldDNSChecks :exec
 DELETE FROM dns_checks WHERE checked_at < NOW() - INTERVAL '90 days';
 

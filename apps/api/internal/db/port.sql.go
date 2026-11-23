@@ -674,6 +674,33 @@ func (q *Queries) SchedulePortRecheck(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const undoPortAlertDelivery = `-- name: UndoPortAlertDelivery :execrows
+UPDATE port_incidents i SET alert_count = 0
+FROM port_monitors m
+WHERE i.id = $1 AND m.id = i.monitor_id AND m.org_id = $2
+  AND i.resolved_at IS NULL AND i.alert_count > 0
+  AND i.alert_attempted_at <= $3::timestamptz
+`
+
+type UndoPortAlertDeliveryParams struct {
+	ID           uuid.UUID          `json:"id"`
+	OrgID        uuid.UUID          `json:"org_id"`
+	SmsCreatedAt pgtype.Timestamptz `json:"sms_created_at"`
+}
+
+// Hands an open incident's down alert back to ClaimPortAlertRetries: its
+// only delivery was an SMS that failed at the carrier, and so did the Fallback
+// email (PRD alert-delivery). Only while no attempt was made after that SMS,
+// so a later delivery is never taken back; alert_attempted_at stays, so the
+// retry comes 5 minutes after the last attempt.
+func (q *Queries) UndoPortAlertDelivery(ctx context.Context, arg UndoPortAlertDeliveryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, undoPortAlertDelivery, arg.ID, arg.OrgID, arg.SmsCreatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updatePortMonitor = `-- name: UpdatePortMonitor :one
 UPDATE port_monitors
 SET name = $3, host = $4, port = $5, expected_state = $6, interval_mins = $7, alerts_enabled = $8,

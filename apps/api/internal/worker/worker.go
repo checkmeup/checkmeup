@@ -146,6 +146,20 @@ type AlertMessage struct {
 type MonitorRef struct {
 	Type string
 	ID   uuid.UUID
+	// Retry is set only by the sends whose alert is retried until delivered
+	// (PRD alert-delivery): a down alert, and an SSL or domain one. An SMS
+	// that is such an alert's only delivery keeps it, so when the SMS fails at
+	// the carrier and its Fallback email fails too, the alert goes back to its
+	// retry. Nil for recovery and stuck-run alerts, which stay one-shot.
+	Retry *AlertSource
+}
+
+// AlertSource is where a retried alert is kept: its incident, or for SSL and
+// domain monitors, which keep no incident row, the monitor, with Alert, the
+// alert as the monitor keeps it until it is delivered.
+type AlertSource struct {
+	ID    uuid.UUID
+	Alert []byte
 }
 
 // DispatchAlert sends msg to every channel attached to the monitor, logging
@@ -178,7 +192,7 @@ func DispatchAlert(ctx context.Context, n Notifiers, orgID uuid.UUID, mon Monito
 		}
 	}
 	for _, c := range channels {
-		if c.Type == db.NotificationChannelTypeSms && sendSMSAlert(ctx, n, c, msg, mon.ID, !sent) {
+		if c.Type == db.NotificationChannelTypeSms && sendSMSAlert(ctx, n, c, msg, mon, !sent) {
 			sent = true
 		}
 	}
@@ -443,8 +457,9 @@ func consumeSMSCredit(ctx context.Context, n Notifiers, c db.NotificationChannel
 //
 // An accepted SMS is kept by its SID until Twilio's status callback reports
 // how it ended (HandleSMSStatus). onlyDelivery — nothing else delivered the
-// alert — stores the fallback email with it, sent if the SMS fails after all.
-func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, monitorID uuid.UUID, onlyDelivery bool) bool {
+// alert — stores the fallback email with it, sent if the SMS fails after all,
+// and mon's retry source, which the alert goes back to if that fails too.
+func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, msg AlertMessage, mon MonitorRef, onlyDelivery bool) bool {
 	if msg.SMS == "" {
 		return false
 	}
@@ -480,7 +495,7 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 	}
 
 	if sendErr != nil {
-		n.Logger.Error("worker: send sms alert", "monitor_id", monitorID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
+		n.Logger.Error("worker: send sms alert", "monitor_id", mon.ID, "channel_id", c.ID, "status_code", statusCode, "err", sendErr)
 		return false
 	}
 	if sid != "" {
@@ -488,6 +503,11 @@ func sendSMSAlert(ctx context.Context, n Notifiers, c db.NotificationChannel, ms
 		if onlyDelivery {
 			params.FallbackSubject = pgtype.Text{String: msg.EmailSubject, Valid: true}
 			params.FallbackHtml = pgtype.Text{String: msg.EmailHTML, Valid: true}
+			if mon.Retry != nil {
+				params.MonitorType = pgtype.Text{String: mon.Type, Valid: true}
+				params.AlertSourceID = pgtype.UUID{Bytes: mon.Retry.ID, Valid: true}
+				params.Alert = mon.Retry.Alert
+			}
 		}
 		if err := n.Queries.InsertSMSMessage(ctx, params); err != nil {
 			n.Logger.Error("worker: record sms message", "channel_id", c.ID, "sid", sid, "err", err)
@@ -666,7 +686,8 @@ func TruncateSMS(s string) string {
 // (ADR alerting). Only a final status acts, and only once per message:
 // delivered records success on the channel; failed or undelivered records
 // the failure and, when the SMS was the alert's only delivery, emails every
-// user in the org instead. Reports whether that fallback email went out.
+// user in the org instead. Reports whether that fallback email went out. When
+// it doesn't, an alert that is retried goes back to its retry (handBack).
 func HandleSMSStatus(ctx context.Context, n Notifiers, sid, status, errorCode string) bool {
 	if status != "delivered" && status != "failed" && status != "undelivered" {
 		return false
@@ -698,7 +719,38 @@ func HandleSMSStatus(ctx context.Context, n Notifiers, sid, status, errorCode st
 		return false
 	}
 	n.Logger.Warn("worker: sms alert failed after send, emailing the org", "channel_id", m.ChannelID, "sid", sid, "status", detail)
-	return dispatchFallbackEmail(ctx, n, m.OrgID, AlertMessage{EmailSubject: m.FallbackSubject.String, EmailHTML: m.FallbackHtml.String}, uuid.Nil)
+	if dispatchFallbackEmail(ctx, n, m.OrgID, AlertMessage{EmailSubject: m.FallbackSubject.String, EmailHTML: m.FallbackHtml.String}, uuid.Nil) {
+		return true
+	}
+	if m.MonitorType.Valid {
+		handBack(ctx, n, sid, m)
+	}
+	return false
+}
+
+// handBack undoes the delivery of the alert an SMS was the only delivery of,
+// once the SMS and its Fallback email both failed, so the alert's retry sends
+// it again. One that can't be undone yet, as when this callback came before
+// the alert was counted delivered, is kept for the worker to undo on its next
+// tick (undoPendingDeliveries). If even that fails, the alert stays lost, and
+// only logged.
+func handBack(ctx context.Context, n Notifiers, sid string, m db.TakeSMSMessageRow) {
+	undone, err := undoDelivery(ctx, n, smsHandBack{
+		OrgID: m.OrgID, MonitorType: m.MonitorType.String, SourceID: m.AlertSourceID.Bytes, Alert: m.Alert, SentAt: m.CreatedAt,
+	})
+	if err != nil {
+		n.Logger.Error("worker: hand alert back to its retry", "sid", sid, "err", err)
+	}
+	if undone {
+		n.Logger.Warn("worker: sms alert and its fallback email failed, alert handed back to its retry", "sid", sid, "monitor_type", m.MonitorType.String)
+		return
+	}
+	if err := n.Queries.KeepSMSUndoPending(ctx, db.KeepSMSUndoPendingParams{
+		Sid: sid, OrgID: m.OrgID, ChannelID: m.ChannelID,
+		MonitorType: m.MonitorType, AlertSourceID: m.AlertSourceID, Alert: m.Alert, CreatedAt: m.CreatedAt,
+	}); err != nil {
+		n.Logger.Error("worker: keep sms message for its undo", "sid", sid, "err", err)
+	}
 }
 
 func pruneOldPings(ctx context.Context, queries *db.Queries, logger *slog.Logger) {

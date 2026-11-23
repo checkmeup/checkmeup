@@ -28,16 +28,16 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
 - A cron monitor's alert filter counts missed runs.
 - A cron ping is never lost to a failed write of its history row, and a database error never answers it 404. A ping whose monitor can't be read at all is still lost: there is nothing to record it on.
 - A stuck run of a paused cron monitor doesn't alert.
+- An alert retried this way whose only delivery was an SMS that then fails at the carrier, and whose Fallback email fails too, goes back to its retry: the SMS keeps the alert's incident, or its SSL or domain monitor, so its status callback can undo the delivery.
 
 ## Non-goals
 
 - Retrying recovery and stuck-run alerts: losing one leaves a problem reported but not its end, never silence during a problem. They stay one-shot.
 - Exactly-once delivery: an alert that went out but wasn't recorded (a restart right after sending) may go out twice. Twice is better than never.
 - Retrying a single channel that failed when another one, or the Fallback email, delivered: as today, the alert counts as delivered once anything delivered it (PRD notification-channels), and Settings shows the failed channel's last delivery.
-- Treating an SMS as undelivered until Twilio's status callback: as today, an SMS Twilio accepted counts as delivered, and a later carrier failure sends the Fallback email (ADR alerting).
+- Treating an SMS as undelivered until Twilio's status callback: as today, an SMS Twilio accepted counts as delivered, and a later carrier failure sends the Fallback email (ADR alerting); only when that fails too does the alert go back to its retry (see the acceptance criteria).
 - A status page or customer-facing notice of Checkmeup's own outage.
 - Claiming due monitors so two processes during a deploy never check the same one: a duplicate check row for those few seconds is harmless once an incident can't open twice.
-- Retrying the Fallback email sent after an SMS that was the alert's only delivery fails at the carrier: it needs the SMS tied to its incident, and is an Inbox item.
 
 ## Anti-goals
 
@@ -65,6 +65,20 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryExpiryAndSSLAlerts/an SSL error alert that fails is sent again 5 minutes later, until delivered, and counts once"
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryExpiryAndSSLAlerts/an SSL alert isn't sent again once the certificate is fine"
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryExpiryAndSSLAlerts/a domain warning that fails is sent again 5 minutes later, until delivered"
+- A down alert (uptime, port, DNS, cron), an SSL error alert or SSL warning, or a domain warning or expired alert, whose only delivery was an SMS that Twilio's status callback then reports failed, and whose Fallback email fails too, is attempted again as an undelivered one is: on the first tick at least 5 minutes after its last attempt, and every 5 minutes after, while what it reports still holds, until something delivers it, and not again after. Its failed SMS count toward the 3 tries of its SMS channel. One whose Fallback email delivered isn't retried. A callback that arrives before the alert was counted delivered hands it back on the next tick. A hand-back never takes back an attempt made after the SMS, nor replaces a newer SSL or domain alert. A recovery or stuck-run SMS in the same case stays one-shot.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a down alert whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered, then not again"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/every incident-tracked type hands a failed only-delivery SMS back to its retry"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a cron missed-run alert whose only SMS and Fallback email fail is sent again"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/an SSL error alert whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a domain warning whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/an alert handed back tries its SMS at most 3 times, the failed ones counted"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a failed SMS whose Fallback email delivered isn't retried"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a failed SMS on an incident no longer open hands nothing back"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a failure callback that arrives before the alert is counted undoes it on the next tick"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/an undo never takes back a delivery made after the SMS"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a handed-back SSL or domain alert never replaces a newer one"
+  → test: apps/api/internal/worker/alert_retry_test.go "TestRetryAfterFailedSMS/a failed recovery or stuck-run SMS stays one-shot"
+  → test: apps/api/internal/worker/worker_test.go "TestDispatchAlert/an accepted sms keeps its alert's retry source only when the send is retried"
 - `/api/v1/health` and `/up` answer 503 with the code `worker_stalled` when no worker tick has finished in the last 2 minutes, with the first 2 minutes after the process starts counting as finished (so a deploy isn't held up), and 200 otherwise. A database that doesn't answer still gives `db_unavailable`, checked first. A tick slower than 2 minutes, which delays every check by as much, gives 503 too, on purpose.
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_WorkerStalled"
   → test: apps/api/internal/server/server_test.go "TestHandleHealth_DBUnavailable"

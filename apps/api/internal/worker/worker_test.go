@@ -1235,6 +1235,42 @@ func TestDispatchAlert(t *testing.T) {
 			t.Fatalf("SM-second fallback = %q, want none: the email channel delivered the alert", second.FallbackSubject.String)
 		}
 	})
+
+	t.Run("an accepted sms keeps its alert's retry source only when the send is retried", func(t *testing.T) {
+		sids := []string{"SM-retried-" + uuid.NewString(), "SM-one-shot-" + uuid.NewString()}
+		given := append([]string(nil), sids...)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]string{"sid": given[0]})
+			given = given[1:]
+		}))
+		defer srv.Close()
+		twilioN := n
+		twilioN.SMS = twilio.NewClientWithBaseURL(srv.URL, srv.Client())
+		smsMsg := AlertMessage{SMS: "checkmeup: X is DOWN", EmailSubject: "down", EmailHTML: "<p>down</p>"}
+
+		org := testOrg(t, queries, pool)
+		upgradeOrgPlan(t, queries, org.ID, db.PlanSolo)
+		monitorID := uuid.New()
+		attachNotificationChannel(t, queries, testNotificationChannel(t, queries, org.ID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"}).ID, "ssl", monitorID)
+		DispatchAlert(context.Background(), twilioN, org.ID, MonitorRef{Type: "ssl", ID: monitorID, Retry: &AlertSource{ID: monitorID, Alert: []byte(`{"EmailSubject": "down"}`)}}, smsMsg)
+		DispatchAlert(context.Background(), twilioN, org.ID, MonitorRef{Type: "ssl", ID: monitorID}, smsMsg)
+
+		retried, err := queries.TakeSMSMessage(context.Background(), sids[0])
+		if err != nil {
+			t.Fatalf("take %s: %v", sids[0], err)
+		}
+		if retried.MonitorType.String != "ssl" || uuid.UUID(retried.AlertSourceID.Bytes) != monitorID || string(retried.Alert) != `{"EmailSubject": "down"}` {
+			t.Fatalf("retried source = %q, %v, %s; want ssl, the monitor, its alert", retried.MonitorType.String, retried.AlertSourceID, retried.Alert)
+		}
+		oneShot, err := queries.TakeSMSMessage(context.Background(), sids[1])
+		if err != nil {
+			t.Fatalf("take %s: %v", sids[1], err)
+		}
+		if oneShot.MonitorType.Valid || oneShot.AlertSourceID.Valid || oneShot.Alert != nil {
+			t.Fatalf("one-shot source = %v, %v, %s; want none", oneShot.MonitorType, oneShot.AlertSourceID, oneShot.Alert)
+		}
+	})
 }
 
 func TestHandleSMSStatus(t *testing.T) {

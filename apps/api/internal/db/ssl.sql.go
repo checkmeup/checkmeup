@@ -334,6 +334,37 @@ func (q *Queries) PauseSSLMonitor(ctx context.Context, arg PauseSSLMonitorParams
 	return i, err
 }
 
+const restoreSSLPendingAlert = `-- name: RestoreSSLPendingAlert :execrows
+UPDATE ssl_monitors SET alert = $1::jsonb
+WHERE id = $2 AND org_id = $3 AND alert IS NULL
+  AND alert_attempted_at <= $4::timestamptz AND status <> 'up'
+`
+
+type RestoreSSLPendingAlertParams struct {
+	Alert        []byte             `json:"alert"`
+	ID           uuid.UUID          `json:"id"`
+	OrgID        uuid.UUID          `json:"org_id"`
+	SmsCreatedAt pgtype.Timestamptz `json:"sms_created_at"`
+}
+
+// Puts a delivered alert back on the monitor for ClaimSSLAlertRetries: its
+// only delivery was an SMS that failed at the carrier, and so did the Fallback
+// email (PRD alert-delivery). Only while the monitor has no pending alert and
+// no attempt was made after that SMS, so a newer check's alert wins, and while
+// it isn't fine again, as a check that finds it fine clears its alert.
+func (q *Queries) RestoreSSLPendingAlert(ctx context.Context, arg RestoreSSLPendingAlertParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreSSLPendingAlert,
+		arg.Alert,
+		arg.ID,
+		arg.OrgID,
+		arg.SmsCreatedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const resumeSSLMonitor = `-- name: ResumeSSLMonitor :one
 UPDATE ssl_monitors SET status = 'waiting', next_check_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND org_id = $2

@@ -72,7 +72,7 @@ func processOverdueMonitor(ctx context.Context, n Notifiers, m db.CronMonitor) {
 	}
 
 	GoAlert(ctx, func(ctx context.Context) {
-		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID}, msg) {
+		if !DispatchAlert(ctx, n, m.OrgID, MonitorRef{Type: "cron", ID: m.ID, Retry: &AlertSource{ID: inc.ID}}, msg) {
 			return
 		}
 		if _, err := n.Queries.IncrementCronIncidentAlertCount(ctx, inc.ID); err != nil {

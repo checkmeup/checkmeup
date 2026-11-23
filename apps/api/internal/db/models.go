@@ -762,6 +762,10 @@ type SmsMessage struct {
 	FallbackSubject pgtype.Text        `json:"fallback_subject"`
 	FallbackHtml    pgtype.Text        `json:"fallback_html"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	MonitorType     pgtype.Text        `json:"monitor_type"`
+	AlertSourceID   pgtype.UUID        `json:"alert_source_id"`
+	Alert           []byte             `json:"alert"`
+	UndoPending     bool               `json:"undo_pending"`
 }
 
 type SslMonitor struct {

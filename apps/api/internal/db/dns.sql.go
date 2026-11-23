@@ -777,6 +777,33 @@ func (q *Queries) ScheduleDNSRecheck(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const undoDNSAlertDelivery = `-- name: UndoDNSAlertDelivery :execrows
+UPDATE dns_incidents i SET alert_count = 0
+FROM dns_monitors m
+WHERE i.id = $1 AND m.id = i.monitor_id AND m.org_id = $2
+  AND i.resolved_at IS NULL AND i.alert_count > 0
+  AND i.alert_attempted_at <= $3::timestamptz
+`
+
+type UndoDNSAlertDeliveryParams struct {
+	ID           uuid.UUID          `json:"id"`
+	OrgID        uuid.UUID          `json:"org_id"`
+	SmsCreatedAt pgtype.Timestamptz `json:"sms_created_at"`
+}
+
+// Hands an open incident's down alert back to ClaimDNSAlertRetries: its
+// only delivery was an SMS that failed at the carrier, and so did the Fallback
+// email (PRD alert-delivery). Only while no attempt was made after that SMS,
+// so a later delivery is never taken back; alert_attempted_at stays, so the
+// retry comes 5 minutes after the last attempt.
+func (q *Queries) UndoDNSAlertDelivery(ctx context.Context, arg UndoDNSAlertDeliveryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, undoDNSAlertDelivery, arg.ID, arg.OrgID, arg.SmsCreatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateDNSMonitor = `-- name: UpdateDNSMonitor :one
 UPDATE dns_monitors
 SET name = $3, hostname = $4, record_type = $5, expected_value = $6, baseline_captured = FALSE,

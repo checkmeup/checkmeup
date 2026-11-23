@@ -8,18 +8,21 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/email"
 	"github.com/checkmeup/checkmeup/internal/rdap"
 	"github.com/checkmeup/checkmeup/internal/telegram"
+	"github.com/checkmeup/checkmeup/internal/twilio"
 	"github.com/checkmeup/checkmeup/internal/webhook"
 )
 
@@ -393,4 +396,451 @@ func TestDispatchAlert_ChannelsUnreadableIsNotDelivered(t *testing.T) {
 	if DispatchAlert(context.Background(), n, uuid.New(), MonitorRef{Type: "uptime", ID: uuid.New()}, AlertMessage{EmailSubject: "DOWN: api"}) {
 		t.Fatal("want an alert whose channels can't be read reported undelivered")
 	}
+}
+
+// acceptingTwilio is a Twilio that accepts every SMS, each with a fresh SID,
+// and lists the SIDs it gave out, oldest first.
+func acceptingTwilio(t *testing.T) (client *twilio.Client, sids func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var given []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		sid := "SM" + strings.ReplaceAll(uuid.NewString(), "-", "")
+		mu.Lock()
+		given = append(given, sid)
+		mu.Unlock()
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(map[string]string{"sid": sid})
+	}))
+	t.Cleanup(srv.Close)
+	return twilio.NewClientWithBaseURL(srv.URL, srv.Client()), func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]string(nil), given...)
+	}
+}
+
+// smsOnlyOrg is an org on a plan with SMS credits and no users, so a
+// Fallback email has nobody to reach.
+func smsOnlyOrg(t *testing.T, queries *db.Queries, pool *pgxpool.Pool) db.Org {
+	t.Helper()
+	org := testOrg(t, queries, pool)
+	upgradeOrgPlan(t, queries, org.ID, db.PlanSolo)
+	return org
+}
+
+// attachSMS attaches an SMS channel to the monitor, its only channel.
+func attachSMS(t *testing.T, queries *db.Queries, orgID uuid.UUID, monitorType string, monitorID uuid.UUID) {
+	t.Helper()
+	c := testNotificationChannel(t, queries, orgID, db.NotificationChannelTypeSms, map[string]string{"phone_number": "+15005550006"})
+	attachNotificationChannel(t, queries, c.ID, monitorType, monitorID)
+}
+
+// failAtCarrier delivers Twilio's callback that sid was undelivered, and
+// reports whether its Fallback email went out.
+func failAtCarrier(t *testing.T, n Notifiers, sid string) bool {
+	t.Helper()
+	return HandleSMSStatus(context.Background(), n, sid, "undelivered", "30003")
+}
+
+// lastSID is the SID of the latest SMS sent, failing the test when none was.
+func lastSID(t *testing.T, sids []string) string {
+	t.Helper()
+	if len(sids) == 0 {
+		t.Fatal("want an SMS sent, got none")
+	}
+	return sids[len(sids)-1]
+}
+
+// attemptedAgo sets back when the monitor's alert was last attempted: on its
+// open incident, or for SSL and domain, on the monitor.
+func attemptedAgo(t *testing.T, pool *pgxpool.Pool, monitorType string, monitorID uuid.UUID, interval string) {
+	t.Helper()
+	where := monitorType + "_incidents SET alert_attempted_at = NOW() - $2::interval WHERE resolved_at IS NULL AND monitor_id = $1"
+	if monitorType == "ssl" || monitorType == "domain" {
+		where = monitorType + "_monitors SET alert_attempted_at = NOW() - $2::interval WHERE id = $1"
+	}
+	mustExecWorker(t, pool, "UPDATE "+where, monitorID, interval)
+}
+
+// retryNow runs one retry pass and waits for what it sends.
+func retryNow(n Notifiers) {
+	retryAlerts(context.Background(), n)
+	WaitForAlerts()
+}
+
+// smsRetryNotifiers are retryNotifiers whose SMS goes to an acceptingTwilio.
+func smsRetryNotifiers(t *testing.T, queries *db.Queries) (Notifiers, func() []string) {
+	t.Helper()
+	n := retryNotifiers(queries)
+	var sids func() []string
+	n.SMS, sids = acceptingTwilio(t)
+	return n, sids
+}
+
+func TestRetryAfterFailedSMS(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	ctx := context.Background()
+
+	t.Run("a down alert whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered, then not again", func(t *testing.T) {
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer target.Close()
+		n := retryNotifiers(queries)
+		var sids func() []string
+		n.SMS, sids = acceptingTwilio(t)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(ctx, n) // rechecked before it counts
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(ctx, n)
+		WaitForAlerts()
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want the down alert's SMS sent once, got %d", got)
+		}
+		if failAtCarrier(t, n, lastSID(t, sids())) {
+			t.Fatal("want the Fallback email to fail: the org has no users")
+		}
+
+		retryAlerts(ctx, n)
+		WaitForAlerts()
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want no retry within 5 minutes of the attempt, got %d SMS", got)
+		}
+
+		for want := 2; want <= 3; want++ {
+			mustExecWorker(t, pool, "UPDATE uptime_incidents SET alert_attempted_at = NOW() - INTERVAL '5 minutes' WHERE monitor_id = $1", mon.ID)
+			retryAlerts(ctx, n)
+			WaitForAlerts()
+			if got := len(sids()); got != want {
+				t.Fatalf("want the alert sent again 5 minutes after the attempt, got %d SMS, want %d", got, want)
+			}
+			if want == 2 {
+				failAtCarrier(t, n, lastSID(t, sids()))
+			}
+		}
+		if HandleSMSStatus(ctx, n, lastSID(t, sids()), "delivered", "") {
+			t.Fatal("want no Fallback email for a delivered SMS")
+		}
+		if got := incidentAlertCount(t, pool, "uptime_incidents", mon.ID); got != 1 {
+			t.Fatalf("want the delivered alert counted once, got alert_count %d", got)
+		}
+
+		mustExecWorker(t, pool, "UPDATE uptime_incidents SET alert_attempted_at = NOW() - INTERVAL '1 hour' WHERE monitor_id = $1", mon.ID)
+		retryAlerts(ctx, n)
+		WaitForAlerts()
+		if got := len(sids()); got != 3 {
+			t.Fatalf("want no retry once delivered, got %d SMS", got)
+		}
+	})
+
+	t.Run("every incident-tracked type hands a failed only-delivery SMS back to its retry", func(t *testing.T) {
+		for _, tc := range []struct {
+			monitorType string
+			create      func(orgID uuid.UUID) uuid.UUID
+		}{
+			{"uptime", func(orgID uuid.UUID) uuid.UUID {
+				return testUptimeMonitor(t, queries, orgID, "http://example.invalid").ID
+			}},
+			{"port", func(orgID uuid.UUID) uuid.UUID {
+				return testPortMonitor(t, queries, orgID, "example.invalid", 443, db.PortExpectedStateOpen).ID
+			}},
+			{"dns", func(orgID uuid.UUID) uuid.UUID { return testDNSMonitor(t, queries, orgID, "example.invalid", "").ID }},
+			{"cron", func(orgID uuid.UUID) uuid.UUID { return testCronMonitor(t, queries, orgID, "every 1h").ID }},
+		} {
+			t.Run(tc.monitorType, func(t *testing.T) {
+				n, sids := smsRetryNotifiers(t, queries)
+				org := smsOnlyOrg(t, queries, pool)
+				id := tc.create(org.ID)
+				attachSMS(t, queries, org.ID, tc.monitorType, id)
+				seedUndeliveredIncident(t, pool, tc.monitorType, id)
+
+				retryNow(n)
+				if got := incidentAlertCount(t, pool, tc.monitorType+"_incidents", id); got != 1 {
+					t.Fatalf("want the accepted SMS counted as the delivery, got alert_count %d", got)
+				}
+				failAtCarrier(t, n, lastSID(t, sids()))
+				if got := incidentAlertCount(t, pool, tc.monitorType+"_incidents", id); got != 0 {
+					t.Fatalf("want the delivery undone, got alert_count %d", got)
+				}
+				attemptedAgo(t, pool, tc.monitorType, id, "5 minutes")
+				retryNow(n)
+				if got := len(sids()); got != 2 {
+					t.Fatalf("want the down alert sent again, got %d SMS", got)
+				}
+			})
+		}
+	})
+
+	t.Run("a cron missed-run alert whose only SMS and Fallback email fail is sent again", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		attachSMS(t, queries, org.ID, "cron", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET status = 'up', next_ping_at = NOW() - INTERVAL '1 hour' WHERE id = $1", mon.ID)
+
+		checkOverdue(ctx, n)
+		WaitForAlerts()
+		failAtCarrier(t, n, lastSID(t, sids()))
+		attemptedAgo(t, pool, "cron", mon.ID, "5 minutes")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want the missed-run alert sent again, got %d SMS", got)
+		}
+	})
+
+	t.Run("an SSL error alert whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testSSLMonitor(t, queries, org.ID, "this-host-does-not-exist.invalid")
+		attachSMS(t, queries, org.ID, "ssl", mon.ID)
+		// Already in error, so this failure isn't held for a recheck.
+		mustExecWorker(t, pool, "UPDATE ssl_monitors SET status = 'error', consecutive_failures = 1 WHERE id = $1", mon.ID)
+
+		checkSSLMonitors(ctx, n)
+		WaitForAlerts()
+		failAtCarrier(t, n, lastSID(t, sids()))
+		retryNow(n)
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want no retry within 5 minutes of the attempt, got %d SMS", got)
+		}
+
+		attemptedAgo(t, pool, "ssl", mon.ID, "5 minutes")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want the SSL alert sent again, got %d SMS", got)
+		}
+		HandleSMSStatus(ctx, n, lastSID(t, sids()), "delivered", "")
+		attemptedAgo(t, pool, "ssl", mon.ID, "1 hour")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want no retry once delivered, got %d SMS", got)
+		}
+	})
+
+	t.Run("a domain warning whose only SMS and Fallback email fail is sent again 5 minutes later, until delivered", func(t *testing.T) {
+		expiresAt := time.Now().Add(20 * 24 * time.Hour).UTC().Truncate(time.Second)
+		rdapSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]any{"events": []map[string]string{{"eventAction": "expiration", "eventDate": expiresAt.Format(time.RFC3339)}}})
+		}))
+		defer rdapSrv.Close()
+		n, sids := smsRetryNotifiers(t, queries)
+		n.RDAP = rdap.NewClientWithHTTPClient(rdapSrv.Client(), rdapSrv.URL+"/domain/")
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+		attachSMS(t, queries, org.ID, "domain", mon.ID)
+
+		checkDomainMonitors(ctx, n)
+		WaitForAlerts()
+		failAtCarrier(t, n, lastSID(t, sids()))
+		attemptedAgo(t, pool, "domain", mon.ID, "5 minutes")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want the warning sent again, got %d SMS", got)
+		}
+		HandleSMSStatus(ctx, n, lastSID(t, sids()), "delivered", "")
+		attemptedAgo(t, pool, "domain", mon.ID, "1 hour")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want no retry once delivered, got %d SMS", got)
+		}
+	})
+
+	t.Run("an alert handed back tries its SMS at most 3 times, the failed ones counted", func(t *testing.T) {
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer target.Close()
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+		checkUptimeMonitors(ctx, n)
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(ctx, n)
+		WaitForAlerts()
+
+		for attempt := 2; attempt <= 5; attempt++ {
+			if got := len(sids()); got == attempt-1 {
+				failAtCarrier(t, n, lastSID(t, sids()))
+			}
+			attemptedAgo(t, pool, "uptime", mon.ID, "5 minutes")
+			retryNow(n)
+		}
+		if got := len(sids()); got != 3 {
+			t.Fatalf("want 3 SMS in all, got %d", got)
+		}
+		var attempts int32
+		if err := pool.QueryRow(ctx, "SELECT alert_attempts FROM uptime_incidents WHERE monitor_id = $1", mon.ID).Scan(&attempts); err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		if attempts != 5 {
+			t.Fatalf("want the alert still attempted without its SMS, got %d attempts", attempts)
+		}
+	})
+
+	t.Run("a failed SMS whose Fallback email delivered isn't retried", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		testUser(t, queries, org.ID) // the Fallback email reaches them
+		mon := testUptimeMonitor(t, queries, org.ID, "http://example.invalid")
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+		seedUndeliveredIncident(t, pool, "uptime", mon.ID)
+
+		retryNow(n)
+		if !failAtCarrier(t, n, lastSID(t, sids())) {
+			t.Fatal("want the Fallback email sent")
+		}
+		attemptedAgo(t, pool, "uptime", mon.ID, "1 hour")
+		retryNow(n)
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want no retry once the Fallback email delivered it, got %d SMS", got)
+		}
+		if got := incidentAlertCount(t, pool, "uptime_incidents", mon.ID); got != 1 {
+			t.Fatalf("want the alert still counted delivered, got alert_count %d", got)
+		}
+	})
+
+	t.Run("a failed SMS on an incident no longer open hands nothing back", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, "http://example.invalid")
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+		seedUndeliveredIncident(t, pool, "uptime", mon.ID)
+
+		retryNow(n)
+		mustExecWorker(t, pool, "UPDATE uptime_incidents SET resolved_at = NOW() WHERE monitor_id = $1", mon.ID)
+		failAtCarrier(t, n, lastSID(t, sids()))
+		retryNow(n)
+		if got := incidentAlertCount(t, pool, "uptime_incidents", mon.ID); got != 1 {
+			t.Fatalf("want the resolved incident left as it was, got alert_count %d", got)
+		}
+	})
+
+	t.Run("an undo never takes back a delivery made after the SMS", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, "http://example.invalid")
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+		seedUndeliveredIncident(t, pool, "uptime", mon.ID)
+
+		retryNow(n)
+		// The SMS is older than the attempt that delivered the alert.
+		mustExecWorker(t, pool, "UPDATE sms_messages SET created_at = NOW() - INTERVAL '10 minutes' WHERE sid = $1", lastSID(t, sids()))
+		failAtCarrier(t, n, lastSID(t, sids()))
+		attemptedAgo(t, pool, "uptime", mon.ID, "6 minutes")
+		retryNow(n)
+		if got := incidentAlertCount(t, pool, "uptime_incidents", mon.ID); got != 1 {
+			t.Fatalf("want the later delivery kept, got alert_count %d", got)
+		}
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want no retry, got %d SMS", got)
+		}
+	})
+
+	t.Run("a handed-back SSL or domain alert never replaces a newer one", func(t *testing.T) {
+		for _, tc := range []struct {
+			monitorType string
+			create      func(orgID uuid.UUID) uuid.UUID
+		}{
+			{"ssl", func(orgID uuid.UUID) uuid.UUID { return testSSLMonitor(t, queries, orgID, "example.invalid").ID }},
+			{"domain", func(orgID uuid.UUID) uuid.UUID { return testDomainMonitor(t, queries, orgID, "example.com").ID }},
+		} {
+			t.Run(tc.monitorType, func(t *testing.T) {
+				n, sids := smsRetryNotifiers(t, queries)
+				org := smsOnlyOrg(t, queries, pool)
+				id := tc.create(org.ID)
+				attachSMS(t, queries, org.ID, tc.monitorType, id)
+				table := tc.monitorType + "_monitors"
+				older, err := json.Marshal(AlertMessage{EmailSubject: "older", SMS: "Checkmeup: older"})
+				if err != nil {
+					t.Fatalf("marshal alert: %v", err)
+				}
+				mustExecWorker(t, pool, "UPDATE "+table+" SET status = 'error', alert = $2, alert_attempted_at = NOW() - INTERVAL '6 minutes', alert_attempts = 1 WHERE id = $1", id, older)
+
+				retryNow(n)
+				// A newer check's alert, its attempt set back so only its
+				// being there keeps the older one out.
+				newer, err := json.Marshal(AlertMessage{EmailSubject: "newer", SMS: "Checkmeup: newer"})
+				if err != nil {
+					t.Fatalf("marshal alert: %v", err)
+				}
+				mustExecWorker(t, pool, "UPDATE "+table+" SET alert = $2, alert_attempted_at = NOW() - INTERVAL '1 hour' WHERE id = $1", id, newer)
+				failAtCarrier(t, n, lastSID(t, sids()))
+				undoPendingDeliveries(ctx, n)
+
+				var subject string
+				if err := pool.QueryRow(ctx, "SELECT alert->>'EmailSubject' FROM "+table+" WHERE id = $1", id).Scan(&subject); err != nil {
+					t.Fatalf("query monitor: %v", err)
+				}
+				if subject != "newer" {
+					t.Fatalf("want the newer alert kept, got %q", subject)
+				}
+			})
+		}
+	})
+
+	t.Run("a failure callback that arrives before the alert is counted undoes it on the next tick", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, "http://example.invalid")
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+		seedUndeliveredIncident(t, pool, "uptime", mon.ID)
+		var incidentID, channelID uuid.UUID
+		if err := pool.QueryRow(ctx, "SELECT id FROM uptime_incidents WHERE monitor_id = $1", mon.ID).Scan(&incidentID); err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		if err := pool.QueryRow(ctx, "SELECT channel_id FROM monitor_notification_channels WHERE monitor_id = $1", mon.ID).Scan(&channelID); err != nil {
+			t.Fatalf("query channel: %v", err)
+		}
+		// The SMS of the alert's attempt 6 minutes ago, not yet counted delivered.
+		sid := "SM" + strings.ReplaceAll(uuid.NewString(), "-", "")
+		if err := queries.InsertSMSMessage(ctx, db.InsertSMSMessageParams{
+			Sid: sid, OrgID: org.ID, ChannelID: channelID,
+			FallbackSubject: pgtype.Text{String: "DOWN: Seeded", Valid: true}, FallbackHtml: pgtype.Text{String: "<p>down</p>", Valid: true},
+			MonitorType: pgtype.Text{String: "uptime", Valid: true}, AlertSourceID: pgtype.UUID{Bytes: incidentID, Valid: true},
+		}); err != nil {
+			t.Fatalf("insert sms message: %v", err)
+		}
+
+		failAtCarrier(t, n, sid)
+		mustExecWorker(t, pool, "UPDATE uptime_incidents SET alert_count = 1 WHERE id = $1", incidentID) // the count lands
+		retryNow(n)
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want the alert sent again on the next tick, got %d SMS", got)
+		}
+		var left int
+		if err := pool.QueryRow(ctx, "SELECT count(*) FROM sms_messages WHERE sid = $1", sid).Scan(&left); err != nil {
+			t.Fatalf("query sms messages: %v", err)
+		}
+		if left != 0 {
+			t.Fatal("want the message dropped once its undo applied")
+		}
+	})
+
+	t.Run("a failed recovery or stuck-run SMS stays one-shot", func(t *testing.T) {
+		n, sids := smsRetryNotifiers(t, queries)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testCronMonitor(t, queries, org.ID, "every 1h")
+		attachSMS(t, queries, org.ID, "cron", mon.ID)
+		seedUndeliveredIncident(t, pool, "cron", mon.ID)
+		mustExecWorker(t, pool, "UPDATE cron_incidents SET alert_count = 1 WHERE monitor_id = $1", mon.ID) // its down alert delivered
+		mustExecWorker(t, pool, "UPDATE cron_monitors SET max_duration_mins = 30 WHERE id = $1", mon.ID)
+		testCronRun(t, pool, mon.ID, time.Now().Add(-2*time.Hour), false)
+
+		checkStuckCronRuns(ctx, n)
+		WaitForAlerts()
+		failAtCarrier(t, n, lastSID(t, sids()))
+		retryNow(n)
+		if got := incidentAlertCount(t, pool, "cron_incidents", mon.ID); got != 1 {
+			t.Fatalf("want the down alert's delivery kept, got alert_count %d", got)
+		}
+		if got := len(sids()); got != 1 {
+			t.Fatalf("want nothing sent again, got %d SMS", got)
+		}
+	})
 }

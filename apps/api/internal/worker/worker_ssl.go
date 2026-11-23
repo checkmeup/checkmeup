@@ -92,11 +92,13 @@ func checkOneSSLMonitor(ctx context.Context, n Notifiers, m db.SslMonitor) {
 		return
 	}
 	ref := MonitorRef{Type: "ssl", ID: m.ID}
+	// Only the alert is retried; the recovery stays one-shot.
+	alertRef := MonitorRef{Type: "ssl", ID: m.ID, Retry: &AlertSource{ID: m.ID, Alert: pending}}
 	GoAlert(ctx, func(ctx context.Context) {
 		if result.recovery != nil {
 			DispatchAlert(ctx, n, m.OrgID, ref, *result.recovery)
 		}
-		if result.alert != nil && DispatchAlert(ctx, n, m.OrgID, ref, *result.alert) {
+		if result.alert != nil && DispatchAlert(ctx, n, m.OrgID, alertRef, *result.alert) {
 			if err := n.Queries.ClearSSLPendingAlert(ctx, m.ID); err != nil {
 				n.Logger.Error("ssl worker: clear pending alert", "monitor_id", m.ID, "err", err)
 			}
