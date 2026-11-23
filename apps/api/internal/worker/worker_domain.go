@@ -122,6 +122,24 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 		r.status = db.DomainMonitorStatusError
 		r.errorMsgParam = pgtype.Text{String: checkErr.Error(), Valid: true}
 		r.consecutiveFailures = m.ConsecutiveFailures + 1
+		// Keeps the last known expiry and alerts on it: a registry's RDAP or
+		// WHOIS can be down for days, and until 2026-11-23 a domain expiring
+		// then alerted nobody.
+		if !m.ExpiresAt.Valid {
+			return r
+		}
+		r.expiresAtParam, r.registrarParam = m.ExpiresAt, m.Registrar
+		known := m.ExpiresAt.Time
+		if domainDaysLeft(known, time.Now()) < 0 {
+			// The status stays Error, so it can't tell whether this was sent:
+			// sent on the check the known date passed, when the last one was
+			// still before it.
+			if m.AlertsEnabled && m.LastCheckedAt.Valid && domainDaysLeft(known, m.LastCheckedAt.Time) >= 0 {
+				r.sendExpired(m, known)
+			}
+			return r
+		}
+		r.warn(m, domainDaysLeft(known, time.Now()), known)
 		return r
 	}
 
@@ -132,40 +150,52 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 	case daysLeft < 0:
 		r.status = db.DomainMonitorStatusExpired
 		r.consecutiveFailures = m.ConsecutiveFailures + 1
-		// Sent once, on the check that finds the domain expired, past the cap
-		// and alert_after_n_failures (PRD domain-expiry-monitoring: "at once
-		// when expired"): the 7-day warning shares alerted7d with it, and the
-		// three warnings fill the default cap of 3.
 		if m.AlertsEnabled && m.Status != db.DomainMonitorStatusExpired {
-			subject, telegramMsg, emailHTML := domainExpiredMessages(m, expiresAt.Format("2006-01-02"))
-			a := domainAlert(m, subject, telegramMsg, emailHTML)
-			r.alert = &a
-			r.alertCount = m.AlertCount + 1
-			r.alerted30d, r.alerted14d, r.alerted7d = true, true, true
+			r.sendExpired(m, expiresAt)
 		}
 		return r
 	case daysLeft <= 30:
 		r.status = db.DomainMonitorStatusExpiringSoon
+		r.consecutiveFailures = m.ConsecutiveFailures + 1
+		r.warn(m, daysLeft, expiresAt)
 	default:
 		r.status = db.DomainMonitorStatusUp
 		// Reset flags, failure counter, and alert count when domain is renewed.
 		r.alerted30d, r.alerted14d, r.alerted7d = false, false, false
 		r.consecutiveFailures = 0
 		r.alertCount = 0
-		return r
-	}
-
-	r.consecutiveFailures = m.ConsecutiveFailures + 1
-
-	maxAlerts := m.MaxAlertsPerIncident
-	withinLimit := maxAlerts == 0 || m.AlertCount < maxAlerts
-	if m.AlertsEnabled && withinLimit && r.consecutiveFailures > m.AlertAfterNFailures {
-		r.alert = domainThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
-		if r.alert != nil {
-			r.alertCount = m.AlertCount + 1
-		}
 	}
 	return r
+}
+
+// domainDaysLeft is the whole days from at to expiresAt, as a check at that
+// time counts them.
+func domainDaysLeft(expiresAt, at time.Time) int {
+	return int(expiresAt.Sub(at).Hours() / 24)
+}
+
+// sendExpired sends the expired alert past the cap and alert_after_n_failures
+// (PRD domain-expiry-monitoring: "at once when expired"): the 7-day warning
+// shares alerted7d with it, and the three warnings fill the default cap of 3.
+func (r *domainCheckResult) sendExpired(m db.DomainMonitor, expiresAt time.Time) {
+	subject, telegramMsg, emailHTML := domainExpiredMessages(m, expiresAt.Format("2006-01-02"))
+	a := domainAlert(m, subject, telegramMsg, emailHTML)
+	r.alert = &a
+	r.alertCount = m.AlertCount + 1
+	r.alerted30d, r.alerted14d, r.alerted7d = true, true, true
+}
+
+// warn sends the warning for a newly crossed 30, 14 or 7-day threshold, within
+// the cap and once past alert_after_n_failures.
+func (r *domainCheckResult) warn(m db.DomainMonitor, daysLeft int, expiresAt time.Time) {
+	withinLimit := m.MaxAlertsPerIncident == 0 || m.AlertCount < m.MaxAlertsPerIncident
+	if !m.AlertsEnabled || !withinLimit || r.consecutiveFailures <= m.AlertAfterNFailures {
+		return
+	}
+	r.alert = domainThresholdAlert(m, daysLeft, expiresAt, &r.alerted30d, &r.alerted14d, &r.alerted7d)
+	if r.alert != nil {
+		r.alertCount = m.AlertCount + 1
+	}
 }
 
 // domainThresholdAlert returns the warning for the first newly-crossed

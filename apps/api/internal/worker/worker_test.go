@@ -2869,6 +2869,67 @@ func TestCheckDomainMonitors(t *testing.T) {
 			t.Fatalf("want no second expired alert the next day, got %d alerts", got)
 		}
 	})
+	t.Run("a failed lookup keeps the last known expiry and still warns on it", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer srv.Close()
+		localWH := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: localWH, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+		sent := webhookRecorder(t, queries, org.ID, "domain", mon.ID)
+		// Already in error, so this failure isn't held for a recheck; the 30
+		// and 14-day warnings went out before the registry stopped answering.
+		mustExecWorker(t, pool, `UPDATE domain_monitors SET status = 'error', expires_at = NOW() + INTERVAL '5 days',
+			alerted_30d = true, alerted_14d = true, alert_count = 2 WHERE id = $1`, mon.ID)
+
+		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
+		if got := sent(); got != 1 {
+			t.Fatalf("want the 7-day warning sent from the known expiry, got %d alerts", got)
+		}
+		var status string
+		var expiresAt pgtype.Timestamptz
+		if err := pool.QueryRow(context.Background(),
+			"SELECT status, expires_at FROM domain_monitors WHERE id = $1", mon.ID,
+		).Scan(&status, &expiresAt); err != nil {
+			t.Fatalf("query monitor: %v", err)
+		}
+		if status != "error" || !expiresAt.Valid {
+			t.Fatalf("want status error with the known expiry kept, got status=%q expires_at valid=%v", status, expiresAt.Valid)
+		}
+	})
+	t.Run("a failed lookup alerts once when the known expiry passes", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer srv.Close()
+		localWH := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: localWH, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+		sent := webhookRecorder(t, queries, org.ID, "domain", mon.ID)
+		// Checked a day ago with less than a day left; a day past expiry now.
+		mustExecWorker(t, pool, `UPDATE domain_monitors SET status = 'error', expires_at = NOW() - INTERVAL '25 hours',
+			last_checked_at = NOW() - INTERVAL '26 hours', alerted_30d = true, alerted_14d = true, alerted_7d = true,
+			alert_count = 3 WHERE id = $1`, mon.ID)
+
+		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
+		if got := sent(); got != 1 {
+			t.Fatalf("want the expired alert sent from the known expiry, got %d alerts", got)
+		}
+
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
+		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
+		if got := sent(); got != 1 {
+			t.Fatalf("want no second expired alert the next day, got %d alerts", got)
+		}
+	})
 	t.Run("a checked domain is not looked up again until a day later", func(t *testing.T) {
 		domain := "once-a-day-" + uuid.NewString()[:8] + ".com"
 		var lookups atomic.Int32
