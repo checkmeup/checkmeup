@@ -2839,6 +2839,36 @@ func TestCheckDomainMonitors(t *testing.T) {
 			t.Fatalf("want only alerted_30d set, got 30d=%v 14d=%v 7d=%v", alerted30d, alerted14d, alerted7d)
 		}
 	})
+	t.Run("expiring sends its alert after all three warnings, past the cap, and only once", func(t *testing.T) {
+		expiresAt := time.Now().Add(-24 * time.Hour).UTC().Truncate(time.Second)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = fmt.Fprintf(w, `{"events": [{"eventAction": "expiration", "eventDate": %q}]}`, expiresAt.Format(time.RFC3339))
+		}))
+		defer srv.Close()
+		// The webhook recorder is a local server, which webhook.NewClient refuses to dial.
+		localWH := webhook.NewClientWithHTTPClient(&http.Client{Timeout: 10 * time.Second})
+		n := Notifiers{Queries: queries, Telegram: tg, Mailer: mailer, Webhook: localWH, RDAP: rdap.NewClientWithHTTPClient(srv.Client(), srv.URL+"/domain/"), Logger: logger}
+
+		org := testOrg(t, queries, pool)
+		mon := testDomainMonitor(t, queries, org.ID, "example.com")
+		sent := webhookRecorder(t, queries, org.ID, "domain", mon.ID)
+		// The 30, 14 and 7-day warnings went out and used up the default cap of 3.
+		mustExecWorker(t, pool, `UPDATE domain_monitors SET status = 'expiring_soon', alerted_30d = true, alerted_14d = true,
+			alerted_7d = true, alert_count = 3, max_alerts_per_incident = 3 WHERE id = $1`, mon.ID)
+
+		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
+		if got := sent(); got != 1 {
+			t.Fatalf("want the expired alert sent, got %d alerts", got)
+		}
+
+		forceDueNow(t, pool, "domain_monitors", mon.ID)
+		checkDomainMonitors(context.Background(), n)
+		WaitForAlerts()
+		if got := sent(); got != 1 {
+			t.Fatalf("want no second expired alert the next day, got %d alerts", got)
+		}
+	})
 	t.Run("a checked domain is not looked up again until a day later", func(t *testing.T) {
 		domain := "once-a-day-" + uuid.NewString()[:8] + ".com"
 		var lookups atomic.Int32

@@ -46,8 +46,9 @@ Every monitored domain is renewed before it expires, with warnings at 30, 14 and
 - A domain under a TLD whose registry publishes no expiry date can't be added, and the form says why; an existing one shows that reason as its error.
   → test: apps/api/internal/handler/domain_monitors_test.go "TestCreateDomainMonitor/a TLD without RDAP but with WHOIS is accepted, and a refused one says why"
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/a TLD whose registry publishes no expiry says so instead of asking anyone"
-- Crossing 30, 14 or 7 days left sends one alert per threshold; an expired domain is alerted on at once.
+- Crossing 30, 14 or 7 days left sends one alert per threshold; an expired domain is alerted on at once, once, even after all three warnings and past the alert cap.
   → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/crossing the 30-day threshold sends one alert via the fallback email"
+  → test: apps/api/internal/worker/worker_test.go "TestCheckDomainMonitors/expiring sends its alert after all three warnings, past the cap, and only once"
   → test: apps/api/internal/worker/worker_test.go "TestDomainExpiredMessages"
   → test: apps/api/internal/worker/worker_test.go "TestDomainExpiringSoonMessages"
 - Editing changes the name and domain; pausing stops checks and alerts.

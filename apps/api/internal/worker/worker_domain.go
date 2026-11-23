@@ -131,6 +131,19 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 	switch {
 	case daysLeft < 0:
 		r.status = db.DomainMonitorStatusExpired
+		r.consecutiveFailures = m.ConsecutiveFailures + 1
+		// Sent once, on the check that finds the domain expired, past the cap
+		// and alert_after_n_failures (PRD domain-expiry-monitoring: "at once
+		// when expired"): the 7-day warning shares alerted7d with it, and the
+		// three warnings fill the default cap of 3.
+		if m.AlertsEnabled && m.Status != db.DomainMonitorStatusExpired {
+			subject, telegramMsg, emailHTML := domainExpiredMessages(m, expiresAt.Format("2006-01-02"))
+			a := domainAlert(m, subject, telegramMsg, emailHTML)
+			r.alert = &a
+			r.alertCount = m.AlertCount + 1
+			r.alerted30d, r.alerted14d, r.alerted7d = true, true, true
+		}
+		return r
 	case daysLeft <= 30:
 		r.status = db.DomainMonitorStatusExpiringSoon
 	default:
@@ -155,23 +168,21 @@ func buildDomainCheckResult(m db.DomainMonitor, expiresAt time.Time, registrar s
 	return r
 }
 
-// domainThresholdAlert returns the alert for the first newly-crossed expiry
-// threshold (expired, then 7/14/30 days), setting the matching alerted flag
-// so checkOneDomainMonitor only sends one notification per crossing.
+// domainThresholdAlert returns the warning for the first newly-crossed
+// threshold of a domain not yet expired (7/14/30 days), setting the matching
+// alerted flag so checkOneDomainMonitor only sends one notification per crossing.
 func domainThresholdAlert(m db.DomainMonitor, daysLeft int, expiresAt time.Time, alerted30d, alerted14d, alerted7d *bool) *AlertMessage {
 	if !sslCrossedThreshold(daysLeft, alerted30d, alerted14d, alerted7d) {
 		return nil
 	}
+	subject, telegramMsg, emailHTML := domainExpiringSoonMessages(m, daysLeft, expiresAt.Format("2006-01-02"))
+	a := domainAlert(m, subject, telegramMsg, emailHTML)
+	return &a
+}
 
-	expiresStr := expiresAt.Format("2006-01-02")
-	var subject, telegramMsg, emailHTML string
-	if daysLeft < 0 {
-		subject, telegramMsg, emailHTML = domainExpiredMessages(m, expiresStr)
-	} else {
-		subject, telegramMsg, emailHTML = domainExpiringSoonMessages(m, daysLeft, expiresStr)
-	}
-
-	return &AlertMessage{
+// domainAlert renders a domain alert's wording into every channel's format.
+func domainAlert(m db.DomainMonitor, subject, telegramMsg, emailHTML string) AlertMessage {
+	return AlertMessage{
 		Telegram:     telegramMsg,
 		EmailSubject: subject,
 		EmailHTML:    emailHTML,
