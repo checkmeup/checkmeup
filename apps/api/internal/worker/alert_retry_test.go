@@ -383,3 +383,14 @@ func TestRetryExpiryAndSSLAlerts(t *testing.T) {
 		}
 	})
 }
+
+// An alert whose channels can't be read isn't delivered, so it stays due a
+// retry: the retry counts an alert only when DispatchAlert says it went out.
+func TestDispatchAlert_ChannelsUnreadableIsNotDelivered(t *testing.T) {
+	pool := testPool(t)
+	pool.Close() // a closed pool fails every query, as a dropped connection would
+	n := retryNotifiers(db.New(pool))
+	if DispatchAlert(context.Background(), n, uuid.New(), MonitorRef{Type: "uptime", ID: uuid.New()}, AlertMessage{EmailSubject: "DOWN: api"}) {
+		t.Fatal("want an alert whose channels can't be read reported undelivered")
+	}
+}

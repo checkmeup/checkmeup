@@ -43,6 +43,7 @@ Every org with a monitor: the alerts are theirs. The operator, for the worker's 
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/a down alert that didn't go out is sent again 5 minutes later, until delivered, then not again"
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/every incident-tracked type retries its undelivered down alert"
 - A failed read of the monitor's channels counts as a failed attempt and is retried the same way.
+  → test: apps/api/internal/worker/alert_retry_test.go "TestDispatchAlert_ChannelsUnreadableIsNotDelivered"
 - An open incident whose down alert was never delivered and whose last attempt started more than 5 minutes ago, or that has none, as after a process stopped mid-send, gets its down alert on the next tick; one whose last attempt started less than 5 minutes ago is not sent a second time, by this process or another.
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/every incident-tracked type retries its undelivered down alert"
   → test: apps/api/internal/worker/alert_retry_test.go "TestRetryDownAlerts/a down alert that didn't go out is sent again 5 minutes later, until delivered, then not again"
