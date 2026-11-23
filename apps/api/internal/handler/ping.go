@@ -83,20 +83,28 @@ func (h *PingHandler) ReceivePing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wasDown := monitor.Status == db.MonitorStatusDown
+	markedUp := false
 
 	// Don't update next_ping_at for paused monitors; the worker ignores them anyway.
 	if monitor.Status != db.MonitorStatusPaused {
 		nextPing := computeNextPing(monitor.Schedule, now, int(monitor.GracePeriodMins))
-		_, _ = h.queries.UpdateCronMonitorPing(r.Context(), db.UpdateCronMonitorPingParams{
+		_, err := h.queries.UpdateCronMonitorPing(r.Context(), db.UpdateCronMonitorPingParams{
 			ID:         monitor.ID,
 			OrgID:      monitor.OrgID,
 			LastPingAt: pgtype.Timestamptz{Time: now, Valid: true},
 			NextPingAt: pgtype.Timestamptz{Time: nextPing, Valid: true},
 		})
+		if err != nil {
+			slog.Default().Error("ping: mark monitor up", "monitor_id", monitor.ID, "err", err)
+		}
+		markedUp = err == nil
 	}
 
-	// Recovery: monitor was down and just checked in again.
-	if wasDown {
+	// Recovery: monitor was down and just checked in again. Only once it is
+	// marked up: resolving the incident of a monitor still down would leave it
+	// down with no incident, which the worker skips, so the job failing again
+	// would alert nobody. The next ping recovers it instead.
+	if wasDown && markedUp {
 		h.sendCronRecoveryAlert(r.Context(), monitor, now)
 	}
 

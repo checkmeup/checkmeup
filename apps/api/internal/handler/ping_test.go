@@ -14,8 +14,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -343,6 +345,60 @@ func TestReceivePing(t *testing.T) {
 		}
 		if !resolved {
 			t.Fatal("want the open incident resolved on recovery even with alerts disabled")
+		}
+	})
+
+	t.Run("a ping that fails to mark the monitor up leaves its incident open for the next ping", func(t *testing.T) {
+		// Resolving the incident while the monitor stays down would leave it
+		// down with no incident: the worker skips down monitors, so the job
+		// failing again would alert nobody.
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Recovering job, update fails")
+		seedCronDown(t, pool, mon.ID, time.Now().Add(-30*time.Minute))
+		token := cronPingToken(t, pool, mon.ID)
+
+		// Makes every update of this monitor fail, as a dropped connection would.
+		name := "fail_update_" + strings.ReplaceAll(mon.ID, "-", "")
+		mustExec(t, pool, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.id = '%s' THEN RAISE EXCEPTION 'injected failure'; END IF;
+  RETURN NEW;
+END $$`, name, mon.ID))
+		mustExec(t, pool, fmt.Sprintf("CREATE TRIGGER %s BEFORE UPDATE ON cron_monitors FOR EACH ROW EXECUTE FUNCTION %s()", name, name))
+		lifted := false
+		lift := func() {
+			if !lifted {
+				lifted = true
+				mustExec(t, pool, fmt.Sprintf("DROP TRIGGER %s ON cron_monitors", name))
+				mustExec(t, pool, fmt.Sprintf("DROP FUNCTION %s()", name))
+			}
+		}
+		t.Cleanup(lift)
+
+		if w := doPing(t, pingH, token, nil); w.Code != http.StatusOK {
+			t.Fatalf("want 200 even when the update fails, got %d", w.Code)
+		}
+		incidentResolved := func() bool {
+			t.Helper()
+			var resolved bool
+			if err := pool.QueryRow(context.Background(),
+				"SELECT resolved_at IS NOT NULL FROM cron_incidents WHERE monitor_id = $1", mon.ID,
+			).Scan(&resolved); err != nil {
+				t.Fatalf("query incident: %v", err)
+			}
+			return resolved
+		}
+		if incidentResolved() {
+			t.Fatal("want the incident left open while the monitor is still down")
+		}
+
+		lift()
+		doPing(t, pingH, token, nil)
+		if row := getCronMonitorRow(t, pool, mon.ID); row.Status != db.MonitorStatusUp {
+			t.Fatalf("want status up after the next ping, got %q", row.Status)
+		}
+		if !incidentResolved() {
+			t.Fatal("want the incident resolved by the next ping")
 		}
 	})
 }
