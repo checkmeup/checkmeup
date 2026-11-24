@@ -3160,6 +3160,42 @@ func TestPruneOldPings(t *testing.T) {
 	}
 }
 
+// A deploy restarts the worker several times a day, so it prunes at start
+// rather than only after 24 h up.
+func TestRunPrunesAtStart(t *testing.T) {
+	pool := testPool(t)
+	queries := db.New(pool)
+	org := testOrg(t, queries, pool)
+	mon := testCronMonitor(t, queries, org.ID, "every 1h")
+	mustExecWorker(t, pool, "INSERT INTO cron_pings (monitor_id, received_at, source_ip) VALUES ($1, NOW() - INTERVAL '31 days', '1.1.1.1')", mon.ID)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		Run(ctx, Notifiers{Queries: queries, Logger: testLogger()})
+		close(done)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var n int
+		if err := pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM cron_pings WHERE monitor_id = $1", mon.ID).Scan(&n); err != nil {
+			t.Fatalf("count pings: %v", err)
+		}
+		if n == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("want the 31-day-old ping pruned at start, still there after 5s")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 func mustExecWorker(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 	t.Helper()
 	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {

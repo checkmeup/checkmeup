@@ -87,12 +87,13 @@ func Stalled() bool { return time.Since(time.Unix(0, lastTickDone.Load())) > sta
 // Run starts the background worker loops. Returns when ctx is cancelled,
 // after the tick in progress, if any, has finished.
 //   - Every 30 s: missed-ping detection + uptime HTTP checks
-//   - Every 24 h: ping/check/incident retention cleanup (ADR limits)
+//   - At start, then every 24 h: ping/check/incident retention cleanup (ADR limits)
 func Run(ctx context.Context, n Notifiers) {
 	ticker := time.NewTicker(30 * time.Second)
-	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
-	defer cleanupTicker.Stop()
+	var pruning sync.WaitGroup
+	pruning.Go(func() { pruneDaily(ctx, n.Queries, n.Logger) })
+	defer pruning.Wait()
 	n.Logger.Info("worker started")
 	for {
 		select {
@@ -113,8 +114,25 @@ func Run(ctx context.Context, n Notifiers) {
 			checkDNSMonitors(tickCtx, n)
 			retryAlerts(tickCtx, n)
 			MarkTickFinished(time.Now())
-		case <-cleanupTicker.C:
-			pruneOldPings(ctx, n.Queries, n.Logger)
+		}
+	}
+}
+
+// pruneDaily prunes once at start, then every 24 h, until ctx is cancelled.
+// It prunes at start because every deploy restarts the process, several
+// times a day, and a 24 h ticker alone then never fires. It runs off the tick
+// loop because its DELETEs scan whole tables (their indexes lead with
+// monitor_id), and checks and alerts mustn't wait on them.
+func pruneDaily(ctx context.Context, queries *db.Queries, logger *slog.Logger) {
+	defer recoverPanic(logger, "prune", nil)
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	for {
+		pruneOldPings(ctx, queries, logger)
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
 		}
 	}
 }
