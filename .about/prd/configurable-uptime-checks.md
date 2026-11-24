@@ -31,6 +31,7 @@ A healthy endpoint answering `204` (or needing a 20-second timeout) stays green 
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/a non-default accepted status code is up"
 - A response slower than the maximum response time is a failed check.
   → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/a response slower than the configured timeout is down"
+  → test: apps/api/internal/worker/worker_test.go "TestPerformHTTPCheck/a body cut off by the timeout is down, not checked as it is"
 - A method other than `GET`, `HEAD` or `POST`, a maximum response time outside 1,000–30,000 ms, or a status code outside 100–599 is refused by the API.
   → test: apps/api/internal/handler/uptime_monitors_test.go "TestCreateUptimeMonitor/validation"
 - An empty set of accepted status codes can't be saved.

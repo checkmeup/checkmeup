@@ -671,6 +671,58 @@ func TestPerformHTTPCheck(t *testing.T) {
 			})
 		}
 	})
+
+	// A monitor on a large file would otherwise download it on every check,
+	// until its timeout, and fill the worker's link for every other check.
+	t.Run("with no keyword or assertion, the body isn't downloaded", func(t *testing.T) {
+		written := make(chan int64, 1)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			chunk := make([]byte, 64*1024)
+			var n int64
+			// Writes until the client goes away, or 1 GB at most.
+			for n < 1<<30 {
+				if _, err := w.Write(chunk); err != nil {
+					break
+				}
+				n += int64(len(chunk))
+			}
+			written <- n
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.MaxResponseTimeMs = 3000
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+		if !isUp {
+			t.Fatalf("want up, got down: %q", reason)
+		}
+		if n := <-written; n > 16<<20 {
+			t.Fatalf("want the body left unread, server got %d MB out", n>>20)
+		}
+	})
+
+	// A not_contains check passing on the half that arrived would hide the
+	// outage.
+	t.Run("a body cut off by the timeout is down, not checked as it is", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = io.WriteString(w, "<html>partial")
+			w.(http.Flusher).Flush()
+			select {
+			case <-r.Context().Done():
+			case <-time.After(5 * time.Second):
+			}
+		}))
+		defer srv.Close()
+
+		m := baseUptimeCheckMonitor(srv.URL)
+		m.MaxResponseTimeMs = 500
+		m.Keyword = pgtype.Text{String: "Internal Server Error", Valid: true}
+		m.KeywordMode = db.KeywordModeNotContains
+		_, _, isUp, reason := performHTTPCheck(m, &http.Client{Timeout: 10 * time.Second})
+		if isUp || reason != "timeout / connection error" {
+			t.Fatalf("want down with %q, got up=%v reason=%q", "timeout / connection error", isUp, reason)
+		}
+	})
 }
 
 // ─── JSON assertions (pure functions) ─────────────────────────────────────

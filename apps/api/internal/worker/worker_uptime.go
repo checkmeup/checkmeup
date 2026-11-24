@@ -202,13 +202,20 @@ func performHTTPCheck(m db.UptimeMonitor, client *http.Client) (statusCode int, 
 		_ = json.Unmarshal(m.JsonAssertions, &assertions)
 	}
 
+	// The body is read only for a keyword or an assertion, and then only its
+	// first maxKeywordCheckBytes: draining it all would download a large file
+	// on every check, until the timeout, and fill the worker's link for every
+	// other check. Closing it unread costs only the connection's reuse.
 	needsBody := keyword != "" || len(assertions) > 0
 	var body string
 	if needsBody {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, maxKeywordCheckBytes))
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, maxKeywordCheckBytes))
+		if err != nil {
+			// Checking the part that arrived could pass a not_contains keyword
+			// on a page cut off by the timeout.
+			return resp.StatusCode, elapsed, false, "timeout / connection error"
+		}
 		body = string(raw)
-	} else {
-		_, _ = io.Copy(io.Discard, resp.Body)
 	}
 
 	if !statusCodeAccepted(resp.StatusCode, m.AcceptedStatusCodes) {
