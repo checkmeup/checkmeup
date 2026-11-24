@@ -206,6 +206,20 @@ func (h *BillingHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// A checkout makes a new Paddle subscription, and the org's own would keep
+	// billing beside it: a paid org changes plan through ChangePlan. The
+	// subscription ID is cleared only once a cancellation takes effect, so a
+	// scheduled one still counts.
+	info, err := h.queries.GetOrgBillingInfo(r.Context(), orgID)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "failed to load billing info", "internal_error")
+		return
+	}
+	if info.PaddleSubscriptionID.Valid && info.PaddleSubscriptionID.String != "" {
+		respond.Error(w, http.StatusConflict, "the org already has a subscription; change its plan instead", "subscription_exists")
+		return
+	}
+
 	// Check configuration before resolving a price ID, so an unconfigured
 	// account reports "not configured" rather than the misleading "invalid
 	// plan" for a plan name that was perfectly valid.

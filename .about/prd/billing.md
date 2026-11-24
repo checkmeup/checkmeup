@@ -40,9 +40,12 @@ A user upgrades from the billing page in one checkout, and their new limits appl
   → test: apps/api/internal/handler/status_pages_test.go "TestCreateStatusPage/plan limit enforced at 1 status page on Hobby"
   → test: apps/api/internal/handler/uptime_monitors_test.go "TestCreateUptimeMonitor/an interval below the plan minimum is rejected, not silently clamped"
   → test: apps/web/src/views/CronMonitorCreateView.test.ts "shows an upgrade prompt when the plan limit is reached"
-- Choosing a plan opens Paddle's checkout overlay for that plan; with billing not configured, the page says so.
+- On Hobby, choosing a plan opens Paddle's checkout overlay for that plan; with billing not configured, the page says so.
   → test: apps/web/src/views/BillingView.test.ts "starts checkout and opens the Paddle overlay with the returned transaction"
   → test: apps/web/src/views/BillingView.test.ts "shows a not-configured message when billing has not been activated"
+- On a paid plan, upgrading changes the existing subscription after a confirm, with a prorated charge, and never starts a second checkout.
+  → test: apps/web/src/views/BillingView.test.ts "upgrades a paid plan by changing its subscription after a confirm, without opening checkout"
+  → test: apps/api/internal/handler/billing_test.go "TestCreateCheckout/refused while the org has a subscription"
 - A signed Paddle webhook for a known price moves the org to that plan; an unsigned or wrongly signed one is refused.
   → test: apps/api/internal/handler/billing_test.go "TestWebhook/known price upgrades the org's plan"
   → test: apps/api/internal/handler/billing_test.go "TestWebhook/invalid signature returns 401"
