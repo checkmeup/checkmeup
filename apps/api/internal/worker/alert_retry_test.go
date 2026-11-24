@@ -538,6 +538,36 @@ func TestRetryAfterFailedSMS(t *testing.T) {
 		}
 	})
 
+	// Twilio gives up on its callback after about 15 s, while a Fallback email
+	// can take up to a minute to fail; the alert is handed back all the same.
+	t.Run("a failed only-delivery SMS is handed back even when its callback's request is cancelled", func(t *testing.T) {
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer target.Close()
+		n := retryNotifiers(queries)
+		var sids func() []string
+		n.SMS, sids = acceptingTwilio(t)
+		org := smsOnlyOrg(t, queries, pool)
+		mon := testUptimeMonitor(t, queries, org.ID, target.URL)
+		attachSMS(t, queries, org.ID, "uptime", mon.ID)
+
+		checkUptimeMonitors(ctx, n) // rechecked before it counts
+		forceDueNow(t, pool, "uptime_monitors", mon.ID)
+		checkUptimeMonitors(ctx, n)
+		WaitForAlerts()
+
+		cancelled, cancel := context.WithCancel(ctx)
+		cancel()
+		HandleSMSStatus(cancelled, n, lastSID(t, sids()), "undelivered", "30003")
+
+		attemptedAgo(t, pool, "uptime", mon.ID, "5 minutes")
+		retryNow(n)
+		if got := len(sids()); got != 2 {
+			t.Fatalf("want the alert sent again after its SMS and Fallback email failed, got %d SMS", got)
+		}
+	})
+
 	t.Run("every incident-tracked type hands a failed only-delivery SMS back to its retry", func(t *testing.T) {
 		for _, tc := range []struct {
 			monitorType string

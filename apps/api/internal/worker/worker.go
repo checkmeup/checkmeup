@@ -718,6 +718,11 @@ func HandleSMSStatus(ctx context.Context, n Notifiers, sid, status, errorCode st
 	if status != "delivered" && status != "failed" && status != "undelivered" {
 		return false
 	}
+	// Not cancelled with the callback's request: once TakeSMSMessage has
+	// deleted the row, its Fallback email and hand-back must finish, or the
+	// alert is lost. Twilio drops the request after about 15 s, and a
+	// Fallback email can take up to a minute to fail.
+	ctx = context.WithoutCancel(ctx)
 	m, err := n.Queries.TakeSMSMessage(ctx, sid)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
