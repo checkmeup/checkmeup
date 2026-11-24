@@ -123,14 +123,19 @@ func (h *PingHandler) ReceivePingStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Supersede (PRD zombie-job-detection): an already-open run means this start ping is
-	// superseding it. If that old run had already fired a stuck-run alert,
-	// resolve it now rather than waiting on a completion ping that may
-	// never arrive.
-	if prevRun, err := h.queries.GetOpenCronRun(r.Context(), monitor.ID); err == nil && prevRun.AlertedAt.Valid {
-		h.sendStuckRunRecoveryAlert(r.Context(), monitor, prevRun, "superseded by a new run")
-	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		slog.Default().Error("ping: get open cron run", "monitor_id", monitor.ID, "err", err)
+	// Supersede (PRD zombie-job-detection): this start ping closes every run
+	// still open. If one had already fired a stuck-run alert, resolve it now
+	// rather than waiting on a completion ping that may never arrive; one
+	// recovery covers them all.
+	closed, err := h.queries.CloseOpenCronRuns(r.Context(), monitor.ID)
+	if err != nil {
+		slog.Default().Error("ping: close open cron runs", "monitor_id", monitor.ID, "err", err)
+	}
+	for _, prevRun := range closed {
+		if prevRun.AlertedAt.Valid {
+			h.sendStuckRunRecoveryAlert(r.Context(), monitor, prevRun, "superseded by a new run")
+			break
+		}
 	}
 
 	if _, err := h.queries.CreateCronRun(r.Context(), monitor.ID); err != nil {

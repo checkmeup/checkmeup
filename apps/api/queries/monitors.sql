@@ -180,8 +180,13 @@ INSERT INTO cron_runs (monitor_id)
 VALUES ($1)
 RETURNING *;
 
--- name: GetOpenCronRun :one
-SELECT * FROM cron_runs WHERE monitor_id = $1 AND completed_at IS NULL ORDER BY started_at DESC LIMIT 1;
+-- name: CloseOpenCronRuns :many
+-- A start ping supersedes every run still open (PRD zombie-job-detection):
+-- left open, a superseded run would later be flagged stuck, and each later
+-- start would find it again and repeat its recovery until it is pruned.
+UPDATE cron_runs SET completed_at = NOW()
+WHERE monitor_id = $1 AND completed_at IS NULL
+RETURNING *;
 
 -- name: CompleteCronRun :one
 UPDATE cron_runs

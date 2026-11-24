@@ -41,6 +41,7 @@ A run that goes past its maximum duration is reported once, as stuck, while it i
 - A stuck run's completion, or a new start ping replacing it, sends a recovery alert; a run never flagged sends none.
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/recovery alert fires on completion when the closed run had already been flagged stuck (PRD zombie-job-detection)"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePingStart/recovery alert fires when a new start ping supersedes an already-alerted open run (PRD zombie-job-detection)"
+  → test: apps/api/internal/handler/ping_test.go "TestReceivePingStart/a superseded run is over, so later runs send no further recovery for it (PRD zombie-job-detection)"
   → test: apps/api/internal/handler/ping_test.go "TestReceivePing/no recovery alert when the open run was never flagged stuck"
 - Under maintenance, or with alerts off, a stuck run sends nothing.
   → test: apps/api/internal/worker/worker_test.go "TestCheckStuckCronRuns/a monitor under an active maintenance window is excluded"

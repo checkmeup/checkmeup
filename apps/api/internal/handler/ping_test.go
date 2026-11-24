@@ -18,6 +18,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -688,6 +689,40 @@ func TestReceivePingStart(t *testing.T) {
 		}
 		if runCount != 2 {
 			t.Fatalf("want both the superseded run and the new run present, got %d", runCount)
+		}
+	})
+
+	t.Run("a superseded run is over, so later runs send no further recovery for it (PRD zombie-job-detection)", func(t *testing.T) {
+		var recoveries atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var e webhook.Event
+			_ = json.NewDecoder(r.Body).Decode(&e)
+			if e.EventType == "recovery" {
+				recoveries.Add(1)
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		u := signUpTestUser(t, authH, pool)
+		mon := createCronMonitor(t, monitorH, u.access, "Superseded once")
+		attachWebhookChannel(t, pool, u, mon.ID, srv.URL)
+
+		token := cronPingToken(t, pool, mon.ID)
+		seedCronRun(t, pool, mon.ID, time.Now().Add(-3*time.Hour), true)
+
+		// Three ordinary runs after the stuck one: start, then complete.
+		for range 3 {
+			if w := doPingStart(t, pingH, token); w.Code != http.StatusOK {
+				t.Fatalf("start: want 200, got %d", w.Code)
+			}
+			if w := doPing(t, pingH, token, nil); w.Code != http.StatusOK {
+				t.Fatalf("complete: want 200, got %d", w.Code)
+			}
+		}
+
+		if got := recoveries.Load(); got != 1 {
+			t.Fatalf("want one recovery, for the first start that superseded the stuck run, got %d", got)
 		}
 	})
 

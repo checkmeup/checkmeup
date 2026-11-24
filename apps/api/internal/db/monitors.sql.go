@@ -68,6 +68,42 @@ func (q *Queries) ClaimCronAlertRetries(ctx context.Context) ([]ClaimCronAlertRe
 	return items, nil
 }
 
+const closeOpenCronRuns = `-- name: CloseOpenCronRuns :many
+UPDATE cron_runs SET completed_at = NOW()
+WHERE monitor_id = $1 AND completed_at IS NULL
+RETURNING id, monitor_id, started_at, completed_at, alerted_at, overlap
+`
+
+// A start ping supersedes every run still open (PRD zombie-job-detection):
+// left open, a superseded run would later be flagged stuck, and each later
+// start would find it again and repeat its recovery until it is pruned.
+func (q *Queries) CloseOpenCronRuns(ctx context.Context, monitorID uuid.UUID) ([]CronRun, error) {
+	rows, err := q.db.Query(ctx, closeOpenCronRuns, monitorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CronRun{}
+	for rows.Next() {
+		var i CronRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.MonitorID,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.AlertedAt,
+			&i.Overlap,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const completeCronRun = `-- name: CompleteCronRun :one
 UPDATE cron_runs
 SET completed_at = NOW()
@@ -361,24 +397,6 @@ func (q *Queries) GetLatestCronPing(ctx context.Context, monitorID uuid.UUID) (C
 		&i.SourceIp,
 		&i.Metadata,
 		&i.RunStartedAt,
-	)
-	return i, err
-}
-
-const getOpenCronRun = `-- name: GetOpenCronRun :one
-SELECT id, monitor_id, started_at, completed_at, alerted_at, overlap FROM cron_runs WHERE monitor_id = $1 AND completed_at IS NULL ORDER BY started_at DESC LIMIT 1
-`
-
-func (q *Queries) GetOpenCronRun(ctx context.Context, monitorID uuid.UUID) (CronRun, error) {
-	row := q.db.QueryRow(ctx, getOpenCronRun, monitorID)
-	var i CronRun
-	err := row.Scan(
-		&i.ID,
-		&i.MonitorID,
-		&i.StartedAt,
-		&i.CompletedAt,
-		&i.AlertedAt,
-		&i.Overlap,
 	)
 	return i, err
 }
