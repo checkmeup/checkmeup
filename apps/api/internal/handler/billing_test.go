@@ -590,6 +590,25 @@ func TestCreateCheckout(t *testing.T) {
 		}
 	})
 
+	// A checkout makes a new Paddle subscription, and the one the org has would
+	// keep billing beside it; a paid org changes plan through ChangePlan.
+	t.Run("refused while the org has a subscription", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		nextBilledAt := time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339)
+		if w := doWebhook(t, billH, webhookEvent("subscription.created", u.resp.OrgID, "active", testSoloPriceID, "ctm_4242", "sub_abc", &nextBilledAt, nil)); w.Code != http.StatusOK {
+			t.Fatalf("setup: want 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		w := doAuthed(t, http.MethodPost, billH.CreateCheckout, u.access, map[string]string{"plan": "startup"})
+		if w.Code != http.StatusConflict {
+			t.Fatalf("want 409, got %d: %s", w.Code, w.Body.String())
+		}
+		body := decodeBody[map[string]string](t, w)
+		if body["code"] != "subscription_exists" {
+			t.Fatalf("want code subscription_exists, got %q", body["code"])
+		}
+	})
+
 	t.Run("billing not configured (no Paddle API key)", func(t *testing.T) {
 		u := signUpTestUser(t, authH, pool)
 		w := doAuthed(t, http.MethodPost, billH.CreateCheckout, u.access, map[string]string{"plan": "solo"})

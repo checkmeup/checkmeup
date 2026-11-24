@@ -17,12 +17,13 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
   default: { name: 'AppLayout', template: '<div><slot /></div>' },
 }))
 
-const { createCheckoutMock } = vi.hoisted(() => ({
+const { createCheckoutMock, changePlanMock } = vi.hoisted(() => ({
   createCheckoutMock: vi.fn(),
+  changePlanMock: vi.fn(),
 }))
 
 vi.mock('@/api/billing', () => ({
-  billingApi: { createCheckout: createCheckoutMock },
+  billingApi: { createCheckout: createCheckoutMock, changePlan: changePlanMock },
 }))
 
 const { initializePaddleMock, checkoutOpenMock } = vi.hoisted(() => ({
@@ -55,12 +56,14 @@ vi.mock('@/api/client', () => ({ ApiError }))
 const infoData = ref<unknown>(null)
 const infoPending = ref(false)
 const infoError = ref<{ message: string } | null>(null)
+const refetchMock = vi.fn()
 
 vi.mock('@/composables/useBilling', () => ({
   useBilling: () => ({
     data: infoData,
     isPending: infoPending,
     error: infoError,
+    refetch: refetchMock,
   }),
 }))
 
@@ -256,6 +259,32 @@ describe('BillingView', () => {
         successUrl: `${window.location.origin}/billing?upgraded=true`,
       },
     })
+  })
+
+  // A checkout would make a second Paddle subscription beside the org's own.
+  it('upgrades a paid plan by changing its subscription after a confirm, without opening checkout', async () => {
+    infoData.value = { ...soloInfo }
+    changePlanMock.mockResolvedValueOnce({ ok: true })
+    refetchMock.mockImplementation(async () => {
+      infoData.value = { ...soloInfo, plan: 'startup' }
+    })
+    const wrapper = mount(BillingView)
+
+    await findButtonByText(wrapper, 'Upgrade to Startup')!.trigger('click')
+    const dialog = wrapper.find('[role="dialog"]')
+    expect(dialog.text()).toContain('Upgrade to Startup?')
+    expect(dialog.text()).toContain('prorated charge')
+    expect(changePlanMock).not.toHaveBeenCalled()
+
+    await dialog
+      .findAll('button')
+      .find((b) => b.text() === 'Upgrade to Startup')!
+      .trigger('click')
+    await flushPromises()
+
+    expect(changePlanMock).toHaveBeenCalledExactlyOnceWith('startup', 'monthly')
+    expect(createCheckoutMock).not.toHaveBeenCalled()
+    expect(checkoutOpenMock).not.toHaveBeenCalled()
   })
 
   it('shows a not-configured message when the Paddle client token is missing', async () => {

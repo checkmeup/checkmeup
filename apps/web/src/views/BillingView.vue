@@ -133,9 +133,14 @@ watch(
   { once: true },
 )
 
-const downgradeTarget = ref<string | null>(null)
-const downgradeTargetLabel = computed(() =>
-  downgradeTarget.value ? planLabel[downgradeTarget.value] : '',
+const planChangeTarget = ref<string | null>(null)
+const planChangeTargetLabel = computed(() =>
+  planChangeTarget.value ? planLabel[planChangeTarget.value] : '',
+)
+const planChangeVerb = computed(() =>
+  info.value && planChangeTarget.value && planRank[planChangeTarget.value] > planRank[info.value.plan]
+    ? 'Upgrade'
+    : 'Downgrade',
 )
 const changingPlan = ref<string | null>(null)
 const changePlanError = ref('')
@@ -173,16 +178,24 @@ async function upgrade(plan: string) {
   }
 }
 
-function confirmDowngrade() {
-  if (downgradeTarget.value) downgrade(downgradeTarget.value)
+// A paid org upgrades by changing its subscription, after a confirm like a
+// downgrade's: a checkout would make a second subscription, and the first
+// would keep billing beside it. Only Hobby, with none yet, checks out.
+function startUpgrade(plan: string) {
+  if (info.value?.plan === 'hobby') void upgrade(plan)
+  else planChangeTarget.value = plan
 }
 
-async function downgrade(plan: string) {
+function confirmPlanChange() {
+  if (planChangeTarget.value) changePlan(planChangeTarget.value)
+}
+
+async function changePlan(plan: string) {
   changingPlan.value = plan
   changePlanError.value = ''
   try {
     await billingApi.changePlan(plan, cycle.value)
-    downgradeTarget.value = null
+    planChangeTarget.value = null
     if (plan === 'hobby') {
       // The plan itself doesn't change yet (cancellation takes effect at
       // period end) — wait for subscriptionStatus to flip to
@@ -341,7 +354,7 @@ function limitLabel(used: number, limit: number) {
         </LabeledSection>
 
         <LabeledSection v-if="upgradeOptions.length > 0 || downgradeOptions.length > 0" title="Change plan">
-          <template #description>Switch plans any time; moving to a cheaper plan is prorated.</template>
+          <template #description>Switch plans any time; a change between paid plans is prorated.</template>
           <div class="flex flex-col gap-6">
             <!-- Cycle toggle (shared by Upgrade and paid-tier Downgrade lists) -->
             <div v-if="showCycleToggle" class="inline-flex self-start gap-0.5 rounded-[10px] bg-[var(--surface-raised)] p-[3px]">
@@ -381,7 +394,7 @@ function limitLabel(used: number, limit: number) {
                     }}
                   </p>
                 </div>
-                <Button size="sm" :disabled="checkingOut === plan" @click="upgrade(plan)">
+                <Button size="sm" :disabled="checkingOut === plan" @click="startUpgrade(plan)">
                   {{ checkingOut === plan ? 'Opening checkout…' : `Upgrade to ${planLabel[plan]}` }}
                 </Button>
               </li>
@@ -409,7 +422,7 @@ function limitLabel(used: number, limit: number) {
                     }}
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" @click="downgradeTarget = plan">
+                <Button size="sm" variant="secondary" @click="planChangeTarget = plan">
                   {{ plan === 'hobby' ? 'Cancel subscription' : `Downgrade to ${planLabel[plan]}` }}
                 </Button>
               </li>
@@ -419,19 +432,19 @@ function limitLabel(used: number, limit: number) {
           </div>
         </LabeledSection>
 
-        <!-- Downgrade confirm dialog -->
+        <!-- Plan change confirm dialog -->
         <div
-          v-if="downgradeTarget"
+          v-if="planChangeTarget"
           class="fixed inset-0 flex items-center justify-center z-50"
           style="background-color: rgb(0 0 0 / 50%)"
-          @click.self="downgradeTarget = null"
+          @click.self="planChangeTarget = null"
         >
-          <div class="mx-4 w-full max-w-sm rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[0_24px_60px_rgb(0_0_0/18%)]">
+          <div role="dialog" aria-modal="true" class="mx-4 w-full max-w-sm rounded-[18px] border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[0_24px_60px_rgb(0_0_0/18%)]">
             <h3 class="mb-2 text-lg font-semibold tracking-[-0.015em] text-[var(--text-strong)]">
-              {{ downgradeTarget === 'hobby' ? 'Cancel subscription?' : `Downgrade to ${downgradeTargetLabel}?` }}
+              {{ planChangeTarget === 'hobby' ? 'Cancel subscription?' : `${planChangeVerb} to ${planChangeTargetLabel}?` }}
             </h3>
             <p class="mb-5 text-sm text-[var(--text-dim)]">
-              <template v-if="downgradeTarget === 'hobby'">
+              <template v-if="planChangeTarget === 'hobby'">
                 You'll keep access to your current plan until the end of the billing period, then drop to Hobby.
               </template>
               <template v-else>
@@ -440,19 +453,19 @@ function limitLabel(used: number, limit: number) {
             </p>
             <div class="flex gap-3">
               <Button
-                :variant="downgradeTarget === 'hobby' ? 'destructive' : 'default'"
-                :disabled="changingPlan === downgradeTarget"
-                @click="confirmDowngrade"
+                :variant="planChangeTarget === 'hobby' ? 'destructive' : 'default'"
+                :disabled="changingPlan === planChangeTarget"
+                @click="confirmPlanChange"
               >
                 {{
-                  changingPlan === downgradeTarget
+                  changingPlan === planChangeTarget
                     ? 'Applying…'
-                    : downgradeTarget === 'hobby'
+                    : planChangeTarget === 'hobby'
                       ? 'Cancel subscription'
-                      : `Downgrade to ${downgradeTargetLabel}`
+                      : `${planChangeVerb} to ${planChangeTargetLabel}`
                 }}
               </Button>
-              <Button variant="secondary" @click="downgradeTarget = null">Never mind</Button>
+              <Button variant="secondary" @click="planChangeTarget = null">Never mind</Button>
             </div>
           </div>
         </div>
