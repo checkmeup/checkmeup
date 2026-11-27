@@ -69,7 +69,7 @@ const summary = computed(() => {
     return why ? `Down — the last check failed: ${why}.` : 'Down — the last check failed.'
   }
   if (d.monitor.status === 'paused') return 'Paused — no checks run until you resume it.'
-  if (d.monitor.status === 'waiting') return 'Waiting for the first check.'
+  if (d.monitor.status === 'waiting') return "No data yet: the first check hasn't run."
   return 'Up — the last check passed.'
 })
 

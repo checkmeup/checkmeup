@@ -59,7 +59,7 @@ const summary = computed(() => {
     return 'Down — the record no longer matches.'
   }
   if (d.monitor.status === 'paused') return 'Paused — no checks run until you resume it.'
-  if (d.monitor.status === 'waiting') return 'Waiting for the first check.'
+  if (d.monitor.status === 'waiting') return "No data yet: the first check hasn't run."
   return 'Up — the record matches.'
 })
 </script>

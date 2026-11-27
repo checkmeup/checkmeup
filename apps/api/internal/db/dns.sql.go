@@ -217,6 +217,39 @@ func (q *Queries) GetDNSDailyStatus90d(ctx context.Context, monitorID uuid.UUID)
 	return items, nil
 }
 
+const getDNSIncidentDays90d = `-- name: GetDNSIncidentDays90d :many
+SELECT DISTINCT d::date AS day
+FROM dns_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC
+`
+
+// Every UTC day one of the monitor's incidents covered, an open one up to today.
+func (q *Queries) GetDNSIncidentDays90d(ctx context.Context, monitorID uuid.UUID) ([]pgtype.Date, error) {
+	rows, err := q.db.Query(ctx, getDNSIncidentDays90d, monitorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Date{}
+	for rows.Next() {
+		var day pgtype.Date
+		if err := rows.Scan(&day); err != nil {
+			return nil, err
+		}
+		items = append(items, day)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDNSMonitor = `-- name: GetDNSMonitor :one
 SELECT id, org_id, name, hostname, record_type, expected_value, baseline_captured, last_resolved_value, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM dns_monitors WHERE id = $1 AND org_id = $2
 `

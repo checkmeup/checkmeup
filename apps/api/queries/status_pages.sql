@@ -71,6 +71,33 @@ WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1
 ORDER BY 1 ASC;
 
+-- name: GetUptimeIncidentDays90d :many
+-- Every UTC day one of the monitor's incidents covered, an open one up to today.
+-- The status page colors a day down by these, not by its failed checks: a
+-- failure its recheck cleared opens no incident and sends no alert, so a red
+-- day for it would show visitors an outage that never was.
+SELECT DISTINCT d::date AS day
+FROM uptime_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC;
+
+-- name: GetPortIncidentDays90d :many
+-- Every UTC day one of the monitor's incidents covered, an open one up to today.
+SELECT DISTINCT d::date AS day
+FROM port_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC;
+
 -- name: GetCronIncidentDays90d :many
 SELECT DISTINCT date_trunc('day', started_at AT TIME ZONE 'UTC')::date AS day
 FROM cron_incidents

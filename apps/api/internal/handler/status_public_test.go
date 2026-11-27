@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/checkmeup/checkmeup/internal/config"
+	"github.com/checkmeup/checkmeup/internal/db"
 	"github.com/checkmeup/checkmeup/internal/telegram"
 )
 
@@ -470,8 +471,8 @@ func TestMonitorStatusDisplay(t *testing.T) {
 		{"up", "Operational", statusColorGreen},
 		{"down", "Down", statusColorRed},
 		{"paused", "Paused", statusColorGray},
-		{"waiting", "Checking…", statusColorGray},
-		{"something-unexpected", "Checking…", statusColorGray},
+		{"waiting", "No data yet", statusColorGray},
+		{"something-unexpected", "No data yet", statusColorGray},
 	}
 	for _, tc := range cases {
 		t.Run(tc.status, func(t *testing.T) {
@@ -513,7 +514,7 @@ func TestComputeOverallStatus(t *testing.T) {
 
 func TestBuild90DayBar(t *testing.T) {
 	t.Run("no data renders all bars as the light placeholder color", func(t *testing.T) {
-		bar := build90DayBar(map[string]bool{}, false)
+		bar := build90DayBar(map[string]bool{}, nil)
 		if len(bar) != 90 {
 			t.Fatalf("want 90 segments, got %d", len(bar))
 		}
@@ -527,7 +528,7 @@ func TestBuild90DayBar(t *testing.T) {
 	t.Run("has data: down days are red, others green, today is the last segment", func(t *testing.T) {
 		today := time.Now().UTC().Truncate(24 * time.Hour)
 		downKey := today.AddDate(0, 0, -5).Format("2006-01-02")
-		bar := build90DayBar(map[string]bool{downKey: true}, true)
+		bar := build90DayBar(map[string]bool{downKey: true}, daysSince(today.AddDate(0, 0, -89)))
 		if len(bar) != 90 {
 			t.Fatalf("want 90 segments, got %d", len(bar))
 		}
@@ -869,11 +870,11 @@ func TestBarWithStats(t *testing.T) {
 	upKey := today.Format("2006-01-02")
 	bar := barWithStats(map[string]dayCheckStats{
 		downKey: {checks: 1440, down: 2, avgMs: 180},
-		upKey:   {checks: 720, avgMs: 120},
-	})
+		upKey:   {checks: 720, down: 1, avgMs: 120},
+	}, map[string]bool{downKey: true})
 
 	if bar[88].Color != statusColorRed || bar[89].Color != statusColorGreen {
-		t.Fatalf("want yesterday red and today green, got %q / %q", bar[88].Color, bar[89].Color)
+		t.Fatalf("want yesterday (an incident) red and today (a failed check, no incident) green, got %q / %q", bar[88].Color, bar[89].Color)
 	}
 	if bar[88].Checks != 1440 || bar[88].Down != 2 || bar[88].AvgMs != 180 {
 		t.Fatalf("want yesterday's stats on its segment, got %+v", bar[88])
@@ -884,9 +885,74 @@ func TestBarWithStats(t *testing.T) {
 	if bar[0].Checks != 0 {
 		t.Fatalf("a day without stats carries none, got %+v", bar[0])
 	}
-	if empty := barWithStats(map[string]dayCheckStats{}); empty[0].Color != statusColorLight {
+	if empty := barWithStats(map[string]dayCheckStats{}, map[string]bool{}); empty[0].Color != statusColorLight {
 		t.Fatalf("no stats at all: want the no-data color, got %q", empty[0].Color)
 	}
+	if unread := barWithStats(map[string]dayCheckStats{upKey: {checks: 720}}, nil); unread[89].Color != statusColorLight {
+		t.Fatalf("incidents unread: want the no-data color, got %q", unread[89].Color)
+	}
+}
+
+// PRD status-pages: a day is red when an incident covered it, not when a check
+// failed, so a failure its recheck cleared shows no outage; a day with no
+// data, such as one before the monitor existed, is gray.
+func TestCheckMonitorBarColorsIncidentDays(t *testing.T) {
+	authH, monitorH, _, _, publicH, pool := testStatusPublicHandler(t)
+	u := signUpTestUser(t, authH, pool)
+	midnight := time.Now().UTC().Truncate(24 * time.Hour)
+	ctx := context.Background()
+
+	for _, tc := range []struct{ kind, checks, incidents string }{
+		{"uptime", "uptime_checks", "uptime_incidents"},
+		{"port", "port_checks", "port_incidents"},
+		{"dns", "dns_checks", "dns_incidents"},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			var ref monitorRef
+			switch tc.kind {
+			case "uptime":
+				ref = createUptimeMonitor(t, monitorH, u.access, "API")
+			case "port":
+				ref = createPortMonitor(t, monitorH, u.access, "Port")
+			case "dns":
+				ref = createDNSMonitor(t, monitorH, u.access, "DNS")
+			}
+			id := uuid.MustParse(ref.ID)
+			// One failed check 3 days ago that opened no incident, and an
+			// incident from 23:00 the day before yesterday into yesterday.
+			mustExec(t, pool, "INSERT INTO "+tc.checks+" (monitor_id, is_up, checked_at, response_time_ms) VALUES ($1, false, $2, 100), ($1, true, $3, 100)",
+				id, midnight.AddDate(0, 0, -3).Add(time.Hour), midnight.Add(-time.Hour))
+			mustExec(t, pool, "INSERT INTO "+tc.incidents+" (monitor_id, started_at, resolved_at) VALUES ($1, $2, $3)",
+				id, midnight.AddDate(0, 0, -1).Add(-time.Hour), midnight.AddDate(0, 0, -1).Add(time.Hour))
+
+			bar := publicH.buildRow(ctx, db.StatusPageMonitor{MonitorType: tc.kind, MonitorID: id}).Bar
+			if bar[86].Color != statusColorGreen || bar[86].Down != 1 {
+				t.Fatalf("a failed check without an incident: want green with its count, got %+v", bar[86])
+			}
+			if bar[87].Color != statusColorRed || bar[88].Color != statusColorRed {
+				t.Fatalf("an incident across midnight: want both days red, got %q / %q", bar[87].Color, bar[88].Color)
+			}
+			if bar[89].Color != statusColorLight || bar[0].Color != statusColorLight {
+				t.Fatalf("days with no check: want the no-data color, got %q / %q", bar[0].Color, bar[89].Color)
+			}
+		})
+	}
+
+	t.Run("cron: days before the monitor existed have no data", func(t *testing.T) {
+		ref := createCronMonitor(t, monitorH, u.access, "Backups")
+		id := uuid.MustParse(ref.ID)
+		row := func() []publicBar {
+			return publicH.buildRow(ctx, db.StatusPageMonitor{MonitorType: "cron", MonitorID: id}).Bar
+		}
+		if bar := row(); bar[89].Color != statusColorLight {
+			t.Fatalf("never pinged: want the no-data color today, got %q", bar[89].Color)
+		}
+		mustExec(t, pool, "UPDATE cron_monitors SET status = 'up', last_ping_at = NOW(), created_at = $2 WHERE id = $1", id, midnight.AddDate(0, 0, -1))
+		bar := row()
+		if bar[87].Color != statusColorLight || bar[88].Color != statusColorGreen || bar[89].Color != statusColorGreen {
+			t.Fatalf("created yesterday: want gray, green, green, got %q / %q / %q", bar[87].Color, bar[88].Color, bar[89].Color)
+		}
+	})
 }
 
 func TestStatusPublicServeSummary(t *testing.T) {

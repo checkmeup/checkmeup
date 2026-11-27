@@ -125,7 +125,7 @@ func expiryStatusDisplay(s string) (label, color string) {
 	case "paused":
 		return "Paused", statusColorGray
 	default:
-		return "Checking…", statusColorGray
+		return "No data yet", statusColorGray
 	}
 }
 
@@ -155,6 +155,6 @@ func monitorStatusDisplay(s string) (label, color string) {
 	case "paused":
 		return "Paused", statusColorGray
 	default:
-		return "Checking…", statusColorGray
+		return "No data yet", statusColorGray
 	}
 }

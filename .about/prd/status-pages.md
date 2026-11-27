@@ -43,6 +43,11 @@ A user publishes a page with their monitors in a few minutes and can send client
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/renders monitor statuses and aggregates overall status"
   → test: apps/api/internal/handler/status_public_test.go "TestBuild90DayBar/has data: down days are red, others green, today is the last segment"
   → test: apps/api/internal/handler/status_public_test.go "TestComputeOverallStatus"
+- A day is red when one of the monitor's incidents covered any part of it, so the bar agrees with the alerts: a failed check that its recheck cleared opened no incident and leaves its day green.
+  → test: apps/api/internal/handler/status_public_test.go "TestCheckMonitorBarColorsIncidentDays"
+  → test: apps/api/internal/handler/status_public_test.go "TestBarWithStats"
+- A monitor with no result yet, such as a cron monitor that has never had a ping, reads "No data yet".
+  → test: apps/api/internal/handler/status_public_test.go "TestMonitorStatusDisplay/waiting"
 - A monitor under an active maintenance window shows "Under maintenance" instead of its real status.
   → test: apps/api/internal/handler/status_public_test.go "TestStatusPublicServeHTTP/an active maintenance window overrides the monitor's real status"
 - An unknown or deleted slug returns `404`.

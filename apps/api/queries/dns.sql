@@ -203,5 +203,17 @@ FROM dns_checks
 WHERE monitor_id = $1 AND checked_at >= NOW() - INTERVAL '90 days'
 GROUP BY 1;
 
+-- name: GetDNSIncidentDays90d :many
+-- Every UTC day one of the monitor's incidents covered, an open one up to today.
+SELECT DISTINCT d::date AS day
+FROM dns_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC;
+
 -- name: GetDNSMonitorPublic :one
 SELECT * FROM dns_monitors WHERE id = $1;

@@ -72,6 +72,7 @@ describe('statusLabel', () => {
     expect(statusLabel('ssl', 'up')).toBe('Valid')
     expect(statusLabel('domain', 'up')).toBe('Valid')
     expect(statusLabel('uptime', 'up')).toBe('Up')
+    expect(statusLabel('cron', 'waiting')).toBe('No data yet')
     expect(statusLabel('ssl', 'expiring_soon')).toBe('Expiring soon')
   })
 })

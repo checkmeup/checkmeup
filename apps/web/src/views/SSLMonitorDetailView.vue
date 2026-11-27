@@ -65,7 +65,7 @@ const summary = computed(() => {
     case 'paused':
       return 'Paused — no checks run until you resume it.'
     default:
-      return 'Waiting for the first check.'
+      return "No data yet: the first check hasn't run."
   }
 })
 </script>

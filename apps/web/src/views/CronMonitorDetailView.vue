@@ -51,7 +51,7 @@ const summary = computed(() => {
     case 'paused':
       return 'Paused — missed pings raise no alerts until you resume it.'
     case 'waiting':
-      return 'Waiting for the first ping — add the ping URL below to your job.'
+      return 'No data yet: add the ping URL below to your job.'
     default:
       return m.nextPingAt
         ? `On schedule — last ping ${relativeTime(m.lastPingAt)}, next expected ${relativeTime(m.nextPingAt)}.`

@@ -96,7 +96,9 @@ const statusLabels: Record<string, string> = {
   expired: 'Expired',
   error: 'Error',
   expiring_soon: 'Expiring soon',
-  waiting: 'Waiting',
+  // The same words as the public status page (monitorStatusDisplay): "Waiting"
+  // read as stuck for a daily job that hasn't run yet.
+  waiting: 'No data yet',
   paused: 'Paused',
 }
 

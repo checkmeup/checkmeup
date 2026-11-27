@@ -59,7 +59,7 @@ const summary = computed(() => {
     return why ? `${base}: ${why}.` : `${base}.`
   }
   if (d.monitor.status === 'paused') return 'Paused — no checks run until you resume it.'
-  if (d.monitor.status === 'waiting') return 'Waiting for the first check.'
+  if (d.monitor.status === 'waiting') return "No data yet: the first check hasn't run."
   return open ? 'Up — the port accepts connections.' : 'Up — the port stays closed, as expected.'
 })
 </script>

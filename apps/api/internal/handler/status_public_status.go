@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/checkmeup/checkmeup/internal/db"
 )
@@ -46,7 +47,7 @@ func (h *StatusPublicHandler) fillUptimeRow(ctx context.Context, id uuid.UUID, r
 			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount, avgMs: d.AvgResponseMs}
 		}
 	}
-	row.Bar = barWithStats(stats)
+	row.Bar = barWithStats(stats, incidentDayKeys(h.queries.GetUptimeIncidentDays90d(ctx, id)))
 }
 
 func (h *StatusPublicHandler) fillCronRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -56,18 +57,14 @@ func (h *StatusPublicHandler) fillCronRow(ctx context.Context, id uuid.UUID, row
 	}
 
 	incidentDays, err := h.queries.GetCronIncidentDays90d(ctx, id)
-	downDays := map[string]bool{}
-	hasData := err == nil
-	for _, d := range incidentDays {
-		downDays[d.Time.Format("2006-01-02")] = true
+	downDays := incidentDayKeys(incidentDays, err)
+	// A cron monitor keeps no per-day history (pings are pruned after 30
+	// days), so its days with data run from its creation, once it has pinged.
+	var dataDays map[string]bool
+	if mon.LastPingAt.Valid && downDays != nil {
+		dataDays = daysSince(mon.CreatedAt.Time)
 	}
-	// For cron, days with no ping data should show as gray only if the monitor is brand new.
-	// Use monitor creation date to determine "has data" window.
-	if mon2, err2 := h.queries.GetCronMonitorPublic(ctx, id); err2 == nil {
-		_ = mon2
-		hasData = true // cron monitors always "have data" from creation
-	}
-	row.Bar = build90DayBar(downDays, hasData)
+	row.Bar = build90DayBar(downDays, dataDays)
 }
 
 func (h *StatusPublicHandler) fillSSLRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -109,7 +106,7 @@ func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row
 			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount}
 		}
 	}
-	row.Bar = barWithStats(stats)
+	row.Bar = barWithStats(stats, incidentDayKeys(h.queries.GetPortIncidentDays90d(ctx, id)))
 }
 
 func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -125,7 +122,7 @@ func (h *StatusPublicHandler) fillDNSRow(ctx context.Context, id uuid.UUID, row 
 			stats[d.Day.Time.Format("2006-01-02")] = dayCheckStats{checks: d.CheckCount, down: d.DownCount}
 		}
 	}
-	row.Bar = barWithStats(stats)
+	row.Bar = barWithStats(stats, incidentDayKeys(h.queries.GetDNSIncidentDays90d(ctx, id)))
 }
 
 // dayCheckStats is one day of a check-based monitor's results: how many
@@ -136,17 +133,34 @@ type dayCheckStats struct {
 	avgMs        int32
 }
 
-// barWithStats builds the 90-day bar from a check-based monitor's per-day
-// stats: a day with any failed check is down, and each segment carries its
-// day's counts so summary.json can report uptime % and latency per day.
-func barWithStats(stats map[string]dayCheckStats) []publicBar {
-	downDays := map[string]bool{}
-	for day, st := range stats {
-		if st.down > 0 {
-			downDays[day] = true
+// incidentDayKeys keys a monitor's incident days by date; nil when they
+// couldn't be read, so its bar shows no data rather than 90 clean days.
+func incidentDayKeys(days []pgtype.Date, err error) map[string]bool {
+	if err != nil {
+		return nil
+	}
+	keys := map[string]bool{}
+	for _, d := range days {
+		keys[d.Time.Format("2006-01-02")] = true
+	}
+	return keys
+}
+
+// barWithStats builds the 90-day bar of a check-based monitor: a day is down
+// when an incident covered it (downDays), not when a check failed, since a
+// failure its recheck cleared alerts no one. Each segment still carries its
+// day's check counts, so summary.json reports uptime % and latency per day.
+func barWithStats(stats map[string]dayCheckStats, downDays map[string]bool) []publicBar {
+	// A day with no check (before the monitor existed, or while paused) has
+	// no data; so does every day when the incidents couldn't be read.
+	var dataDays map[string]bool
+	if downDays != nil {
+		dataDays = map[string]bool{}
+		for day := range stats {
+			dataDays[day] = true
 		}
 	}
-	bar := build90DayBar(downDays, len(stats) > 0)
+	bar := build90DayBar(downDays, dataDays)
 	for i := range bar {
 		if st, ok := stats[bar[i].Date]; ok {
 			bar[i].Checks, bar[i].Down, bar[i].AvgMs = st.checks, st.down, st.avgMs
@@ -192,7 +206,19 @@ func applySeverity(color string, anyDown, anyDegraded *bool) {
 	}
 }
 
-func build90DayBar(downDays map[string]bool, hasData bool) []publicBar {
+// daysSince keys every UTC day from t's through today.
+func daysSince(t time.Time) map[string]bool {
+	days := map[string]bool{}
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	for day := t.UTC().Truncate(24 * time.Hour); !day.After(today); day = day.AddDate(0, 0, 1) {
+		days[day.Format("2006-01-02")] = true
+	}
+	return days
+}
+
+// build90DayBar colors the last 90 days, today last: red for a day in
+// downDays, green for one in dataDays, and the no-data color for the rest.
+func build90DayBar(downDays, dataDays map[string]bool) []publicBar {
 	bar := make([]publicBar, 90)
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	for i := range bar {
@@ -201,12 +227,12 @@ func build90DayBar(downDays map[string]bool, hasData bool) []publicBar {
 		label := day.Format("Jan 2")
 		var color string
 		switch {
-		case !hasData:
-			color = statusColorLight
 		case downDays[key]:
 			color = statusColorRed
-		default:
+		case dataDays[key]:
 			color = statusColorGreen
+		default:
+			color = statusColorLight
 		}
 		bar[i] = publicBar{Color: color, Label: label, Date: key}
 	}

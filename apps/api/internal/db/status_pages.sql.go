@@ -234,6 +234,39 @@ func (q *Queries) GetPortDailyStatus90d(ctx context.Context, monitorID uuid.UUID
 	return items, nil
 }
 
+const getPortIncidentDays90d = `-- name: GetPortIncidentDays90d :many
+SELECT DISTINCT d::date AS day
+FROM port_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC
+`
+
+// Every UTC day one of the monitor's incidents covered, an open one up to today.
+func (q *Queries) GetPortIncidentDays90d(ctx context.Context, monitorID uuid.UUID) ([]pgtype.Date, error) {
+	rows, err := q.db.Query(ctx, getPortIncidentDays90d, monitorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Date{}
+	for rows.Next() {
+		var day pgtype.Date
+		if err := rows.Scan(&day); err != nil {
+			return nil, err
+		}
+		items = append(items, day)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPortMonitorPublic = `-- name: GetPortMonitorPublic :one
 SELECT id, org_id, name, host, port, expected_state, interval_mins, status, alerts_enabled, max_alerts_per_incident, alert_after_n_failures, consecutive_failures, last_checked_at, next_check_at, created_at, updated_at, project_id FROM port_monitors WHERE id = $1
 `
@@ -413,6 +446,42 @@ func (q *Queries) GetUptimeDailyStatus90d(ctx context.Context, monitorID uuid.UU
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUptimeIncidentDays90d = `-- name: GetUptimeIncidentDays90d :many
+SELECT DISTINCT d::date AS day
+FROM uptime_incidents i,
+     generate_series(
+         date_trunc('day', GREATEST(i.started_at, NOW() - INTERVAL '90 days') AT TIME ZONE 'UTC'),
+         date_trunc('day', COALESCE(i.resolved_at, NOW()) AT TIME ZONE 'UTC'),
+         INTERVAL '1 day'
+     ) AS d
+WHERE i.monitor_id = $1 AND COALESCE(i.resolved_at, NOW()) >= NOW() - INTERVAL '90 days'
+ORDER BY 1 ASC
+`
+
+// Every UTC day one of the monitor's incidents covered, an open one up to today.
+// The status page colors a day down by these, not by its failed checks: a
+// failure its recheck cleared opens no incident and sends no alert, so a red
+// day for it would show visitors an outage that never was.
+func (q *Queries) GetUptimeIncidentDays90d(ctx context.Context, monitorID uuid.UUID) ([]pgtype.Date, error) {
+	rows, err := q.db.Query(ctx, getUptimeIncidentDays90d, monitorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Date{}
+	for rows.Next() {
+		var day pgtype.Date
+		if err := rows.Scan(&day); err != nil {
+			return nil, err
+		}
+		items = append(items, day)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
