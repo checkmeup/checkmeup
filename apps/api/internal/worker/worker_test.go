@@ -54,13 +54,18 @@ import (
 	"github.com/checkmeup/checkmeup/internal/whois"
 )
 
-func testPool(t *testing.T) *pgxpool.Pool {
-	t.Helper()
+// testDatabaseURL is DATABASE_URL, or `mise run db`'s database without it.
+func testDatabaseURL() string {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
 		url = "postgres://checkmeup:checkmeup@localhost:5432/checkmeup?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	return url
+}
+
+func testPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	pool, err := pgxpool.New(context.Background(), testDatabaseURL())
 	if err != nil {
 		t.Fatalf("connect to test db: %v", err)
 	}
