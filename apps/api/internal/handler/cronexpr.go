@@ -332,3 +332,38 @@ func joinAnd(items []string) string {
 	}
 	return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
 }
+
+// describeSchedule says a cron monitor's schedule in plain English: a cron
+// expression as describeCron words it, an interval as "Every day" or "Every
+// 30 minutes". It is empty for a schedule neither form reads, which the
+// dashboard then shows as written.
+func describeSchedule(schedule string) string {
+	if rest, ok := strings.CutPrefix(strings.ToLower(strings.TrimSpace(schedule)), "every "); ok {
+		return describeInterval(worker.ParseEveryDuration(rest))
+	}
+	if _, fields, err := parseCronExpression(schedule); err == nil {
+		return describeCron(fields)
+	}
+	return ""
+}
+
+// describeInterval words an interval in the largest unit that divides it.
+func describeInterval(d time.Duration) string {
+	for _, u := range []struct {
+		d         time.Duration
+		one, many string
+	}{
+		{7 * 24 * time.Hour, "week", "weeks"},
+		{24 * time.Hour, "day", "days"},
+		{time.Hour, "hour", "hours"},
+		{time.Minute, "minute", "minutes"},
+	} {
+		if d > 0 && d%u.d == 0 {
+			if n := int(d / u.d); n > 1 {
+				return "Every " + plural(strconv.Itoa(n), u.one, u.many)
+			}
+			return "Every " + u.one
+		}
+	}
+	return ""
+}

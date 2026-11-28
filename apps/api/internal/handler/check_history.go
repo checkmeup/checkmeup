@@ -22,7 +22,8 @@ type checkHistoryMonitor struct {
 	ID   string `json:"id"`
 	// One entry per hour, oldest first, ending with the current hour:
 	// "up" when every check that hour passed, "down" when any failed, null
-	// when no check ran.
+	// when no check ran. A cron monitor is "up" every hour from its first
+	// ping on that no incident was open (ListCronPingHistory).
 	Ticks []*string `json:"ticks"`
 }
 

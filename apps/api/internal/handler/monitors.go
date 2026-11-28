@@ -37,6 +37,7 @@ type cronMonitorResponse struct {
 	ID                   string   `json:"id"`
 	Name                 string   `json:"name"`
 	Schedule             string   `json:"schedule"`
+	ScheduleDescription  string   `json:"scheduleDescription"`
 	GracePeriodMins      int32    `json:"gracePeriodMins"`
 	PingToken            string   `json:"pingToken"`
 	PingURL              string   `json:"pingUrl"`
@@ -90,6 +91,7 @@ func (h *MonitorHandler) monitorToResponse(m db.CronMonitor) cronMonitorResponse
 		ID:                   m.ID.String(),
 		Name:                 m.Name,
 		Schedule:             m.Schedule,
+		ScheduleDescription:  describeSchedule(m.Schedule),
 		GracePeriodMins:      m.GracePeriodMins,
 		PingToken:            m.PingToken,
 		PingURL:              fmt.Sprintf("%s/ping/%s", h.cfg.BaseURL, m.PingToken),

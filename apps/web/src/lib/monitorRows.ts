@@ -23,6 +23,8 @@ export interface MonitorRow {
   id: string
   name: string
   target: string
+  // The target's tooltip, when the target is a rewording (a cron schedule).
+  targetTitle?: string
   // Type-specific second line under the target (keyword rule, expected
   // state, check error) — null when there's nothing to add.
   note: string | null
@@ -118,10 +120,10 @@ export function relativeTime(iso: string | null, now = Date.now()): string {
   return m < 1 ? 'in <1m' : `in ${magnitude}`
 }
 
-// Under a cron row's last ping: when the next one is due, or, once that time
-// has passed without one, how long ago it was due.
+// A cron row's "Now": when the next ping is due, or, once that time has passed
+// without one, how long ago it was due. The last ping is the row's "Checked".
 function nextPingNote(nextPingAt: string | null, now: number): string {
-  if (!nextPingAt) return 'last ping'
+  if (!nextPingAt) return '—'
   const due = relativeTime(nextPingAt, now)
   return new Date(nextPingAt).getTime() < now ? `was due ${due}` : `next ping ${due}`
 }
@@ -172,10 +174,12 @@ function base(
 export function cronRow(m: CronMonitor, now = Date.now()): MonitorRow {
   return {
     ...base('cron', m),
-    target: m.schedule,
+    // The schedule in words ("At 00:00, every day"), its raw form in the tooltip.
+    target: m.scheduleDescription || m.schedule,
+    targetTitle: m.schedule,
     note: null,
-    metric: relativeTime(m.lastPingAt, now),
-    metricSub: nextPingNote(m.nextPingAt, now),
+    metric: nextPingNote(m.nextPingAt, now),
+    metricSub: '',
     lastChecked: relativeTime(m.lastPingAt, now),
     daysUntilExpiry: null,
     uptime24h: null,
@@ -320,7 +324,8 @@ export function groupByProject(
 export function matchesSearch(row: MonitorRow, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
-  return row.name.toLowerCase().includes(q) || row.target.toLowerCase().includes(q)
+  // targetTitle too: a cron schedule is still found by the expression typed.
+  return [row.name, row.target, row.targetTitle ?? ''].some((s) => s.toLowerCase().includes(q))
 }
 
 // The sentence the dashboard's "Needs attention" list shows for a row.

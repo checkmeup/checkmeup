@@ -19,7 +19,7 @@ func NextPing(schedule string, now time.Time, graceMins int) time.Time {
 	s := strings.ToLower(strings.TrimSpace(schedule))
 
 	if strings.HasPrefix(s, "every ") {
-		d := parseEveryDuration(strings.TrimPrefix(s, "every "))
+		d := ParseEveryDuration(strings.TrimPrefix(s, "every "))
 		if d > 0 {
 			// next expected ping = now + interval + grace
 			return now.Add(d + time.Duration(graceMins)*time.Minute)
@@ -37,9 +37,9 @@ func NextPing(schedule string, now time.Time, graceMins int) time.Time {
 	return now.Add(time.Hour + time.Duration(graceMins)*time.Minute)
 }
 
-// parseEveryDuration parses "1h", "1hr", "1hour", "30m", "30min", "30mins",
+// ParseEveryDuration parses "1h", "1hr", "1hour", "30m", "30min", "30mins",
 // "1d", "1day", "1w", "1week" etc.
-func parseEveryDuration(s string) time.Duration {
+func ParseEveryDuration(s string) time.Duration {
 	s = normalizeDurationSuffix(strings.TrimSpace(strings.ToLower(s)))
 	if len(s) < 2 {
 		return 0
@@ -53,7 +53,7 @@ func parseEveryDuration(s string) time.Duration {
 }
 
 // normalizeDurationSuffix rewrites a word suffix ("minutes", "hour", "days",
-// "week", ...) to the single-char unit parseEveryDuration expects.
+// "week", ...) to the single-char unit ParseEveryDuration expects.
 func normalizeDurationSuffix(s string) string {
 	for _, r := range []struct{ old, new string }{
 		{"minutes", "m"}, {"minute", "m"}, {"mins", "m"}, {"min", "m"},
@@ -69,7 +69,7 @@ func normalizeDurationSuffix(s string) string {
 }
 
 // durationUnit maps a single-char unit to its time.Duration multiplier, or
-// 0 for an unrecognized unit (parseEveryDuration treats that as invalid).
+// 0 for an unrecognized unit (ParseEveryDuration treats that as invalid).
 func durationUnit(unit byte) time.Duration {
 	switch unit {
 	case 'm':

@@ -58,15 +58,21 @@ func (q *Queries) ListCronIncidentHours(ctx context.Context, arg ListCronInciden
 }
 
 const listCronPingHistory = `-- name: ListCronPingHistory :many
-SELECT p.monitor_id,
-       date_trunc('hour', p.received_at)::timestamptz AS hour,
-       COUNT(*)::int AS checks,
+SELECT m.id AS monitor_id,
+       h::timestamptz AS hour,
+       1::int AS checks,
        0::int AS failures
-FROM cron_pings p
-JOIN cron_monitors m ON m.id = p.monitor_id
+FROM cron_monitors m
+CROSS JOIN LATERAL (
+    SELECT MIN(p.received_at) AS first_ping FROM cron_pings p WHERE p.monitor_id = m.id
+) f
+CROSS JOIN LATERAL generate_series(
+    date_trunc('hour', GREATEST(f.first_ping, date_trunc('hour', NOW()) - make_interval(hours => $2::int - 1))),
+    date_trunc('hour', CASE WHEN m.status = 'paused' THEN m.last_ping_at ELSE NOW() END),
+    INTERVAL '1 hour'
+) AS h
 WHERE m.org_id = $1
-  AND p.received_at >= date_trunc('hour', NOW()) - make_interval(hours => $2::int - 1)
-GROUP BY p.monitor_id, hour
+  AND f.first_ping IS NOT NULL
 `
 
 type ListCronPingHistoryParams struct {
@@ -82,8 +88,13 @@ type ListCronPingHistoryRow struct {
 }
 
 // A cron job has no failed "check" row: a ping is a success, and a missed
-// window is an incident. Pings count as checks here; incident hours come
-// from ListCronIncidentHours.
+// window is an incident. Every hour from the monitor's first ping on counts
+// as a passing check, not only the hours a ping landed in: a daily job pings
+// in one hour of 24, and the other 23 read as gaps, as if the job were
+// failing. Incident hours come from ListCronIncidentHours and win over these.
+// A paused monitor's hours end at its last ping. Pings are kept 30 days
+// (DeleteOldCronPings), longer than the window, so the earliest one left is
+// the first one whenever it falls inside it.
 func (q *Queries) ListCronPingHistory(ctx context.Context, arg ListCronPingHistoryParams) ([]ListCronPingHistoryRow, error) {
 	rows, err := q.db.Query(ctx, listCronPingHistory, arg.OrgID, arg.Hours)
 	if err != nil {

@@ -53,8 +53,8 @@ func TestParseEveryDuration(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
-			if got := parseEveryDuration(tc.in); got != tc.want {
-				t.Fatalf("parseEveryDuration(%q) = %v, want %v", tc.in, got, tc.want)
+			if got := ParseEveryDuration(tc.in); got != tc.want {
+				t.Fatalf("ParseEveryDuration(%q) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}

@@ -161,4 +161,52 @@ func TestListCheckHistory(t *testing.T) {
 			t.Fatalf("cron incident hour (5h ago) = %q, want down", got)
 		}
 	})
+
+	t.Run("a cron monitor is up every hour from its first ping on, not only the hours a ping landed in", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		daily := createCronMonitor(t, monitorH, u.access, "Daily")
+		paused := createCronMonitor(t, monitorH, u.access, "Paused")
+		never := createCronMonitor(t, monitorH, u.access, "Never pinged")
+		ping := func(monitorID string, ago string) {
+			t.Helper()
+			if _, err := pool.Exec(ctx,
+				`INSERT INTO cron_pings (monitor_id, received_at) VALUES ($1, NOW() - $2::interval)`,
+				monitorID, ago); err != nil {
+				t.Fatalf("insert cron ping: %v", err)
+			}
+		}
+		ping(daily.ID, "10 hours")
+		ping(paused.ID, "20 hours")
+		if _, err := pool.Exec(ctx,
+			`UPDATE cron_monitors SET status = 'paused', last_ping_at = NOW() - INTERVAL '10 hours' WHERE id = $1`,
+			paused.ID); err != nil {
+			t.Fatalf("pause: %v", err)
+		}
+
+		body := decodeBody[checkHistoryResponse](t, doAuthed(t, http.MethodGet, monitorH.ListCheckHistory, u.access, nil))
+		found := map[string][]*string{}
+		for _, m := range body.Monitors {
+			found[m.ID] = m.Ticks
+		}
+
+		d := found[daily.ID]
+		if got := tickString(d[36]); got != "-" {
+			t.Fatalf("daily, 11h ago (before its first ping) = %q, want no data", got)
+		}
+		for i := 37; i <= 47; i++ {
+			if got := tickString(d[i]); got != "up" {
+				t.Fatalf("daily, %dh ago = %q, want up", 47-i, got)
+			}
+		}
+		p := found[paused.ID]
+		if got := tickString(p[37]); got != "up" {
+			t.Fatalf("paused, 10h ago (its last ping) = %q, want up", got)
+		}
+		if got := tickString(p[38]); got != "-" {
+			t.Fatalf("paused, 9h ago (after its last ping) = %q, want no data", got)
+		}
+		if _, ok := found[never.ID]; ok {
+			t.Fatalf("a cron monitor with no ping has a check strip: %v", found[never.ID])
+		}
+	})
 }

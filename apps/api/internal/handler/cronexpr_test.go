@@ -38,3 +38,20 @@ func TestDescribeCron_ReadsEachShapeOfExpressionInPlainEnglish(t *testing.T) {
 		})
 	}
 }
+
+func TestDescribeSchedule_WordsBothFormsOfACronMonitorsSchedule(t *testing.T) {
+	cases := map[string]string{
+		"0 0 * * *":   "At 00:00, every day",
+		"every 1d":    "Every day",
+		"every 30m":   "Every 30 minutes",
+		"every 2 hrs": "Every 2 hours",
+		"Every 1W":    "Every week",
+		"every 36h":   "Every 36 hours",
+		"every soon":  "",
+	}
+	for schedule, want := range cases {
+		if got := describeSchedule(schedule); got != want {
+			t.Errorf("describeSchedule(%q) = %q, want %q", schedule, got, want)
+		}
+	}
+}

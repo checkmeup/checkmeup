@@ -4,6 +4,8 @@ export interface CronMonitor {
   id: string
   name: string
   schedule: string
+  // The schedule in plain English, as the cron explainer words it.
+  scheduleDescription: string
   gracePeriodMins: number
   pingToken: string
   pingUrl: string

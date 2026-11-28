@@ -221,7 +221,9 @@ function open(row: MonitorRow) {
                 <StatusLabel :tone="m.tone" :label="m.statusLabel" />
               </div>
               <div class="mt-1 flex items-center justify-between gap-3 text-xs">
-                <span class="truncate font-mono text-[var(--text-dim)]">{{ m.target }}</span>
+                <span class="truncate font-mono text-[var(--text-dim)]" :title="m.targetTitle">{{
+                  m.target
+                }}</span>
                 <span class="flex-shrink-0 font-mono text-[var(--text)]">{{ m.metric }}</span>
               </div>
               <CheckStrip v-if="m.history" size="sm" :checks="m.history" class="mt-2" />
@@ -303,7 +305,12 @@ function open(row: MonitorRow) {
                     >Muted</span
                   >
                 </div>
-                <div class="truncate font-mono text-xs text-[var(--text-dim)]">{{ m.target }}</div>
+                <div
+                  class="truncate font-mono text-xs text-[var(--text-dim)]"
+                  :title="m.targetTitle"
+                >
+                  {{ m.target }}
+                </div>
                 <div v-if="m.note" class="truncate text-xs text-[var(--text-muted)]">
                   {{ m.note }}
                 </div>

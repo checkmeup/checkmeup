@@ -134,9 +134,22 @@ describe('row builders', () => {
         lastPingAt: null,
         nextPingAt,
       }) as CronMonitor
-    expect(cronRow(cron('2026-10-14T16:00:00Z'), now).metricSub).toBe('next ping in 4h')
-    expect(cronRow(cron('2026-10-14T11:53:00Z'), now).metricSub).toBe('was due 7m ago')
-    expect(cronRow(cron(null), now).metricSub).toBe('last ping')
+    expect(cronRow(cron('2026-10-14T16:00:00Z'), now).metric).toBe('next ping in 4h')
+    expect(cronRow(cron('2026-10-14T11:53:00Z'), now).metric).toBe('was due 7m ago')
+    expect(cronRow(cron(null), now).metric).toBe('—')
+  })
+
+  it('shows a cron schedule in words, the raw schedule when there are none', () => {
+    const cron = (scheduleDescription: string) =>
+      ({
+        id: 'c1',
+        name: 'backup',
+        schedule: '0 0 * * *',
+        scheduleDescription,
+        status: 'up',
+      }) as CronMonitor
+    expect(cronRow(cron('At 00:00, every day'), now).target).toBe('At 00:00, every day')
+    expect(cronRow(cron(''), now).target).toBe('0 0 * * *')
   })
 
   it('notes a port monitor that expects the port closed', () => {
