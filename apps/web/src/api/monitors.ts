@@ -391,13 +391,14 @@ export interface UpdateDNSMonitorInput {
 
 // One tick per hour over the last `hours`, oldest first: 'up' when every
 // check passed, 'down' when any failed, null when none ran. SSL and domain
-// monitors keep no check history and never appear.
+// monitors keep no check history: their ticks are their current status,
+// 'warn' when expiring soon, from the hour they were created.
 export interface CheckHistory {
   hours: number
   monitors: {
-    type: 'cron' | 'uptime' | 'port' | 'dns'
+    type: 'cron' | 'uptime' | 'port' | 'dns' | 'ssl' | 'domain'
     id: string
-    ticks: ('up' | 'down' | null)[]
+    ticks: ('up' | 'warn' | 'down' | null)[]
   }[]
 }
 

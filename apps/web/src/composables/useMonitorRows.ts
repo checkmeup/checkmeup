@@ -31,11 +31,12 @@ export function useMonitorRows() {
 
   // type:id → that monitor's hourly ticks, in the shape CheckStrip takes.
   const historyByKey = computed(() => {
-    const map = new Map<string, { ok: boolean | null }[]>()
+    const map = new Map<string, { ok: boolean | null; slow?: boolean }[]>()
     for (const m of history.data.value?.monitors ?? []) {
       map.set(
         `${m.type}:${m.id}`,
-        m.ticks.map((t) => ({ ok: t === null ? null : t === 'up' })),
+        // 'warn' (a certificate or domain expiring soon) is CheckStrip's amber.
+        m.ticks.map((t) => (t === null ? { ok: null } : { ok: t !== 'down', slow: t === 'warn' })),
       )
     }
     return map

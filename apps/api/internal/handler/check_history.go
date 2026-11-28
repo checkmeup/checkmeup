@@ -23,7 +23,9 @@ type checkHistoryMonitor struct {
 	// One entry per hour, oldest first, ending with the current hour:
 	// "up" when every check that hour passed, "down" when any failed, null
 	// when no check ran. A cron monitor is "up" every hour from its first
-	// ping on that no incident was open (ListCronPingHistory).
+	// ping on that no incident was open (ListCronPingHistory). SSL and domain
+	// monitors keep no check history: every hour since they were created is
+	// their current status, "warn" when expiring soon (expiryTicks).
 	Ticks []*string `json:"ticks"`
 }
 
@@ -43,6 +45,7 @@ type hourResult struct {
 
 var (
 	tickUp   = "up"
+	tickWarn = "warn"
 	tickDown = "down"
 )
 
@@ -104,10 +107,70 @@ func (h *MonitorHandler) ListCheckHistory(w http.ResponseWriter, r *http.Request
 		respond.InternalError(w)
 		return
 	}
+	now := time.Now()
+	monitors := buildCheckHistory(now, checkHistoryHours, results)
+	expiry, err := h.expiryHistory(r.Context(), orgID, now, checkHistoryHours)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "list check history failed", "err", err)
+		respond.InternalError(w)
+		return
+	}
 	respond.JSON(w, http.StatusOK, checkHistoryResponse{
 		Hours:    checkHistoryHours,
-		Monitors: buildCheckHistory(time.Now(), checkHistoryHours, results),
+		Monitors: append(monitors, expiry...),
 	})
+}
+
+// expiryHistory gives the org's SSL and domain monitors their strips, which
+// expiryTicks draws from the status alone: they keep no check history.
+func (h *MonitorHandler) expiryHistory(ctx context.Context, orgID uuid.UUID, now time.Time, hours int) ([]checkHistoryMonitor, error) {
+	var out []checkHistoryMonitor
+	add := func(monitorType string, id uuid.UUID, status string, created time.Time) {
+		if ticks := expiryTicks(now, hours, created, status); ticks != nil {
+			out = append(out, checkHistoryMonitor{Type: monitorType, ID: id.String(), Ticks: ticks})
+		}
+	}
+	ssl, err := h.queries.ListSSLMonitors(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("ssl: %w", err)
+	}
+	for _, m := range ssl {
+		add("ssl", m.ID, string(m.Status), m.CreatedAt.Time)
+	}
+	domains, err := h.queries.ListDomainMonitors(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("domain: %w", err)
+	}
+	for _, m := range domains {
+		add("domain", m.ID, string(m.Status), m.CreatedAt.Time)
+	}
+	return out, nil
+}
+
+// expiryTicks colors every hour since an SSL or domain monitor was created by
+// its current status, as the status page's bar does (solidColorBar): a
+// certificate or registration changes state in days, not hours, and the
+// monitor keeps no record of when it did. A monitor not yet checked, or
+// paused, has no strip (nil).
+func expiryTicks(now time.Time, hours int, created time.Time, status string) []*string {
+	var tick *string
+	switch status {
+	case "up":
+		tick = &tickUp
+	case "expiring_soon":
+		tick = &tickWarn
+	case "expired", "error":
+		tick = &tickDown
+	default:
+		return nil
+	}
+	current := now.UTC().Truncate(time.Hour)
+	first := hours - 1 - int(current.Sub(created.UTC().Truncate(time.Hour))/time.Hour)
+	ticks := make([]*string, hours)
+	for i := max(first, 0); i < hours; i++ {
+		ticks[i] = tick
+	}
+	return ticks
 }
 
 // loadHourResults collects the org's hourly check counts from every monitor

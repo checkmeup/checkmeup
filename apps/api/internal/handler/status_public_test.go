@@ -1001,3 +1001,23 @@ func TestStatusPublicServeSummary(t *testing.T) {
 		}
 	})
 }
+
+func TestSolidColorBar(t *testing.T) {
+	t.Run("an SSL or domain monitor's days before it was created have no data", func(t *testing.T) {
+		bar := solidColorBar("up", time.Now().AddDate(0, 0, -2))
+		if bar[86].Color != statusColorLight {
+			t.Fatalf("3 days ago = %q, want no data (%q)", bar[86].Color, statusColorLight)
+		}
+		for i := 87; i < 90; i++ {
+			if bar[i].Color != statusColorGreen {
+				t.Fatalf("day %d = %q, want green", i, bar[i].Color)
+			}
+		}
+	})
+	t.Run("one created before the 90 days is its status throughout", func(t *testing.T) {
+		bar := solidColorBar("expiring_soon", time.Now().AddDate(-1, 0, 0))
+		if bar[0].Color != statusColorAmber || bar[89].Color != statusColorAmber {
+			t.Fatalf("first, last = %q, %q, want amber", bar[0].Color, bar[89].Color)
+		}
+	})
+}

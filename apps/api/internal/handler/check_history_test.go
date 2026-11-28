@@ -25,6 +25,8 @@ func ticksString(ticks []*string) string {
 			out += "u"
 		case "down":
 			out += "d"
+		case "warn":
+			out += "w"
 		default:
 			out += "-"
 		}
@@ -79,6 +81,34 @@ func TestBuildCheckHistory(t *testing.T) {
 			t.Fatalf("monitors = %d, want 2", len(got))
 		}
 	})
+}
+
+func TestExpiryTicks(t *testing.T) {
+	now := time.Date(2026, 10, 15, 12, 30, 0, 0, time.UTC)
+	cases := []struct {
+		name    string
+		created time.Time
+		status  string
+		want    string
+	}{
+		{"valid since before the window: every hour up", now.Add(-100 * time.Hour), "up", "uuuu"},
+		{"created 2 hours ago: the hours before have no data", now.Add(-2 * time.Hour), "up", "-uuu"},
+		{"expiring soon is warn", now.Add(-100 * time.Hour), "expiring_soon", "wwww"},
+		{"expired is down", now.Add(-100 * time.Hour), "expired", "dddd"},
+		{"a lookup error is down", now.Add(-100 * time.Hour), "error", "dddd"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ticksString(expiryTicks(now, 4, tc.created, tc.status)); got != tc.want {
+				t.Fatalf("ticks = %q, want %q", got, tc.want)
+			}
+		})
+	}
+	for _, status := range []string{"waiting", "paused"} {
+		if got := expiryTicks(now, 4, now.Add(-100*time.Hour), status); got != nil {
+			t.Fatalf("%s: ticks = %v, want no strip", status, got)
+		}
+	}
 }
 
 func TestListCheckHistory(t *testing.T) {
@@ -207,6 +237,46 @@ func TestListCheckHistory(t *testing.T) {
 		}
 		if _, ok := found[never.ID]; ok {
 			t.Fatalf("a cron monitor with no ping has a check strip: %v", found[never.ID])
+		}
+	})
+
+	t.Run("an SSL or domain monitor's strip is its status since it was created, and only once checked", func(t *testing.T) {
+		u := signUpTestUser(t, authH, pool)
+		other := signUpTestUser(t, authH, pool)
+		cert := createSSLMonitor(t, monitorH, u.access, "Cert")
+		dom := createDomainMonitor(t, monitorH, u.access, "Domain")
+		unchecked := createSSLMonitor(t, monitorH, u.access, "Not checked yet")
+		theirs := createSSLMonitor(t, monitorH, other.access, "Theirs")
+		exec := func(q, id string) {
+			t.Helper()
+			if _, err := pool.Exec(ctx, q, id); err != nil {
+				t.Fatalf("%s: %v", q, err)
+			}
+		}
+		exec(`UPDATE ssl_monitors SET status = 'up', created_at = NOW() - INTERVAL '5 hours' WHERE id = $1`, cert.ID)
+		exec(`UPDATE domain_monitors SET status = 'expiring_soon', created_at = NOW() - INTERVAL '100 hours' WHERE id = $1`, dom.ID)
+		exec(`UPDATE ssl_monitors SET status = 'up' WHERE id = $1`, theirs.ID)
+
+		body := decodeBody[checkHistoryResponse](t, doAuthed(t, http.MethodGet, monitorH.ListCheckHistory, u.access, nil))
+		found := map[string][]*string{}
+		for _, m := range body.Monitors {
+			found[m.Type+":"+m.ID] = m.Ticks
+		}
+		c := found["ssl:"+cert.ID]
+		if got := tickString(c[41]); got != "-" {
+			t.Fatalf("cert, 6h ago (before it was created) = %q, want no data", got)
+		}
+		if got := tickString(c[42]); got != "up" {
+			t.Fatalf("cert, 5h ago (the hour it was created) = %q, want up", got)
+		}
+		if got := tickString(found["domain:"+dom.ID][0]); got != "warn" {
+			t.Fatalf("expiring domain, 47h ago = %q, want warn", got)
+		}
+		if _, ok := found["ssl:"+unchecked.ID]; ok {
+			t.Fatalf("an SSL monitor not checked yet has a strip")
+		}
+		if _, ok := found["ssl:"+theirs.ID]; ok {
+			t.Fatalf("another org's SSL monitor leaked into the history")
 		}
 	})
 }

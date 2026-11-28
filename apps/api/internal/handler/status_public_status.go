@@ -77,7 +77,7 @@ func (h *StatusPublicHandler) fillSSLRow(ctx context.Context, id uuid.UUID, row 
 		row.ExpiresAt = mon.ExpiresAt.Time.Format("2006-01-02")
 		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
 	}
-	row.Bar = solidColorBar(string(mon.Status))
+	row.Bar = solidColorBar(string(mon.Status), mon.CreatedAt.Time)
 }
 
 func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {
@@ -90,7 +90,7 @@ func (h *StatusPublicHandler) fillDomainRow(ctx context.Context, id uuid.UUID, r
 		row.ExpiresAt = mon.ExpiresAt.Time.Format("2006-01-02")
 		row.DaysLeft = int(time.Until(mon.ExpiresAt.Time).Hours() / 24)
 	}
-	row.Bar = solidColorBar(string(mon.Status))
+	row.Bar = solidColorBar(string(mon.Status), mon.CreatedAt.Time)
 }
 
 func (h *StatusPublicHandler) fillPortRow(ctx context.Context, id uuid.UUID, row *publicMonitorRow) {

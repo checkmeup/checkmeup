@@ -129,7 +129,10 @@ func expiryStatusDisplay(s string) (label, color string) {
 	}
 }
 
-func solidColorBar(status string) []publicBar {
+// solidColorBar colors an SSL or domain monitor's 90 days by its current
+// status, as it keeps no check history; the days before it was created have
+// no data.
+func solidColorBar(status string, created time.Time) []publicBar {
 	color := statusColorGreen
 	switch status {
 	case "expiring_soon":
@@ -139,9 +142,15 @@ func solidColorBar(status string) []publicBar {
 	case "waiting", "paused":
 		color = statusColorLight
 	}
+	firstDay := created.UTC().Format("2006-01-02")
+	today := time.Now().UTC()
 	bar := make([]publicBar, 90)
 	for i := range bar {
-		bar[i] = publicBar{Color: color}
+		c := color
+		if today.AddDate(0, 0, i-89).Format("2006-01-02") < firstDay {
+			c = statusColorLight
+		}
+		bar[i] = publicBar{Color: c}
 	}
 	return bar
 }

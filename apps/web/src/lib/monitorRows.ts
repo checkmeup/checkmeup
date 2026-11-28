@@ -43,8 +43,8 @@ export interface MonitorRow {
   // (PRD telegram-alerts).
   muted: boolean
   // Hourly check results for the check strip, oldest first; absent for
-  // monitors that keep no check history (SSL, domain) or have none yet.
-  history?: { ok: boolean | null }[]
+  // monitors with none yet. `slow` is the amber of an expiring SSL or domain.
+  history?: { ok: boolean | null; slow?: boolean }[]
 }
 
 export const typeLabel: Record<MonitorType, string> = {
